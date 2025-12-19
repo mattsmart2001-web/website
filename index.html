@@ -3,25 +3,251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Interactive Website</title>
+    <title>sparkstheory - Sim Racing & Content Creator</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Three.js Background -->
     <div id="canvas-container"></div>
 
-    <div class="content">
-        <h1>Welcome to My Three.js Website</h1>
-        <p>Experience interactive 3D graphics in your browser</p>
-        <div class="controls">
-            <button id="colorBtn">Change Color</button>
-            <button id="speedBtn">Toggle Speed</button>
-            <button id="shapeBtn">Change Shape</button>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-logo">SPARKS<span class="highlight">THEORY</span></div>
+        <div class="nav-links">
+            <a href="#about">About</a>
+            <a href="#results">Results</a>
+            <a href="#videos">Videos</a>
+            <a href="#checker">Rating Checker</a>
+            <a href="#contact">Contact</a>
         </div>
-    </div>
+        <div class="nav-burger" id="navBurger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
 
-    <div class="info">
-        <p>Move your mouse to interact with the scene</p>
-    </div>
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-content">
+            <div class="hero-label">SIM RACER & CONTENT CREATOR</div>
+            <h1 class="hero-title">
+                <span class="title-line">SPARKS</span>
+                <span class="title-line highlight-gradient">THEORY</span>
+            </h1>
+            <p class="hero-subtitle">Pushing the limits on virtual tarmac</p>
+            <div class="hero-buttons">
+                <a href="#videos" class="btn btn-primary">Watch Content</a>
+                <a href="#contact" class="btn btn-secondary">Get in Touch</a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-value">2.5K+</div>
+                    <div class="stat-label">Subscribers</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">150+</div>
+                    <div class="stat-label">Races</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">A</div>
+                    <div class="stat-label">iRating</div>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <span>Scroll</span>
+            <div class="scroll-line"></div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="section about-section" id="about">
+        <div class="container">
+            <h2 class="section-title">ABOUT ME</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p class="about-intro">Hey, I'm <span class="highlight">sparkstheory</span> - a passionate sim racer and content creator dedicated to bringing you the most intense virtual racing action.</p>
+                    <p>With years of experience on the virtual track, I compete in various sim racing championships and share my journey, setups, and racing strategies with the community.</p>
+                    <p>When I'm not chasing podiums, you'll find me creating content to help racers improve their craft, analyzing telemetry, and pushing for that perfect lap.</p>
+                    <div class="social-links">
+                        <a href="https://www.youtube.com/@SparksTheory" target="_blank" class="social-link" title="YouTube">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                        </a>
+                        <a href="https://twitter.com/SparksTheory" target="_blank" class="social-link" title="Twitter">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="about-image">
+                    <div class="image-placeholder">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 10c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm0 6c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Race Results Section -->
+    <section class="section results-section" id="results">
+        <div class="container">
+            <h2 class="section-title">RECENT RESULTS</h2>
+            <div class="results-grid">
+                <!-- Results will be dynamically populated -->
+                <div class="result-card">
+                    <div class="result-position p1">P1</div>
+                    <div class="result-details">
+                        <h3>Spa-Francorchamps</h3>
+                        <p class="result-series">GT3 Sprint Series</p>
+                        <div class="result-meta">
+                            <span>Ferrari 488 GT3</span>
+                            <span>•</span>
+                            <span>Dec 15, 2025</span>
+                        </div>
+                    </div>
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Best Lap</span>
+                            <span class="stat-value">2:17.438</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <div class="result-position p2">P2</div>
+                    <div class="result-details">
+                        <h3>Silverstone</h3>
+                        <p class="result-series">GT3 Endurance</p>
+                        <div class="result-meta">
+                            <span>McLaren 720S GT3</span>
+                            <span>•</span>
+                            <span>Dec 12, 2025</span>
+                        </div>
+                    </div>
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Best Lap</span>
+                            <span class="stat-value">1:58.234</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <div class="result-position p3">P3</div>
+                    <div class="result-details">
+                        <h3>Monza</h3>
+                        <p class="result-series">GT3 Sprint Series</p>
+                        <div class="result-meta">
+                            <span>Porsche 911 GT3 R</span>
+                            <span>•</span>
+                            <span>Dec 8, 2025</span>
+                        </div>
+                    </div>
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Best Lap</span>
+                            <span class="stat-value">1:47.892</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- YouTube Videos Section -->
+    <section class="section videos-section" id="videos">
+        <div class="container">
+            <h2 class="section-title">LATEST CONTENT</h2>
+            <div class="videos-grid" id="videosGrid">
+                <!-- Videos will be loaded dynamically -->
+                <div class="video-placeholder">
+                    <p>Loading latest videos...</p>
+                </div>
+            </div>
+            <div class="section-cta">
+                <a href="https://www.youtube.com/@SparksTheory" target="_blank" class="btn btn-primary">View All Videos</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Driver Rating Checker -->
+    <section class="section checker-section" id="checker">
+        <div class="container">
+            <h2 class="section-title">DRIVER RATING CHECKER</h2>
+            <div class="checker-content">
+                <p class="checker-description">Check your GT7 stats and see how you stack up against the competition</p>
+                <div class="checker-form">
+                    <input type="text" id="driverInput" placeholder="Enter PSN ID" class="checker-input">
+                    <button id="checkDriver" class="btn btn-primary">Check Stats</button>
+                </div>
+                <div class="checker-results" id="checkerResults">
+                    <!-- Results will appear here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="section contact-section" id="contact">
+        <div class="container">
+            <h2 class="section-title">GET IN TOUCH</h2>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <h3>Let's Connect</h3>
+                    <p>Whether you want to collaborate, ask about setups, or just chat about racing - I'd love to hear from you.</p>
+                    <div class="contact-methods">
+                        <div class="contact-method">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                            <span>sparkstheory@racing.com</span>
+                        </div>
+                        <div class="contact-method">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                            <span>@SparksTheory</span>
+                        </div>
+                    </div>
+                </div>
+                <form class="contact-form" id="contactForm">
+                    <div class="form-group">
+                        <input type="text" placeholder="Your Name" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" placeholder="Your Email" required>
+                    </div>
+                    <div class="form-group">
+                        <textarea placeholder="Your Message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Message</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">SPARKS<span class="highlight">THEORY</span></div>
+                <div class="footer-links">
+                    <a href="#about">About</a>
+                    <a href="#results">Results</a>
+                    <a href="#videos">Videos</a>
+                    <a href="#contact">Contact</a>
+                </div>
+                <div class="footer-social">
+                    <a href="https://www.youtube.com/@SparksTheory" target="_blank" title="YouTube">YT</a>
+                    <a href="https://twitter.com/SparksTheory" target="_blank" title="Twitter">X</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 sparkstheory. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="script.js"></script>
