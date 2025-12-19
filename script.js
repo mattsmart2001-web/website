@@ -33,7 +33,7 @@ scene.add(sunLight);
 let trackPosition = 0;
 const trackWidth = 12;
 const laneWidth = 4;
-let speed = 0.3;
+let speed = 0.15;
 
 // Steering controls
 let steeringAngle = 0;
@@ -186,29 +186,7 @@ for (let i = 0; i < 15; i++) {
     trackSegments.push(segment);
 }
 
-// Speed particles (enhanced motion blur effect)
-const particlesGeometry = new THREE.BufferGeometry();
-const particlesCount = 1500;
-const posArray = new Float32Array(particlesCount * 3);
-const velocities = [];
-
-for (let i = 0; i < particlesCount; i++) {
-    posArray[i * 3] = (Math.random() - 0.5) * 30;
-    posArray[i * 3 + 1] = Math.random() * 3;
-    posArray[i * 3 + 2] = Math.random() * 100 - 50;
-    velocities.push(Math.random() * 0.5 + 0.3);
-}
-
-particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-const particlesMaterial = new THREE.PointsMaterial({
-    size: 0.15,
-    color: 0x00ff88,
-    transparent: true,
-    opacity: 0.6,
-    blending: THREE.AdditiveBlending
-});
-const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-scene.add(particlesMesh);
+// Removed speed particles for cleaner view
 
 // Mouse controls for steering
 let mouseX = 0;
@@ -242,20 +220,6 @@ function animate() {
     cameraLateralOffset += (mouseX * 2 - cameraLateralOffset) * 0.05;
     camera.position.x = cameraLateralOffset;
 
-    // Speed particles
-    const positions = particlesGeometry.attributes.position.array;
-    for (let i = 0; i < particlesCount; i++) {
-        positions[i * 3 + 2] += (speed + velocities[i]) * 2;
-
-        // Reset particles
-        if (positions[i * 3 + 2] > 20) {
-            positions[i * 3] = (Math.random() - 0.5) * 30;
-            positions[i * 3 + 1] = Math.random() * 3;
-            positions[i * 3 + 2] = -50;
-        }
-    }
-    particlesGeometry.attributes.position.needsUpdate = true;
-
     // Camera tilt effect (banking)
     camera.rotation.z = -steeringAngle * 0.2;
 
@@ -287,7 +251,7 @@ window.addEventListener('scroll', () => {
 
     // Increase speed based on scroll
     const scrollPercent = Math.min(window.scrollY / 1000, 1);
-    speed = 0.3 + scrollPercent * 1.2;
+    speed = 0.15 + scrollPercent * 0.6;
 });
 
 // Mobile burger menu
