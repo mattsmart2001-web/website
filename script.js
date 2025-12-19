@@ -319,45 +319,122 @@ const checkDriverBtn = document.getElementById('checkDriver');
 const driverInput = document.getElementById('driverInput');
 const checkerResults = document.getElementById('checkerResults');
 
-checkDriverBtn?.addEventListener('click', () => {
-    const driverId = driverInput.value.trim();
+// Allow Enter key to submit
+driverInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        checkDriverBtn.click();
+    }
+});
 
-    if (!driverId) {
+checkDriverBtn?.addEventListener('click', async () => {
+    const psnId = driverInput.value.trim();
+
+    if (!psnId) {
         checkerResults.innerHTML = '<p style="color: var(--color-accent);">Please enter a PSN ID</p>';
         return;
     }
 
-    checkerResults.innerHTML = '<p>Searching...</p>';
+    checkerResults.innerHTML = '<p>Searching GT7 stats...</p>';
 
-    setTimeout(() => {
+    try {
+        // Note: gtstat.live API requires both user_id and psn parameters
+        // For now, we'll try with just the PSN and let users know if we need more info
+        const response = await fetch(`https://gtstat.live/api/getDriverStatsHistory?psn=${encodeURIComponent(psnId)}`);
+
+        if (!response.ok) {
+            throw new Error(`API returned ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Display the stats from the API response
+        displayDriverStats(psnId, data);
+
+    } catch (error) {
+        console.error('Error fetching driver stats:', error);
         checkerResults.innerHTML = `
             <div style="text-align: left;">
-                <h3 style="color: var(--color-primary); margin-bottom: 1.5rem;">Driver Profile</h3>
-                <div style="display: grid; gap: 1rem;">
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                        <span style="color: var(--color-text-muted);">PSN ID:</span>
-                        <span style="font-weight: 600;">${driverId}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                        <span style="color: var(--color-text-muted);">Driver Rating:</span>
-                        <span style="font-weight: 600; color: var(--color-primary);">A</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                        <span style="color: var(--color-text-muted);">Sportsmanship:</span>
-                        <span style="font-weight: 600; color: var(--color-secondary);">S</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                        <span style="color: var(--color-text-muted);">Total Races:</span>
-                        <span style="font-weight: 600;">142</span>
-                    </div>
-                </div>
-                <p style="margin-top: 1.5rem; color: var(--color-text-muted); font-size: 0.85rem; font-style: italic;">
-                    Note: GT7 stats are manually updated. For real-time stats, check your in-game profile.
+                <p style="color: var(--color-accent); margin-bottom: 1rem;">⚠️ Could not fetch stats for "${psnId}"</p>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem;">
+                    This could mean:
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                        <li>The PSN ID doesn't exist in GT7's database</li>
+                        <li>The player hasn't played GT7 Sport mode</li>
+                        <li>The gtstat.live service is temporarily unavailable</li>
+                    </ul>
+                </p>
+                <p style="margin-top: 1rem; color: var(--color-text-muted); font-size: 0.85rem;">
+                    Error: ${error.message}
                 </p>
             </div>
         `;
-    }, 1000);
+    }
 });
+
+function displayDriverStats(psnId, data) {
+    // Parse the API response and display relevant stats
+    // The exact structure depends on what gtstat.live returns
+    console.log('API Response:', data);
+
+    // Check if we have valid data
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+        checkerResults.innerHTML = `
+            <div style="text-align: left;">
+                <p style="color: var(--color-accent);">No stats found for "${psnId}"</p>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 1rem;">
+                    Make sure the PSN ID is correct and the player has participated in GT7 Sport mode.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    // Get the most recent stats (assuming data is an array sorted by date)
+    const latestStats = Array.isArray(data) ? data[0] : data;
+
+    // Extract common GT7 stat fields (adjust based on actual API response)
+    const driverRating = latestStats.driver_rating || latestStats.dr || 'N/A';
+    const sportsmanship = latestStats.sportsmanship_rating || latestStats.sr || 'N/A';
+    const totalRaces = latestStats.total_races || latestStats.races || 'N/A';
+    const wins = latestStats.wins || 0;
+    const drPoints = latestStats.driver_point || latestStats.dr_points || 'N/A';
+    const srPoints = latestStats.sportsmanship_point || latestStats.sr_points || 'N/A';
+
+    checkerResults.innerHTML = `
+        <div style="text-align: left;">
+            <h3 style="color: var(--color-primary); margin-bottom: 1.5rem;">Driver Profile</h3>
+            <div style="display: grid; gap: 1rem;">
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <span style="color: var(--color-text-muted);">PSN ID:</span>
+                    <span style="font-weight: 600;">${psnId}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <span style="color: var(--color-text-muted);">Driver Rating:</span>
+                    <span style="font-weight: 600; color: var(--color-primary);">${driverRating}${drPoints !== 'N/A' ? ` (${drPoints} pts)` : ''}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <span style="color: var(--color-text-muted);">Sportsmanship:</span>
+                    <span style="font-weight: 600; color: var(--color-secondary);">${sportsmanship}${srPoints !== 'N/A' ? ` (${srPoints} pts)` : ''}</span>
+                </div>
+                ${totalRaces !== 'N/A' ? `
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <span style="color: var(--color-text-muted);">Total Races:</span>
+                    <span style="font-weight: 600;">${totalRaces}</span>
+                </div>
+                ` : ''}
+                ${wins ? `
+                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                    <span style="color: var(--color-text-muted);">Wins:</span>
+                    <span style="font-weight: 600; color: var(--color-primary);">${wins}</span>
+                </div>
+                ` : ''}
+            </div>
+            <p style="margin-top: 1.5rem; color: var(--color-text-muted); font-size: 0.85rem;">
+                Data provided by <a href="https://gtstat.live" target="_blank" style="color: var(--color-primary);">gtstat.live</a>
+            </p>
+        </div>
+    `;
+}
 
 // ===== CONTACT FORM =====
 const contactForm = document.getElementById('contactForm');
