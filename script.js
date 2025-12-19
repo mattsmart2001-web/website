@@ -44,11 +44,21 @@ let cameraLateralOffset = 0;
 function createTrackSegment(zPosition) {
     const segmentGroup = new THREE.Group();
 
-    // Main track surface
-    const trackGeometry = new THREE.PlaneGeometry(trackWidth, 20);
+    // Main track surface with realistic texture
+    const trackGeometry = new THREE.PlaneGeometry(trackWidth, 20, 32, 32);
+
+    // Add subtle height variation for asphalt texture
+    const positions = trackGeometry.attributes.position;
+    for (let i = 0; i < positions.count; i++) {
+        const noise = (Math.random() - 0.5) * 0.01;
+        positions.setY(i, noise);
+    }
+    trackGeometry.computeVertexNormals();
+
     const trackMaterial = new THREE.MeshStandardMaterial({
-        color: 0x2a2a2a,
-        roughness: 0.9
+        color: 0x1a1a1a,
+        roughness: 0.95,
+        metalness: 0.05
     });
     const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
     trackMesh.rotation.x = -Math.PI / 2;
@@ -85,23 +95,54 @@ function createTrackSegment(zPosition) {
         segmentGroup.add(laneLine2);
     }
 
-    // Red/white curbs (left)
-    const curbGeometry = new THREE.BoxGeometry(0.8, 0.1, 20);
-    const curbMaterial1 = new THREE.MeshStandardMaterial({
-        color: 0xff0000,
-        roughness: 0.8
-    });
-    const leftCurb = new THREE.Mesh(curbGeometry, curbMaterial1);
-    leftCurb.position.set(-trackWidth / 2 - 0.4, 0, zPosition);
-    segmentGroup.add(leftCurb);
+    // Realistic red/white alternating curbs (left side)
+    const curbStripeLength = 1.0;
+    const numStripes = Math.ceil(20 / curbStripeLength);
 
-    // Red/white curbs (right)
-    const rightCurb = new THREE.Mesh(curbGeometry, curbMaterial1);
-    rightCurb.position.set(trackWidth / 2 + 0.4, 0, zPosition);
-    segmentGroup.add(rightCurb);
+    for (let i = 0; i < numStripes; i++) {
+        const isRed = i % 2 === 0;
+        const curbGeometry = new THREE.BoxGeometry(0.6, 0.15, curbStripeLength);
+        const curbMaterial = new THREE.MeshStandardMaterial({
+            color: isRed ? 0xff0000 : 0xffffff,
+            roughness: 0.7,
+            metalness: 0.1
+        });
+        const curbStripe = new THREE.Mesh(curbGeometry, curbMaterial);
+        curbStripe.position.set(
+            -trackWidth / 2 - 0.3,
+            0.05,
+            zPosition - 10 + i * curbStripeLength + curbStripeLength / 2
+        );
+        segmentGroup.add(curbStripe);
+    }
 
-    // Grass (left)
-    const grassGeometry = new THREE.PlaneGeometry(20, 20);
+    // Realistic red/white alternating curbs (right side)
+    for (let i = 0; i < numStripes; i++) {
+        const isRed = i % 2 === 0;
+        const curbGeometry = new THREE.BoxGeometry(0.6, 0.15, curbStripeLength);
+        const curbMaterial = new THREE.MeshStandardMaterial({
+            color: isRed ? 0xff0000 : 0xffffff,
+            roughness: 0.7,
+            metalness: 0.1
+        });
+        const curbStripe = new THREE.Mesh(curbGeometry, curbMaterial);
+        curbStripe.position.set(
+            trackWidth / 2 + 0.3,
+            0.05,
+            zPosition - 10 + i * curbStripeLength + curbStripeLength / 2
+        );
+        segmentGroup.add(curbStripe);
+    }
+
+    // Grass (left) with texture variation
+    const grassGeometry = new THREE.PlaneGeometry(20, 20, 16, 16);
+    const grassPositions = grassGeometry.attributes.position;
+    for (let i = 0; i < grassPositions.count; i++) {
+        const noise = (Math.random() - 0.5) * 0.05;
+        grassPositions.setY(i, noise);
+    }
+    grassGeometry.computeVertexNormals();
+
     const grassMaterial = new THREE.MeshStandardMaterial({
         color: 0x1a4d1a,
         roughness: 1
@@ -112,13 +153,13 @@ function createTrackSegment(zPosition) {
     segmentGroup.add(leftGrass);
 
     // Grass (right)
-    const rightGrass = new THREE.Mesh(grassGeometry, grassMaterial);
+    const rightGrass = new THREE.Mesh(grassGeometry.clone(), grassMaterial);
     rightGrass.rotation.x = -Math.PI / 2;
     rightGrass.position.set(trackWidth / 2 + 10, -0.05, zPosition);
     segmentGroup.add(rightGrass);
 
-    // Barriers (left)
-    const barrierGeometry = new THREE.BoxGeometry(0.3, 1, 20);
+    // Barriers (left) - lower and further back
+    const barrierGeometry = new THREE.BoxGeometry(0.3, 0.8, 20);
     const barrierMaterial = new THREE.MeshStandardMaterial({
         color: 0x00ff88,
         emissive: 0x00ff88,
@@ -126,12 +167,12 @@ function createTrackSegment(zPosition) {
         roughness: 0.5
     });
     const leftBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
-    leftBarrier.position.set(-trackWidth / 2 - 8, 0.5, zPosition);
+    leftBarrier.position.set(-trackWidth / 2 - 8, 0.4, zPosition);
     segmentGroup.add(leftBarrier);
 
     // Barriers (right)
     const rightBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
-    rightBarrier.position.set(trackWidth / 2 + 8, 0.5, zPosition);
+    rightBarrier.position.set(trackWidth / 2 + 8, 0.4, zPosition);
     segmentGroup.add(rightBarrier);
 
     return segmentGroup;
@@ -169,25 +210,6 @@ const particlesMaterial = new THREE.PointsMaterial({
 const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
 scene.add(particlesMesh);
 
-// Add trackside lights
-const lightsGroup = new THREE.Group();
-for (let i = 0; i < 20; i++) {
-    const lightGeometry = new THREE.CylinderGeometry(0.2, 0.3, 2, 8);
-    const lightMaterial = new THREE.MeshStandardMaterial({
-        color: 0x0ea5e9,
-        emissive: 0x0ea5e9,
-        emissiveIntensity: 0.5
-    });
-    const lightPost = new THREE.Mesh(lightGeometry, lightMaterial);
-    lightPost.position.set(-trackWidth / 2 - 6, 1, i * 15 - 50);
-    lightsGroup.add(lightPost);
-
-    const rightLight = lightPost.clone();
-    rightLight.position.x = trackWidth / 2 + 6;
-    lightsGroup.add(rightLight);
-}
-scene.add(lightsGroup);
-
 // Mouse controls for steering
 let mouseX = 0;
 document.addEventListener('mousemove', (event) => {
@@ -211,12 +233,6 @@ function animate() {
             segment.position.z -= trackSegments.length * 20;
         }
     });
-
-    // Move lights
-    lightsGroup.position.z += speed;
-    if (lightsGroup.position.z > 50) {
-        lightsGroup.position.z -= 300;
-    }
 
     // Smooth steering
     steeringAngle += (targetSteeringAngle - steeringAngle) * 0.1;
