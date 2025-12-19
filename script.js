@@ -1,16 +1,15 @@
-// ===== THREE.JS RACING BACKGROUND =====
+// ===== THREE.JS RACING HELMET BACKGROUND =====
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x0a0e12, 0.015);
 
 // Camera setup
 const camera = new THREE.PerspectiveCamera(
-    75,
+    45,
     window.innerWidth / window.innerHeight,
     0.1,
     1000
 );
-camera.position.z = 30;
-camera.position.y = 5;
+camera.position.z = 8;
+camera.position.y = 0;
 
 // Renderer setup
 const renderer = new THREE.WebGLRenderer({
@@ -21,89 +20,134 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+// Lighting for the helmet
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
 scene.add(ambientLight);
 
-const pointLight1 = new THREE.PointLight(0x00ff88, 2, 100);
-pointLight1.position.set(10, 10, 10);
-scene.add(pointLight1);
+// Key light (main light from top-right)
+const keyLight = new THREE.DirectionalLight(0x00ff88, 1.2);
+keyLight.position.set(5, 5, 5);
+scene.add(keyLight);
 
-const pointLight2 = new THREE.PointLight(0x0ea5e9, 2, 100);
-pointLight2.position.set(-10, -10, 10);
-scene.add(pointLight2);
+// Fill light (softer light from left)
+const fillLight = new THREE.DirectionalLight(0x0ea5e9, 0.6);
+fillLight.position.set(-5, 0, 3);
+scene.add(fillLight);
 
-// Create racing grid floor
-const gridHelper = new THREE.GridHelper(200, 50, 0x00ff88, 0x0ea5e9);
-gridHelper.position.y = -5;
-gridHelper.material.opacity = 0.2;
-gridHelper.material.transparent = true;
-scene.add(gridHelper);
+// Rim light (backlight for edge glow)
+const rimLight = new THREE.PointLight(0x00ff88, 1.5, 100);
+rimLight.position.set(0, 3, -5);
+scene.add(rimLight);
 
-// Create racing track lines
-const trackLines = [];
-for (let i = 0; i < 5; i++) {
-    const geometry = new THREE.BufferGeometry();
-    const material = new THREE.LineBasicMaterial({
-        color: i % 2 === 0 ? 0x00ff88 : 0x0ea5e9,
-        transparent: true,
-        opacity: 0.4
+// Accent light
+const accentLight = new THREE.PointLight(0x0ea5e9, 0.8, 100);
+accentLight.position.set(-3, -2, 2);
+scene.add(accentLight);
+
+// Create Racing Helmet
+const helmetGroup = new THREE.Group();
+
+// Main helmet dome
+const helmetGeometry = new THREE.SphereGeometry(1.2, 64, 64, 0, Math.PI * 2, 0, Math.PI * 0.7);
+const helmetMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1a1a1a,
+    metalness: 0.9,
+    roughness: 0.1,
+    envMapIntensity: 1
+});
+const helmetMesh = new THREE.Mesh(helmetGeometry, helmetMaterial);
+helmetGroup.add(helmetMesh);
+
+// Visor (glossy transparent)
+const visorGeometry = new THREE.SphereGeometry(1.21, 64, 64, 0, Math.PI * 2, Math.PI * 0.25, Math.PI * 0.3);
+const visorMaterial = new THREE.MeshStandardMaterial({
+    color: 0x00ff88,
+    metalness: 1,
+    roughness: 0.05,
+    transparent: true,
+    opacity: 0.6,
+    side: THREE.DoubleSide
+});
+const visorMesh = new THREE.Mesh(visorGeometry, visorMaterial);
+helmetGroup.add(visorMesh);
+
+// Racing stripe 1
+const stripeGeometry1 = new THREE.TorusGeometry(1.22, 0.05, 16, 100, Math.PI * 0.6);
+const stripeMaterial1 = new THREE.MeshStandardMaterial({
+    color: 0x00ff88,
+    metalness: 0.8,
+    roughness: 0.2,
+    emissive: 0x00ff88,
+    emissiveIntensity: 0.3
+});
+const stripe1 = new THREE.Mesh(stripeGeometry1, stripeMaterial1);
+stripe1.rotation.x = Math.PI / 2;
+stripe1.rotation.y = -Math.PI / 6;
+helmetGroup.add(stripe1);
+
+// Racing stripe 2
+const stripe2 = stripe1.clone();
+stripe2.rotation.y = Math.PI / 6;
+const stripeMaterial2 = stripeMaterial1.clone();
+stripeMaterial2.color.setHex(0x0ea5e9);
+stripeMaterial2.emissive.setHex(0x0ea5e9);
+stripe2.material = stripeMaterial2;
+helmetGroup.add(stripe2);
+
+// Chin guard/bottom rim
+const chinGeometry = new THREE.TorusGeometry(1.0, 0.15, 16, 32, Math.PI * 2);
+const chinMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1a1a1a,
+    metalness: 0.9,
+    roughness: 0.2
+});
+const chinGuard = new THREE.Mesh(chinGeometry, chinMaterial);
+chinGuard.rotation.x = Math.PI / 2;
+chinGuard.position.y = -0.8;
+helmetGroup.add(chinGuard);
+
+// Air vents (decorative details)
+for (let i = 0; i < 3; i++) {
+    const ventGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.3, 16);
+    const ventMaterial = new THREE.MeshStandardMaterial({
+        color: 0x00ff88,
+        metalness: 0.7,
+        roughness: 0.3,
+        emissive: 0x00ff88,
+        emissiveIntensity: 0.2
     });
-
-    const points = [];
-    for (let j = 0; j < 100; j++) {
-        const x = (i - 2) * 5;
-        const y = 0;
-        const z = j * 2 - 100;
-        points.push(new THREE.Vector3(x, y, z));
-    }
-
-    geometry.setFromPoints(points);
-    const line = new THREE.Line(geometry, material);
-    scene.add(line);
-    trackLines.push(line);
+    const vent = new THREE.Mesh(ventGeometry, ventMaterial);
+    vent.position.set(-0.6 + i * 0.3, 0.9, 0.8);
+    vent.rotation.x = Math.PI / 3;
+    helmetGroup.add(vent);
 }
 
-// Create particle speed lines
+// Position the helmet group
+helmetGroup.rotation.y = 0.3;
+helmetGroup.rotation.x = -0.1;
+scene.add(helmetGroup);
+
+// Subtle floating particles
 const particlesGeometry = new THREE.BufferGeometry();
-const particlesCount = 2000;
+const particlesCount = 300;
 const posArray = new Float32Array(particlesCount * 3);
-const velocities = new Float32Array(particlesCount);
 
 for (let i = 0; i < particlesCount; i++) {
-    posArray[i * 3] = (Math.random() - 0.5) * 100;
-    posArray[i * 3 + 1] = (Math.random() - 0.5) * 50;
-    posArray[i * 3 + 2] = Math.random() * 100 - 50;
-    velocities[i] = Math.random() * 0.5 + 0.2;
+    posArray[i * 3] = (Math.random() - 0.5) * 20;
+    posArray[i * 3 + 1] = (Math.random() - 0.5) * 20;
+    posArray[i * 3 + 2] = (Math.random() - 0.5) * 20;
 }
 
 particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 const particlesMaterial = new THREE.PointsMaterial({
-    size: 0.1,
+    size: 0.03,
     color: 0x00ff88,
     transparent: true,
-    opacity: 0.6,
+    opacity: 0.3,
     blending: THREE.AdditiveBlending
 });
 const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
 scene.add(particlesMesh);
-
-// Create glowing rings (like speed boosts)
-const rings = [];
-for (let i = 0; i < 3; i++) {
-    const ringGeometry = new THREE.TorusGeometry(3, 0.1, 16, 100);
-    const ringMaterial = new THREE.MeshBasicMaterial({
-        color: 0x00ff88,
-        transparent: true,
-        opacity: 0.3
-    });
-    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-    ring.rotation.x = Math.PI / 2;
-    ring.position.z = -20 - i * 20;
-    ring.position.y = 0;
-    scene.add(ring);
-    rings.push(ring);
-}
 
 // Mouse interaction
 let mouseX = 0;
@@ -114,61 +158,29 @@ let targetRotationX = 0;
 document.addEventListener('mousemove', (event) => {
     mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-    targetRotationY = mouseX * 0.3;
-    targetRotationX = mouseY * 0.2;
+    targetRotationY = mouseX * 0.5;
+    targetRotationX = mouseY * 0.3;
 });
 
-// Animation loop with racing effects
-let animationSpeed = 0.5;
-
+// Animation loop
 function animate() {
     requestAnimationFrame(animate);
 
-    // Smooth camera rotation based on mouse
-    camera.rotation.y += (targetRotationY - camera.rotation.y) * 0.05;
-    camera.rotation.x += (targetRotationX - camera.rotation.x) * 0.05;
+    // Smooth helmet rotation based on mouse
+    helmetGroup.rotation.y += (targetRotationY - helmetGroup.rotation.y) * 0.05;
+    helmetGroup.rotation.x += (targetRotationX - helmetGroup.rotation.x) * 0.05;
 
-    // Animate particles moving forward (speed effect)
-    const positions = particlesGeometry.attributes.position.array;
-    for (let i = 0; i < particlesCount; i++) {
-        positions[i * 3 + 2] += velocities[i] * animationSpeed;
+    // Subtle auto-rotation when mouse is idle
+    helmetGroup.rotation.y += 0.001;
 
-        // Reset particle position when it goes too far
-        if (positions[i * 3 + 2] > 50) {
-            positions[i * 3 + 2] = -50;
-        }
-    }
-    particlesGeometry.attributes.position.needsUpdate = true;
+    // Slowly rotate particles
+    particlesMesh.rotation.y += 0.0005;
+    particlesMesh.rotation.x += 0.0003;
 
-    // Animate track lines moving
-    trackLines.forEach(line => {
-        line.position.z += animationSpeed;
-        if (line.position.z > 50) {
-            line.position.z = -50;
-        }
-    });
-
-    // Animate rings
-    rings.forEach(ring => {
-        ring.position.z += animationSpeed;
-        ring.rotation.z += 0.01;
-
-        if (ring.position.z > 30) {
-            ring.position.z = -60;
-        }
-
-        // Pulse effect
-        const scale = 1 + Math.sin(Date.now() * 0.002 + ring.position.z) * 0.2;
-        ring.scale.set(scale, scale, scale);
-    });
-
-    // Animate lights
+    // Animate accent lights subtly
     const time = Date.now() * 0.001;
-    pointLight1.position.x = Math.sin(time * 0.5) * 15;
-    pointLight1.position.z = Math.cos(time * 0.5) * 15;
-
-    pointLight2.position.x = Math.sin(time * 0.3 + Math.PI) * 15;
-    pointLight2.position.z = Math.cos(time * 0.3 + Math.PI) * 15;
+    rimLight.intensity = 1.5 + Math.sin(time * 0.5) * 0.3;
+    accentLight.intensity = 0.8 + Math.sin(time * 0.7) * 0.2;
 
     renderer.render(scene, camera);
 }
@@ -195,10 +207,6 @@ window.addEventListener('scroll', () => {
     } else {
         navbar.classList.remove('scrolled');
     }
-
-    // Increase animation speed based on scroll
-    const scrollPercent = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
-    animationSpeed = 0.5 + scrollPercent * 2;
 });
 
 // Mobile burger menu
