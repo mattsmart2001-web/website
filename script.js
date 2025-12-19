@@ -1,15 +1,16 @@
-// ===== THREE.JS RACING HELMET BACKGROUND =====
+// ===== THREE.JS RACING TRACK SIMULATION =====
 const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0a0e12, 50, 200);
 
-// Camera setup
+// Camera setup - Driver's POV
 const camera = new THREE.PerspectiveCamera(
-    45,
+    90,
     window.innerWidth / window.innerHeight,
     0.1,
-    1000
+    500
 );
-camera.position.z = 8;
-camera.position.y = 0;
+camera.position.set(0, 1.2, 0); // Driver's eye level
+camera.rotation.order = 'YXZ';
 
 // Renderer setup
 const renderer = new THREE.WebGLRenderer({
@@ -20,167 +21,227 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-// Lighting for the helmet
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+// Lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambientLight);
 
-// Key light (main light from top-right)
-const keyLight = new THREE.DirectionalLight(0x00ff88, 1.2);
-keyLight.position.set(5, 5, 5);
-scene.add(keyLight);
+const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+sunLight.position.set(50, 100, 50);
+scene.add(sunLight);
 
-// Fill light (softer light from left)
-const fillLight = new THREE.DirectionalLight(0x0ea5e9, 0.6);
-fillLight.position.set(-5, 0, 3);
-scene.add(fillLight);
+// Track variables
+let trackPosition = 0;
+const trackWidth = 12;
+const laneWidth = 4;
+let speed = 0.3;
 
-// Rim light (backlight for edge glow)
-const rimLight = new THREE.PointLight(0x00ff88, 1.5, 100);
-rimLight.position.set(0, 3, -5);
-scene.add(rimLight);
+// Steering controls
+let steeringAngle = 0;
+let targetSteeringAngle = 0;
+let cameraLateralOffset = 0;
 
-// Accent light
-const accentLight = new THREE.PointLight(0x0ea5e9, 0.8, 100);
-accentLight.position.set(-3, -2, 2);
-scene.add(accentLight);
+// Create track surface
+function createTrackSegment(zPosition) {
+    const segmentGroup = new THREE.Group();
 
-// Create Racing Helmet
-const helmetGroup = new THREE.Group();
-
-// Main helmet dome
-const helmetGeometry = new THREE.SphereGeometry(1.2, 64, 64, 0, Math.PI * 2, 0, Math.PI * 0.7);
-const helmetMaterial = new THREE.MeshStandardMaterial({
-    color: 0x1a1a1a,
-    metalness: 0.9,
-    roughness: 0.1,
-    envMapIntensity: 1
-});
-const helmetMesh = new THREE.Mesh(helmetGeometry, helmetMaterial);
-helmetGroup.add(helmetMesh);
-
-// Visor (glossy transparent)
-const visorGeometry = new THREE.SphereGeometry(1.21, 64, 64, 0, Math.PI * 2, Math.PI * 0.25, Math.PI * 0.3);
-const visorMaterial = new THREE.MeshStandardMaterial({
-    color: 0x00ff88,
-    metalness: 1,
-    roughness: 0.05,
-    transparent: true,
-    opacity: 0.6,
-    side: THREE.DoubleSide
-});
-const visorMesh = new THREE.Mesh(visorGeometry, visorMaterial);
-helmetGroup.add(visorMesh);
-
-// Racing stripe 1
-const stripeGeometry1 = new THREE.TorusGeometry(1.22, 0.05, 16, 100, Math.PI * 0.6);
-const stripeMaterial1 = new THREE.MeshStandardMaterial({
-    color: 0x00ff88,
-    metalness: 0.8,
-    roughness: 0.2,
-    emissive: 0x00ff88,
-    emissiveIntensity: 0.3
-});
-const stripe1 = new THREE.Mesh(stripeGeometry1, stripeMaterial1);
-stripe1.rotation.x = Math.PI / 2;
-stripe1.rotation.y = -Math.PI / 6;
-helmetGroup.add(stripe1);
-
-// Racing stripe 2
-const stripe2 = stripe1.clone();
-stripe2.rotation.y = Math.PI / 6;
-const stripeMaterial2 = stripeMaterial1.clone();
-stripeMaterial2.color.setHex(0x0ea5e9);
-stripeMaterial2.emissive.setHex(0x0ea5e9);
-stripe2.material = stripeMaterial2;
-helmetGroup.add(stripe2);
-
-// Chin guard/bottom rim
-const chinGeometry = new THREE.TorusGeometry(1.0, 0.15, 16, 32, Math.PI * 2);
-const chinMaterial = new THREE.MeshStandardMaterial({
-    color: 0x1a1a1a,
-    metalness: 0.9,
-    roughness: 0.2
-});
-const chinGuard = new THREE.Mesh(chinGeometry, chinMaterial);
-chinGuard.rotation.x = Math.PI / 2;
-chinGuard.position.y = -0.8;
-helmetGroup.add(chinGuard);
-
-// Air vents (decorative details)
-for (let i = 0; i < 3; i++) {
-    const ventGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.3, 16);
-    const ventMaterial = new THREE.MeshStandardMaterial({
-        color: 0x00ff88,
-        metalness: 0.7,
-        roughness: 0.3,
-        emissive: 0x00ff88,
-        emissiveIntensity: 0.2
+    // Main track surface
+    const trackGeometry = new THREE.PlaneGeometry(trackWidth, 20);
+    const trackMaterial = new THREE.MeshStandardMaterial({
+        color: 0x2a2a2a,
+        roughness: 0.9
     });
-    const vent = new THREE.Mesh(ventGeometry, ventMaterial);
-    vent.position.set(-0.6 + i * 0.3, 0.9, 0.8);
-    vent.rotation.x = Math.PI / 3;
-    helmetGroup.add(vent);
+    const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
+    trackMesh.rotation.x = -Math.PI / 2;
+    trackMesh.position.z = zPosition;
+    segmentGroup.add(trackMesh);
+
+    // Center line
+    const centerLineGeometry = new THREE.PlaneGeometry(0.2, 20);
+    const centerLineMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+        transparent: true,
+        opacity: 0.8
+    });
+    const centerLine = new THREE.Mesh(centerLineGeometry, centerLineMaterial);
+    centerLine.rotation.x = -Math.PI / 2;
+    centerLine.position.set(0, 0.01, zPosition);
+    segmentGroup.add(centerLine);
+
+    // Lane lines (dashed)
+    for (let i = 0; i < 4; i++) {
+        const laneLineGeometry = new THREE.PlaneGeometry(0.15, 2);
+        const laneLineMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.7
+        });
+        const laneLine = new THREE.Mesh(laneLineGeometry, laneLineMaterial);
+        laneLine.rotation.x = -Math.PI / 2;
+        laneLine.position.set(-trackWidth / 4, 0.01, zPosition + i * 5 - 7.5);
+        segmentGroup.add(laneLine);
+
+        const laneLine2 = laneLine.clone();
+        laneLine2.position.x = trackWidth / 4;
+        segmentGroup.add(laneLine2);
+    }
+
+    // Red/white curbs (left)
+    const curbGeometry = new THREE.BoxGeometry(0.8, 0.1, 20);
+    const curbMaterial1 = new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        roughness: 0.8
+    });
+    const leftCurb = new THREE.Mesh(curbGeometry, curbMaterial1);
+    leftCurb.position.set(-trackWidth / 2 - 0.4, 0, zPosition);
+    segmentGroup.add(leftCurb);
+
+    // Red/white curbs (right)
+    const rightCurb = new THREE.Mesh(curbGeometry, curbMaterial1);
+    rightCurb.position.set(trackWidth / 2 + 0.4, 0, zPosition);
+    segmentGroup.add(rightCurb);
+
+    // Grass (left)
+    const grassGeometry = new THREE.PlaneGeometry(20, 20);
+    const grassMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1a4d1a,
+        roughness: 1
+    });
+    const leftGrass = new THREE.Mesh(grassGeometry, grassMaterial);
+    leftGrass.rotation.x = -Math.PI / 2;
+    leftGrass.position.set(-trackWidth / 2 - 10, -0.05, zPosition);
+    segmentGroup.add(leftGrass);
+
+    // Grass (right)
+    const rightGrass = new THREE.Mesh(grassGeometry, grassMaterial);
+    rightGrass.rotation.x = -Math.PI / 2;
+    rightGrass.position.set(trackWidth / 2 + 10, -0.05, zPosition);
+    segmentGroup.add(rightGrass);
+
+    // Barriers (left)
+    const barrierGeometry = new THREE.BoxGeometry(0.3, 1, 20);
+    const barrierMaterial = new THREE.MeshStandardMaterial({
+        color: 0x00ff88,
+        emissive: 0x00ff88,
+        emissiveIntensity: 0.2,
+        roughness: 0.5
+    });
+    const leftBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+    leftBarrier.position.set(-trackWidth / 2 - 8, 0.5, zPosition);
+    segmentGroup.add(leftBarrier);
+
+    // Barriers (right)
+    const rightBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+    rightBarrier.position.set(trackWidth / 2 + 8, 0.5, zPosition);
+    segmentGroup.add(rightBarrier);
+
+    return segmentGroup;
 }
 
-// Position the helmet group
-helmetGroup.rotation.y = 0.3;
-helmetGroup.rotation.x = -0.1;
-scene.add(helmetGroup);
+// Create initial track segments
+const trackSegments = [];
+for (let i = 0; i < 15; i++) {
+    const segment = createTrackSegment(i * 20 - 40);
+    scene.add(segment);
+    trackSegments.push(segment);
+}
 
-// Subtle floating particles
+// Speed particles (enhanced motion blur effect)
 const particlesGeometry = new THREE.BufferGeometry();
-const particlesCount = 300;
+const particlesCount = 1500;
 const posArray = new Float32Array(particlesCount * 3);
+const velocities = [];
 
 for (let i = 0; i < particlesCount; i++) {
-    posArray[i * 3] = (Math.random() - 0.5) * 20;
-    posArray[i * 3 + 1] = (Math.random() - 0.5) * 20;
-    posArray[i * 3 + 2] = (Math.random() - 0.5) * 20;
+    posArray[i * 3] = (Math.random() - 0.5) * 30;
+    posArray[i * 3 + 1] = Math.random() * 3;
+    posArray[i * 3 + 2] = Math.random() * 100 - 50;
+    velocities.push(Math.random() * 0.5 + 0.3);
 }
 
 particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 const particlesMaterial = new THREE.PointsMaterial({
-    size: 0.03,
+    size: 0.15,
     color: 0x00ff88,
     transparent: true,
-    opacity: 0.3,
+    opacity: 0.6,
     blending: THREE.AdditiveBlending
 });
 const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
 scene.add(particlesMesh);
 
-// Mouse interaction
-let mouseX = 0;
-let mouseY = 0;
-let targetRotationY = 0;
-let targetRotationX = 0;
+// Add trackside lights
+const lightsGroup = new THREE.Group();
+for (let i = 0; i < 20; i++) {
+    const lightGeometry = new THREE.CylinderGeometry(0.2, 0.3, 2, 8);
+    const lightMaterial = new THREE.MeshStandardMaterial({
+        color: 0x0ea5e9,
+        emissive: 0x0ea5e9,
+        emissiveIntensity: 0.5
+    });
+    const lightPost = new THREE.Mesh(lightGeometry, lightMaterial);
+    lightPost.position.set(-trackWidth / 2 - 6, 1, i * 15 - 50);
+    lightsGroup.add(lightPost);
 
+    const rightLight = lightPost.clone();
+    rightLight.position.x = trackWidth / 2 + 6;
+    lightsGroup.add(rightLight);
+}
+scene.add(lightsGroup);
+
+// Mouse controls for steering
+let mouseX = 0;
 document.addEventListener('mousemove', (event) => {
     mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-    mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-    targetRotationY = mouseX * 0.5;
-    targetRotationX = mouseY * 0.3;
+    targetSteeringAngle = mouseX * 0.4; // Steering sensitivity
 });
 
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
 
-    // Smooth helmet rotation based on mouse
-    helmetGroup.rotation.y += (targetRotationY - helmetGroup.rotation.y) * 0.05;
-    helmetGroup.rotation.x += (targetRotationX - helmetGroup.rotation.x) * 0.05;
+    // Update track position (forward motion)
+    trackPosition += speed;
 
-    // Subtle auto-rotation when mouse is idle
-    helmetGroup.rotation.y += 0.001;
+    // Move track segments
+    trackSegments.forEach(segment => {
+        segment.position.z += speed;
 
-    // Slowly rotate particles
-    particlesMesh.rotation.y += 0.0005;
-    particlesMesh.rotation.x += 0.0003;
+        // Reset segment position when it goes behind camera
+        if (segment.position.z > 20) {
+            segment.position.z -= trackSegments.length * 20;
+        }
+    });
 
-    // Animate accent lights subtly
-    const time = Date.now() * 0.001;
-    rimLight.intensity = 1.5 + Math.sin(time * 0.5) * 0.3;
-    accentLight.intensity = 0.8 + Math.sin(time * 0.7) * 0.2;
+    // Move lights
+    lightsGroup.position.z += speed;
+    if (lightsGroup.position.z > 50) {
+        lightsGroup.position.z -= 300;
+    }
+
+    // Smooth steering
+    steeringAngle += (targetSteeringAngle - steeringAngle) * 0.1;
+    camera.rotation.y = steeringAngle;
+
+    // Lateral camera movement (drift effect)
+    cameraLateralOffset += (mouseX * 2 - cameraLateralOffset) * 0.05;
+    camera.position.x = cameraLateralOffset;
+
+    // Speed particles
+    const positions = particlesGeometry.attributes.position.array;
+    for (let i = 0; i < particlesCount; i++) {
+        positions[i * 3 + 2] += (speed + velocities[i]) * 2;
+
+        // Reset particles
+        if (positions[i * 3 + 2] > 20) {
+            positions[i * 3] = (Math.random() - 0.5) * 30;
+            positions[i * 3 + 1] = Math.random() * 3;
+            positions[i * 3 + 2] = -50;
+        }
+    }
+    particlesGeometry.attributes.position.needsUpdate = true;
+
+    // Camera tilt effect (banking)
+    camera.rotation.z = -steeringAngle * 0.2;
 
     renderer.render(scene, camera);
 }
@@ -207,6 +268,10 @@ window.addEventListener('scroll', () => {
     } else {
         navbar.classList.remove('scrolled');
     }
+
+    // Increase speed based on scroll
+    const scrollPercent = Math.min(window.scrollY / 1000, 1);
+    speed = 0.3 + scrollPercent * 1.2;
 });
 
 // Mobile burger menu
@@ -224,27 +289,18 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                 behavior: 'smooth',
                 block: 'start'
             });
-            // Close mobile menu if open
             navLinks.classList.remove('active');
         }
     });
 });
 
 // ===== YOUTUBE VIDEO INTEGRATION =====
-const YOUTUBE_CHANNEL_ID = 'UCyour_channel_id_here'; // You'll need to get this
-const YOUTUBE_API_KEY = 'your_api_key_here'; // You'll need to get this from Google Cloud Console
-
-// For now, we'll show placeholder videos
-// To get real videos, you'll need to:
-// 1. Go to https://console.cloud.google.com/
-// 2. Create a project and enable YouTube Data API v3
-// 3. Get your API key
-// 4. Get your channel ID from your YouTube channel URL
+const YOUTUBE_CHANNEL_ID = 'UCyour_channel_id_here';
+const YOUTUBE_API_KEY = 'your_api_key_here';
 
 function loadYouTubeVideos() {
     const videosGrid = document.getElementById('videosGrid');
 
-    // Placeholder videos - replace with actual API call
     const placeholderVideos = [
         {
             title: 'Epic GT7 Race at Spa | Close Finish!',
@@ -274,40 +330,8 @@ function loadYouTubeVideos() {
             </div>
         </a>
     `).join('');
-
-    /*
-    // Uncomment and configure this when you have API credentials:
-
-    fetch(`https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${YOUTUBE_CHANNEL_ID}&part=snippet,id&order=date&maxResults=6`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.items) {
-                videosGrid.innerHTML = data.items.map(item => {
-                    if (item.id.videoId) {
-                        return `
-                            <a href="https://youtube.com/watch?v=${item.id.videoId}" target="_blank" class="video-card">
-                                <div class="video-thumbnail">
-                                    <img src="${item.snippet.thumbnails.medium.url}" alt="${item.snippet.title}">
-                                </div>
-                                <div class="video-info">
-                                    <h3 class="video-title">${item.snippet.title}</h3>
-                                    <p class="video-meta">${new Date(item.snippet.publishedAt).toLocaleDateString()}</p>
-                                </div>
-                            </a>
-                        `;
-                    }
-                    return '';
-                }).join('');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading videos:', error);
-            videosGrid.innerHTML = '<p class="video-placeholder">Unable to load videos. Visit <a href="https://youtube.com/@SparksTheory" target="_blank">my YouTube channel</a> directly.</p>';
-        });
-    */
 }
 
-// Load videos when page loads
 document.addEventListener('DOMContentLoaded', loadYouTubeVideos);
 
 // ===== GT7 DRIVER RATING CHECKER =====
@@ -325,8 +349,6 @@ checkDriverBtn?.addEventListener('click', () => {
 
     checkerResults.innerHTML = '<p>Searching...</p>';
 
-    // Note: Gran Turismo 7 doesn't have an official public API
-    // This is a placeholder for future integration or manual stats
     setTimeout(() => {
         checkerResults.innerHTML = `
             <div style="text-align: left;">
@@ -355,19 +377,6 @@ checkDriverBtn?.addEventListener('click', () => {
             </div>
         `;
     }, 1000);
-
-    /*
-    // Future: If GT7 API becomes available or using a third-party tracker:
-
-    fetch(`https://api.example.com/gt7/driver/${driverId}`)
-        .then(response => response.json())
-        .then(data => {
-            checkerResults.innerHTML = // ... render real data
-        })
-        .catch(error => {
-            checkerResults.innerHTML = '<p style="color: var(--color-accent);">Driver not found or API unavailable</p>';
-        });
-    */
 });
 
 // ===== CONTACT FORM =====
@@ -383,8 +392,6 @@ contactForm?.addEventListener('submit', (e) => {
     submitBtn.textContent = 'Sending...';
     submitBtn.disabled = true;
 
-    // Simulate form submission
-    // Replace this with your actual form handling (e.g., FormSpree, Netlify Forms, or your backend)
     setTimeout(() => {
         submitBtn.textContent = 'Message Sent!';
         submitBtn.style.background = 'var(--color-secondary)';
@@ -396,39 +403,9 @@ contactForm?.addEventListener('submit', (e) => {
             submitBtn.style.background = '';
         }, 3000);
     }, 1500);
-
-    /*
-    // Example with FormSpree or similar service:
-
-    fetch('https://formspree.io/f/your_form_id', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        if (response.ok) {
-            submitBtn.textContent = 'Message Sent!';
-            contactForm.reset();
-        } else {
-            submitBtn.textContent = 'Error - Try Again';
-        }
-    })
-    .catch(error => {
-        submitBtn.textContent = 'Error - Try Again';
-    })
-    .finally(() => {
-        setTimeout(() => {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }, 3000);
-    });
-    */
 });
 
 // ===== SCROLL ANIMATIONS =====
-// Add fade-in animations for sections as they come into view
 const observerOptions = {
     threshold: 0.1,
     rootMargin: '0px 0px -100px 0px'
@@ -443,7 +420,6 @@ const observer = new IntersectionObserver((entries) => {
     });
 }, observerOptions);
 
-// Observe all sections
 document.querySelectorAll('.section').forEach(section => {
     section.style.opacity = '0';
     section.style.transform = 'translateY(30px)';
@@ -454,4 +430,4 @@ document.querySelectorAll('.section').forEach(section => {
 // ===== CONSOLE WELCOME MESSAGE =====
 console.log('%cSPARKSTHEORY', 'color: #00ff88; font-size: 48px; font-weight: bold; font-family: Rajdhani, sans-serif;');
 console.log('%c🏎️ Welcome to the sparkstheory racing website!', 'color: #0ea5e9; font-size: 16px;');
-console.log('%cBuilt with Three.js, love, and lots of virtual racing', 'color: #94a3b8; font-size: 12px;');
+console.log('%cMove your mouse to steer - scroll to accelerate!', 'color: #94a3b8; font-size: 12px;');
