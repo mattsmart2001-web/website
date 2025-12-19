@@ -337,9 +337,10 @@ checkDriverBtn?.addEventListener('click', async () => {
     checkerResults.innerHTML = '<p>Searching GT7 stats...</p>';
 
     try {
-        // Note: gtstat.live API requires both user_id and psn parameters
-        // For now, we'll try with just the PSN and let users know if we need more info
-        const response = await fetch(`https://gtstat.live/api/getDriverStatsHistory?psn=${encodeURIComponent(psnId)}`);
+        // Use CORS proxy to bypass cross-origin restrictions
+        const corsProxy = 'https://corsproxy.io/?';
+        const apiUrl = `https://gtstat.live/api/getDriverStatsHistory?psn=${encodeURIComponent(psnId)}`;
+        const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
 
         if (!response.ok) {
             throw new Error(`API returned ${response.status}`);
@@ -352,9 +353,22 @@ checkDriverBtn?.addEventListener('click', async () => {
 
     } catch (error) {
         console.error('Error fetching driver stats:', error);
+
+        // Check if it's a CORS or network error
+        const isCorsError = error.message.includes('Failed to fetch') || error.message.includes('CORS') || error.message.includes('NetworkError');
+
         checkerResults.innerHTML = `
             <div style="text-align: left;">
                 <p style="color: var(--color-accent); margin-bottom: 1rem;">⚠️ Could not fetch stats for "${psnId}"</p>
+                ${isCorsError ? `
+                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                    <strong>Connection Issue:</strong> Unable to reach the gtstat.live API.
+                </p>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem;">
+                    Try checking your stats directly at
+                    <a href="https://gtstat.live" target="_blank" style="color: var(--color-primary); text-decoration: underline;">gtstat.live</a>
+                </p>
+                ` : `
                 <p style="color: var(--color-text-muted); font-size: 0.9rem;">
                     This could mean:
                     <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
@@ -363,6 +377,7 @@ checkDriverBtn?.addEventListener('click', async () => {
                         <li>The gtstat.live service is temporarily unavailable</li>
                     </ul>
                 </p>
+                `}
                 <p style="margin-top: 1rem; color: var(--color-text-muted); font-size: 0.85rem;">
                     Error: ${error.message}
                 </p>
