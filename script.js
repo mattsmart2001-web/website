@@ -337,16 +337,18 @@ checkDriverBtn?.addEventListener('click', async () => {
     checkerResults.innerHTML = '<p>Searching GT7 stats...</p>';
 
     try {
-        // Use CORS proxy to bypass cross-origin restrictions
-        const corsProxy = 'https://corsproxy.io/?';
+        // Try AllOrigins CORS proxy which returns JSON with contents
         const apiUrl = `https://gtstat.live/api/getDriverStatsHistory?psn=${encodeURIComponent(psnId)}`;
-        const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
+
+        const response = await fetch(proxyUrl);
 
         if (!response.ok) {
-            throw new Error(`API returned ${response.status}`);
+            throw new Error(`Proxy returned ${response.status}`);
         }
 
-        const data = await response.json();
+        const proxyData = await response.json();
+        const data = JSON.parse(proxyData.contents);
 
         // Display the stats from the API response
         displayDriverStats(psnId, data);
@@ -379,7 +381,7 @@ checkDriverBtn?.addEventListener('click', async () => {
                 </p>
                 `}
                 <p style="margin-top: 1rem; color: var(--color-text-muted); font-size: 0.85rem;">
-                    Error: ${error.message}
+                    Debug: ${error.message}
                 </p>
             </div>
         `;
