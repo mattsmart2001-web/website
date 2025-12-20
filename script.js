@@ -142,8 +142,13 @@ const mouseVector = new THREE.Vector2();
 let isOverHelmet = false;
 let lastPaintPos = null;
 
+// Track current mouse position
+let currentMousePos = { x: 0, y: 0 };
+
 // Track mouse movement for raycasting
 document.addEventListener('mousemove', (event) => {
+    currentMousePos = { x: event.clientX, y: event.clientY };
+
     // Update raycaster
     mouseVector.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouseVector.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -157,84 +162,61 @@ document.addEventListener('mousemove', (event) => {
         // Update cursor
         if (isOverHelmet) {
             document.body.classList.add('painting');
-
-            // Paint to reveal text
-            const currentPos = { x: event.clientX, y: event.clientY };
-
-            if (lastPaintPos) {
-                revealText(lastPaintPos.x, lastPaintPos.y, currentPos.x, currentPos.y);
-            }
-
-            lastPaintPos = currentPos;
         } else {
             document.body.classList.remove('painting');
-            lastPaintPos = null;
         }
     }
 });
 
-// Continuous fade effect
-let fadeAnimationId = null;
+// Continuous render loop for spotlight effect
+function renderSpotlight() {
+    // Clear canvas
+    paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
 
-// Start continuous fade animation
-function startFadeAnimation() {
-    if (fadeAnimationId) return;
+    if (isOverHelmet) {
+        // Draw circular mask where mouse is
+        paintCtx.globalCompositeOperation = 'source-over';
+        paintCtx.beginPath();
+        paintCtx.arc(currentMousePos.x, currentMousePos.y, 80, 0, Math.PI * 2);
+        paintCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+        paintCtx.fill();
 
-    function fade() {
-        // Gradually fade the entire canvas
-        paintCtx.fillStyle = 'rgba(10, 14, 18, 0.02)'; // Very subtle fade
-        paintCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+        // Add glow to spotlight
+        paintCtx.shadowColor = '#00ff88';
+        paintCtx.shadowBlur = 30;
+        paintCtx.beginPath();
+        paintCtx.arc(currentMousePos.x, currentMousePos.y, 80, 0, Math.PI * 2);
+        paintCtx.fill();
+        paintCtx.shadowBlur = 0;
 
-        fadeAnimationId = requestAnimationFrame(fade);
+        // Draw text only where the spotlight is (using source-atop)
+        paintCtx.globalCompositeOperation = 'source-atop';
+
+        const centerX = paintCanvas.width / 2;
+        const centerY = paintCanvas.height / 2;
+
+        paintCtx.font = 'bold 120px Rajdhani, sans-serif';
+        paintCtx.textAlign = 'center';
+        paintCtx.textBaseline = 'middle';
+
+        // Create gradient
+        const gradient = paintCtx.createLinearGradient(centerX - 300, centerY, centerX + 300, centerY);
+        gradient.addColorStop(0, '#ffffff');
+        gradient.addColorStop(0.5, '#00ff88');
+        gradient.addColorStop(1, '#0ea5e9');
+
+        paintCtx.fillStyle = gradient;
+        paintCtx.shadowColor = '#00ff88';
+        paintCtx.shadowBlur = 30;
+        paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
+
+        paintCtx.shadowBlur = 0;
     }
 
-    fade();
+    requestAnimationFrame(renderSpotlight);
 }
 
-startFadeAnimation();
-
-// Reveal text with brush stroke
-function revealText(x1, y1, x2, y2) {
-    // First, draw the paint stroke mask
-    paintCtx.globalCompositeOperation = 'source-over';
-    paintCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-    paintCtx.lineWidth = 50;
-    paintCtx.lineCap = 'round';
-    paintCtx.lineJoin = 'round';
-    paintCtx.shadowColor = '#00ff88';
-    paintCtx.shadowBlur = 15;
-
-    paintCtx.beginPath();
-    paintCtx.moveTo(x1, y1);
-    paintCtx.lineTo(x2, y2);
-    paintCtx.stroke();
-
-    paintCtx.shadowBlur = 0;
-
-    // Then draw the text using source-atop so it only appears where we painted
-    paintCtx.globalCompositeOperation = 'source-atop';
-
-    const centerX = paintCanvas.width / 2;
-    const centerY = paintCanvas.height / 2;
-
-    paintCtx.font = 'bold 120px Rajdhani, sans-serif';
-    paintCtx.textAlign = 'center';
-    paintCtx.textBaseline = 'middle';
-
-    // Create gradient
-    const gradient = paintCtx.createLinearGradient(centerX - 300, centerY, centerX + 300, centerY);
-    gradient.addColorStop(0, '#ffffff');
-    gradient.addColorStop(0.5, '#00ff88');
-    gradient.addColorStop(1, '#0ea5e9');
-
-    paintCtx.fillStyle = gradient;
-    paintCtx.shadowColor = '#00ff88';
-    paintCtx.shadowBlur = 30;
-    paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
-
-    paintCtx.shadowBlur = 0;
-    paintCtx.globalCompositeOperation = 'source-over';
-}
+renderSpotlight();
 
 
 // ===== NAVIGATION =====
