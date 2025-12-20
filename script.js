@@ -185,7 +185,7 @@ function renderSpotlight() {
     paintCtx.globalCompositeOperation = 'source-over';
 
     const centerX = paintCanvas.width / 2;
-    const centerY = paintCanvas.height * 0.3; // Top third of screen
+    const centerY = paintCanvas.height * 0.4; // Positioned lower on screen
 
     paintCtx.font = 'bold 140px Rajdhani, sans-serif';
     paintCtx.textAlign = 'center';
