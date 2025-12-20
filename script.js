@@ -72,8 +72,8 @@ loader.load(
         const scale = 6 / maxDim;
         model.scale.setScalar(scale);
 
-        // Move model down by 30% to prevent top cutoff
-        model.position.y -= 1.8;
+        // Move model down by 15% to prevent top cutoff
+        model.position.y -= 0.9;
 
         // Face forward initially
         model.rotation.y = 0;
