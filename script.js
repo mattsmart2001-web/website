@@ -244,11 +244,13 @@ const paintCanvasElement = document.getElementById('paint-canvas');
 
 window.addEventListener('scroll', () => {
     const scrollY = window.scrollY;
-    // Move helmet and text up faster than scroll (parallax effect)
-    const parallaxOffset = scrollY * 0.6; // 60% of scroll speed
 
-    canvasContainer.style.transform = `translateY(-${parallaxOffset}px)`;
-    paintCanvasElement.style.transform = `translateY(-${parallaxOffset}px)`;
+    // Different speeds for depth effect
+    const helmetOffset = scrollY * 0.5; // Helmet moves slower (appears farther)
+    const textOffset = scrollY * 0.8; // Text moves faster (appears closer)
+
+    canvasContainer.style.transform = `translateY(-${helmetOffset}px)`;
+    paintCanvasElement.style.transform = `translateY(-${textOffset}px)`;
 });
 
 
