@@ -132,14 +132,8 @@ window.addEventListener('resize', resizePaintCanvas);
 
 // Draw the hidden text initially
 function drawInitialText() {
+    // Keep canvas clear - helmet always visible
     paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
-
-    // Draw "SPARKSTHEORY" text (hidden initially with black overlay)
-    paintCtx.fillStyle = 'rgba(10, 14, 18, 1)'; // Match background
-    paintCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
-
-    // Store text for reveal
-    paintCanvas.dataset.textRevealed = 'false';
 }
 
 // Raycaster for detecting mouse over helmet
@@ -179,10 +173,22 @@ document.addEventListener('mousemove', (event) => {
     }
 });
 
+// Track paint strokes
+let paintStrokes = 0;
+let textShown = false;
+let fadeTimeout = null;
+
 // Reveal text with brush stroke
 function revealText(x1, y1, x2, y2) {
-    paintCtx.globalCompositeOperation = 'destination-out';
-    paintCtx.strokeStyle = 'rgba(255, 255, 255, 1)';
+    if (textShown) return;
+
+    // Draw glowing brush stroke
+    paintCtx.globalCompositeOperation = 'source-over';
+
+    // Glow effect
+    paintCtx.shadowColor = '#00ff88';
+    paintCtx.shadowBlur = 20;
+    paintCtx.strokeStyle = 'rgba(0, 255, 136, 0.3)';
     paintCtx.lineWidth = 40;
     paintCtx.lineCap = 'round';
     paintCtx.lineJoin = 'round';
@@ -192,41 +198,38 @@ function revealText(x1, y1, x2, y2) {
     paintCtx.lineTo(x2, y2);
     paintCtx.stroke();
 
-    // Check if enough has been revealed to show text
-    checkRevealProgress();
-}
+    paintCtx.shadowBlur = 0;
 
-// Check reveal progress and show text when enough is revealed
-let textShown = false;
-function checkRevealProgress() {
-    if (textShown) return;
+    // Increment paint count
+    paintStrokes++;
 
-    // Sample some pixels to estimate how much has been revealed
-    const sampleSize = 50;
-    let transparentPixels = 0;
-
-    for (let i = 0; i < sampleSize; i++) {
-        const x = Math.random() * paintCanvas.width;
-        const y = Math.random() * paintCanvas.height;
-        const pixel = paintCtx.getImageData(x, y, 1, 1).data;
-        if (pixel[3] < 128) transparentPixels++;
-    }
-
-    // If more than 30% revealed, show the text
-    if (transparentPixels / sampleSize > 0.3) {
+    // If enough painted, show the text after a short delay
+    if (paintStrokes > 20) {
         showRevealedText();
         textShown = true;
+        paintStrokes = 0;
     }
 }
 
 // Show the revealed text
 function showRevealedText() {
-    paintCtx.globalCompositeOperation = 'source-over';
+    // Wait a moment before showing (delay)
+    setTimeout(() => {
+        drawTextOnCanvas(1);
 
-    // Clear and draw the text
+        // Keep text visible for 2 seconds, then start slow fade
+        setTimeout(() => {
+            fadeOutText();
+        }, 2000);
+    }, 300);
+}
+
+// Draw text with given opacity
+function drawTextOnCanvas(opacity) {
     paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+    paintCtx.globalCompositeOperation = 'source-over';
+    paintCtx.globalAlpha = opacity;
 
-    // Draw "SPARKSTHEORY" in center with gradient
     const centerX = paintCanvas.width / 2;
     const centerY = paintCanvas.height / 2;
 
@@ -241,34 +244,25 @@ function showRevealedText() {
     gradient.addColorStop(1, '#0ea5e9');
 
     paintCtx.fillStyle = gradient;
-    paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
-
-    // Add glow effect
     paintCtx.shadowColor = '#00ff88';
     paintCtx.shadowBlur = 30;
     paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
 
-    // Fade out after 3 seconds
-    setTimeout(() => {
-        fadeOutText();
-    }, 3000);
+    paintCtx.shadowBlur = 0;
+    paintCtx.globalAlpha = 1;
 }
 
-// Fade out the text
+// Fade out the text slowly
 function fadeOutText() {
     let opacity = 1;
     const fadeInterval = setInterval(() => {
-        opacity -= 0.02;
+        opacity -= 0.008; // Slower fade (was 0.02)
         if (opacity <= 0) {
             clearInterval(fadeInterval);
             paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
-            drawInitialText();
             textShown = false;
         } else {
-            paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
-            paintCtx.globalAlpha = opacity;
-            showRevealedText();
-            paintCtx.globalAlpha = 1;
+            drawTextOnCanvas(opacity);
         }
     }, 50);
 }
