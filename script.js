@@ -36,31 +36,35 @@ logoImage.crossOrigin = 'anonymous';
 logoImage.onload = function() {
     console.log('Logo image loaded, creating environment...');
 
-    // Create gradient background
-    const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-    gradient.addColorStop(0, '#00ff88');    // Primary green
-    gradient.addColorStop(0.5, '#0ea5e9');  // Secondary blue
-    gradient.addColorStop(1, '#000000');    // Black
-    ctx.fillStyle = gradient;
+    // Fill with dark background first
+    ctx.fillStyle = '#0a0e12';
     ctx.fillRect(0, 0, 1024, 512);
 
-    // Draw logo multiple times across the canvas for environment map
-    ctx.globalCompositeOperation = 'screen'; // Blend mode for visibility
-    ctx.globalAlpha = 0.8; // More opaque for better visibility
+    // Draw logo tiled across entire canvas - no blending, just direct drawing
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1.0; // Full opacity
 
-    // Draw logo in center
-    const logoSize = 400;
-    ctx.drawImage(logoImage,
-        (1024 - logoSize) / 2,
-        (512 - logoSize) / 2,
-        logoSize,
-        logoSize
-    );
+    // Tile the logo across the canvas for maximum visibility
+    const logoSize = 350;
+    const spacing = 400;
 
-    // Draw logos on sides for wraparound effect
-    ctx.globalAlpha = 0.6;
-    ctx.drawImage(logoImage, 50, 50, 250, 250);
-    ctx.drawImage(logoImage, 1024 - 300, 50, 250, 250);
+    // Top row
+    ctx.drawImage(logoImage, 50, 50, logoSize, logoSize);
+    ctx.drawImage(logoImage, 50 + spacing, 50, logoSize, logoSize);
+    ctx.drawImage(logoImage, 50 + spacing * 2 - 100, 50, logoSize, logoSize);
+
+    // Bottom row
+    ctx.drawImage(logoImage, 200, 200, logoSize, logoSize);
+    ctx.drawImage(logoImage, 200 + spacing, 200, logoSize, logoSize);
+
+    // Add green/blue tint overlay for brand colors
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalAlpha = 0.3;
+    const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, '#00ff88');
+    gradient.addColorStop(1, '#0ea5e9');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1024, 512);
 
     // Create environment texture
     envTexture = new THREE.CanvasTexture(canvas);
