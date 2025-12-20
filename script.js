@@ -21,38 +21,64 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setClearColor(0x000000, 0); // Transparent
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-// Create gradient environment for reflections
+// Create environment with logo for reflections
 const canvas = document.createElement('canvas');
-canvas.width = 512;
+canvas.width = 1024;
 canvas.height = 512;
 const ctx = canvas.getContext('2d');
 
-// Create gradient with your brand colors
-const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-gradient.addColorStop(0, '#00ff88');    // Primary green
-gradient.addColorStop(0.5, '#0ea5e9');  // Secondary blue
-gradient.addColorStop(1, '#000000');    // Black
-ctx.fillStyle = gradient;
-ctx.fillRect(0, 0, 512, 512);
+// Load logo and create environment
+const logoImage = new Image();
+logoImage.crossOrigin = 'anonymous';
+logoImage.onload = function() {
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, '#00ff88');    // Primary green
+    gradient.addColorStop(0.5, '#0ea5e9');  // Secondary blue
+    gradient.addColorStop(1, '#000000');    // Black
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1024, 512);
 
-const envTexture = new THREE.CanvasTexture(canvas);
-envTexture.mapping = THREE.EquirectangularReflectionMapping;
-scene.environment = envTexture;
+    // Draw logo multiple times across the canvas for environment map
+    ctx.globalCompositeOperation = 'screen'; // Blend mode for visibility
+    ctx.globalAlpha = 0.6; // Semi-transparent
 
-// Load logo texture to apply to helmet
-let logoTexture;
-const textureLoader = new THREE.TextureLoader();
-textureLoader.load(
-    'Sparks_logo.jpg',
-    function(texture) {
-        logoTexture = texture;
-        console.log('Logo texture loaded successfully');
-    },
-    undefined,
-    function(error) {
-        console.warn('Logo failed to load', error);
-    }
-);
+    // Draw logo in center
+    const logoSize = 300;
+    ctx.drawImage(logoImage,
+        (1024 - logoSize) / 2,
+        (512 - logoSize) / 2,
+        logoSize,
+        logoSize
+    );
+
+    // Draw logos on sides for wraparound effect
+    ctx.drawImage(logoImage, 50, 100, 200, 200);
+    ctx.drawImage(logoImage, 1024 - 250, 100, 200, 200);
+
+    // Update environment texture
+    const envTexture = new THREE.CanvasTexture(canvas);
+    envTexture.mapping = THREE.EquirectangularReflectionMapping;
+    envTexture.needsUpdate = true;
+    scene.environment = envTexture;
+
+    console.log('Logo environment created successfully');
+};
+logoImage.onerror = function() {
+    console.warn('Logo failed to load, using gradient only');
+    // Fallback to gradient only
+    const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, '#00ff88');
+    gradient.addColorStop(0.5, '#0ea5e9');
+    gradient.addColorStop(1, '#000000');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1024, 512);
+
+    const envTexture = new THREE.CanvasTexture(canvas);
+    envTexture.mapping = THREE.EquirectangularReflectionMapping;
+    scene.environment = envTexture;
+};
+logoImage.src = 'Sparks_logo.jpg';
 
 // Lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
