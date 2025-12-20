@@ -1,16 +1,15 @@
-// ===== THREE.JS RACING TRACK SIMULATION =====
+// ===== THREE.JS 3D MODEL BACKGROUND =====
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x0a0e12, 50, 200);
+scene.background = null; // Transparent background
 
-// Camera setup - Driver's POV
+// Camera setup
 const camera = new THREE.PerspectiveCamera(
-    90,
+    75,
     window.innerWidth / window.innerHeight,
     0.1,
-    500
+    1000
 );
-camera.position.set(0, 1.2, 0); // Driver's eye level
-camera.rotation.order = 'YXZ';
+camera.position.set(0, 2, 5);
 
 // Renderer setup
 const renderer = new THREE.WebGLRenderer({
@@ -19,212 +18,57 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x000000, 0); // Transparent
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
 // Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
 
-const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
-sunLight.position.set(50, 100, 50);
-scene.add(sunLight);
+const mainLight = new THREE.DirectionalLight(0x00ff88, 1.5);
+mainLight.position.set(5, 10, 5);
+scene.add(mainLight);
 
-// Track variables
-let trackPosition = 0;
-const trackWidth = 12;
-const laneWidth = 4;
-let speed = 0.15;
+const backLight = new THREE.DirectionalLight(0x0ea5e9, 1);
+backLight.position.set(-5, 5, -5);
+scene.add(backLight);
 
-// Steering controls
-let steeringAngle = 0;
-let targetSteeringAngle = 0;
-let cameraLateralOffset = 0;
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+fillLight.position.set(0, -5, 0);
+scene.add(fillLight);
 
-// Create track surface
-function createTrackSegment(zPosition) {
-    const segmentGroup = new THREE.Group();
+// Load GLB model
+let model;
+const loader = new THREE.GLTFLoader();
 
-    // Main track surface with realistic texture
-    const trackGeometry = new THREE.PlaneGeometry(trackWidth, 20, 32, 32);
-
-    // Add subtle height variation for asphalt texture
-    const positions = trackGeometry.attributes.position;
-    for (let i = 0; i < positions.count; i++) {
-        const noise = (Math.random() - 0.5) * 0.01;
-        positions.setY(i, noise);
+loader.load(
+    'fbx.glb',
+    function (gltf) {
+        model = gltf.scene;
+        
+        // Center and scale the model
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        
+        // Center the model
+        model.position.sub(center);
+        
+        // Scale to fit
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 3 / maxDim;
+        model.scale.setScalar(scale);
+        
+        scene.add(model);
+        console.log('GLB model loaded successfully!');
+    },
+    function (xhr) {
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    },
+    function (error) {
+        console.error('Error loading GLB model:', error);
     }
-    trackGeometry.computeVertexNormals();
-
-    const trackMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1a1a1a,
-        roughness: 0.95,
-        metalness: 0.05
-    });
-    const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
-    trackMesh.rotation.x = -Math.PI / 2;
-    trackMesh.position.z = zPosition;
-    segmentGroup.add(trackMesh);
-
-    // Center line
-    const centerLineGeometry = new THREE.PlaneGeometry(0.2, 20);
-    const centerLineMaterial = new THREE.MeshBasicMaterial({
-        color: 0xffff00,
-        transparent: true,
-        opacity: 0.8
-    });
-    const centerLine = new THREE.Mesh(centerLineGeometry, centerLineMaterial);
-    centerLine.rotation.x = -Math.PI / 2;
-    centerLine.position.set(0, 0.01, zPosition);
-    segmentGroup.add(centerLine);
-
-    // Lane lines (dashed)
-    for (let i = 0; i < 4; i++) {
-        const laneLineGeometry = new THREE.PlaneGeometry(0.15, 2);
-        const laneLineMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.7
-        });
-        const laneLine = new THREE.Mesh(laneLineGeometry, laneLineMaterial);
-        laneLine.rotation.x = -Math.PI / 2;
-        laneLine.position.set(-trackWidth / 4, 0.01, zPosition + i * 5 - 7.5);
-        segmentGroup.add(laneLine);
-
-        const laneLine2 = laneLine.clone();
-        laneLine2.position.x = trackWidth / 4;
-        segmentGroup.add(laneLine2);
-    }
-
-    // Realistic red/white alternating curbs (left side)
-    const curbStripeLength = 1.0;
-    const numStripes = Math.ceil(20 / curbStripeLength);
-
-    for (let i = 0; i < numStripes; i++) {
-        const isRed = i % 2 === 0;
-        const curbGeometry = new THREE.BoxGeometry(0.6, 0.15, curbStripeLength);
-        const curbMaterial = new THREE.MeshStandardMaterial({
-            color: isRed ? 0xff0000 : 0xffffff,
-            roughness: 0.7,
-            metalness: 0.1
-        });
-        const curbStripe = new THREE.Mesh(curbGeometry, curbMaterial);
-        curbStripe.position.set(
-            -trackWidth / 2 - 0.3,
-            0.05,
-            zPosition - 10 + i * curbStripeLength + curbStripeLength / 2
-        );
-        segmentGroup.add(curbStripe);
-    }
-
-    // Realistic red/white alternating curbs (right side)
-    for (let i = 0; i < numStripes; i++) {
-        const isRed = i % 2 === 0;
-        const curbGeometry = new THREE.BoxGeometry(0.6, 0.15, curbStripeLength);
-        const curbMaterial = new THREE.MeshStandardMaterial({
-            color: isRed ? 0xff0000 : 0xffffff,
-            roughness: 0.7,
-            metalness: 0.1
-        });
-        const curbStripe = new THREE.Mesh(curbGeometry, curbMaterial);
-        curbStripe.position.set(
-            trackWidth / 2 + 0.3,
-            0.05,
-            zPosition - 10 + i * curbStripeLength + curbStripeLength / 2
-        );
-        segmentGroup.add(curbStripe);
-    }
-
-    // Grass (left) with texture variation
-    const grassGeometry = new THREE.PlaneGeometry(20, 20, 16, 16);
-    const grassPositions = grassGeometry.attributes.position;
-    for (let i = 0; i < grassPositions.count; i++) {
-        const noise = (Math.random() - 0.5) * 0.05;
-        grassPositions.setY(i, noise);
-    }
-    grassGeometry.computeVertexNormals();
-
-    const grassMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1a4d1a,
-        roughness: 1
-    });
-    const leftGrass = new THREE.Mesh(grassGeometry, grassMaterial);
-    leftGrass.rotation.x = -Math.PI / 2;
-    leftGrass.position.set(-trackWidth / 2 - 10, -0.05, zPosition);
-    segmentGroup.add(leftGrass);
-
-    // Grass (right)
-    const rightGrass = new THREE.Mesh(grassGeometry.clone(), grassMaterial);
-    rightGrass.rotation.x = -Math.PI / 2;
-    rightGrass.position.set(trackWidth / 2 + 10, -0.05, zPosition);
-    segmentGroup.add(rightGrass);
-
-    // Barriers (left) - lower and further back
-    const barrierGeometry = new THREE.BoxGeometry(0.3, 0.8, 20);
-    const barrierMaterial = new THREE.MeshStandardMaterial({
-        color: 0x00ff88,
-        emissive: 0x00ff88,
-        emissiveIntensity: 0.2,
-        roughness: 0.5
-    });
-    const leftBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
-    leftBarrier.position.set(-trackWidth / 2 - 8, 0.4, zPosition);
-    segmentGroup.add(leftBarrier);
-
-    // Barriers (right)
-    const rightBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
-    rightBarrier.position.set(trackWidth / 2 + 8, 0.4, zPosition);
-    segmentGroup.add(rightBarrier);
-
-    return segmentGroup;
-}
-
-// Create initial track segments
-const trackSegments = [];
-for (let i = 0; i < 15; i++) {
-    const segment = createTrackSegment(i * 20 - 40);
-    scene.add(segment);
-    trackSegments.push(segment);
-}
-
-// Removed speed particles for cleaner view
-
-// Mouse controls for steering
-let mouseX = 0;
-document.addEventListener('mousemove', (event) => {
-    mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-    targetSteeringAngle = mouseX * 0.4; // Steering sensitivity
-});
-
-// Animation loop
-function animate() {
-    requestAnimationFrame(animate);
-
-    // Update track position (forward motion)
-    trackPosition += speed;
-
-    // Move track segments
-    trackSegments.forEach(segment => {
-        segment.position.z += speed;
-
-        // Reset segment position when it goes behind camera
-        if (segment.position.z > 20) {
-            segment.position.z -= trackSegments.length * 20;
-        }
-    });
-
-    // Smooth steering
-    steeringAngle += (targetSteeringAngle - steeringAngle) * 0.1;
-    camera.rotation.y = steeringAngle;
-
-    // Lateral camera movement (drift effect)
-    cameraLateralOffset += (mouseX * 2 - cameraLateralOffset) * 0.05;
-    camera.position.x = cameraLateralOffset;
-
-    // Camera tilt effect (banking)
-    camera.rotation.z = -steeringAngle * 0.2;
-
-    renderer.render(scene, camera);
-}
+);
 
 // Handle window resize
 window.addEventListener('resize', () => {
@@ -233,8 +77,21 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// Animation loop
+function animate() {
+    requestAnimationFrame(animate);
+    
+    // Slowly rotate the model
+    if (model) {
+        model.rotation.y += 0.003;
+    }
+    
+    renderer.render(scene, camera);
+}
+
 // Start animation
 animate();
+
 
 // ===== NAVIGATION =====
 const navbar = document.querySelector('.navbar');
@@ -249,9 +106,6 @@ window.addEventListener('scroll', () => {
         navbar.classList.remove('scrolled');
     }
 
-    // Increase speed based on scroll
-    const scrollPercent = Math.min(window.scrollY / 1000, 1);
-    speed = 0.15 + scrollPercent * 0.6;
 });
 
 // Mobile burger menu
@@ -520,4 +374,4 @@ document.querySelectorAll('.section').forEach(section => {
 // ===== CONSOLE WELCOME MESSAGE =====
 console.log('%cSPARKSTHEORY', 'color: #00ff88; font-size: 48px; font-weight: bold; font-family: Rajdhani, sans-serif;');
 console.log('%c🏎️ Welcome to the sparkstheory racing website!', 'color: #0ea5e9; font-size: 16px;');
-console.log('%cMove your mouse to steer - scroll to accelerate!', 'color: #94a3b8; font-size: 12px;');
+console.log('%cFeaturing live GT7 stats and premium 3D visuals!', 'color: #94a3b8; font-size: 12px;');
