@@ -37,6 +37,15 @@ const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
 fillLight.position.set(0, -5, 0);
 scene.add(fillLight);
 
+// Dynamic mouse spotlight
+const mouseLight = new THREE.SpotLight(0xffffff, 2);
+mouseLight.position.set(0, 0, 10);
+mouseLight.angle = Math.PI / 6;
+mouseLight.penumbra = 0.3;
+mouseLight.decay = 2;
+mouseLight.distance = 50;
+scene.add(mouseLight);
+
 // Mouse tracking for interactive rotation
 let mouseX = 0;
 let mouseY = 0;
@@ -110,6 +119,12 @@ function animate() {
         model.rotation.x += (targetRotationX - model.rotation.x) * 0.05;
     }
 
+    // Update mouse spotlight position
+    mouseLight.position.x = mouseX * 8;
+    mouseLight.position.y = -mouseY * 6 + 2;
+    mouseLight.target.position.set(0, 0, 0);
+    mouseLight.target.updateMatrixWorld();
+
     renderer.render(scene, camera);
 }
 
@@ -170,7 +185,7 @@ document.addEventListener('mousemove', (event) => {
 
 // Track lagging mouse position for delay effect
 let laggedMousePos = { x: 0, y: 0 };
-const LAG_FACTOR = 0.04; // Lower = more lag/delay
+const LAG_FACTOR = 0.02; // Lower = more lag/delay (increased delay)
 
 // Continuous render loop for spotlight effect
 function renderSpotlight() {
