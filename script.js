@@ -382,7 +382,6 @@ document.addEventListener('DOMContentLoaded', loadMyGT7Stats);
 
 function displayDriverStats(psnId, data) {
     // Parse the API response and display relevant stats
-    // The exact structure depends on what gtstat.live returns
     console.log('API Response:', data);
 
     // Check if we have valid data
@@ -398,16 +397,39 @@ function displayDriverStats(psnId, data) {
         return;
     }
 
+    // Helper function to convert DR points to letter grade
+    function getDRGrade(points) {
+        if (points >= 75000) return 'A+';
+        if (points >= 50000) return 'A';
+        if (points >= 30000) return 'B';
+        if (points >= 10000) return 'C';
+        if (points >= 4000) return 'D';
+        return 'E';
+    }
+
+    // Helper function to convert SR number to letter grade
+    function getSRGrade(sr) {
+        // GT7 SR scale: S=99, A=80-98, B=65-79, C=40-64, D=20-39, E=1-19
+        if (sr >= 99) return 'S';
+        if (sr >= 80) return 'A';
+        if (sr >= 65) return 'B';
+        if (sr >= 40) return 'C';
+        if (sr >= 20) return 'D';
+        return 'E';
+    }
+
     // Get the most recent stats (assuming data is an array sorted by date)
     const latestStats = Array.isArray(data) ? data[0] : data;
 
-    // Extract common GT7 stat fields (adjust based on actual API response)
-    const driverRating = latestStats.driver_rating || latestStats.dr || 'N/A';
-    const sportsmanship = latestStats.sportsmanship_rating || latestStats.sr || 'N/A';
+    // Extract GT7 stat fields from API
+    const drPoints = latestStats.driver_rating || latestStats.dr || latestStats.driver_point || 0;
+    const srValue = latestStats.sportsmanship_rating || latestStats.sr || latestStats.sportsmanship_point || 0;
     const totalRaces = latestStats.total_races || latestStats.races || 'N/A';
     const wins = latestStats.wins || 0;
-    const drPoints = latestStats.driver_point || latestStats.dr_points || 'N/A';
-    const srPoints = latestStats.sportsmanship_point || latestStats.sr_points || 'N/A';
+
+    // Calculate letter grades
+    const driverRating = getDRGrade(drPoints);
+    const sportsmanship = getSRGrade(srValue);
 
     checkerResults.innerHTML = `
         <div style="max-width: 600px; margin: 0 auto;">
@@ -416,13 +438,13 @@ function displayDriverStats(psnId, data) {
                     <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));"></div>
                     <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--color-text-muted); margin-bottom: 0.5rem;">Driver Rating</div>
                     <div style="font-size: 3rem; font-weight: 900; font-family: var(--font-display); color: var(--color-primary); line-height: 1; margin-bottom: 0.25rem;">${driverRating}</div>
-                    <div style="font-size: 1.25rem; font-weight: 600; color: rgba(255,255,255,0.8);">${drPoints !== 'N/A' ? `${drPoints.toLocaleString()} DR` : 'N/A'}</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; color: rgba(255,255,255,0.8);">${drPoints ? drPoints.toLocaleString() : 'N/A'} DR</div>
                 </div>
                 <div style="background: linear-gradient(135deg, rgba(14,165,233,0.1) 0%, rgba(14,165,233,0.05) 100%); border: 2px solid rgba(14,165,233,0.3); border-radius: 12px; padding: 2rem; text-align: center; position: relative; overflow: hidden;">
                     <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-secondary), var(--color-primary));"></div>
                     <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--color-text-muted); margin-bottom: 0.5rem;">Sportsmanship</div>
                     <div style="font-size: 3rem; font-weight: 900; font-family: var(--font-display); color: var(--color-secondary); line-height: 1; margin-bottom: 0.25rem;">${sportsmanship}</div>
-                    <div style="font-size: 1.25rem; font-weight: 600; color: rgba(255,255,255,0.8);">${srPoints !== 'N/A' ? `${srPoints} SR` : 'N/A'}</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; color: rgba(255,255,255,0.8);">${srValue ? srValue : 'N/A'} SR</div>
                 </div>
             </div>
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem;">
