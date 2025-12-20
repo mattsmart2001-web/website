@@ -421,11 +421,17 @@ function displayDriverStats(psnId, data) {
     // Get the most recent stats (assuming data is an array sorted by date)
     const latestStats = Array.isArray(data) ? data[0] : data;
 
+    // Debug: Log all available fields
+    console.log('All stats fields:', latestStats);
+
     // Extract GT7 stat fields from API
     const drPoints = latestStats.driver_rating || latestStats.dr || latestStats.driver_point || 0;
-    const srValue = latestStats.sportsmanship_rating || latestStats.sr || latestStats.sportsmanship_point || 0;
+    // Try multiple possible SR field names
+    const srValue = latestStats.manner_point || latestStats.sportsmanship || latestStats.sportsmanship_rating || latestStats.sr || latestStats.sportsmanship_point || 0;
     const totalRaces = latestStats.total_races || latestStats.races || 'N/A';
     const wins = latestStats.wins || 0;
+
+    console.log('DR Points:', drPoints, 'SR Value:', srValue);
 
     // Calculate letter grades
     const driverRating = getDRGrade(drPoints);
