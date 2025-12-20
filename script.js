@@ -117,6 +117,163 @@ function animate() {
 animate();
 
 
+// ===== PAINT REVEAL EFFECT =====
+const paintCanvas = document.getElementById('paint-canvas');
+const paintCtx = paintCanvas.getContext('2d');
+
+// Set canvas size
+function resizePaintCanvas() {
+    paintCanvas.width = window.innerWidth;
+    paintCanvas.height = window.innerHeight;
+    drawInitialText();
+}
+resizePaintCanvas();
+window.addEventListener('resize', resizePaintCanvas);
+
+// Draw the hidden text initially
+function drawInitialText() {
+    paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+
+    // Draw "SPARKSTHEORY" text (hidden initially with black overlay)
+    paintCtx.fillStyle = 'rgba(10, 14, 18, 1)'; // Match background
+    paintCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+
+    // Store text for reveal
+    paintCanvas.dataset.textRevealed = 'false';
+}
+
+// Raycaster for detecting mouse over helmet
+const raycaster = new THREE.Raycaster();
+const mouseVector = new THREE.Vector2();
+let isOverHelmet = false;
+let lastPaintPos = null;
+
+// Track mouse movement for raycasting
+document.addEventListener('mousemove', (event) => {
+    // Update raycaster
+    mouseVector.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouseVector.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouseVector, camera);
+
+    if (model) {
+        const intersects = raycaster.intersectObject(model, true);
+        isOverHelmet = intersects.length > 0;
+
+        // Update cursor
+        if (isOverHelmet) {
+            document.body.classList.add('painting');
+
+            // Paint to reveal text
+            const currentPos = { x: event.clientX, y: event.clientY };
+
+            if (lastPaintPos) {
+                revealText(lastPaintPos.x, lastPaintPos.y, currentPos.x, currentPos.y);
+            }
+
+            lastPaintPos = currentPos;
+        } else {
+            document.body.classList.remove('painting');
+            lastPaintPos = null;
+        }
+    }
+});
+
+// Reveal text with brush stroke
+function revealText(x1, y1, x2, y2) {
+    paintCtx.globalCompositeOperation = 'destination-out';
+    paintCtx.strokeStyle = 'rgba(255, 255, 255, 1)';
+    paintCtx.lineWidth = 40;
+    paintCtx.lineCap = 'round';
+    paintCtx.lineJoin = 'round';
+
+    paintCtx.beginPath();
+    paintCtx.moveTo(x1, y1);
+    paintCtx.lineTo(x2, y2);
+    paintCtx.stroke();
+
+    // Check if enough has been revealed to show text
+    checkRevealProgress();
+}
+
+// Check reveal progress and show text when enough is revealed
+let textShown = false;
+function checkRevealProgress() {
+    if (textShown) return;
+
+    // Sample some pixels to estimate how much has been revealed
+    const sampleSize = 50;
+    let transparentPixels = 0;
+
+    for (let i = 0; i < sampleSize; i++) {
+        const x = Math.random() * paintCanvas.width;
+        const y = Math.random() * paintCanvas.height;
+        const pixel = paintCtx.getImageData(x, y, 1, 1).data;
+        if (pixel[3] < 128) transparentPixels++;
+    }
+
+    // If more than 30% revealed, show the text
+    if (transparentPixels / sampleSize > 0.3) {
+        showRevealedText();
+        textShown = true;
+    }
+}
+
+// Show the revealed text
+function showRevealedText() {
+    paintCtx.globalCompositeOperation = 'source-over';
+
+    // Clear and draw the text
+    paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+
+    // Draw "SPARKSTHEORY" in center with gradient
+    const centerX = paintCanvas.width / 2;
+    const centerY = paintCanvas.height / 2;
+
+    paintCtx.font = 'bold 120px Rajdhani, sans-serif';
+    paintCtx.textAlign = 'center';
+    paintCtx.textBaseline = 'middle';
+
+    // Create gradient
+    const gradient = paintCtx.createLinearGradient(centerX - 300, centerY, centerX + 300, centerY);
+    gradient.addColorStop(0, '#ffffff');
+    gradient.addColorStop(0.5, '#00ff88');
+    gradient.addColorStop(1, '#0ea5e9');
+
+    paintCtx.fillStyle = gradient;
+    paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
+
+    // Add glow effect
+    paintCtx.shadowColor = '#00ff88';
+    paintCtx.shadowBlur = 30;
+    paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
+
+    // Fade out after 3 seconds
+    setTimeout(() => {
+        fadeOutText();
+    }, 3000);
+}
+
+// Fade out the text
+function fadeOutText() {
+    let opacity = 1;
+    const fadeInterval = setInterval(() => {
+        opacity -= 0.02;
+        if (opacity <= 0) {
+            clearInterval(fadeInterval);
+            paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+            drawInitialText();
+            textShown = false;
+        } else {
+            paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+            paintCtx.globalAlpha = opacity;
+            showRevealedText();
+            paintCtx.globalAlpha = 1;
+        }
+    }, 50);
+}
+
+
 // ===== NAVIGATION =====
 const navbar = document.querySelector('.navbar');
 const navBurger = document.getElementById('navBurger');

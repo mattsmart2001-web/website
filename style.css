@@ -40,6 +40,21 @@ body {
     opacity: 0.4;
 }
 
+/* ===== PAINT REVEAL CANVAS ===== */
+#paint-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+}
+
+body.painting {
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="8" fill="rgba(0,255,136,0.5)" stroke="%2300ff88" stroke-width="2"/></svg>') 16 16, crosshair;
+}
+
 /* ===== NAVIGATION ===== */
 .navbar {
     position: fixed;
