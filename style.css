@@ -135,12 +135,12 @@ body.painting {
 /* ===== HERO SECTION ===== */
 .hero {
     position: relative;
-    min-height: 180vh;
+    min-height: 160vh;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    padding: 120vh 3rem 0;
+    padding: 90vh 3rem 0;
     z-index: 10;
     overflow: hidden;
 }
