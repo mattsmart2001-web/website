@@ -173,25 +173,36 @@ document.addEventListener('mousemove', (event) => {
     }
 });
 
-// Track paint strokes
-let paintStrokes = 0;
-let textShown = false;
-let fadeTimeout = null;
+// Continuous fade effect
+let fadeAnimationId = null;
+
+// Start continuous fade animation
+function startFadeAnimation() {
+    if (fadeAnimationId) return;
+
+    function fade() {
+        // Gradually fade the entire canvas
+        paintCtx.fillStyle = 'rgba(10, 14, 18, 0.02)'; // Very subtle fade
+        paintCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+
+        fadeAnimationId = requestAnimationFrame(fade);
+    }
+
+    fade();
+}
+
+startFadeAnimation();
 
 // Reveal text with brush stroke
 function revealText(x1, y1, x2, y2) {
-    if (textShown) return;
-
-    // Draw glowing brush stroke
+    // First, draw the paint stroke mask
     paintCtx.globalCompositeOperation = 'source-over';
-
-    // Glow effect
-    paintCtx.shadowColor = '#00ff88';
-    paintCtx.shadowBlur = 20;
-    paintCtx.strokeStyle = 'rgba(0, 255, 136, 0.3)';
-    paintCtx.lineWidth = 40;
+    paintCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    paintCtx.lineWidth = 50;
     paintCtx.lineCap = 'round';
     paintCtx.lineJoin = 'round';
+    paintCtx.shadowColor = '#00ff88';
+    paintCtx.shadowBlur = 15;
 
     paintCtx.beginPath();
     paintCtx.moveTo(x1, y1);
@@ -200,35 +211,8 @@ function revealText(x1, y1, x2, y2) {
 
     paintCtx.shadowBlur = 0;
 
-    // Increment paint count
-    paintStrokes++;
-
-    // If enough painted, show the text after a short delay
-    if (paintStrokes > 20) {
-        showRevealedText();
-        textShown = true;
-        paintStrokes = 0;
-    }
-}
-
-// Show the revealed text
-function showRevealedText() {
-    // Wait a moment before showing (delay)
-    setTimeout(() => {
-        drawTextOnCanvas(1);
-
-        // Keep text visible for 2 seconds, then start slow fade
-        setTimeout(() => {
-            fadeOutText();
-        }, 2000);
-    }, 300);
-}
-
-// Draw text with given opacity
-function drawTextOnCanvas(opacity) {
-    paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
-    paintCtx.globalCompositeOperation = 'source-over';
-    paintCtx.globalAlpha = opacity;
+    // Then draw the text using source-atop so it only appears where we painted
+    paintCtx.globalCompositeOperation = 'source-atop';
 
     const centerX = paintCanvas.width / 2;
     const centerY = paintCanvas.height / 2;
@@ -249,22 +233,7 @@ function drawTextOnCanvas(opacity) {
     paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
 
     paintCtx.shadowBlur = 0;
-    paintCtx.globalAlpha = 1;
-}
-
-// Fade out the text slowly
-function fadeOutText() {
-    let opacity = 1;
-    const fadeInterval = setInterval(() => {
-        opacity -= 0.008; // Slower fade (was 0.02)
-        if (opacity <= 0) {
-            clearInterval(fadeInterval);
-            paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
-            textShown = false;
-        } else {
-            drawTextOnCanvas(opacity);
-        }
-    }, 50);
+    paintCtx.globalCompositeOperation = 'source-over';
 }
 
 
