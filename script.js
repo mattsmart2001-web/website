@@ -21,21 +21,36 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setClearColor(0x000000, 0); // Transparent
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-// Logo Environment Map for subtle reflections
-let envTexture;
+// Create gradient environment for reflections
+const canvas = document.createElement('canvas');
+canvas.width = 512;
+canvas.height = 512;
+const ctx = canvas.getContext('2d');
+
+// Create gradient with your brand colors
+const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+gradient.addColorStop(0, '#00ff88');    // Primary green
+gradient.addColorStop(0.5, '#0ea5e9');  // Secondary blue
+gradient.addColorStop(1, '#000000');    // Black
+ctx.fillStyle = gradient;
+ctx.fillRect(0, 0, 512, 512);
+
+const envTexture = new THREE.CanvasTexture(canvas);
+envTexture.mapping = THREE.EquirectangularReflectionMapping;
+scene.environment = envTexture;
+
+// Load logo texture to apply to helmet
+let logoTexture;
 const textureLoader = new THREE.TextureLoader();
 textureLoader.load(
     'Sparks_logo.jpg',
     function(texture) {
-        texture.mapping = THREE.EquirectangularReflectionMapping;
-        texture.rotation = Math.PI; // Rotate 180 degrees
-        envTexture = texture;
-        scene.environment = texture;
-        console.log('Logo environment loaded successfully');
+        logoTexture = texture;
+        console.log('Logo texture loaded successfully');
     },
     undefined,
     function(error) {
-        console.warn('Logo failed to load, using default lighting', error);
+        console.warn('Logo failed to load', error);
     }
 );
 
