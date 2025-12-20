@@ -21,6 +21,21 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setClearColor(0x000000, 0); // Transparent
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
+// HDRI Environment Map
+const rgbeLoader = new THREE.RGBELoader();
+rgbeLoader.load(
+    'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_08_1k.hdr',
+    function(texture) {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = texture;
+        console.log('HDRI loaded successfully');
+    },
+    undefined,
+    function(error) {
+        console.warn('HDRI failed to load, using default lighting', error);
+    }
+);
+
 // Lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
