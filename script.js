@@ -318,14 +318,14 @@ document.addEventListener('DOMContentLoaded', loadYouTubeVideos);
 const checkerResults = document.getElementById('checkerResults');
 
 // Your GT7 credentials
-const MY_USER_ID = '85596fe8-f2f8-45c1-9474-f3357e8d9446';
+const MY_USER_ID = '5cdc13af-48a4-4f9c-8a31-9974936faab8';
 const MY_PSN = 'SparksTheory';
 
 // Load stats automatically on page load
 async function loadMyGT7Stats() {
     try {
         // Use CORS proxy to fetch your stats
-        const apiUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${MY_USER_ID}&psn=${encodeURIComponent(MY_PSN)}`;
+        const apiUrl = `https://gtstats.live/api/getDriverRating?user_id=${MY_USER_ID}`;
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
 
         const response = await fetch(proxyUrl);
