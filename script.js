@@ -72,8 +72,8 @@ loader.load(
         const scale = 8 / maxDim;
         model.scale.setScalar(scale);
 
-        // Position model lower
-        model.position.y -= 1.2;
+        // Position model much lower
+        model.position.y -= 3.5;
 
         // Face forward initially
         model.rotation.y = 0;
@@ -168,20 +168,25 @@ document.addEventListener('mousemove', (event) => {
     }
 });
 
+// Track reveal with delay
+let revealStartTime = null;
+const REVEAL_DELAY = 300; // ms delay before showing text
+
 // Continuous render loop for spotlight effect
 function renderSpotlight() {
     // Clear canvas
     paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
 
-    if (isOverHelmet) {
-        // Draw invisible circular mask where mouse is (no visible blob)
-        paintCtx.globalCompositeOperation = 'source-over';
-        paintCtx.beginPath();
-        paintCtx.arc(currentMousePos.x, currentMousePos.y, 100, 0, Math.PI * 2);
-        paintCtx.fillStyle = 'rgba(255, 255, 255, 0)'; // Invisible mask
-        paintCtx.fill();
+    const currentTime = Date.now();
 
-        // Create a clipping region instead
+    // Initialize reveal timer
+    if (revealStartTime === null) {
+        revealStartTime = currentTime;
+    }
+
+    // Only show text after delay
+    if (currentTime - revealStartTime >= REVEAL_DELAY) {
+        // Create a clipping region at mouse position
         paintCtx.save();
         paintCtx.beginPath();
         paintCtx.arc(currentMousePos.x, currentMousePos.y, 100, 0, Math.PI * 2);
