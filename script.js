@@ -40,26 +40,19 @@ logoImage.onload = function() {
     ctx.fillStyle = '#0a0e12';
     ctx.fillRect(0, 0, 1024, 512);
 
-    // Draw logo tiled across entire canvas - no blending, just direct drawing
+    // Draw one large centered logo
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1.0; // Full opacity
 
-    // Tile the logo across the canvas for maximum visibility
-    const logoSize = 350;
-    const spacing = 400;
+    // Single large logo in center
+    const logoSize = 700; // Much bigger
+    const centerX = (1024 - logoSize) / 2;
+    const centerY = (512 - logoSize) / 2;
+    ctx.drawImage(logoImage, centerX, centerY, logoSize, logoSize);
 
-    // Top row
-    ctx.drawImage(logoImage, 50, 50, logoSize, logoSize);
-    ctx.drawImage(logoImage, 50 + spacing, 50, logoSize, logoSize);
-    ctx.drawImage(logoImage, 50 + spacing * 2 - 100, 50, logoSize, logoSize);
-
-    // Bottom row
-    ctx.drawImage(logoImage, 200, 200, logoSize, logoSize);
-    ctx.drawImage(logoImage, 200 + spacing, 200, logoSize, logoSize);
-
-    // Add green/blue tint overlay for brand colors
+    // Add subtle green/blue tint overlay for brand colors
     ctx.globalCompositeOperation = 'overlay';
-    ctx.globalAlpha = 0.3;
+    ctx.globalAlpha = 0.2; // Even more subtle
     const gradient = ctx.createLinearGradient(0, 0, 0, 512);
     gradient.addColorStop(0, '#00ff88');
     gradient.addColorStop(1, '#0ea5e9');
