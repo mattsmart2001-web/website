@@ -181,24 +181,8 @@ function renderSpotlight() {
     laggedMousePos.x += (currentMousePos.x - laggedMousePos.x) * LAG_FACTOR;
     laggedMousePos.y += (currentMousePos.y - laggedMousePos.y) * LAG_FACTOR;
 
-    // Draw feathered circular mask using radial gradient
+    // First, draw the text
     paintCtx.globalCompositeOperation = 'source-over';
-
-    const gradient = paintCtx.createRadialGradient(
-        laggedMousePos.x, laggedMousePos.y, 0,
-        laggedMousePos.x, laggedMousePos.y, 100
-    );
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.8)');
-    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)'); // Feathered edge
-
-    paintCtx.beginPath();
-    paintCtx.arc(laggedMousePos.x, laggedMousePos.y, 100, 0, Math.PI * 2);
-    paintCtx.fillStyle = gradient;
-    paintCtx.fill();
-
-    // Draw text only where the mask is (using source-atop)
-    paintCtx.globalCompositeOperation = 'source-atop';
 
     const centerX = paintCanvas.width / 2;
     const centerY = paintCanvas.height * 0.3; // Top third of screen
@@ -215,6 +199,22 @@ function renderSpotlight() {
 
     paintCtx.fillStyle = textGradient;
     paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
+
+    // Now apply invisible feathered mask (only keep text within circle)
+    paintCtx.globalCompositeOperation = 'destination-in';
+
+    const maskGradient = paintCtx.createRadialGradient(
+        laggedMousePos.x, laggedMousePos.y, 0,
+        laggedMousePos.x, laggedMousePos.y, 100
+    );
+    maskGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    maskGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.5)');
+    maskGradient.addColorStop(1, 'rgba(255, 255, 255, 0)'); // Feathered edge
+
+    paintCtx.beginPath();
+    paintCtx.arc(laggedMousePos.x, laggedMousePos.y, 100, 0, Math.PI * 2);
+    paintCtx.fillStyle = maskGradient;
+    paintCtx.fill();
 
     requestAnimationFrame(renderSpotlight);
 }
