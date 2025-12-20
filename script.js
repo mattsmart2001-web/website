@@ -397,46 +397,30 @@ function displayDriverStats(psnId, data) {
         return;
     }
 
-    // Helper function to convert DR points to letter grade
-    function getDRGrade(points) {
-        if (points >= 50000) return 'A+';
-        if (points >= 40000) return 'A';
-        if (points >= 30000) return 'B';
-        if (points >= 10000) return 'C';
-        if (points >= 4000) return 'D';
-        return 'E';
-    }
-
-    // Helper function to convert SR number to letter grade
+    // Helper function to convert SR number to letter grade (API uses 0-6 scale)
     function getSRGrade(sr) {
-        // GT7 SR scale: S=99, A=80-98, B=65-79, C=40-64, D=20-39, E=1-19
-        if (sr >= 99) return 'S';
-        if (sr >= 80) return 'A';
-        if (sr >= 65) return 'B';
-        if (sr >= 40) return 'C';
-        if (sr >= 20) return 'D';
-        return 'E';
+        // GT7 API SR scale: 6=S, 5=A, 4=B, 3=C, 2=D, 1=E, 0=E
+        const grades = ['E', 'E', 'D', 'C', 'B', 'A', 'S'];
+        return grades[sr] || 'E';
     }
 
-    // Get the most recent stats (assuming data is an array sorted by date)
-    const latestStats = Array.isArray(data) ? data[0] : data;
+    // Get the most recent stats (data is an object with numeric keys)
+    const latestStats = data["0"] || data[0] || data;
 
     // Debug: Log all available fields
     console.log('All stats fields:', latestStats);
 
-    // Extract GT7 stat fields from API
-    const drPoints = latestStats.driver_rating || latestStats.dr || latestStats.driver_point || 0;
-    const srValue = latestStats.manner_point || latestStats.sportsmanship || latestStats.sportsmanship_rating || latestStats.sr || latestStats.sportsmanship_point || 0;
-    const totalRaces = latestStats.total_races || latestStats.races || latestStats.stats_start_num || 0;
-    const wins = latestStats.wins || latestStats.stats_1st || 0;
-    const poles = latestStats.poles || latestStats.stats_pole || 0;
-    const fastestLaps = latestStats.fastest_laps || latestStats.stats_fastest_lap || 0;
-
-    console.log('DR Points:', drPoints, 'SR Value:', srValue);
-
-    // Calculate letter grades
-    const driverRating = getDRGrade(drPoints);
+    // Extract GT7 stat fields from API using correct field names
+    const drPoints = latestStats.dr || 0;
+    const driverRating = latestStats.rank || 'E';  // API provides the letter grade directly!
+    const srValue = latestStats.sr || 0;
     const sportsmanship = getSRGrade(srValue);
+    const totalRaces = latestStats.raceCount || 0;
+    const wins = latestStats.winCount || 0;
+    const poles = latestStats.polePositionCount || 0;
+    const fastestLaps = latestStats.fastestLapCount || 0;
+
+    console.log('DR Points:', drPoints, 'DR Grade:', driverRating, 'SR Value:', srValue, 'SR Grade:', sportsmanship);
 
     checkerResults.innerHTML = `
         <div style="max-width: 700px; margin: 0 auto;">
