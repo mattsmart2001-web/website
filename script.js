@@ -67,9 +67,9 @@ loader.load(
         // Center the model
         model.position.sub(center);
 
-        // Scale to fit
+        // Scale to fit (2x larger)
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 3 / maxDim;
+        const scale = 6 / maxDim;
         model.scale.setScalar(scale);
 
         // Face forward initially
