@@ -9,7 +9,7 @@ const camera = new THREE.PerspectiveCamera(
     0.1,
     1000
 );
-camera.position.set(0, 1, 4.5);
+camera.position.set(0, 1, 8);
 
 // Renderer setup
 const renderer = new THREE.WebGLRenderer({
@@ -168,51 +168,53 @@ document.addEventListener('mousemove', (event) => {
     }
 });
 
-// Track reveal with delay
-let revealStartTime = null;
-const REVEAL_DELAY = 300; // ms delay before showing text
+// Track lagging mouse position for delay effect
+let laggedMousePos = { x: 0, y: 0 };
+const LAG_FACTOR = 0.08; // Lower = more lag/delay
 
 // Continuous render loop for spotlight effect
 function renderSpotlight() {
     // Clear canvas
     paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
 
-    const currentTime = Date.now();
+    // Smoothly lag behind actual mouse position (creates delay effect)
+    laggedMousePos.x += (currentMousePos.x - laggedMousePos.x) * LAG_FACTOR;
+    laggedMousePos.y += (currentMousePos.y - laggedMousePos.y) * LAG_FACTOR;
 
-    // Initialize reveal timer
-    if (revealStartTime === null) {
-        revealStartTime = currentTime;
-    }
+    // Draw feathered circular mask using radial gradient
+    paintCtx.globalCompositeOperation = 'source-over';
 
-    // Only show text after delay
-    if (currentTime - revealStartTime >= REVEAL_DELAY) {
-        // Create a clipping region at mouse position
-        paintCtx.save();
-        paintCtx.beginPath();
-        paintCtx.arc(currentMousePos.x, currentMousePos.y, 100, 0, Math.PI * 2);
-        paintCtx.clip();
+    const gradient = paintCtx.createRadialGradient(
+        laggedMousePos.x, laggedMousePos.y, 0,
+        laggedMousePos.x, laggedMousePos.y, 100
+    );
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.8)');
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)'); // Feathered edge
 
-        // Draw text only within the clipping region
-        const centerX = paintCanvas.width / 2;
-        const centerY = paintCanvas.height * 0.3; // Top third of screen
+    paintCtx.beginPath();
+    paintCtx.arc(laggedMousePos.x, laggedMousePos.y, 100, 0, Math.PI * 2);
+    paintCtx.fillStyle = gradient;
+    paintCtx.fill();
 
-        paintCtx.font = 'bold 140px Rajdhani, sans-serif';
-        paintCtx.textAlign = 'center';
-        paintCtx.textBaseline = 'middle';
+    // Draw text only where the mask is (using source-atop)
+    paintCtx.globalCompositeOperation = 'source-atop';
 
-        // Create gradient
-        const gradient = paintCtx.createLinearGradient(centerX - 400, centerY, centerX + 400, centerY);
-        gradient.addColorStop(0, '#ffffff');
-        gradient.addColorStop(0.5, '#00ff88');
-        gradient.addColorStop(1, '#0ea5e9');
+    const centerX = paintCanvas.width / 2;
+    const centerY = paintCanvas.height * 0.3; // Top third of screen
 
-        paintCtx.fillStyle = gradient;
-        paintCtx.shadowColor = '#00ff88';
-        paintCtx.shadowBlur = 40;
-        paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
+    paintCtx.font = 'bold 140px Rajdhani, sans-serif';
+    paintCtx.textAlign = 'center';
+    paintCtx.textBaseline = 'middle';
 
-        paintCtx.restore();
-    }
+    // Create text gradient
+    const textGradient = paintCtx.createLinearGradient(centerX - 400, centerY, centerX + 400, centerY);
+    textGradient.addColorStop(0, '#ffffff');
+    textGradient.addColorStop(0.5, '#00ff88');
+    textGradient.addColorStop(1, '#0ea5e9');
+
+    paintCtx.fillStyle = textGradient;
+    paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
 
     requestAnimationFrame(renderSpotlight);
 }
