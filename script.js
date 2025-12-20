@@ -345,29 +345,33 @@ async function loadMyGT7Stats() {
 
         // Fallback to manual stats display
         checkerResults.innerHTML = `
-            <div style="text-align: left;">
-                <h3 style="color: var(--color-primary); margin-bottom: 1.5rem;">Driver Profile</h3>
-                <div style="display: grid; gap: 1rem;">
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                        <span style="color: var(--color-text-muted);">PSN ID:</span>
-                        <span style="font-weight: 600;">${MY_PSN}</span>
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+                    <div style="background: linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(0,255,136,0.05) 100%); border: 2px solid rgba(0,255,136,0.3); border-radius: 12px; padding: 2rem; text-align: center; position: relative; overflow: hidden;">
+                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));"></div>
+                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--color-text-muted); margin-bottom: 0.5rem;">Driver Rating</div>
+                        <div style="font-size: 3rem; font-weight: 900; font-family: var(--font-display); color: var(--color-primary); line-height: 1; margin-bottom: 0.25rem;">A+</div>
+                        <div style="font-size: 1.25rem; font-weight: 600; color: rgba(255,255,255,0.8);">75,000 DR</div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                        <span style="color: var(--color-text-muted);">Driver Rating:</span>
-                        <span style="font-weight: 600; color: var(--color-primary);">A+</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                        <span style="color: var(--color-text-muted);">Sportsmanship:</span>
-                        <span style="font-weight: 600; color: var(--color-secondary);">S</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                        <span style="color: var(--color-text-muted);">Active Racer:</span>
-                        <span style="font-weight: 600;">GT7 Sport Mode</span>
+                    <div style="background: linear-gradient(135deg, rgba(14,165,233,0.1) 0%, rgba(14,165,233,0.05) 100%); border: 2px solid rgba(14,165,233,0.3); border-radius: 12px; padding: 2rem; text-align: center; position: relative; overflow: hidden;">
+                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-secondary), var(--color-primary));"></div>
+                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--color-text-muted); margin-bottom: 0.5rem;">Sportsmanship</div>
+                        <div style="font-size: 3rem; font-weight: 900; font-family: var(--font-display); color: var(--color-secondary); line-height: 1; margin-bottom: 0.25rem;">S</div>
+                        <div style="font-size: 1.25rem; font-weight: 600; color: rgba(255,255,255,0.8);">99 SR</div>
                     </div>
                 </div>
-                <p style="margin-top: 1.5rem; color: var(--color-text-muted); font-size: 0.85rem; text-align: center;">
-                    <a href="https://gtstats.live" target="_blank" style="color: var(--color-primary); text-decoration: underline;">View detailed stats on gtstats.live</a>
-                </p>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);">SparksTheory</div>
+                            <div style="font-size: 0.875rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">PSN ID</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--color-text);">Active</div>
+                            <div style="font-size: 0.875rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">GT7 Sport Mode</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -406,37 +410,46 @@ function displayDriverStats(psnId, data) {
     const srPoints = latestStats.sportsmanship_point || latestStats.sr_points || 'N/A';
 
     checkerResults.innerHTML = `
-        <div style="text-align: left;">
-            <h3 style="color: var(--color-primary); margin-bottom: 1.5rem;">Driver Profile</h3>
-            <div style="display: grid; gap: 1rem;">
-                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <span style="color: var(--color-text-muted);">PSN ID:</span>
-                    <span style="font-weight: 600;">${psnId}</span>
+        <div style="max-width: 600px; margin: 0 auto;">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+                <div style="background: linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(0,255,136,0.05) 100%); border: 2px solid rgba(0,255,136,0.3); border-radius: 12px; padding: 2rem; text-align: center; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));"></div>
+                    <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--color-text-muted); margin-bottom: 0.5rem;">Driver Rating</div>
+                    <div style="font-size: 3rem; font-weight: 900; font-family: var(--font-display); color: var(--color-primary); line-height: 1; margin-bottom: 0.25rem;">${driverRating}</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; color: rgba(255,255,255,0.8);">${drPoints !== 'N/A' ? `${drPoints.toLocaleString()} DR` : 'N/A'}</div>
                 </div>
-                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <span style="color: var(--color-text-muted);">Driver Rating:</span>
-                    <span style="font-weight: 600; color: var(--color-primary);">${driverRating}${drPoints !== 'N/A' ? ` (${drPoints} pts)` : ''}</span>
+                <div style="background: linear-gradient(135deg, rgba(14,165,233,0.1) 0%, rgba(14,165,233,0.05) 100%); border: 2px solid rgba(14,165,233,0.3); border-radius: 12px; padding: 2rem; text-align: center; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-secondary), var(--color-primary));"></div>
+                    <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--color-text-muted); margin-bottom: 0.5rem;">Sportsmanship</div>
+                    <div style="font-size: 3rem; font-weight: 900; font-family: var(--font-display); color: var(--color-secondary); line-height: 1; margin-bottom: 0.25rem;">${sportsmanship}</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; color: rgba(255,255,255,0.8);">${srPoints !== 'N/A' ? `${srPoints} SR` : 'N/A'}</div>
                 </div>
-                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <span style="color: var(--color-text-muted);">Sportsmanship:</span>
-                    <span style="font-weight: 600; color: var(--color-secondary);">${sportsmanship}${srPoints !== 'N/A' ? ` (${srPoints} pts)` : ''}</span>
-                </div>
-                ${totalRaces !== 'N/A' ? `
-                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <span style="color: var(--color-text-muted);">Total Races:</span>
-                    <span style="font-weight: 600;">${totalRaces}</span>
-                </div>
-                ` : ''}
-                ${wins ? `
-                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                    <span style="color: var(--color-text-muted);">Wins:</span>
-                    <span style="font-weight: 600; color: var(--color-primary);">${wins}</span>
-                </div>
-                ` : ''}
             </div>
-            <p style="margin-top: 1.5rem; color: var(--color-text-muted); font-size: 0.85rem;">
-                Data provided by <a href="https://gtstats.live" target="_blank" style="color: var(--color-primary);">gtstats.live</a>
-            </p>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem;">
+                <div style="display: grid; grid-template-columns: repeat(${totalRaces !== 'N/A' && wins ? '3' : '2'}, 1fr); gap: 1.5rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);">${psnId}</div>
+                        <div style="font-size: 0.875rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">PSN ID</div>
+                    </div>
+                    ${totalRaces !== 'N/A' ? `
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-text);">${totalRaces}</div>
+                        <div style="font-size: 0.875rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Races</div>
+                    </div>
+                    ` : ''}
+                    ${wins ? `
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-primary);">${wins}</div>
+                        <div style="font-size: 0.875rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Wins</div>
+                    </div>
+                    ` : `
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--color-text);">Active</div>
+                        <div style="font-size: 0.875rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">GT7 Sport Mode</div>
+                    </div>
+                    `}
+                </div>
+            </div>
         </div>
     `;
 }
