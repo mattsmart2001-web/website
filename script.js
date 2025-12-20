@@ -220,14 +220,15 @@ function renderSpotlight() {
 
     const maskGradient = paintCtx.createRadialGradient(
         laggedMousePos.x, laggedMousePos.y, 0,
-        laggedMousePos.x, laggedMousePos.y, 100
+        laggedMousePos.x, laggedMousePos.y, 150  // Bigger brush
     );
     maskGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    maskGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.5)');
-    maskGradient.addColorStop(1, 'rgba(255, 255, 255, 0)'); // Feathered edge
+    maskGradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.7)'); // More gradual fade
+    maskGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.3)');
+    maskGradient.addColorStop(1, 'rgba(255, 255, 255, 0)'); // Soft feathered edge
 
     paintCtx.beginPath();
-    paintCtx.arc(laggedMousePos.x, laggedMousePos.y, 100, 0, Math.PI * 2);
+    paintCtx.arc(laggedMousePos.x, laggedMousePos.y, 150, 0, Math.PI * 2);  // Bigger brush
     paintCtx.fillStyle = maskGradient;
     paintCtx.fill();
 
