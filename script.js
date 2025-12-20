@@ -324,8 +324,8 @@ const MY_PSN = 'SparksTheory';
 // Load stats automatically on page load
 async function loadMyGT7Stats() {
     try {
-        // Use CORS proxy to fetch your stats
-        const apiUrl = `https://gtstats.live/api/getDriverRating?user_id=${MY_USER_ID}`;
+        // Use CORS proxy to fetch your stats via PSN lookup
+        const apiUrl = `https://gtstats.live/api/lookupPSN?psn=${encodeURIComponent(MY_PSN)}`;
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
 
         const response = await fetch(proxyUrl);
@@ -399,8 +399,8 @@ function displayDriverStats(psnId, data) {
 
     // Helper function to convert DR points to letter grade
     function getDRGrade(points) {
-        if (points >= 75000) return 'A+';
-        if (points >= 50000) return 'A';
+        if (points >= 50000) return 'A+';
+        if (points >= 40000) return 'A';
         if (points >= 30000) return 'B';
         if (points >= 10000) return 'C';
         if (points >= 4000) return 'D';
