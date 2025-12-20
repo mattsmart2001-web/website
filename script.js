@@ -72,8 +72,8 @@ loader.load(
         const scale = 8 / maxDim;
         model.scale.setScalar(scale);
 
-        // Position model slightly up
-        model.position.y += 0.3;
+        // Position model lower
+        model.position.y -= 1.2;
 
         // Face forward initially
         model.rotation.y = 0;
