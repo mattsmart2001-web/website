@@ -338,7 +338,7 @@ checkDriverBtn?.addEventListener('click', async () => {
 
     try {
         // Try AllOrigins CORS proxy which returns JSON with contents
-        const apiUrl = `https://gtstat.live/api/getDriverStatsHistory?psn=${encodeURIComponent(psnId)}`;
+        const apiUrl = `https://gtstats.live/api/getDriverStatsHistory?psn=${encodeURIComponent(psnId)}`;
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
 
         const response = await fetch(proxyUrl);
@@ -364,11 +364,11 @@ checkDriverBtn?.addEventListener('click', async () => {
                 <p style="color: var(--color-accent); margin-bottom: 1rem;">⚠️ Could not fetch stats for "${psnId}"</p>
                 ${isCorsError ? `
                 <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-                    <strong>Connection Issue:</strong> Unable to reach the gtstat.live API.
+                    <strong>Connection Issue:</strong> Unable to reach the gtstats.live API.
                 </p>
                 <p style="color: var(--color-text-muted); font-size: 0.9rem;">
                     Try checking your stats directly at
-                    <a href="https://gtstat.live" target="_blank" style="color: var(--color-primary); text-decoration: underline;">gtstat.live</a>
+                    <a href="https://gtstats.live" target="_blank" style="color: var(--color-primary); text-decoration: underline;">gtstats.live</a>
                 </p>
                 ` : `
                 <p style="color: var(--color-text-muted); font-size: 0.9rem;">
@@ -376,7 +376,7 @@ checkDriverBtn?.addEventListener('click', async () => {
                     <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
                         <li>The PSN ID doesn't exist in GT7's database</li>
                         <li>The player hasn't played GT7 Sport mode</li>
-                        <li>The gtstat.live service is temporarily unavailable</li>
+                        <li>The gtstats.live service is temporarily unavailable</li>
                     </ul>
                 </p>
                 `}
@@ -447,7 +447,7 @@ function displayDriverStats(psnId, data) {
                 ` : ''}
             </div>
             <p style="margin-top: 1.5rem; color: var(--color-text-muted); font-size: 0.85rem;">
-                Data provided by <a href="https://gtstat.live" target="_blank" style="color: var(--color-primary);">gtstat.live</a>
+                Data provided by <a href="https://gtstats.live" target="_blank" style="color: var(--color-primary);">gtstats.live</a>
             </p>
         </div>
     `;
