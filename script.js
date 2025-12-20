@@ -37,6 +37,19 @@ const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
 fillLight.position.set(0, -5, 0);
 scene.add(fillLight);
 
+// Mouse tracking for interactive rotation
+let mouseX = 0;
+let mouseY = 0;
+let targetRotationX = 0;
+let targetRotationY = 0;
+
+// Track mouse movement
+document.addEventListener('mousemove', (event) => {
+    // Normalize mouse position to -1 to 1
+    mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+    mouseY = (event.clientY / window.innerHeight) * 2 - 1;
+});
+
 // Load GLB model
 let model;
 const loader = new THREE.GLTFLoader();
@@ -45,20 +58,23 @@ loader.load(
     'fbx.glb',
     function (gltf) {
         model = gltf.scene;
-        
+
         // Center and scale the model
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
-        
+
         // Center the model
         model.position.sub(center);
-        
+
         // Scale to fit
         const maxDim = Math.max(size.x, size.y, size.z);
         const scale = 3 / maxDim;
         model.scale.setScalar(scale);
-        
+
+        // Face forward initially
+        model.rotation.y = 0;
+
         scene.add(model);
         console.log('GLB model loaded successfully!');
     },
@@ -80,12 +96,17 @@ window.addEventListener('resize', () => {
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
-    
-    // Slowly rotate the model
+
     if (model) {
-        model.rotation.y += 0.003;
+        // Calculate target rotation based on mouse position
+        targetRotationY = mouseX * 0.3; // Horizontal rotation (max ±0.3 radians ≈ ±17 degrees)
+        targetRotationX = mouseY * 0.2; // Vertical rotation (max ±0.2 radians ≈ ±11 degrees)
+
+        // Smooth interpolation for natural movement
+        model.rotation.y += (targetRotationY - model.rotation.y) * 0.05;
+        model.rotation.x += (targetRotationX - model.rotation.x) * 0.05;
     }
-    
+
     renderer.render(scene, camera);
 }
 
