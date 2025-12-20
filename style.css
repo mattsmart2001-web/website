@@ -140,7 +140,7 @@ body.painting {
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    padding: 70vh 3rem 0;
+    padding: 85vh 3rem 0;
     z-index: 10;
     overflow: hidden;
 }
