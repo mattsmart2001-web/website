@@ -222,6 +222,20 @@ function renderSpotlight() {
 renderSpotlight();
 
 
+// ===== PARALLAX SCROLL EFFECT =====
+const canvasContainer = document.getElementById('canvas-container');
+const paintCanvasElement = document.getElementById('paint-canvas');
+
+window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    // Move helmet and text up faster than scroll (parallax effect)
+    const parallaxOffset = scrollY * 0.6; // 60% of scroll speed
+
+    canvasContainer.style.transform = `translateY(-${parallaxOffset}px)`;
+    paintCanvasElement.style.transform = `translateY(-${parallaxOffset}px)`;
+});
+
+
 // ===== NAVIGATION =====
 const navbar = document.querySelector('.navbar');
 const navBurger = document.getElementById('navBurger');
