@@ -27,10 +27,15 @@ canvas.width = 1024;
 canvas.height = 512;
 const ctx = canvas.getContext('2d');
 
+let envTexture;
+let envReady = false;
+
 // Load logo and create environment
 const logoImage = new Image();
 logoImage.crossOrigin = 'anonymous';
 logoImage.onload = function() {
+    console.log('Logo image loaded, creating environment...');
+
     // Create gradient background
     const gradient = ctx.createLinearGradient(0, 0, 0, 512);
     gradient.addColorStop(0, '#00ff88');    // Primary green
@@ -41,10 +46,10 @@ logoImage.onload = function() {
 
     // Draw logo multiple times across the canvas for environment map
     ctx.globalCompositeOperation = 'screen'; // Blend mode for visibility
-    ctx.globalAlpha = 0.6; // Semi-transparent
+    ctx.globalAlpha = 0.8; // More opaque for better visibility
 
     // Draw logo in center
-    const logoSize = 300;
+    const logoSize = 400;
     ctx.drawImage(logoImage,
         (1024 - logoSize) / 2,
         (512 - logoSize) / 2,
@@ -53,16 +58,23 @@ logoImage.onload = function() {
     );
 
     // Draw logos on sides for wraparound effect
-    ctx.drawImage(logoImage, 50, 100, 200, 200);
-    ctx.drawImage(logoImage, 1024 - 250, 100, 200, 200);
+    ctx.globalAlpha = 0.6;
+    ctx.drawImage(logoImage, 50, 50, 250, 250);
+    ctx.drawImage(logoImage, 1024 - 300, 50, 250, 250);
 
-    // Update environment texture
-    const envTexture = new THREE.CanvasTexture(canvas);
+    // Create environment texture
+    envTexture = new THREE.CanvasTexture(canvas);
     envTexture.mapping = THREE.EquirectangularReflectionMapping;
     envTexture.needsUpdate = true;
     scene.environment = envTexture;
+    envReady = true;
 
-    console.log('Logo environment created successfully');
+    console.log('Logo environment created and applied successfully');
+
+    // Update model materials if model already loaded
+    if (model) {
+        updateModelMaterials();
+    }
 };
 logoImage.onerror = function() {
     console.warn('Logo failed to load, using gradient only');
@@ -74,11 +86,52 @@ logoImage.onerror = function() {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1024, 512);
 
-    const envTexture = new THREE.CanvasTexture(canvas);
+    envTexture = new THREE.CanvasTexture(canvas);
     envTexture.mapping = THREE.EquirectangularReflectionMapping;
     scene.environment = envTexture;
+    envReady = true;
+
+    if (model) {
+        updateModelMaterials();
+    }
 };
 logoImage.src = 'Sparks_logo.jpg';
+
+// Function to update model materials with environment map
+function updateModelMaterials() {
+    if (!model || !envTexture) return;
+
+    console.log('Updating model materials with environment map...');
+    let materialCount = 0;
+
+    model.traverse((child) => {
+        if (child.isMesh && child.material) {
+            materialCount++;
+
+            // Force environment map on material
+            child.material.envMap = envTexture;
+
+            // Enhance reflectivity
+            if (child.material.metalness !== undefined) {
+                child.material.metalness = 0.95;
+            }
+            if (child.material.roughness !== undefined) {
+                child.material.roughness = 0.1;
+            }
+
+            child.material.envMapIntensity = 2.0; // Even higher intensity
+            child.material.needsUpdate = true;
+
+            console.log('Updated material:', child.name || 'unnamed', {
+                metalness: child.material.metalness,
+                roughness: child.material.roughness,
+                envMapIntensity: child.material.envMapIntensity
+            });
+        }
+    });
+
+    console.log(`Updated ${materialCount} materials with reflections`);
+}
 
 // Lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
@@ -127,20 +180,7 @@ loader.load(
     function (gltf) {
         model = gltf.scene;
 
-        // Make materials more reflective
-        model.traverse((child) => {
-            if (child.isMesh && child.material) {
-                // Enhance reflectivity for better environment map visibility
-                if (child.material.metalness !== undefined) {
-                    child.material.metalness = 0.9; // High metalness for reflections
-                }
-                if (child.material.roughness !== undefined) {
-                    child.material.roughness = 0.2; // Low roughness for shiny reflections
-                }
-                child.material.envMapIntensity = 1.5; // Boost environment map visibility
-                child.material.needsUpdate = true;
-            }
-        });
+        console.log('GLB model loaded, processing...');
 
         // Center and scale the model
         const box = new THREE.Box3().setFromObject(model);
@@ -162,7 +202,13 @@ loader.load(
         model.rotation.y = 0;
 
         scene.add(model);
-        console.log('GLB model loaded successfully with enhanced reflections!');
+
+        // Apply environment map if ready
+        if (envReady) {
+            updateModelMaterials();
+        }
+
+        console.log('GLB model loaded and added to scene');
     },
     function (xhr) {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
