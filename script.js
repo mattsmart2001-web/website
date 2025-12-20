@@ -9,7 +9,7 @@ const camera = new THREE.PerspectiveCamera(
     0.1,
     1000
 );
-camera.position.set(0, 2, 5);
+camera.position.set(0, 1, 4.5);
 
 // Renderer setup
 const renderer = new THREE.WebGLRenderer({
@@ -67,13 +67,13 @@ loader.load(
         // Center the model
         model.position.sub(center);
 
-        // Scale to fit (2x larger)
+        // Scale to fit (larger for full screen)
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 6 / maxDim;
+        const scale = 8 / maxDim;
         model.scale.setScalar(scale);
 
-        // Move model down by 15% to prevent top cutoff
-        model.position.y -= 0.9;
+        // Position model slightly up
+        model.position.y += 0.3;
 
         // Face forward initially
         model.rotation.y = 0;
@@ -174,43 +174,39 @@ function renderSpotlight() {
     paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
 
     if (isOverHelmet) {
-        // Draw circular mask where mouse is
+        // Draw invisible circular mask where mouse is (no visible blob)
         paintCtx.globalCompositeOperation = 'source-over';
         paintCtx.beginPath();
-        paintCtx.arc(currentMousePos.x, currentMousePos.y, 80, 0, Math.PI * 2);
-        paintCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+        paintCtx.arc(currentMousePos.x, currentMousePos.y, 100, 0, Math.PI * 2);
+        paintCtx.fillStyle = 'rgba(255, 255, 255, 0)'; // Invisible mask
         paintCtx.fill();
 
-        // Add glow to spotlight
-        paintCtx.shadowColor = '#00ff88';
-        paintCtx.shadowBlur = 30;
+        // Create a clipping region instead
+        paintCtx.save();
         paintCtx.beginPath();
-        paintCtx.arc(currentMousePos.x, currentMousePos.y, 80, 0, Math.PI * 2);
-        paintCtx.fill();
-        paintCtx.shadowBlur = 0;
+        paintCtx.arc(currentMousePos.x, currentMousePos.y, 100, 0, Math.PI * 2);
+        paintCtx.clip();
 
-        // Draw text only where the spotlight is (using source-atop)
-        paintCtx.globalCompositeOperation = 'source-atop';
-
+        // Draw text only within the clipping region
         const centerX = paintCanvas.width / 2;
-        const centerY = paintCanvas.height / 2;
+        const centerY = paintCanvas.height * 0.3; // Top third of screen
 
-        paintCtx.font = 'bold 120px Rajdhani, sans-serif';
+        paintCtx.font = 'bold 140px Rajdhani, sans-serif';
         paintCtx.textAlign = 'center';
         paintCtx.textBaseline = 'middle';
 
         // Create gradient
-        const gradient = paintCtx.createLinearGradient(centerX - 300, centerY, centerX + 300, centerY);
+        const gradient = paintCtx.createLinearGradient(centerX - 400, centerY, centerX + 400, centerY);
         gradient.addColorStop(0, '#ffffff');
         gradient.addColorStop(0.5, '#00ff88');
         gradient.addColorStop(1, '#0ea5e9');
 
         paintCtx.fillStyle = gradient;
         paintCtx.shadowColor = '#00ff88';
-        paintCtx.shadowBlur = 30;
+        paintCtx.shadowBlur = 40;
         paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
 
-        paintCtx.shadowBlur = 0;
+        paintCtx.restore();
     }
 
     requestAnimationFrame(renderSpotlight);
