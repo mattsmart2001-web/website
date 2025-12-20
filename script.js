@@ -110,13 +110,13 @@ function updateModelMaterials() {
 
             // Enhance reflectivity
             if (child.material.metalness !== undefined) {
-                child.material.metalness = 0.95;
+                child.material.metalness = 0.85; // Slightly less metallic
             }
             if (child.material.roughness !== undefined) {
-                child.material.roughness = 0.1;
+                child.material.roughness = 0.6; // Much rougher surface
             }
 
-            child.material.envMapIntensity = 2.0; // Even higher intensity
+            child.material.envMapIntensity = 1.8; // Adjusted for rougher surface
             child.material.needsUpdate = true;
 
             console.log('Updated material:', child.name || 'unnamed', {
