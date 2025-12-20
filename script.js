@@ -22,11 +22,14 @@ renderer.setClearColor(0x000000, 0); // Transparent
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
 // Logo Environment Map for subtle reflections
+let envTexture;
 const textureLoader = new THREE.TextureLoader();
 textureLoader.load(
     'Sparks_logo.jpg',
     function(texture) {
         texture.mapping = THREE.EquirectangularReflectionMapping;
+        texture.rotation = Math.PI; // Rotate 180 degrees
+        envTexture = texture;
         scene.environment = texture;
         console.log('Logo environment loaded successfully');
     },
@@ -83,6 +86,21 @@ loader.load(
     function (gltf) {
         model = gltf.scene;
 
+        // Make materials more reflective
+        model.traverse((child) => {
+            if (child.isMesh && child.material) {
+                // Enhance reflectivity for better environment map visibility
+                if (child.material.metalness !== undefined) {
+                    child.material.metalness = 0.9; // High metalness for reflections
+                }
+                if (child.material.roughness !== undefined) {
+                    child.material.roughness = 0.2; // Low roughness for shiny reflections
+                }
+                child.material.envMapIntensity = 1.5; // Boost environment map visibility
+                child.material.needsUpdate = true;
+            }
+        });
+
         // Center and scale the model
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
@@ -103,7 +121,7 @@ loader.load(
         model.rotation.y = 0;
 
         scene.add(model);
-        console.log('GLB model loaded successfully!');
+        console.log('GLB model loaded successfully with enhanced reflections!');
     },
     function (xhr) {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
