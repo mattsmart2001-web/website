@@ -170,7 +170,7 @@ document.addEventListener('mousemove', (event) => {
 
 // Track lagging mouse position for delay effect
 let laggedMousePos = { x: 0, y: 0 };
-const LAG_FACTOR = 0.08; // Lower = more lag/delay
+const LAG_FACTOR = 0.04; // Lower = more lag/delay
 
 // Continuous render loop for spotlight effect
 function renderSpotlight() {
