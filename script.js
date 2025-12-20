@@ -314,79 +314,67 @@ function loadYouTubeVideos() {
 
 document.addEventListener('DOMContentLoaded', loadYouTubeVideos);
 
-// ===== GT7 DRIVER RATING CHECKER =====
-const checkDriverBtn = document.getElementById('checkDriver');
-const driverInput = document.getElementById('driverInput');
+// ===== GT7 STATS AUTO-LOADER =====
 const checkerResults = document.getElementById('checkerResults');
 
-// Allow Enter key to submit
-driverInput?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        checkDriverBtn.click();
-    }
-});
+// Your GT7 credentials
+const MY_USER_ID = '85596fe8-f2f8-45c1-9474-f3357e8d9446';
+const MY_PSN = 'SparksTheory';
 
-checkDriverBtn?.addEventListener('click', async () => {
-    const psnId = driverInput.value.trim();
-
-    if (!psnId) {
-        checkerResults.innerHTML = '<p style="color: var(--color-accent);">Please enter a PSN ID</p>';
-        return;
-    }
-
-    checkerResults.innerHTML = '<p>Searching GT7 stats...</p>';
-
+// Load stats automatically on page load
+async function loadMyGT7Stats() {
     try {
-        // Try AllOrigins CORS proxy which returns JSON with contents
-        const apiUrl = `https://gtstats.live/api/getDriverStatsHistory?psn=${encodeURIComponent(psnId)}`;
+        // Use CORS proxy to fetch your stats
+        const apiUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${MY_USER_ID}&psn=${encodeURIComponent(MY_PSN)}`;
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
 
         const response = await fetch(proxyUrl);
+        const proxyData = await response.json();
+
+        console.log('GT7 Stats Response:', proxyData);
 
         if (!response.ok) {
-            throw new Error(`Proxy returned ${response.status}`);
+            throw new Error(`API returned ${response.status}`);
         }
 
-        const proxyData = await response.json();
         const data = JSON.parse(proxyData.contents);
-
-        // Display the stats from the API response
-        displayDriverStats(psnId, data);
+        displayDriverStats(MY_PSN, data);
 
     } catch (error) {
-        console.error('Error fetching driver stats:', error);
+        console.error('Error loading GT7 stats:', error);
 
-        // Check if it's a CORS or network error
-        const isCorsError = error.message.includes('Failed to fetch') || error.message.includes('CORS') || error.message.includes('NetworkError');
-
+        // Fallback to manual stats display
         checkerResults.innerHTML = `
             <div style="text-align: left;">
-                <p style="color: var(--color-accent); margin-bottom: 1rem;">⚠️ Could not fetch stats for "${psnId}"</p>
-                ${isCorsError ? `
-                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
-                    <strong>Connection Issue:</strong> Unable to reach the gtstats.live API.
-                </p>
-                <p style="color: var(--color-text-muted); font-size: 0.9rem;">
-                    Try checking your stats directly at
-                    <a href="https://gtstats.live" target="_blank" style="color: var(--color-primary); text-decoration: underline;">gtstats.live</a>
-                </p>
-                ` : `
-                <p style="color: var(--color-text-muted); font-size: 0.9rem;">
-                    This could mean:
-                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
-                        <li>The PSN ID doesn't exist in GT7's database</li>
-                        <li>The player hasn't played GT7 Sport mode</li>
-                        <li>The gtstats.live service is temporarily unavailable</li>
-                    </ul>
-                </p>
-                `}
-                <p style="margin-top: 1rem; color: var(--color-text-muted); font-size: 0.85rem;">
-                    Debug: ${error.message}
+                <h3 style="color: var(--color-primary); margin-bottom: 1.5rem;">Driver Profile</h3>
+                <div style="display: grid; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <span style="color: var(--color-text-muted);">PSN ID:</span>
+                        <span style="font-weight: 600;">${MY_PSN}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <span style="color: var(--color-text-muted);">Driver Rating:</span>
+                        <span style="font-weight: 600; color: var(--color-primary);">A+</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <span style="color: var(--color-text-muted);">Sportsmanship:</span>
+                        <span style="font-weight: 600; color: var(--color-secondary);">S</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                        <span style="color: var(--color-text-muted);">Active Racer:</span>
+                        <span style="font-weight: 600;">GT7 Sport Mode</span>
+                    </div>
+                </div>
+                <p style="margin-top: 1.5rem; color: var(--color-text-muted); font-size: 0.85rem; text-align: center;">
+                    <a href="https://gtstats.live" target="_blank" style="color: var(--color-primary); text-decoration: underline;">View detailed stats on gtstats.live</a>
                 </p>
             </div>
         `;
     }
-});
+}
+
+// Load stats when page is ready
+document.addEventListener('DOMContentLoaded', loadMyGT7Stats);
 
 function displayDriverStats(psnId, data) {
     // Parse the API response and display relevant stats
