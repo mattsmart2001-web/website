@@ -324,8 +324,8 @@ const MY_PSN = 'SparksTheory';
 // Load stats automatically on page load
 async function loadMyGT7Stats() {
     try {
-        // Use CORS proxy to fetch your DR stats
-        const apiUrl = `https://gtstats.live/api/getDriverRating?user_id=${MY_USER_ID}`;
+        // Use CORS proxy to fetch your full stats history
+        const apiUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${MY_USER_ID}&psn=${encodeURIComponent(MY_PSN)}`;
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
 
         const response = await fetch(proxyUrl);
