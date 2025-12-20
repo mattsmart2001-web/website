@@ -99,7 +99,7 @@ logoImage.onerror = function() {
         updateModelMaterials();
     }
 };
-logoImage.src = 'Sparks_logo.jpg';
+logoImage.src = 'sparks_logo.jpg';
 
 // Function to update model materials with environment map
 function updateModelMaterials() {
