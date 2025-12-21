@@ -166,7 +166,7 @@ let model;
 const loader = new THREE.GLTFLoader();
 
 loader.load(
-    'fbx.glb',
+    'SunglassesKhronos.glb',
     function (gltf) {
         model = gltf.scene;
 
@@ -178,13 +178,14 @@ loader.load(
         // Center the model
         model.position.sub(center);
 
-        // Scale to fit screen nicely
+        // Scale to fit screen nicely - sunglasses are smaller, so scale more
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 12 / maxDim;
+        const scale = 18 / maxDim; // Increased from 12 for better visibility
         model.scale.setScalar(scale);
 
-        // Position helmet lower on screen
-        model.position.y = -2;
+        // Position sunglasses - adjust for better viewing angle
+        model.position.y = -1;
+        model.rotation.y = 0.3; // Slight angle to show off the design
 
         scene.add(model);
 
@@ -197,7 +198,7 @@ loader.load(
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
     },
     function (error) {
-        console.error('Error loading FBX model:', error);
+        console.error('Error loading sunglasses model:', error);
     }
 );
 
