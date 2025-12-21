@@ -198,14 +198,14 @@ loader.load(
         console.log('Max dimension:', maxDim);
         console.log('Scale factor:', scale);
 
-        // Position model at camera level
-        model.position.y = 1; // Match camera height
+        // Position model lower
+        model.position.y = -2; // Lower on screen
 
         console.log('Final model position:', model.position);
         console.log('Final model scale:', model.scale);
 
-        // Face forward initially
-        model.rotation.y = 0;
+        // Face forward
+        model.rotation.y = Math.PI; // Rotate 180 degrees to face camera
 
         scene.add(model);
 
