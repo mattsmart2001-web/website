@@ -264,7 +264,7 @@ body.painting {
     gap: 1rem;
     animation: bounce 2s infinite;
     z-index: 10;
-    margin-top: -8rem;
+    margin-top: -3rem;
 }
 
 .scroll-indicator span {
@@ -278,6 +278,21 @@ body.painting {
     width: 2px;
     height: 40px;
     background: linear-gradient(180deg, var(--color-primary), transparent);
+}
+
+/* Ensure no stray borders or outlines anywhere */
+* {
+    box-sizing: border-box;
+}
+
+.container {
+    border: none !important;
+    outline: none !important;
+}
+
+.section {
+    border: none !important;
+    outline: none !important;
 }
 
 /* ===== BUTTONS ===== */
