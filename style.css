@@ -255,7 +255,9 @@ body.painting {
 
 .scroll-indicator {
     position: absolute;
-    bottom: 3rem;
+    top: 8rem;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -296,7 +298,8 @@ body.painting {
 .btn-primary {
     background: var(--color-primary);
     color: var(--color-bg);
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+    outline: none;
 }
 
 .btn-primary::before {
@@ -316,20 +319,25 @@ body.painting {
 }
 
 .btn-primary:hover {
-    box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+    box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
     transform: translateY(-2px);
+}
+
+.btn-primary:focus {
+    outline: none;
 }
 
 .btn-secondary {
     background: transparent;
     color: var(--color-text);
     border: 2px solid var(--color-primary);
+    outline: none;
 }
 
 .btn-secondary:hover {
     background: var(--color-primary);
     color: var(--color-bg);
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
     transform: translateY(-2px);
 }
 
