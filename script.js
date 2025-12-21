@@ -50,12 +50,12 @@ logoImage.onload = function() {
     const centerY = (512 - logoSize) / 2;
     ctx.drawImage(logoImage, centerX, centerY, logoSize, logoSize);
 
-    // Add subtle green/blue tint overlay for brand colors
+    // Add subtle blue tint overlay for brand colors
     ctx.globalCompositeOperation = 'overlay';
     ctx.globalAlpha = 0.2; // Even more subtle
     const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-    gradient.addColorStop(0, '#00ff88');
-    gradient.addColorStop(1, '#0ea5e9');
+    gradient.addColorStop(0, '#0ea5e9');
+    gradient.addColorStop(1, '#38bdf8');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1024, 512);
 
@@ -77,8 +77,8 @@ logoImage.onerror = function() {
     console.warn('Logo failed to load, using gradient only');
     // Fallback to gradient only
     const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-    gradient.addColorStop(0, '#00ff88');
-    gradient.addColorStop(0.5, '#0ea5e9');
+    gradient.addColorStop(0, '#0ea5e9');
+    gradient.addColorStop(0.5, '#38bdf8');
     gradient.addColorStop(1, '#000000');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1024, 512);
@@ -670,6 +670,6 @@ document.querySelectorAll('.section').forEach(section => {
 });
 
 // ===== CONSOLE WELCOME MESSAGE =====
-console.log('%cSPARKSTHEORY', 'color: #00ff88; font-size: 48px; font-weight: bold; font-family: Rajdhani, sans-serif;');
-console.log('%c🏎️ Welcome to the sparkstheory racing website!', 'color: #0ea5e9; font-size: 16px;');
+console.log('%cSPARKSTHEORY', 'color: #0ea5e9; font-size: 48px; font-weight: bold; font-family: Rajdhani, sans-serif;');
+console.log('%c🏎️ Welcome to the sparkstheory racing website!', 'color: #38bdf8; font-size: 16px;');
 console.log('%cFeaturing live GT7 stats and premium 3D visuals!', 'color: #94a3b8; font-size: 12px;');
