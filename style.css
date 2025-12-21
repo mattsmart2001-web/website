@@ -255,7 +255,7 @@ body.painting {
 
 .scroll-indicator {
     position: absolute;
-    top: 50%;
+    top: 90vh;
     left: 40%;
     transform: translate(-50%, -50%);
     display: flex;
@@ -265,7 +265,6 @@ body.painting {
     gap: 1rem;
     animation: bounce 2s infinite;
     z-index: 10;
-    margin-top: 3rem;
 }
 
 .scroll-indicator span {
