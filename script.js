@@ -115,16 +115,10 @@ function updateModelMaterials() {
             });
 
             // REPLACE material entirely with a fresh basic material for debugging
-            const newMaterial = new THREE.MeshStandardMaterial({
-                color: 0x00ff88,  // Bright green - highly visible
-                metalness: 0.7,
-                roughness: 0.3,
-                envMap: envTexture,
-                envMapIntensity: 1.5,
+            const newMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff0000,  // Bright red - highly visible
                 side: THREE.DoubleSide,
-                transparent: false,
-                opacity: 1.0,
-                wireframe: true  // ENABLE WIREFRAME to see geometry
+                wireframe: false
             });
 
             child.material = newMaterial;
@@ -206,33 +200,12 @@ loader.load(
         console.log('Total meshes found:', meshCount);
         console.log('======================');
 
-        // Center and scale the model
-        const box = new THREE.Box3().setFromObject(model);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
+        // SIMPLIFIED: No complex transformations, just basic positioning
+        model.position.set(0, 0, 0);  // Center at origin
+        model.scale.set(50, 50, 50);  // Fixed scale
+        model.rotation.set(0, 0, 0);   // No rotation
 
-        console.log('Model dimensions:', size);
-        console.log('Model center:', center);
-
-        // Center the model
-        model.position.sub(center);
-
-        // Scale to fit (larger for full screen)
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 12 / maxDim; // Increased from 8 to 12
-        model.scale.setScalar(scale);
-
-        console.log('Max dimension:', maxDim);
-        console.log('Scale factor:', scale);
-
-        // Position model lower
-        model.position.y = -2; // Lower on screen
-
-        console.log('Final model position:', model.position);
-        console.log('Final model scale:', model.scale);
-
-        // Face forward
-        model.rotation.y = Math.PI; // Rotate 180 degrees to face camera
+        console.log('Set fixed position (0, 0, 0) and scale (50, 50, 50)');
 
         scene.add(model);
 
