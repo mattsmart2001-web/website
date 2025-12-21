@@ -173,7 +173,7 @@ let model;
 const loader = new THREE.GLTFLoader();
 
 loader.load(
-    'racing_pilot_helmet.glb',
+    'fbx.glb',  // Temporarily test with working helmet
     function (gltf) {
         model = gltf.scene;
 
