@@ -116,7 +116,7 @@ function updateModelMaterials() {
 
             // REPLACE material entirely with a fresh basic material for debugging
             const newMaterial = new THREE.MeshStandardMaterial({
-                color: 0xcccccc,  // Light gray - highly visible
+                color: 0x00ff88,  // Bright green - highly visible
                 metalness: 0.7,
                 roughness: 0.3,
                 envMap: envTexture,
@@ -124,7 +124,7 @@ function updateModelMaterials() {
                 side: THREE.DoubleSide,
                 transparent: false,
                 opacity: 1.0,
-                wireframe: false  // Try with wireframe: true if still invisible
+                wireframe: true  // ENABLE WIREFRAME to see geometry
             });
 
             child.material = newMaterial;
