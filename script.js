@@ -430,38 +430,51 @@ async function loadSubscriberCount() {
 // Load subscriber count on page load
 document.addEventListener('DOMContentLoaded', loadSubscriberCount);
 
-function loadYouTubeVideos() {
+async function loadYouTubeVideos() {
     const videosGrid = document.getElementById('videosGrid');
 
-    const placeholderVideos = [
-        {
-            title: 'Epic GT7 Race at Spa | Close Finish!',
-            thumbnail: 'https://via.placeholder.com/640x360/0a0e12/00ff88?text=Video+1',
-            url: 'https://youtube.com/@SparksTheory'
-        },
-        {
-            title: 'Setup Guide: Finding the Perfect Balance',
-            thumbnail: 'https://via.placeholder.com/640x360/0a0e12/0ea5e9?text=Video+2',
-            url: 'https://youtube.com/@SparksTheory'
-        },
-        {
-            title: 'Overtaking Masterclass | Race Analysis',
-            thumbnail: 'https://via.placeholder.com/640x360/0a0e12/00ff88?text=Video+3',
-            url: 'https://youtube.com/@SparksTheory'
-        }
-    ];
+    try {
+        // Fetch latest videos from YouTube channel
+        const videosUrl = `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${YOUTUBE_CHANNEL_ID}&part=snippet,id&order=date&maxResults=6&type=video`;
+        const response = await fetch(videosUrl);
+        const data = await response.json();
 
-    videosGrid.innerHTML = placeholderVideos.map(video => `
-        <a href="${video.url}" target="_blank" class="video-card">
-            <div class="video-thumbnail">
-                <img src="${video.thumbnail}" alt="${video.title}">
+        if (data.items && data.items.length > 0) {
+            videosGrid.innerHTML = data.items.map(item => {
+                const videoId = item.id.videoId;
+                const title = item.snippet.title;
+                const thumbnail = item.snippet.thumbnails.high.url;
+                const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+                return `
+                    <a href="${videoUrl}" target="_blank" class="video-card">
+                        <div class="video-thumbnail">
+                            <img src="${thumbnail}" alt="${title}">
+                            <div class="play-button">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="white">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="video-info">
+                            <h3 class="video-title">${title}</h3>
+                            <p class="video-meta">SparksTheory</p>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+
+            console.log('YouTube videos loaded:', data.items.length);
+        }
+    } catch (error) {
+        console.error('Error loading YouTube videos:', error);
+        // Fallback to placeholder
+        videosGrid.innerHTML = `
+            <div class="video-placeholder">
+                <p>Unable to load videos. <a href="https://www.youtube.com/@SparksTheory" target="_blank">Visit my YouTube channel</a></p>
             </div>
-            <div class="video-info">
-                <h3 class="video-title">${video.title}</h3>
-                <p class="video-meta">SparksTheory • GT7</p>
-            </div>
-        </a>
-    `).join('');
+        `;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', loadYouTubeVideos);

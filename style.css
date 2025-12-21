@@ -541,6 +541,32 @@ body.painting {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 64px;
+    height: 64px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.video-card:hover .play-button {
+    background: var(--color-primary);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.video-card:hover .video-thumbnail img {
+    transform: scale(1.05);
 }
 
 .video-info {
