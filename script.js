@@ -110,13 +110,13 @@ function updateModelMaterials() {
 
             // Enhance reflectivity
             if (child.material.metalness !== undefined) {
-                child.material.metalness = 0.85; // Slightly less metallic
+                child.material.metalness = 0.85;
             }
             if (child.material.roughness !== undefined) {
-                child.material.roughness = 0.6; // Much rougher surface
+                child.material.roughness = 0.3; // Balanced - not too shiny, not too rough
             }
 
-            child.material.envMapIntensity = 1.8; // Adjusted for rougher surface
+            child.material.envMapIntensity = 1.8;
             child.material.needsUpdate = true;
 
             console.log('Updated material:', child.name || 'unnamed', {
@@ -130,19 +130,19 @@ function updateModelMaterials() {
     console.log(`Updated ${materialCount} materials with reflections`);
 }
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+// Lighting - softer, less colored
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
 scene.add(ambientLight);
 
-const mainLight = new THREE.DirectionalLight(0x00ff88, 1.5);
+const mainLight = new THREE.DirectionalLight(0xffffff, 0.8); // White instead of green
 mainLight.position.set(5, 10, 5);
 scene.add(mainLight);
 
-const backLight = new THREE.DirectionalLight(0x0ea5e9, 1);
+const backLight = new THREE.DirectionalLight(0xffffff, 0.5); // White instead of blue
 backLight.position.set(-5, 5, -5);
 scene.add(backLight);
 
-const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
 fillLight.position.set(0, -5, 0);
 scene.add(fillLight);
 
@@ -406,9 +406,52 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
-// ===== YOUTUBE VIDEO INTEGRATION =====
-const YOUTUBE_CHANNEL_ID = 'UCyour_channel_id_here';
-const YOUTUBE_API_KEY = 'your_api_key_here';
+// ===== YOUTUBE INTEGRATION =====
+const YOUTUBE_CHANNEL_HANDLE = '@SparksTheory';
+const YOUTUBE_API_KEY = 'AIzaSyDUaJz8qK_k9vV9vV9vV9vV9vV9vV9vV9v'; // You'll need to replace this with your actual API key
+
+// Load YouTube subscriber count
+async function loadSubscriberCount() {
+    try {
+        // First, get channel ID from handle using search
+        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(YOUTUBE_CHANNEL_HANDLE)}&type=channel&key=${YOUTUBE_API_KEY}`;
+        const searchResponse = await fetch(searchUrl);
+        const searchData = await searchResponse.json();
+
+        if (searchData.items && searchData.items.length > 0) {
+            const channelId = searchData.items[0].snippet.channelId;
+
+            // Now get subscriber count
+            const statsUrl = `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}&key=${YOUTUBE_API_KEY}`;
+            const statsResponse = await fetch(statsUrl);
+            const statsData = await statsResponse.json();
+
+            if (statsData.items && statsData.items.length > 0) {
+                const subCount = parseInt(statsData.items[0].statistics.subscriberCount);
+
+                // Format subscriber count
+                let formattedCount;
+                if (subCount >= 1000000) {
+                    formattedCount = (subCount / 1000000).toFixed(1) + 'M+';
+                } else if (subCount >= 1000) {
+                    formattedCount = (subCount / 1000).toFixed(1) + 'K+';
+                } else {
+                    formattedCount = subCount + '+';
+                }
+
+                // Update the display
+                document.getElementById('subscriber-count').textContent = formattedCount;
+                console.log('YouTube subscriber count loaded:', formattedCount);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading YouTube subscriber count:', error);
+        // Keep the default "2.5K+" if API fails
+    }
+}
+
+// Load subscriber count on page load
+document.addEventListener('DOMContentLoaded', loadSubscriberCount);
 
 function loadYouTubeVideos() {
     const videosGrid = document.getElementById('videosGrid');
