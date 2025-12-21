@@ -185,6 +185,27 @@ loader.load(
 
         console.log('GLB model loaded, processing...');
 
+        // DEBUG: Log everything in the model
+        console.log('=== MODEL STRUCTURE ===');
+        console.log('Model children count:', model.children.length);
+        let meshCount = 0;
+        model.traverse((child) => {
+            console.log('Child type:', child.type, 'Name:', child.name);
+            if (child.isMesh) {
+                meshCount++;
+                console.log('  - MESH FOUND:', child.name);
+                console.log('  - Has geometry:', !!child.geometry);
+                console.log('  - Has material:', !!child.material);
+                if (child.geometry) {
+                    console.log('  - Geometry attributes:', Object.keys(child.geometry.attributes));
+                    console.log('  - Position count:', child.geometry.attributes.position?.count);
+                    console.log('  - Index:', child.geometry.index);
+                }
+            }
+        });
+        console.log('Total meshes found:', meshCount);
+        console.log('======================');
+
         // Center and scale the model
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
