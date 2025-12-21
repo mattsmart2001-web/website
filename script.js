@@ -201,7 +201,7 @@ loader.load(
 
         // Position sunglasses - adjust for better viewing angle
         model.position.y = -1;
-        model.rotation.y = 0.3; // Slight angle to show off the design
+        model.rotation.y = 0; // Face forward for centered logo reflection
 
         scene.add(model);
 
