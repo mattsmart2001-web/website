@@ -435,7 +435,7 @@ async function loadYouTubeVideos() {
 
     try {
         // Fetch latest videos from YouTube channel
-        const videosUrl = `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${YOUTUBE_CHANNEL_ID}&part=snippet,id&order=date&maxResults=6&type=video`;
+        const videosUrl = `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${YOUTUBE_CHANNEL_ID}&part=snippet,id&order=date&maxResults=8&type=video`;
         const response = await fetch(videosUrl);
         const data = await response.json();
 
