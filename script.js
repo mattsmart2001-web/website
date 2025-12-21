@@ -198,8 +198,8 @@ loader.load(
         console.log('Max dimension:', maxDim);
         console.log('Scale factor:', scale);
 
-        // Position model
-        model.position.y -= 2.5; // Adjusted positioning
+        // Position model at camera level
+        model.position.y = 1; // Match camera height
 
         console.log('Final model position:', model.position);
         console.log('Final model scale:', model.scale);
