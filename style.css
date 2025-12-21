@@ -505,32 +505,70 @@ body.painting {
 }
 
 /* ===== VIDEOS SECTION ===== */
+.videos-section {
+    position: relative;
+    overflow: hidden;
+}
+
+.videos-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 400px;
+    background: radial-gradient(ellipse at center, rgba(14, 165, 233, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
 .videos-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 2rem;
     margin-bottom: 3rem;
+    position: relative;
+    z-index: 1;
 }
 
 .video-card {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
+    position: relative;
+}
+
+.video-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.1), transparent);
+    transition: left 0.6s ease;
+    z-index: 1;
+}
+
+.video-card:hover::before {
+    left: 100%;
 }
 
 .video-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-8px);
     border-color: var(--color-primary);
-    box-shadow: 0 10px 30px rgba(0, 255, 136, 0.1);
+    box-shadow: 0 20px 40px rgba(14, 165, 233, 0.2), 0 0 0 1px rgba(14, 165, 233, 0.1);
 }
 
 .video-thumbnail {
     position: relative;
     width: 100%;
     padding-top: 56.25%;
-    background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(14, 165, 233, 0.1));
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(56, 189, 248, 0.1));
     overflow: hidden;
 }
 
@@ -571,18 +609,44 @@ body.painting {
 
 .video-info {
     padding: 1.5rem;
+    position: relative;
+    z-index: 2;
 }
 
 .video-title {
     font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
-    line-height: 1.4;
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+    color: var(--color-text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: color 0.3s ease;
+}
+
+.video-card:hover .video-title {
+    color: var(--color-primary);
 }
 
 .video-meta {
     color: var(--color-text-muted);
     font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.video-meta::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    background: var(--color-primary);
+    border-radius: 50%;
 }
 
 .video-placeholder {
