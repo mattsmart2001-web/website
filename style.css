@@ -261,10 +261,13 @@ body.painting {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 1rem;
     animation: bounce 2s infinite;
     z-index: 10;
     margin-top: -3rem;
+    text-align: center;
+    width: 100px;
 }
 
 .scroll-indicator span {
@@ -278,6 +281,7 @@ body.painting {
     width: 2px;
     height: 40px;
     background: linear-gradient(180deg, var(--color-primary), transparent);
+    margin: 0 auto;
 }
 
 /* Ensure no stray borders or outlines anywhere */
@@ -495,6 +499,8 @@ body.painting {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    border: none !important;
+    outline: none !important;
 }
 
 .shop-features {
