@@ -307,54 +307,10 @@ document.addEventListener('mousemove', (event) => {
 let laggedMousePos = { x: 0, y: 0 };
 const LAG_FACTOR = 0.02; // Lower = more lag/delay (increased delay)
 
-// Continuous render loop for spotlight effect
+// Continuous render loop for spotlight effect (disabled - text reveal removed)
 function renderSpotlight() {
-    // Clear canvas
+    // Clear canvas and keep it empty (text reveal effect removed)
     paintCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
-
-    // Smoothly lag behind actual mouse position (creates delay effect)
-    laggedMousePos.x += (currentMousePos.x - laggedMousePos.x) * LAG_FACTOR;
-    laggedMousePos.y += (currentMousePos.y - laggedMousePos.y) * LAG_FACTOR;
-
-    // First, draw the text
-    paintCtx.globalCompositeOperation = 'source-over';
-    paintCtx.globalAlpha = 0.2; // Set text opacity to 20%
-
-    const centerX = paintCanvas.width / 2;
-    const centerY = paintCanvas.height * 0.4; // Positioned lower on screen
-
-    paintCtx.font = 'bold 140px Rajdhani, sans-serif';
-    paintCtx.textAlign = 'center';
-    paintCtx.textBaseline = 'middle';
-
-    // Create text gradient
-    const textGradient = paintCtx.createLinearGradient(centerX - 400, centerY, centerX + 400, centerY);
-    textGradient.addColorStop(0, '#ffffff');
-    textGradient.addColorStop(0.5, '#00ff88');
-    textGradient.addColorStop(1, '#0ea5e9');
-
-    paintCtx.fillStyle = textGradient;
-    paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
-
-    paintCtx.globalAlpha = 1.0; // Reset alpha for mask
-
-    // Now apply invisible feathered mask (only keep text within circle)
-    paintCtx.globalCompositeOperation = 'destination-in';
-
-    const maskGradient = paintCtx.createRadialGradient(
-        laggedMousePos.x, laggedMousePos.y, 0,
-        laggedMousePos.x, laggedMousePos.y, 150  // Bigger brush
-    );
-    maskGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    maskGradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.7)'); // More gradual fade
-    maskGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.3)');
-    maskGradient.addColorStop(1, 'rgba(255, 255, 255, 0)'); // Soft feathered edge
-
-    paintCtx.beginPath();
-    paintCtx.arc(laggedMousePos.x, laggedMousePos.y, 150, 0, Math.PI * 2);  // Bigger brush
-    paintCtx.fillStyle = maskGradient;
-    paintCtx.fill();
-
     requestAnimationFrame(renderSpotlight);
 }
 
