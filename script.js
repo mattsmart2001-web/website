@@ -105,46 +105,35 @@ function updateModelMaterials() {
         if (child.isMesh && child.material) {
             materialCount++;
 
-            // Force material to be visible
-            child.material.transparent = false;
-            child.material.opacity = 1.0;
-            child.material.visible = true;
-            child.material.side = THREE.DoubleSide; // Render both sides
-
-            // Force a base color if it doesn't have one
-            if (!child.material.color) {
-                child.material.color = new THREE.Color(0x333333); // Dark gray
-            } else {
-                // Make sure color isn't black/transparent
-                child.material.color.setHex(0x333333);
-            }
-
-            // Force environment map on material
-            child.material.envMap = envTexture;
-
-            // Enhance reflectivity
-            if (child.material.metalness !== undefined) {
-                child.material.metalness = 0.85;
-            }
-            if (child.material.roughness !== undefined) {
-                child.material.roughness = 0.3;
-            }
-
-            child.material.envMapIntensity = 1.8;
-            child.material.needsUpdate = true;
-
-            console.log('Updated material:', child.name || 'unnamed', {
-                color: child.material.color,
-                transparent: child.material.transparent,
-                opacity: child.material.opacity,
-                metalness: child.material.metalness,
-                roughness: child.material.roughness,
-                envMapIntensity: child.material.envMapIntensity
+            console.log('Processing mesh:', child.name, {
+                hasGeometry: !!child.geometry,
+                geometryType: child.geometry?.type,
+                vertexCount: child.geometry?.attributes?.position?.count,
+                hasNormals: !!child.geometry?.attributes?.normal,
+                materialType: child.material.type,
+                originalColor: child.material.color
             });
+
+            // REPLACE material entirely with a fresh basic material for debugging
+            const newMaterial = new THREE.MeshStandardMaterial({
+                color: 0xcccccc,  // Light gray - highly visible
+                metalness: 0.7,
+                roughness: 0.3,
+                envMap: envTexture,
+                envMapIntensity: 1.5,
+                side: THREE.DoubleSide,
+                transparent: false,
+                opacity: 1.0,
+                wireframe: false  // Try with wireframe: true if still invisible
+            });
+
+            child.material = newMaterial;
+
+            console.log('Replaced material with fresh MeshStandardMaterial for:', child.name || 'unnamed');
         }
     });
 
-    console.log(`Updated ${materialCount} materials with reflections`);
+    console.log(`Replaced ${materialCount} materials with fresh ones`);
 }
 
 // Lighting - softer, less colored
@@ -226,12 +215,29 @@ loader.load(
 
         scene.add(model);
 
+        // DEBUG: Add a visible box at model position to verify location
+        const debugBox = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2, 2),
+            new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.5
+            })
+        );
+        debugBox.position.copy(model.position);
+        scene.add(debugBox);
+        console.log('DEBUG: Added red wireframe box at model position');
+
         // Apply environment map if ready
         if (envReady) {
             updateModelMaterials();
         }
 
         console.log('GLB model loaded and added to scene');
+        console.log('Model world position:', model.getWorldPosition(new THREE.Vector3()));
+        console.log('Model visible:', model.visible);
+        console.log('Model in scene:', scene.children.includes(model));
     },
     function (xhr) {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
