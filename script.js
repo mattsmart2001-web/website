@@ -46,7 +46,7 @@ logoImage.onload = function() {
 
     // Single large logo - offset to center reflection on angled glasses
     const logoSize = 500; // Smaller for cleaner reflection
-    const centerX = (1024 - logoSize) / 2 + 150; // Shift right to center on both lenses
+    const centerX = (1024 - logoSize) / 2 + 180; // Shift right to center on both lenses
     const centerY = (512 - logoSize) / 2;
     ctx.drawImage(logoImage, centerX, centerY, logoSize, logoSize);
 
