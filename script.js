@@ -105,6 +105,20 @@ function updateModelMaterials() {
         if (child.isMesh && child.material) {
             materialCount++;
 
+            // Force material to be visible
+            child.material.transparent = false;
+            child.material.opacity = 1.0;
+            child.material.visible = true;
+            child.material.side = THREE.DoubleSide; // Render both sides
+
+            // Force a base color if it doesn't have one
+            if (!child.material.color) {
+                child.material.color = new THREE.Color(0x333333); // Dark gray
+            } else {
+                // Make sure color isn't black/transparent
+                child.material.color.setHex(0x333333);
+            }
+
             // Force environment map on material
             child.material.envMap = envTexture;
 
@@ -113,13 +127,16 @@ function updateModelMaterials() {
                 child.material.metalness = 0.85;
             }
             if (child.material.roughness !== undefined) {
-                child.material.roughness = 0.3; // Balanced - not too shiny, not too rough
+                child.material.roughness = 0.3;
             }
 
             child.material.envMapIntensity = 1.8;
             child.material.needsUpdate = true;
 
             console.log('Updated material:', child.name || 'unnamed', {
+                color: child.material.color,
+                transparent: child.material.transparent,
+                opacity: child.material.opacity,
                 metalness: child.material.metalness,
                 roughness: child.material.roughness,
                 envMapIntensity: child.material.envMapIntensity
