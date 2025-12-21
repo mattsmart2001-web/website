@@ -200,7 +200,7 @@ loader.load(
         model.scale.setScalar(scale);
 
         // Position sunglasses - adjust for better viewing angle
-        model.position.y = -1;
+        model.position.y = -2;
         model.rotation.y = 0.3; // Slight angle to show off the design
 
         scene.add(model);
