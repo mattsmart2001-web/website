@@ -266,8 +266,6 @@ body.painting {
     animation: bounce 2s infinite;
     z-index: 10;
     margin-top: -3rem;
-    text-align: center;
-    width: 100px;
 }
 
 .scroll-indicator span {
