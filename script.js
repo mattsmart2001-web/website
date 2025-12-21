@@ -105,29 +105,22 @@ function updateModelMaterials() {
         if (child.isMesh && child.material) {
             materialCount++;
 
-            console.log('Processing mesh:', child.name, {
-                hasGeometry: !!child.geometry,
-                geometryType: child.geometry?.type,
-                vertexCount: child.geometry?.attributes?.position?.count,
-                hasNormals: !!child.geometry?.attributes?.normal,
-                materialType: child.material.type,
-                originalColor: child.material.color
-            });
+            // Apply environment map and set material properties
+            child.material.envMap = envTexture;
+            child.material.envMapIntensity = 1.8;
 
-            // REPLACE material entirely with a fresh basic material for debugging
-            const newMaterial = new THREE.MeshBasicMaterial({
-                color: 0xff0000,  // Bright red - highly visible
-                side: THREE.DoubleSide,
-                wireframe: false
-            });
+            if (child.material.metalness !== undefined) {
+                child.material.metalness = 0.85;
+            }
+            if (child.material.roughness !== undefined) {
+                child.material.roughness = 0.3;  // Balanced - not too shiny
+            }
 
-            child.material = newMaterial;
-
-            console.log('Replaced material with fresh MeshStandardMaterial for:', child.name || 'unnamed');
+            child.material.needsUpdate = true;
         }
     });
 
-    console.log(`Replaced ${materialCount} materials with fresh ones`);
+    console.log(`Updated ${materialCount} materials with environment map`);
 }
 
 // Lighting - softer, less colored
@@ -179,49 +172,23 @@ loader.load(
 
         console.log('GLB model loaded, processing...');
 
-        // DEBUG: Log everything in the model
-        console.log('=== MODEL STRUCTURE ===');
-        console.log('Model children count:', model.children.length);
-        let meshCount = 0;
-        model.traverse((child) => {
-            console.log('Child type:', child.type, 'Name:', child.name);
-            if (child.isMesh) {
-                meshCount++;
-                console.log('  - MESH FOUND:', child.name);
-                console.log('  - Has geometry:', !!child.geometry);
-                console.log('  - Has material:', !!child.material);
-                if (child.geometry) {
-                    console.log('  - Geometry attributes:', Object.keys(child.geometry.attributes));
-                    console.log('  - Position count:', child.geometry.attributes.position?.count);
-                    console.log('  - Index:', child.geometry.index);
-                }
-            }
-        });
-        console.log('Total meshes found:', meshCount);
-        console.log('======================');
+        // Center and scale the model
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
 
-        // SIMPLIFIED: No complex transformations, just basic positioning
-        model.position.set(0, 0, 0);  // Center at origin
-        model.scale.set(50, 50, 50);  // Fixed scale
-        model.rotation.set(0, 0, 0);   // No rotation
+        // Center the model
+        model.position.sub(center);
 
-        console.log('Set fixed position (0, 0, 0) and scale (50, 50, 50)');
+        // Scale to fit screen nicely
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 12 / maxDim;
+        model.scale.setScalar(scale);
+
+        // Position helmet lower on screen
+        model.position.y = -2;
 
         scene.add(model);
-
-        // DEBUG: Add a visible box at model position to verify location
-        const debugBox = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 2, 2),
-            new THREE.MeshBasicMaterial({
-                color: 0xff0000,
-                wireframe: true,
-                transparent: true,
-                opacity: 0.5
-            })
-        );
-        debugBox.position.copy(model.position);
-        scene.add(debugBox);
-        console.log('DEBUG: Added red wireframe box at model position');
 
         // Apply environment map if ready
         if (envReady) {
@@ -229,9 +196,6 @@ loader.load(
         }
 
         console.log('GLB model loaded and added to scene');
-        console.log('Model world position:', model.getWorldPosition(new THREE.Vector3()));
-        console.log('Model visible:', model.visible);
-        console.log('Model in scene:', scene.children.includes(model));
     },
     function (xhr) {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
