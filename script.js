@@ -45,7 +45,7 @@ logoImage.onload = function() {
     ctx.globalAlpha = 1.0; // Full opacity
 
     // Single large logo in center
-    const logoSize = 700; // Much bigger
+    const logoSize = 500; // Smaller for cleaner reflection
     const centerX = (1024 - logoSize) / 2;
     const centerY = (512 - logoSize) / 2;
     ctx.drawImage(logoImage, centerX, centerY, logoSize, logoSize);
@@ -119,7 +119,7 @@ function updateModelMaterials() {
                 // Lenses - reflective with logo, maintain transparency
                 mat.envMapIntensity = 2.5; // Strong reflection for logo visibility
                 mat.metalness = 0.1; // Low metalness for glass
-                mat.roughness = 0.05; // Very smooth for clear reflections
+                mat.roughness = 0.01; // Ultra smooth for sharp, crisp reflections
                 if (mat.transmission !== undefined) {
                     mat.transmission = 0.9; // Keep transparency
                 }
@@ -128,7 +128,7 @@ function updateModelMaterials() {
                 // Frames - chrome/metallic
                 mat.envMapIntensity = 2.0;
                 mat.metalness = 1.0; // Full metallic for chrome
-                mat.roughness = 0.08; // Very low roughness for shiny chrome
+                mat.roughness = 0.02; // Ultra low roughness for sharp chrome reflections
                 console.log('  -> Configured as FRAME (chrome)');
             }
 
