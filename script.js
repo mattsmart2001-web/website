@@ -44,9 +44,9 @@ logoImage.onload = function() {
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1.0; // Full opacity
 
-    // Single large logo in center
+    // Single large logo - offset to center reflection on angled glasses
     const logoSize = 500; // Smaller for cleaner reflection
-    const centerX = (1024 - logoSize) / 2;
+    const centerX = (1024 - logoSize) / 2 - 150; // Shift left to center on both lenses
     const centerY = (512 - logoSize) / 2;
     ctx.drawImage(logoImage, centerX, centerY, logoSize, logoSize);
 
@@ -201,7 +201,7 @@ loader.load(
 
         // Position sunglasses - adjust for better viewing angle
         model.position.y = -1;
-        model.rotation.y = 0; // Face forward for centered logo reflection
+        model.rotation.y = 0.3; // Slight angle to show off the design
 
         scene.add(model);
 
