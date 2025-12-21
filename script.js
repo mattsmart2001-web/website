@@ -407,42 +407,33 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 // ===== YOUTUBE INTEGRATION =====
-const YOUTUBE_CHANNEL_HANDLE = '@SparksTheory';
+const YOUTUBE_CHANNEL_ID = 'UCuUCB1yQyF23u5ESGvNZKNg';
 const YOUTUBE_API_KEY = 'AIzaSyBSELHZRfCG2MnQD_HABaKbFGbKRxqyf4M';
 
 // Load YouTube subscriber count
 async function loadSubscriberCount() {
     try {
-        // First, get channel ID from handle using search
-        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(YOUTUBE_CHANNEL_HANDLE)}&type=channel&key=${YOUTUBE_API_KEY}`;
-        const searchResponse = await fetch(searchUrl);
-        const searchData = await searchResponse.json();
+        // Get subscriber count directly using channel ID
+        const statsUrl = `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${YOUTUBE_CHANNEL_ID}&key=${YOUTUBE_API_KEY}`;
+        const statsResponse = await fetch(statsUrl);
+        const statsData = await statsResponse.json();
 
-        if (searchData.items && searchData.items.length > 0) {
-            const channelId = searchData.items[0].snippet.channelId;
+        if (statsData.items && statsData.items.length > 0) {
+            const subCount = parseInt(statsData.items[0].statistics.subscriberCount);
 
-            // Now get subscriber count
-            const statsUrl = `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}&key=${YOUTUBE_API_KEY}`;
-            const statsResponse = await fetch(statsUrl);
-            const statsData = await statsResponse.json();
-
-            if (statsData.items && statsData.items.length > 0) {
-                const subCount = parseInt(statsData.items[0].statistics.subscriberCount);
-
-                // Format subscriber count
-                let formattedCount;
-                if (subCount >= 1000000) {
-                    formattedCount = (subCount / 1000000).toFixed(1) + 'M+';
-                } else if (subCount >= 1000) {
-                    formattedCount = (subCount / 1000).toFixed(1) + 'K+';
-                } else {
-                    formattedCount = subCount + '+';
-                }
-
-                // Update the display
-                document.getElementById('subscriber-count').textContent = formattedCount;
-                console.log('YouTube subscriber count loaded:', formattedCount);
+            // Format subscriber count
+            let formattedCount;
+            if (subCount >= 1000000) {
+                formattedCount = (subCount / 1000000).toFixed(1) + 'M+';
+            } else if (subCount >= 1000) {
+                formattedCount = (subCount / 1000).toFixed(1) + 'K+';
+            } else {
+                formattedCount = subCount + '+';
             }
+
+            // Update the display
+            document.getElementById('subscriber-count').textContent = formattedCount;
+            console.log('YouTube subscriber count loaded:', formattedCount);
         }
     } catch (error) {
         console.error('Error loading YouTube subscriber count:', error);
