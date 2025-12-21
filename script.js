@@ -408,7 +408,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 
 // ===== YOUTUBE INTEGRATION =====
 const YOUTUBE_CHANNEL_HANDLE = '@SparksTheory';
-const YOUTUBE_API_KEY = 'AIzaSyDUaJz8qK_k9vV9vV9vV9vV9vV9vV9vV9v'; // You'll need to replace this with your actual API key
+const YOUTUBE_API_KEY = 'AIzaSyBSELHZRfCG2MnQD_HABaKbFGbKRxqyf4M';
 
 // Load YouTube subscriber count
 async function loadSubscriberCount() {
