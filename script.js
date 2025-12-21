@@ -98,38 +98,29 @@ logoImage.src = 'sparks_logo.jpg';
 function updateModelMaterials() {
     if (!model || !envTexture) return;
 
-    console.log('Updating model materials - forcing bright visible materials...');
+    console.log('Updating model materials with environment map...');
     let materialCount = 0;
 
     model.traverse((child) => {
-        if (child.isMesh) {
+        if (child.isMesh && child.material) {
             materialCount++;
 
-            console.log('Mesh found:', {
-                name: child.name,
-                hasGeometry: !!child.geometry,
-                vertexCount: child.geometry?.attributes?.position?.count,
-                hasMaterial: !!child.material,
-                visible: child.visible,
-                scale: child.scale
-            });
+            // Apply environment map and set material properties
+            child.material.envMap = envTexture;
+            child.material.envMapIntensity = 1.8;
 
-            // FORCE a bright, simple material
-            child.material = new THREE.MeshBasicMaterial({
-                color: 0x00ff00,  // Bright green
-                side: THREE.DoubleSide,
-                transparent: false,
-                opacity: 1
-            });
+            if (child.material.metalness !== undefined) {
+                child.material.metalness = 0.85;
+            }
+            if (child.material.roughness !== undefined) {
+                child.material.roughness = 0.3;  // Balanced - not too shiny
+            }
 
-            child.visible = true;
-            child.frustumCulled = false;  // Disable frustum culling
-
-            console.log('Applied bright green MeshBasicMaterial to:', child.name);
+            child.material.needsUpdate = true;
         }
     });
 
-    console.log(`Updated ${materialCount} meshes with bright materials`);
+    console.log(`Updated ${materialCount} materials with environment map`);
 }
 
 // Lighting - softer, less colored
@@ -170,21 +161,14 @@ document.addEventListener('mousemove', (event) => {
     mouseY = (event.clientY / window.innerHeight) * 2 - 1;
 });
 
-// Load FBX model
+// Load GLB model
 let model;
-console.log('Initializing FBXLoader...');
-console.log('THREE.FBXLoader available:', typeof THREE.FBXLoader);
-
-const loader = new THREE.FBXLoader();
-console.log('FBXLoader created, attempting to load racing_pilot_helmet.fbx...');
+const loader = new THREE.GLTFLoader();
 
 loader.load(
-    'racing_pilot_helmet.fbx',
-    function (fbx) {
-        model = fbx;
-
-        console.log('FBX model loaded successfully!');
-        console.log('FBX model:', fbx);
+    'fbx.glb',
+    function (gltf) {
+        model = gltf.scene;
 
         // Center and scale the model
         const box = new THREE.Box3().setFromObject(model);
@@ -204,23 +188,10 @@ loader.load(
 
         scene.add(model);
 
-        // Add a bright test sphere at model position to verify location is visible
-        const testSphere = new THREE.Mesh(
-            new THREE.SphereGeometry(3, 32, 32),
-            new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: false })
-        );
-        testSphere.position.copy(model.position);
-        scene.add(testSphere);
-        console.log('Added magenta test sphere at model position');
-
         // Apply environment map if ready
         if (envReady) {
             updateModelMaterials();
         }
-
-        console.log('FBX model loaded and added to scene');
-        console.log('Model children:', model.children.length);
-        console.log('Model bounds:', { min: box.min, max: box.max });
     },
     function (xhr) {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
