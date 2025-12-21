@@ -184,6 +184,9 @@ loader.load(
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
 
+        console.log('Model dimensions:', size);
+        console.log('Model center:', center);
+
         // Center the model
         model.position.sub(center);
 
@@ -192,8 +195,14 @@ loader.load(
         const scale = 12 / maxDim; // Increased from 8 to 12
         model.scale.setScalar(scale);
 
+        console.log('Max dimension:', maxDim);
+        console.log('Scale factor:', scale);
+
         // Position model
         model.position.y -= 2.5; // Adjusted positioning
+
+        console.log('Final model position:', model.position);
+        console.log('Final model scale:', model.scale);
 
         // Face forward initially
         model.rotation.y = 0;
