@@ -161,21 +161,21 @@ document.addEventListener('mousemove', (event) => {
     mouseY = (event.clientY / window.innerHeight) * 2 - 1;
 });
 
-// Load FBX model
+// Load GLB model
 let model;
-console.log('Initializing FBXLoader...');
-console.log('THREE.FBXLoader available:', typeof THREE.FBXLoader);
+console.log('Initializing GLTFLoader...');
+console.log('THREE.GLTFLoader available:', typeof THREE.GLTFLoader);
 
-const loader = new THREE.FBXLoader();
-console.log('FBXLoader created, attempting to load racing_pilot_helmet.fbx...');
+const loader = new THREE.GLTFLoader();
+console.log('GLTFLoader created, attempting to load racing_pilot_helmet.glb...');
 
 loader.load(
-    'racing_pilot_helmet.fbx',
-    function (fbx) {
-        model = fbx;
+    'racing_pilot_helmet.glb',
+    function (gltf) {
+        model = gltf.scene;
 
-        console.log('FBX model loaded successfully!');
-        console.log('FBX model:', fbx);
+        console.log('GLB model loaded successfully!');
+        console.log('GLB model:', gltf.scene);
 
         // Center and scale the model
         const box = new THREE.Box3().setFromObject(model);
@@ -200,13 +200,13 @@ loader.load(
             updateModelMaterials();
         }
 
-        console.log('FBX model loaded and added to scene');
+        console.log('GLB model loaded and added to scene');
     },
     function (xhr) {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
     },
     function (error) {
-        console.error('Error loading FBX model:', error);
+        console.error('Error loading GLB model:', error);
     }
 );
 
