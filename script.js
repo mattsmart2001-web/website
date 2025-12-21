@@ -104,19 +104,35 @@ function updateModelMaterials() {
     model.traverse((child) => {
         if (child.isMesh && child.material) {
             materialCount++;
+            const mat = child.material;
+            const matName = mat.name ? mat.name.toLowerCase() : '';
 
-            // Apply environment map and set material properties
-            child.material.envMap = envTexture;
-            child.material.envMapIntensity = 1.8;
+            console.log('Material name:', mat.name, 'Has transmission:', mat.transmission);
 
-            if (child.material.metalness !== undefined) {
-                child.material.metalness = 0.85;
+            // Apply environment map to all materials
+            mat.envMap = envTexture;
+
+            // Check if this is a lens (usually has transmission or has "lens" in name)
+            const isLens = mat.transmission > 0 || matName.includes('lens') || matName.includes('glass');
+
+            if (isLens) {
+                // Lenses - reflective with logo, maintain transparency
+                mat.envMapIntensity = 2.5; // Strong reflection for logo visibility
+                mat.metalness = 0.1; // Low metalness for glass
+                mat.roughness = 0.05; // Very smooth for clear reflections
+                if (mat.transmission !== undefined) {
+                    mat.transmission = 0.9; // Keep transparency
+                }
+                console.log('  -> Configured as LENS (reflective with logo)');
+            } else {
+                // Frames - chrome/metallic
+                mat.envMapIntensity = 2.0;
+                mat.metalness = 1.0; // Full metallic for chrome
+                mat.roughness = 0.08; // Very low roughness for shiny chrome
+                console.log('  -> Configured as FRAME (chrome)');
             }
-            if (child.material.roughness !== undefined) {
-                child.material.roughness = 0.3;  // Balanced - not too shiny
-            }
 
-            child.material.needsUpdate = true;
+            mat.needsUpdate = true;
         }
     });
 
