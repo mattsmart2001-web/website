@@ -163,14 +163,19 @@ document.addEventListener('mousemove', (event) => {
 
 // Load FBX model
 let model;
+console.log('Initializing FBXLoader...');
+console.log('THREE.FBXLoader available:', typeof THREE.FBXLoader);
+
 const loader = new THREE.FBXLoader();
+console.log('FBXLoader created, attempting to load racing_pilot_helmet.fbx...');
 
 loader.load(
     'racing_pilot_helmet.fbx',
     function (fbx) {
         model = fbx;
 
-        console.log('FBX model loaded, processing...');
+        console.log('FBX model loaded successfully!');
+        console.log('FBX model:', fbx);
 
         // Center and scale the model
         const box = new THREE.Box3().setFromObject(model);
