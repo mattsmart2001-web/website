@@ -189,11 +189,11 @@ loader.load(
 
         // Scale to fit (larger for full screen)
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 8 / maxDim;
+        const scale = 12 / maxDim; // Increased from 8 to 12
         model.scale.setScalar(scale);
 
-        // Position model much lower
-        model.position.y -= 3.5;
+        // Position model
+        model.position.y -= 2.5; // Adjusted positioning
 
         // Face forward initially
         model.rotation.y = 0;
