@@ -196,7 +196,7 @@ loader.load(
 
         // Scale to fit screen nicely - sunglasses are smaller, so scale more
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 18 / maxDim; // Increased from 12 for better visibility
+        const scale = 23.4 / maxDim; // 30% larger than 18 for better visibility
         model.scale.setScalar(scale);
 
         // Position sunglasses - adjust for better viewing angle
