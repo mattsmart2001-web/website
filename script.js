@@ -302,6 +302,7 @@ function renderSpotlight() {
 
     // First, draw the text
     paintCtx.globalCompositeOperation = 'source-over';
+    paintCtx.globalAlpha = 0.2; // Set text opacity to 20%
 
     const centerX = paintCanvas.width / 2;
     const centerY = paintCanvas.height * 0.4; // Positioned lower on screen
@@ -318,6 +319,8 @@ function renderSpotlight() {
 
     paintCtx.fillStyle = textGradient;
     paintCtx.fillText('SPARKSTHEORY', centerX, centerY);
+
+    paintCtx.globalAlpha = 1.0; // Reset alpha for mask
 
     // Now apply invisible feathered mask (only keep text within circle)
     paintCtx.globalCompositeOperation = 'destination-in';
