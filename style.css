@@ -255,8 +255,8 @@ body.painting {
 
 .scroll-indicator {
     position: absolute;
-    top: 90vh;
-    left: 40%;
+    top: 60vh;
+    left: 50%;
     transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
