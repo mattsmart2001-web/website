@@ -113,7 +113,12 @@ function updateModelMaterials() {
             mat.envMap = envTexture;
 
             // Check if this is a lens (usually has transmission or has "lens" in name)
-            const isLens = mat.transmission > 0 || matName.includes('lens') || matName.includes('glass');
+            // Make sure nose pads, bridge, and supports are NOT treated as lenses
+            const isLens = (mat.transmission > 0 || matName.includes('lens') || matName.includes('glass'))
+                && !matName.includes('nose')
+                && !matName.includes('pad')
+                && !matName.includes('bridge')
+                && !matName.includes('support');
 
             if (isLens) {
                 // Lenses - reflective with logo, maintain transparency
