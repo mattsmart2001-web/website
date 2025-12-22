@@ -19,6 +19,8 @@
 
 html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100vw;
 }
 
 body {
@@ -1291,20 +1293,20 @@ body {
 
     .hero {
         min-height: 100vh;
-        padding: 60vh 0 3rem 0;
+        max-width: 100vw;
+        padding: 60vh 5vw 3rem 5vw;
         justify-content: center;
         align-items: center;
         display: flex;
+        overflow-x: hidden;
     }
 
     .hero-content {
-        position: relative;
-        left: 50%;
-        transform: translateX(-50%);
+        width: 100%;
+        max-width: 100%;
         text-align: center !important;
-        width: 90%;
-        max-width: 500px;
         padding: 0;
+        margin: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
