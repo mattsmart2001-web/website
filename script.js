@@ -261,6 +261,53 @@ document.addEventListener('mousemove', (event) => {
     mouseY = (event.clientY / window.innerHeight) * 2 - 1;
 });
 
+// Mobile accelerometer support for gyroscope-based interaction
+let isUsingAccelerometer = false;
+
+// Check if device supports orientation
+if (window.DeviceOrientationEvent) {
+    // Request permission for iOS 13+
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS requires user interaction first - we'll auto-request on first touch
+        document.addEventListener('touchstart', requestOrientationPermission, { once: true });
+    } else {
+        // Non-iOS devices
+        enableAccelerometer();
+    }
+}
+
+function requestOrientationPermission() {
+    DeviceOrientationEvent.requestPermission()
+        .then(permissionState => {
+            if (permissionState === 'granted') {
+                enableAccelerometer();
+            }
+        })
+        .catch(console.error);
+}
+
+function enableAccelerometer() {
+    window.addEventListener('deviceorientation', handleOrientation);
+    isUsingAccelerometer = true;
+}
+
+function handleOrientation(event) {
+    // Get device orientation (beta = front-to-back tilt, gamma = left-to-right tilt)
+    const beta = event.beta;   // -180 to 180 degrees (front-back tilt)
+    const gamma = event.gamma;  // -90 to 90 degrees (left-right tilt)
+
+    if (beta !== null && gamma !== null) {
+        // Convert to normalized values (-1 to 1) for consistency with mouse movement
+        // Gamma (left-right): -90 to 90 -> map to -1 to 1
+        mouseX = Math.max(-1, Math.min(1, gamma / 45)); // Divide by 45 for sensitivity
+
+        // Beta (front-back): Use range around portrait position (around 90 degrees in portrait)
+        // Adjust for portrait mode: 90 is neutral, tilt forward/back from there
+        const adjustedBeta = beta - 90; // Center around 0
+        mouseY = Math.max(-1, Math.min(1, adjustedBeta / 45)); // Divide by 45 for sensitivity
+    }
+}
+
 // Load GLB model
 let model;
 const loader = new THREE.GLTFLoader();
