@@ -117,18 +117,18 @@ function updateModelMaterials() {
 
             if (isLens) {
                 // Lenses - reflective with logo, maintain transparency
-                mat.envMapIntensity = 2.5; // Strong reflection for logo visibility
-                mat.metalness = 0.1; // Low metalness for glass
-                mat.roughness = 0.01; // Ultra smooth for sharp, crisp reflections
+                mat.envMapIntensity = 5.0; // Very strong reflection for high reflectivity
+                mat.metalness = 0.2; // Slightly higher metalness for more reflection
+                mat.roughness = 0.001; // Nearly mirror-smooth for maximum reflections
                 if (mat.transmission !== undefined) {
                     mat.transmission = 0.9; // Keep transparency
                 }
                 console.log('  -> Configured as LENS (reflective with logo)');
             } else {
                 // Frames - chrome/metallic
-                mat.envMapIntensity = 2.0;
+                mat.envMapIntensity = 4.0; // High reflection for chrome
                 mat.metalness = 1.0; // Full metallic for chrome
-                mat.roughness = 0.02; // Ultra low roughness for sharp chrome reflections
+                mat.roughness = 0.001; // Mirror-smooth for maximum chrome reflections
                 console.log('  -> Configured as FRAME (chrome)');
             }
 
