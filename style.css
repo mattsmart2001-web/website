@@ -1283,16 +1283,17 @@ body {
 @media (max-width: 768px) {
     .hero {
         min-height: 100vh;
-        padding: 100px 1.5rem 3rem;
-        justify-content: center;
+        padding: 30vh 0 3rem;
+        justify-content: flex-start;
+        align-items: center;
     }
 
     .hero-content {
         margin: 0 auto;
         text-align: center;
-        width: 100%;
+        width: 90%;
         max-width: 100%;
-        padding: 0;
+        padding: 0 1rem;
         display: flex;
         flex-direction: column;
         align-items: center;
