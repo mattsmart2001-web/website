@@ -494,6 +494,162 @@ body.painting {
     background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
 }
 
+/* ===== SPONSORS SECTION ===== */
+.sponsors-section {
+    min-height: 60vh;
+}
+
+.sponsors-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.sponsor-card {
+    position: relative;
+    padding: 3rem 2rem;
+    background: rgba(14, 165, 233, 0.03);
+    border: 2px solid rgba(14, 165, 233, 0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    overflow: hidden;
+    box-shadow:
+        0 0 20px rgba(14, 165, 233, 0.2),
+        inset 0 0 30px rgba(14, 165, 233, 0.05);
+}
+
+.sponsor-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #0ea5e9, #38bdf8, #0ea5e9);
+    background-size: 200% 100%;
+    border-radius: 8px;
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.4s ease;
+    animation: gradient-shift 3s ease infinite;
+}
+
+.sponsor-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #0a0e12;
+    border-radius: 6px;
+    z-index: -1;
+}
+
+.sponsor-card:hover {
+    border-color: transparent;
+    box-shadow:
+        0 0 40px rgba(14, 165, 233, 0.6),
+        0 0 80px rgba(14, 165, 233, 0.3),
+        0 10px 30px rgba(0, 0, 0, 0.4),
+        inset 0 0 50px rgba(14, 165, 233, 0.1);
+    transform: translateY(-10px) scale(1.05);
+}
+
+.sponsor-card:hover::before {
+    opacity: 1;
+}
+
+.sponsor-logo {
+    width: 100%;
+    max-width: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: brightness(1);
+    transition: filter 0.3s ease;
+}
+
+.sponsor-card:hover .sponsor-logo {
+    filter: brightness(1.2) drop-shadow(0 0 20px rgba(14, 165, 233, 0.5));
+}
+
+.sponsor-logo img {
+    width: 100%;
+    height: auto;
+    max-height: 100px;
+    object-fit: contain;
+}
+
+/* ===== FLOATING SPONSOR BADGES ===== */
+.sponsor-badges {
+    position: fixed;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    z-index: 100;
+}
+
+.sponsor-badge {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    padding: 1rem;
+    background: rgba(10, 14, 18, 0.95);
+    border: 2px solid rgba(14, 165, 233, 0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    overflow: hidden;
+    box-shadow:
+        0 0 15px rgba(14, 165, 233, 0.2),
+        inset 0 0 20px rgba(14, 165, 233, 0.05);
+    backdrop-filter: blur(10px);
+}
+
+.sponsor-badge::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+    border-radius: 8px;
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.4s ease;
+    animation: gradient-shift 3s ease infinite;
+}
+
+.sponsor-badge:hover {
+    border-color: transparent;
+    box-shadow:
+        0 0 30px rgba(14, 165, 233, 0.6),
+        0 0 60px rgba(14, 165, 233, 0.3),
+        0 4px 20px rgba(0, 0, 0, 0.4);
+    transform: translateX(-10px) scale(1.1);
+}
+
+.sponsor-badge:hover::before {
+    opacity: 1;
+}
+
+.sponsor-badge img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: brightness(0.9);
+    transition: filter 0.3s ease;
+}
+
+.sponsor-badge:hover img {
+    filter: brightness(1.2) drop-shadow(0 0 10px rgba(14, 165, 233, 0.5));
+}
+
 /* ===== ABOUT SECTION ===== */
 .about-content {
     display: grid;
@@ -1115,6 +1271,21 @@ body.painting {
 
     .section {
         padding: 5rem 1.5rem;
+    }
+
+    /* Sponsors responsive */
+    .sponsors-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .sponsor-card {
+        padding: 2rem 1.5rem;
+    }
+
+    /* Hide floating badges on mobile, show in sponsors section instead */
+    .sponsor-badges {
+        display: none;
     }
 
     .checker-form {
