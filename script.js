@@ -175,23 +175,24 @@ mouseLight.distance = 50;
 scene.add(mouseLight);
 
 // ===== PARTICLE NETWORK BACKGROUND =====
-const particleCount = 200; // Doubled for more prominence
+const particleCount = 400; // Much more particles
 const particlePositions = [];
 const particleGeometry = new THREE.BufferGeometry();
 const particleMaterial = new THREE.PointsMaterial({
     color: 0x0ea5e9,
-    size: 0.3, // Larger particles
+    size: 0.4, // Even larger particles
     transparent: true,
-    opacity: 0.6, // More visible
-    blending: THREE.AdditiveBlending
+    opacity: 0.75, // More prominent
+    blending: THREE.AdditiveBlending,
+    sizeAttenuation: true // Particles get bigger as they approach
 });
 
 // Create particles in 3D space with wider distribution
 const positions = new Float32Array(particleCount * 3);
 for (let i = 0; i < particleCount; i++) {
-    const x = (Math.random() - 0.5) * 80; // Wider spread to edges
-    const y = (Math.random() - 0.5) * 80; // Wider spread to edges
-    const z = (Math.random() - 0.5) * 40 - 15; // Behind the glasses
+    const x = (Math.random() - 0.5) * 100; // Even wider spread
+    const y = (Math.random() - 0.5) * 100; // Even wider spread
+    const z = (Math.random() - 0.5) * 60 - 30; // Deep background to behind glasses
 
     positions[i * 3] = x;
     positions[i * 3 + 1] = y;
@@ -208,13 +209,13 @@ scene.add(particles);
 const lineMaterial = new THREE.LineBasicMaterial({
     color: 0x0ea5e9,
     transparent: true,
-    opacity: 0.35, // More visible lines
+    opacity: 0.5, // Even more prominent lines
     blending: THREE.AdditiveBlending
 });
 
 const lineGeometry = new THREE.BufferGeometry();
 const linePositions = [];
-const maxDistance = 10; // Slightly longer connections
+const maxDistance = 12; // Longer connections for denser network
 
 function updateParticleLines() {
     linePositions.length = 0;
@@ -318,6 +319,32 @@ function animate() {
     particles.rotation.x += (mouseY * 0.05 - particles.rotation.x) * 0.02;
     lines.rotation.y = particles.rotation.y;
     lines.rotation.x = particles.rotation.x;
+
+    // Animate particles moving slowly towards the camera
+    const particlePositionsArray = particleGeometry.attributes.position.array;
+    let needsLineUpdate = false;
+
+    for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+
+        // Move particle forward (towards camera) slowly
+        particlePositionsArray[i3 + 2] += 0.05; // Slow forward movement
+        particlePositions[i].z += 0.05;
+
+        // Reset particle to back if it gets too close
+        if (particlePositionsArray[i3 + 2] > 15) {
+            particlePositionsArray[i3 + 2] = -45; // Reset to far back
+            particlePositions[i].z = -45;
+            needsLineUpdate = true;
+        }
+    }
+
+    particleGeometry.attributes.position.needsUpdate = true;
+
+    // Update connecting lines periodically
+    if (needsLineUpdate) {
+        updateParticleLines();
+    }
 
     // Update mouse spotlight position
     mouseLight.position.x = mouseX * 8;
