@@ -125,16 +125,20 @@ function updateModelMaterials() {
                 mat.envMapIntensity = 5.0; // Very strong reflection for high reflectivity
                 mat.metalness = 0.2; // Slightly higher metalness for more reflection
                 mat.roughness = 0.001; // Nearly mirror-smooth for maximum reflections
+                mat.emissive = new THREE.Color(0x0ea5e9); // Subtle blue glow
+                mat.emissiveIntensity = 0.15; // Very subtle glow
                 if (mat.transmission !== undefined) {
                     mat.transmission = 0.9; // Keep transparency
                 }
-                console.log('  -> Configured as LENS (reflective with logo)');
+                console.log('  -> Configured as LENS (reflective with logo + glow)');
             } else {
                 // Frames - chrome/metallic
                 mat.envMapIntensity = 4.0; // High reflection for chrome
                 mat.metalness = 1.0; // Full metallic for chrome
                 mat.roughness = 0.001; // Mirror-smooth for maximum chrome reflections
-                console.log('  -> Configured as FRAME (chrome)');
+                mat.emissive = new THREE.Color(0x38bdf8); // Subtle lighter blue glow for chrome
+                mat.emissiveIntensity = 0.2; // Subtle glow on frames
+                console.log('  -> Configured as FRAME (chrome + glow)');
             }
 
             mat.needsUpdate = true;
