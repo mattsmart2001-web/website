@@ -1291,20 +1291,23 @@ body {
 
     .hero {
         min-height: 100vh;
-        padding: 60vh 1.5rem 3rem;
-        justify-content: flex-start;
+        padding: 60vh 0 3rem 0;
+        justify-content: center;
         align-items: center;
+        display: flex;
     }
 
     .hero-content {
-        margin: 0 auto;
+        margin-left: auto;
+        margin-right: auto;
         text-align: center;
-        width: 100%;
-        max-width: 100%;
-        padding: 0;
+        width: 90%;
+        max-width: 500px;
+        padding: 0 1rem;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
     }
 
     .hero-label {
@@ -1312,12 +1315,16 @@ body {
         margin-bottom: 1rem;
         text-align: center;
         width: 100%;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .hero-title {
         font-size: clamp(2.5rem, 12vw, 5rem);
         text-align: center;
         width: 100%;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .hero-subtitle {
@@ -1325,6 +1332,8 @@ body {
         margin-bottom: 2rem;
         text-align: center;
         width: 100%;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .hero-buttons {
@@ -1332,12 +1341,16 @@ body {
         width: 100%;
         gap: 1rem;
         align-items: center;
-        max-width: 400px;
+        justify-content: center;
+        max-width: 100%;
     }
 
     .btn {
         width: 100%;
+        max-width: 350px;
         text-align: center;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .hero-stats {
@@ -1345,6 +1358,7 @@ body {
         margin-top: 2rem;
         width: 100%;
         justify-content: center;
+        display: flex;
     }
 
     .section {
