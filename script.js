@@ -169,6 +169,70 @@ mouseLight.decay = 2;
 mouseLight.distance = 50;
 scene.add(mouseLight);
 
+// ===== PARTICLE NETWORK BACKGROUND =====
+const particleCount = 100;
+const particlePositions = [];
+const particleGeometry = new THREE.BufferGeometry();
+const particleMaterial = new THREE.PointsMaterial({
+    color: 0x0ea5e9,
+    size: 0.15,
+    transparent: true,
+    opacity: 0.3,
+    blending: THREE.AdditiveBlending
+});
+
+// Create particles in 3D space
+const positions = new Float32Array(particleCount * 3);
+for (let i = 0; i < particleCount; i++) {
+    const x = (Math.random() - 0.5) * 50;
+    const y = (Math.random() - 0.5) * 50;
+    const z = (Math.random() - 0.5) * 30 - 10; // Behind the glasses
+
+    positions[i * 3] = x;
+    positions[i * 3 + 1] = y;
+    positions[i * 3 + 2] = z;
+
+    particlePositions.push(new THREE.Vector3(x, y, z));
+}
+
+particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+const particles = new THREE.Points(particleGeometry, particleMaterial);
+scene.add(particles);
+
+// Create lines connecting nearby particles
+const lineMaterial = new THREE.LineBasicMaterial({
+    color: 0x0ea5e9,
+    transparent: true,
+    opacity: 0.15,
+    blending: THREE.AdditiveBlending
+});
+
+const lineGeometry = new THREE.BufferGeometry();
+const linePositions = [];
+const maxDistance = 8; // Maximum distance to draw lines between particles
+
+function updateParticleLines() {
+    linePositions.length = 0;
+
+    for (let i = 0; i < particlePositions.length; i++) {
+        for (let j = i + 1; j < particlePositions.length; j++) {
+            const distance = particlePositions[i].distanceTo(particlePositions[j]);
+            if (distance < maxDistance) {
+                linePositions.push(
+                    particlePositions[i].x, particlePositions[i].y, particlePositions[i].z,
+                    particlePositions[j].x, particlePositions[j].y, particlePositions[j].z
+                );
+            }
+        }
+    }
+
+    lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+}
+
+updateParticleLines();
+const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+scene.add(lines);
+
 // Mouse tracking for interactive rotation
 let mouseX = 0;
 let mouseY = 0;
@@ -243,6 +307,12 @@ function animate() {
         model.rotation.y += (targetRotationY - model.rotation.y) * 0.05;
         model.rotation.x += (targetRotationX - model.rotation.x) * 0.05;
     }
+
+    // Subtle particle network movement based on mouse (slower, more subtle)
+    particles.rotation.y += (mouseX * 0.1 - particles.rotation.y) * 0.02;
+    particles.rotation.x += (mouseY * 0.05 - particles.rotation.x) * 0.02;
+    lines.rotation.y = particles.rotation.y;
+    lines.rotation.x = particles.rotation.x;
 
     // Update mouse spotlight position
     mouseLight.position.x = mouseX * 8;
