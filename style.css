@@ -1291,7 +1291,7 @@ body {
 
     .hero {
         min-height: 100vh;
-        padding: 45vh 0 3rem;
+        padding: 60vh 1.5rem 3rem;
         justify-content: flex-start;
         align-items: center;
     }
@@ -1299,9 +1299,9 @@ body {
     .hero-content {
         margin: 0 auto;
         text-align: center;
-        width: 90%;
+        width: 100%;
         max-width: 100%;
-        padding: 0 1rem;
+        padding: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
