@@ -144,24 +144,29 @@ function updateModelMaterials() {
     console.log(`Updated ${materialCount} materials with environment map`);
 }
 
-// Lighting - softer, less colored
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+// Lighting - brighter for better sunglasses visibility
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Increased ambient
 scene.add(ambientLight);
 
-const mainLight = new THREE.DirectionalLight(0xffffff, 0.8); // White instead of green
+const mainLight = new THREE.DirectionalLight(0xffffff, 1.2); // Brighter main light
 mainLight.position.set(5, 10, 5);
 scene.add(mainLight);
 
-const backLight = new THREE.DirectionalLight(0xffffff, 0.5); // White instead of blue
+const backLight = new THREE.DirectionalLight(0xffffff, 0.8); // Brighter back light
 backLight.position.set(-5, 5, -5);
 scene.add(backLight);
 
-const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.6); // Brighter fill
 fillLight.position.set(0, -5, 0);
 scene.add(fillLight);
 
+// Additional front light for chrome reflections
+const frontLight = new THREE.DirectionalLight(0xffffff, 0.8);
+frontLight.position.set(0, 0, 10);
+scene.add(frontLight);
+
 // Dynamic mouse spotlight
-const mouseLight = new THREE.SpotLight(0xffffff, 2);
+const mouseLight = new THREE.SpotLight(0xffffff, 3); // Brighter spotlight
 mouseLight.position.set(0, 0, 10);
 mouseLight.angle = Math.PI / 6;
 mouseLight.penumbra = 0.3;
@@ -170,23 +175,23 @@ mouseLight.distance = 50;
 scene.add(mouseLight);
 
 // ===== PARTICLE NETWORK BACKGROUND =====
-const particleCount = 100;
+const particleCount = 200; // Doubled for more prominence
 const particlePositions = [];
 const particleGeometry = new THREE.BufferGeometry();
 const particleMaterial = new THREE.PointsMaterial({
     color: 0x0ea5e9,
-    size: 0.15,
+    size: 0.3, // Larger particles
     transparent: true,
-    opacity: 0.3,
+    opacity: 0.6, // More visible
     blending: THREE.AdditiveBlending
 });
 
-// Create particles in 3D space
+// Create particles in 3D space with wider distribution
 const positions = new Float32Array(particleCount * 3);
 for (let i = 0; i < particleCount; i++) {
-    const x = (Math.random() - 0.5) * 50;
-    const y = (Math.random() - 0.5) * 50;
-    const z = (Math.random() - 0.5) * 30 - 10; // Behind the glasses
+    const x = (Math.random() - 0.5) * 80; // Wider spread to edges
+    const y = (Math.random() - 0.5) * 80; // Wider spread to edges
+    const z = (Math.random() - 0.5) * 40 - 15; // Behind the glasses
 
     positions[i * 3] = x;
     positions[i * 3 + 1] = y;
@@ -203,13 +208,13 @@ scene.add(particles);
 const lineMaterial = new THREE.LineBasicMaterial({
     color: 0x0ea5e9,
     transparent: true,
-    opacity: 0.15,
+    opacity: 0.35, // More visible lines
     blending: THREE.AdditiveBlending
 });
 
 const lineGeometry = new THREE.BufferGeometry();
 const linePositions = [];
-const maxDistance = 8; // Maximum distance to draw lines between particles
+const maxDistance = 10; // Slightly longer connections
 
 function updateParticleLines() {
     linePositions.length = 0;
