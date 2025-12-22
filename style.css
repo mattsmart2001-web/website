@@ -1281,9 +1281,17 @@ body {
 }
 
 @media (max-width: 768px) {
+    .navbar {
+        padding: 1rem 1.5rem;
+    }
+
+    .nav-burger {
+        margin-left: auto;
+    }
+
     .hero {
         min-height: 100vh;
-        padding: 30vh 0 3rem;
+        padding: 45vh 0 3rem;
         justify-content: flex-start;
         align-items: center;
     }
@@ -1369,7 +1377,7 @@ body {
 
 @media (max-width: 480px) {
     .navbar {
-        padding: 1rem;
+        padding: 1rem 1.5rem;
     }
 
     .section-title {
