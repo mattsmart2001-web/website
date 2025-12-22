@@ -1288,38 +1288,54 @@ body {
     }
 
     .hero-content {
-        margin-top: 0;
+        margin: 0 auto;
         text-align: center;
         width: 100%;
+        max-width: 100%;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 
     .hero-label {
         font-size: 0.75rem;
         margin-bottom: 1rem;
+        text-align: center;
+        width: 100%;
     }
 
     .hero-title {
         font-size: clamp(2.5rem, 12vw, 5rem);
+        text-align: center;
+        width: 100%;
     }
 
     .hero-subtitle {
         font-size: 1rem;
         margin-bottom: 2rem;
+        text-align: center;
+        width: 100%;
     }
 
     .hero-buttons {
         flex-direction: column;
         width: 100%;
         gap: 1rem;
+        align-items: center;
+        max-width: 400px;
     }
 
     .btn {
         width: 100%;
+        text-align: center;
     }
 
     .hero-stats {
         gap: 2rem;
         margin-top: 2rem;
+        width: 100%;
+        justify-content: center;
     }
 
     .section {
