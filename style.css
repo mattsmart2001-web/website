@@ -51,10 +51,6 @@ body {
     pointer-events: none;
 }
 
-body.painting {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="8" fill="rgba(0,255,136,0.5)" stroke="%2300ff88" stroke-width="2"/></svg>') 16 16, crosshair;
-}
-
 /* ===== NAVIGATION ===== */
 .navbar {
     position: fixed;
