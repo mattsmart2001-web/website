@@ -358,9 +358,22 @@ navBurger?.addEventListener('click', () => {
     navLinks.classList.toggle('active');
 });
 
+// Logo click to scroll to top
+const navLogo = document.querySelector('.nav-logo');
+navLogo?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+});
+
 // Smooth scroll for navigation links
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
+        // Skip if this is the logo (already handled above)
+        if (this.classList.contains('nav-logo')) return;
+
         e.preventDefault();
         const target = document.querySelector(this.getAttribute('href'));
         if (target) {
