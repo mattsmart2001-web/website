@@ -125,20 +125,16 @@ function updateModelMaterials() {
                 mat.envMapIntensity = 5.0; // Very strong reflection for high reflectivity
                 mat.metalness = 0.2; // Slightly higher metalness for more reflection
                 mat.roughness = 0.001; // Nearly mirror-smooth for maximum reflections
-                mat.emissive = new THREE.Color(0x0ea5e9); // Subtle blue glow
-                mat.emissiveIntensity = 0.15; // Very subtle glow
                 if (mat.transmission !== undefined) {
                     mat.transmission = 0.9; // Keep transparency
                 }
-                console.log('  -> Configured as LENS (reflective with logo + glow)');
+                console.log('  -> Configured as LENS (reflective with logo)');
             } else {
                 // Frames - chrome/metallic
                 mat.envMapIntensity = 4.0; // High reflection for chrome
                 mat.metalness = 1.0; // Full metallic for chrome
                 mat.roughness = 0.001; // Mirror-smooth for maximum chrome reflections
-                mat.emissive = new THREE.Color(0x38bdf8); // Subtle lighter blue glow for chrome
-                mat.emissiveIntensity = 0.2; // Subtle glow on frames
-                console.log('  -> Configured as FRAME (chrome + glow)');
+                console.log('  -> Configured as FRAME (chrome)');
             }
 
             mat.needsUpdate = true;
@@ -148,29 +144,38 @@ function updateModelMaterials() {
     console.log(`Updated ${materialCount} materials with environment map`);
 }
 
-// Lighting - brighter for better sunglasses visibility
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Increased ambient
+// Lighting - much brighter for better sunglasses visibility
+const ambientLight = new THREE.AmbientLight(0xffffff, 2.0); // Even brighter ambient
 scene.add(ambientLight);
 
-const mainLight = new THREE.DirectionalLight(0xffffff, 1.2); // Brighter main light
+const mainLight = new THREE.DirectionalLight(0xffffff, 1.8); // Much brighter main
 mainLight.position.set(5, 10, 5);
 scene.add(mainLight);
 
-const backLight = new THREE.DirectionalLight(0xffffff, 0.8); // Brighter back light
+const backLight = new THREE.DirectionalLight(0xffffff, 1.2); // Brighter back light
 backLight.position.set(-5, 5, -5);
 scene.add(backLight);
 
-const fillLight = new THREE.DirectionalLight(0xffffff, 0.6); // Brighter fill
+const fillLight = new THREE.DirectionalLight(0xffffff, 1.0); // Brighter fill
 fillLight.position.set(0, -5, 0);
 scene.add(fillLight);
 
 // Additional front light for chrome reflections
-const frontLight = new THREE.DirectionalLight(0xffffff, 0.8);
+const frontLight = new THREE.DirectionalLight(0xffffff, 1.2); // Brighter front
 frontLight.position.set(0, 0, 10);
 scene.add(frontLight);
 
+// Additional side lights for better coverage
+const leftLight = new THREE.DirectionalLight(0xffffff, 0.8);
+leftLight.position.set(-10, 0, 5);
+scene.add(leftLight);
+
+const rightLight = new THREE.DirectionalLight(0xffffff, 0.8);
+rightLight.position.set(10, 0, 5);
+scene.add(rightLight);
+
 // Dynamic mouse spotlight
-const mouseLight = new THREE.SpotLight(0xffffff, 3); // Brighter spotlight
+const mouseLight = new THREE.SpotLight(0xffffff, 4); // Even brighter spotlight
 mouseLight.position.set(0, 0, 10);
 mouseLight.angle = Math.PI / 6;
 mouseLight.penumbra = 0.3;
