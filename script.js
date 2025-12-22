@@ -512,8 +512,26 @@ window.addEventListener('scroll', () => {
 });
 
 // Mobile burger menu
-navBurger?.addEventListener('click', () => {
+navBurger?.addEventListener('click', (e) => {
+    e.stopPropagation();
     navLinks.classList.toggle('active');
+    navBurger.classList.toggle('active');
+});
+
+// Close menu when clicking nav links
+document.querySelectorAll('.nav-links a').forEach(link => {
+    link.addEventListener('click', () => {
+        navLinks.classList.remove('active');
+        navBurger.classList.remove('active');
+    });
+});
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (!navLinks.contains(e.target) && !navBurger.contains(e.target)) {
+        navLinks.classList.remove('active');
+        navBurger.classList.remove('active');
+    }
 });
 
 // Logo click to scroll to top
