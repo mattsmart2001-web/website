@@ -896,18 +896,49 @@ lookupStatsBtn?.addEventListener('click', async () => {
     lookupStatsBtn.disabled = true;
 
     try {
-        // First, get the PSN ID from the profile page
-        const psnResponse = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(profileUrl)}`);
-        const psnData = await psnResponse.json();
-        const psnMatch = psnData.contents.match(/"PSN ID","([^"]+)"/);
-        const psnId = psnMatch ? psnMatch[1] : 'Unknown';
-
-        // Fetch stats using the User GUID
-        const statsUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${userGuid}&psn=${encodeURIComponent(psnId)}`;
+        // Fetch stats using the User GUID first
+        const statsUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${userGuid}`;
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(statsUrl)}`;
         const statsResponse = await fetch(proxyUrl);
         const proxyData = await statsResponse.json();
         const statsData = JSON.parse(proxyData.contents);
+
+        // Try to extract PSN ID from the stats data or from the profile URL
+        let psnId = 'Unknown';
+
+        // Method 1: Extract from stats data
+        if (statsData && (statsData["0"] || statsData[0])) {
+            const latestStats = statsData["0"] || statsData[0];
+            if (latestStats.psnId) {
+                psnId = latestStats.psnId;
+            } else if (latestStats.user_name) {
+                psnId = latestStats.user_name;
+            }
+        }
+
+        // Method 2: Try to fetch from profile page if still unknown
+        if (psnId === 'Unknown') {
+            try {
+                const psnResponse = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(profileUrl)}`);
+                const psnData = await psnResponse.json();
+                // Try multiple patterns
+                const patterns = [
+                    /"PSN ID","([^"]+)"/,
+                    /"nickname":"([^"]+)"/,
+                    /data-user-name="([^"]+)"/,
+                    /<span[^>]*class="profile-name"[^>]*>([^<]+)</
+                ];
+                for (const pattern of patterns) {
+                    const match = psnData.contents.match(pattern);
+                    if (match && match[1]) {
+                        psnId = match[1];
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.log('Could not extract PSN from profile page', e);
+            }
+        }
 
         displayUserStats(psnId, userGuid, statsData);
     } catch (error) {
