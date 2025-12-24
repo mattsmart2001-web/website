@@ -819,7 +819,13 @@ contactForm?.addEventListener('submit', (e) => {
     submitBtn.textContent = 'Sending...';
     submitBtn.disabled = true;
 
-    setTimeout(() => {
+    // Submit to Netlify Forms
+    fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(formData).toString()
+    })
+    .then(() => {
         submitBtn.textContent = 'Message Sent!';
         submitBtn.style.background = 'var(--color-secondary)';
         contactForm.reset();
@@ -829,7 +835,18 @@ contactForm?.addEventListener('submit', (e) => {
             submitBtn.disabled = false;
             submitBtn.style.background = '';
         }, 3000);
-    }, 1500);
+    })
+    .catch((error) => {
+        console.error('Form submission error:', error);
+        submitBtn.textContent = 'Error - Try Again';
+        submitBtn.style.background = '#ef4444';
+
+        setTimeout(() => {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            submitBtn.style.background = '';
+        }, 3000);
+    });
 });
 
 // ===== SCROLL ANIMATIONS =====
