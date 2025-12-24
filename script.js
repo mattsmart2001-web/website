@@ -871,6 +871,289 @@ document.querySelectorAll('.section').forEach(section => {
     observer.observe(section);
 });
 
+// ===== YOUR GT7 STATS LOOKUP =====
+const lookupStatsBtn = document.getElementById('lookupStatsBtn');
+const gtProfileUrl = document.getElementById('gtProfileUrl');
+const userStatsResults = document.getElementById('userStatsResults');
+
+lookupStatsBtn?.addEventListener('click', async () => {
+    const profileUrl = gtProfileUrl.value.trim();
+
+    if (!profileUrl) {
+        alert('Please enter your Gran Turismo profile URL');
+        return;
+    }
+
+    // Extract User GUID from profile URL
+    const guidMatch = profileUrl.match(/\/([a-f0-9-]{36})\//i);
+    if (!guidMatch) {
+        alert('Invalid profile URL. Please copy the full URL from your GT profile page.');
+        return;
+    }
+
+    const userGuid = guidMatch[1];
+    lookupStatsBtn.textContent = 'Loading...';
+    lookupStatsBtn.disabled = true;
+
+    try {
+        // First, get the PSN ID from the profile page
+        const psnResponse = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(profileUrl)}`);
+        const psnData = await psnResponse.json();
+        const psnMatch = psnData.contents.match(/"PSN ID","([^"]+)"/);
+        const psnId = psnMatch ? psnMatch[1] : 'Unknown';
+
+        // Fetch stats using the User GUID
+        const statsUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${userGuid}&psn=${encodeURIComponent(psnId)}`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(statsUrl)}`;
+        const statsResponse = await fetch(proxyUrl);
+        const proxyData = await statsResponse.json();
+        const statsData = JSON.parse(proxyData.contents);
+
+        displayUserStats(psnId, userGuid, statsData);
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        userStatsResults.innerHTML = `
+            <div style="background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 2rem; text-align: center;">
+                <p style="color: #fca5a5; font-size: 1.2rem; margin-bottom: 1rem;">Error Loading Stats</p>
+                <p style="color: var(--color-text-muted);">Please make sure you've participated in GT7 Sport Mode and copied the correct profile URL.</p>
+            </div>
+        `;
+        userStatsResults.style.display = 'block';
+    } finally {
+        lookupStatsBtn.textContent = 'View My Stats';
+        lookupStatsBtn.disabled = false;
+    }
+});
+
+function displayUserStats(psnId, userGuid, data) {
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+        userStatsResults.innerHTML = `
+            <div style="background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 2rem; text-align: center;">
+                <p style="color: #fca5a5;">No stats found for this profile.</p>
+            </div>
+        `;
+        userStatsResults.style.display = 'block';
+        return;
+    }
+
+    function getSRGrade(sr) {
+        const grades = ['E', 'E', 'D', 'C', 'B', 'A', 'S'];
+        return grades[sr] || 'E';
+    }
+
+    const latestStats = data["0"] || data[0] || data;
+    const drPoints = latestStats.dr || 0;
+    const driverRating = latestStats.rank || 'E';
+    const srValue = latestStats.sr || 0;
+    const sportsmanship = getSRGrade(srValue);
+    const totalRaces = latestStats.raceCount || 0;
+    const wins = latestStats.winCount || 0;
+    const poles = latestStats.polePositionCount || 0;
+    const fastestLaps = latestStats.fastestLapCount || 0;
+
+    userStatsResults.innerHTML = `
+        <div style="animation: fadeIn 0.5s ease-in;">
+            <!-- DR & SR Cards -->
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div style="background: linear-gradient(135deg, rgba(0,255,136,0.15) 0%, rgba(0,255,136,0.05) 100%); border: 2px solid rgba(0,255,136,0.4); border-radius: 16px; padding: 2rem; text-align: center; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));"></div>
+                    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 3px; color: var(--color-text-muted); margin-bottom: 0.5rem; font-weight: 600;">Driver Rating</div>
+                    <div style="font-size: 3.5rem; font-weight: 900; font-family: var(--font-display); color: var(--color-primary); line-height: 1; margin-bottom: 0.5rem;">${driverRating}</div>
+                    <div style="font-size: 1.1rem; font-weight: 700; color: rgba(255,255,255,0.9);">${drPoints.toLocaleString()} <span style="color: var(--color-text-muted); font-weight: 500;">points</span></div>
+                </div>
+                <div style="background: linear-gradient(135deg, rgba(14,165,233,0.15) 0%, rgba(14,165,233,0.05) 100%); border: 2px solid rgba(14,165,233,0.4); border-radius: 16px; padding: 2rem; text-align: center; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-secondary), var(--color-primary));"></div>
+                    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 3px; color: var(--color-text-muted); margin-bottom: 0.5rem; font-weight: 600;">Sportsmanship</div>
+                    <div style="font-size: 3.5rem; font-weight: 900; font-family: var(--font-display); color: var(--color-secondary); line-height: 1; margin-bottom: 0.5rem;">${sportsmanship}</div>
+                    <div style="font-size: 1.1rem; font-weight: 700; color: rgba(255,255,255,0.9);">${srValue} <span style="color: var(--color-text-muted); font-weight: 500;">rating</span></div>
+                </div>
+            </div>
+
+            <!-- Racing Stats -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--color-primary);">${totalRaces}</div>
+                    <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Races</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--color-primary);">${wins}</div>
+                    <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Wins</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--color-primary);">${poles}</div>
+                    <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Poles</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--color-primary);">${fastestLaps}</div>
+                    <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Fast Laps</div>
+                </div>
+            </div>
+
+            <!-- PSN Badge -->
+            <div style="background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem;">
+                <div style="font-size: 1.75rem; font-weight: 800; color: var(--color-primary); font-family: var(--font-display); letter-spacing: 1px;">${psnId}</div>
+                <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 2px; margin-top: 0.25rem; font-weight: 600;">PSN ID • GT7 Sport Mode</div>
+            </div>
+
+            <!-- Download Widget Button -->
+            <button
+                onclick="downloadOBSWidget('${psnId}', '${userGuid}')"
+                class="btn btn-primary"
+                style="width: 100%; font-size: 1.2rem; padding: 1.25rem; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); border: none; box-shadow: 0 8px 32px rgba(0,255,136,0.3);"
+            >
+                📥 Download Custom OBS Widget
+            </button>
+            <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 1rem;">
+                Pre-configured with your PSN ID and stats • Ready to use in OBS Browser Source
+            </p>
+        </div>
+    `;
+
+    userStatsResults.style.display = 'block';
+}
+
+// Function to generate and download custom OBS widget
+function downloadOBSWidget(psnId, userGuid) {
+    const widgetContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GT7 Stats OBS Widget - ${psnId}</title>
+    <style>
+        :root {
+            --primary-color: #00ff88;
+            --secondary-color: #0ea5e9;
+            --bg-color: rgba(10, 14, 18, 0.95);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-color: #ffffff;
+            --text-muted: #94a3b8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: transparent; color: var(--text-color); padding: 20px; }
+        .widget-container { max-width: 600px; animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px; }
+        .stat-card { background: var(--bg-color); border: 2px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center; position: relative; overflow: hidden; transition: all 0.3s ease; }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3); }
+        .stat-card.dr { border-color: var(--primary-color); }
+        .stat-card.sr { border-color: var(--secondary-color); }
+        .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
+        .stat-value { font-size: 3.5rem; font-weight: 900; line-height: 1; margin-bottom: 8px; }
+        .dr .stat-value { color: var(--primary-color); text-shadow: 0 0 20px rgba(0, 255, 136, 0.5); }
+        .sr .stat-value { color: var(--secondary-color); text-shadow: 0 0 20px rgba(14, 165, 233, 0.5); }
+        .stat-points { font-size: 1.1rem; font-weight: 700; color: rgba(255, 255, 255, 0.9); }
+        .stat-points span { color: var(--text-muted); font-weight: 500; font-size: 0.9rem; }
+        .race-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+        .race-stat { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center; transition: all 0.3s ease; }
+        .race-stat:hover { border-color: var(--primary-color); transform: scale(1.05); }
+        .race-stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); margin-bottom: 4px; }
+        .race-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+        .psn-badge { background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center; }
+        .psn-name { font-size: 1.5rem; font-weight: 800; color: var(--primary-color); letter-spacing: 1px; }
+        .psn-label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; }
+        .loading { text-align: center; padding: 40px; color: var(--text-muted); font-size: 1.2rem; }
+        .error { background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 20px; text-align: center; color: #fca5a5; }
+        .last-updated { text-align: center; font-size: 0.7rem; color: var(--text-muted); margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="widget-container" id="widget"><div class="loading">Loading GT7 stats...</div></div>
+    <script>
+        const CONFIG = { PSN_ID: '${psnId}', USER_ID: '${userGuid}', REFRESH_INTERVAL: 30000, USE_CORS_PROXY: true };
+        let lastData = null;
+        async function fetchGT7Stats() {
+            try {
+                const apiUrl = \`https://gtstats.live/api/getDriverStatsHistory?user_id=\${CONFIG.USER_ID}&psn=\${encodeURIComponent(CONFIG.PSN_ID)}\`;
+                let response, data;
+                if (CONFIG.USE_CORS_PROXY) {
+                    const proxyUrl = \`https://api.allorigins.win/get?url=\${encodeURIComponent(apiUrl)}\`;
+                    response = await fetch(proxyUrl);
+                    const proxyData = await response.json();
+                    data = JSON.parse(proxyData.contents);
+                } else {
+                    response = await fetch(apiUrl);
+                    data = await response.json();
+                }
+                return data;
+            } catch (error) {
+                console.error('Error fetching GT7 stats:', error);
+                throw error;
+            }
+        }
+        function getSRGrade(sr) { const grades = ['E', 'E', 'D', 'C', 'B', 'A', 'S']; return grades[sr] || 'E'; }
+        function displayStats(data) {
+            const widget = document.getElementById('widget');
+            if (!data || (Array.isArray(data) && data.length === 0)) {
+                widget.innerHTML = '<div class="error"><h2>No Stats Found</h2><p>Unable to load stats for ' + CONFIG.PSN_ID + '</p></div>';
+                return;
+            }
+            const latestStats = data["0"] || data[0] || data;
+            const drPoints = latestStats.dr || 0;
+            const driverRating = latestStats.rank || 'E';
+            const srValue = latestStats.sr || 0;
+            const sportsmanship = getSRGrade(srValue);
+            const totalRaces = latestStats.raceCount || 0;
+            const wins = latestStats.winCount || 0;
+            const poles = latestStats.polePositionCount || 0;
+            const fastestLaps = latestStats.fastestLapCount || 0;
+            const now = new Date().toLocaleTimeString();
+            widget.innerHTML = \`
+                <div class="stats-grid">
+                    <div class="stat-card dr">
+                        <div class="stat-label">Driver Rating</div>
+                        <div class="stat-value">\${driverRating}</div>
+                        <div class="stat-points">\${drPoints.toLocaleString()} <span>points</span></div>
+                    </div>
+                    <div class="stat-card sr">
+                        <div class="stat-label">Sportsmanship</div>
+                        <div class="stat-value">\${sportsmanship}</div>
+                        <div class="stat-points">\${srValue} <span>rating</span></div>
+                    </div>
+                </div>
+                <div class="race-stats">
+                    <div class="race-stat"><div class="race-stat-value">\${totalRaces}</div><div class="race-stat-label">Races</div></div>
+                    <div class="race-stat"><div class="race-stat-value">\${wins}</div><div class="race-stat-label">Wins</div></div>
+                    <div class="race-stat"><div class="race-stat-value">\${poles}</div><div class="race-stat-label">Poles</div></div>
+                    <div class="race-stat"><div class="race-stat-value">\${fastestLaps}</div><div class="race-stat-label">Fast Laps</div></div>
+                </div>
+                <div class="psn-badge">
+                    <div class="psn-name">\${CONFIG.PSN_ID}</div>
+                    <div class="psn-label">PSN ID • GT7 Sport Mode</div>
+                </div>
+                <div class="last-updated">Last updated: \${now}</div>
+            \`;
+            lastData = data;
+        }
+        async function updateStats() {
+            try { const data = await fetchGT7Stats(); displayStats(data); }
+            catch (error) {
+                document.getElementById('widget').innerHTML = \`<div class="error"><h2>Error Loading Stats</h2><p>\${error.message}</p><p style="font-size: 0.8rem; margin-top: 10px;">Retrying in \${CONFIG.REFRESH_INTERVAL / 1000} seconds...</p></div>\`;
+            }
+        }
+        updateStats();
+        setInterval(updateStats, CONFIG.REFRESH_INTERVAL);
+        console.log('GT7 OBS Widget loaded - PSN:', CONFIG.PSN_ID);
+    </script>
+</body>
+</html>`;
+
+    // Create blob and download
+    const blob = new Blob([widgetContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `gt7-widget-${psnId}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Show success message
+    alert(`✅ Widget downloaded!\n\nTo use in OBS:\n1. Add Browser Source\n2. Check "Local file"\n3. Select gt7-widget-${psnId}.html\n4. Set Width: 600, Height: 400\n5. Done!`);
+}
+
 // ===== CONSOLE WELCOME MESSAGE =====
 console.log('%cSPARKSTHEORY', 'color: #0ea5e9; font-size: 48px; font-weight: bold; font-family: Rajdhani, sans-serif;');
 console.log('%c🏎️ Welcome to the sparkstheory racing website!', 'color: #38bdf8; font-size: 16px;');
