@@ -325,9 +325,11 @@ loader.load(
         // Center the model
         model.position.sub(center);
 
-        // Scale to fit screen nicely - sunglasses are smaller, so scale more
+        // Scale to fit screen nicely - smaller on mobile
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 28.08 / maxDim; // 20% larger than 23.4 for better visibility
+        const isMobile = window.innerWidth <= 768;
+        const baseScale = isMobile ? 18 : 28.08; // Smaller scale for mobile
+        const scale = baseScale / maxDim;
         model.scale.setScalar(scale);
 
         // Position sunglasses - adjust for better viewing angle
