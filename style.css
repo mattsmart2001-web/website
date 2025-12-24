@@ -732,6 +732,13 @@ body {
     color: rgba(255, 255, 255, 0.1);
 }
 
+.about-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
 /* ===== SHOP SECTION ===== */
 .shop-section {
     background: var(--color-bg-secondary);
