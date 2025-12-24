@@ -566,7 +566,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 
 // ===== YOUTUBE INTEGRATION =====
 const YOUTUBE_CHANNEL_ID = 'UCuUCB1yQyF23u5ESGvNZKNg';
-const YOUTUBE_API_KEY = 'AIzaSyBSELHZRfCG2MnQD_HABaKbFGbKRxqyf4M';
+const YOUTUBE_API_KEY = 'AIzaSyBRxCoE4FhqnNfVOHWgVxLApLSnxIlbQ4w';
 
 // Load YouTube subscriber count
 async function loadSubscriberCount() {
