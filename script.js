@@ -832,8 +832,7 @@ lookupStatsBtn?.addEventListener('click', async () => {
         userStatsResults.innerHTML = `
             <div style="background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 2rem; text-align: center;">
                 <p style="color: #fca5a5; font-size: 1.2rem; margin-bottom: 1rem;">Error Loading Stats</p>
-                <p style="color: var(--color-text-muted);">No stats found. Make sure you've participated in <strong>GT World Series</strong> events.</p>
-                <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 1rem;">Note: gtstats.live only tracks GT World Series participants (~10% of Sport Mode players)</p>
+                <p style="color: var(--color-text-muted);">No stats found. Make sure you've participated in GT World Series events.</p>
             </div>
         `;
         userStatsResults.style.display = 'block';
