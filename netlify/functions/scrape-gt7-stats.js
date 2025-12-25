@@ -126,6 +126,15 @@ exports.handler = async (event) => {
         victories: parseNum(victories),
         polePositions: parseNum(polePositions),
         fastestLaps: parseNum(fastestLaps),
+        // Debug info
+        _debug: {
+          pageTextLength: allText.length,
+          pageTextPreview: allText.substring(0, 500),
+          drMatch: drMatch ? drMatch[0] : null,
+          srMatch: srMatch ? srMatch[0] : null,
+          foundRaces: races,
+          foundVictories: victories,
+        }
       };
     });
 
@@ -133,6 +142,7 @@ exports.handler = async (event) => {
     browser = null;
 
     console.log('Scraped stats:', stats);
+    console.log('Debug info:', stats._debug);
 
     return {
       statusCode: 200,
@@ -140,6 +150,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         success: true,
         stats,
+        debug: stats._debug, // Include debug info in response
       }),
     };
 

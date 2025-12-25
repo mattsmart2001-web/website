@@ -919,6 +919,11 @@ lookupStatsBtn?.addEventListener('click', async () => {
 
         const data = await response.json();
 
+        // Log debug info if available
+        if (data.debug) {
+            console.log('Scraper debug info:', data.debug);
+        }
+
         if (!data.success) {
             throw new Error(data.message || 'Failed to fetch stats');
         }
@@ -938,10 +943,21 @@ lookupStatsBtn?.addEventListener('click', async () => {
         displayUserStatsFromScraper(psnId, userGuid, statsData);
     } catch (error) {
         console.error('Error fetching stats:', error);
+        let debugInfo = '';
+        if (error.response) {
+            try {
+                const errorData = await error.response.json();
+                if (errorData.debug) {
+                    debugInfo = `<details style="margin-top: 1rem; text-align: left;"><summary style="cursor: pointer; color: var(--color-text-muted);">Debug Info</summary><pre style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--color-text-muted); overflow-x: auto;">${JSON.stringify(errorData.debug, null, 2)}</pre></details>`;
+                }
+            } catch (e) {}
+        }
         userStatsResults.innerHTML = `
             <div style="background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 2rem; text-align: center;">
                 <p style="color: #fca5a5; font-size: 1.2rem; margin-bottom: 1rem;">Error Loading Stats</p>
                 <p style="color: var(--color-text-muted);">Please make sure you've participated in GT7 Sport Mode and copied the correct profile URL.</p>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Error: ${error.message}</p>
+                ${debugInfo}
             </div>
         `;
         userStatsResults.style.display = 'block';
