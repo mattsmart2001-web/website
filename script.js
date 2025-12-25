@@ -807,26 +807,21 @@ lookupStatsBtn?.addEventListener('click', async () => {
     lookupStatsBtn.disabled = true;
 
     try {
-        // Use gtstats.live API with PSN ID
-        const response = await fetch(`https://gtstats.live/api/search?psn=${encodeURIComponent(psnId)}`);
+        // Use our Netlify proxy to fetch gtstats.live data (bypasses CORS)
+        const response = await fetch(`/.netlify/functions/gtstats-proxy?psnId=${encodeURIComponent(psnId)}`);
         const data = await response.json();
 
-        console.log('gtstats.live API response:', data);
+        console.log('Proxy API response:', data);
 
-        if (!data || data.length === 0) {
-            throw new Error('No stats found. Make sure you\'ve participated in GT World Series events.');
+        if (!data.success) {
+            throw new Error(data.error || 'Player not found');
         }
 
-        // Get the first result (should be exact match)
-        const playerData = data[0];
-
-        // Fetch detailed stats using the user ID
-        const statsResponse = await fetch(`https://gtstats.live/api/player/${playerData.id}`);
-        const statsData = await statsResponse.json();
+        const statsData = data.player;
 
         console.log('Player stats:', statsData);
 
-        displayUserStats(psnId, playerData.id, statsData);
+        displayUserStats(psnId, statsData.id, statsData);
     } catch (error) {
         console.error('Error fetching stats:', error);
         userStatsResults.innerHTML = `
