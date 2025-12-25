@@ -1,0 +1,9 @@
+{
+  "name": "sparkstheory-website",
+  "version": "1.0.0",
+  "description": "SparksTheory GT7 Racing Website",
+  "dependencies": {
+    "@sparticuz/chromium": "^119.0.2",
+    "puppeteer-core": "^21.6.1"
+  }
+}

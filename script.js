@@ -908,14 +908,34 @@ lookupStatsBtn?.addEventListener('click', async () => {
     lookupStatsBtn.disabled = true;
 
     try {
-        // Fetch stats using the User GUID and PSN ID
-        const statsUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${userGuid}&psn=${encodeURIComponent(psnId)}`;
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(statsUrl)}`;
-        const statsResponse = await fetch(proxyUrl);
-        const proxyData = await statsResponse.json();
-        const statsData = JSON.parse(proxyData.contents);
+        // Call our Netlify Function scraper
+        const response = await fetch('/.netlify/functions/scrape-gt7-stats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ profileUrl }),
+        });
 
-        displayUserStats(psnId, userGuid, statsData);
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to fetch stats');
+        }
+
+        const stats = data.stats;
+
+        // Map scraped data to expected format
+        const statsData = {
+            rank: stats.driverRating,
+            sr: stats.sportsmanshipRating,
+            raceCount: stats.races,
+            winCount: stats.victories,
+            polePositionCount: stats.polePositions,
+            fastestLapCount: stats.fastestLaps,
+        };
+
+        displayUserStatsFromScraper(psnId, userGuid, statsData);
     } catch (error) {
         console.error('Error fetching stats:', error);
         userStatsResults.innerHTML = `
@@ -1013,6 +1033,96 @@ function displayUserStats(psnId, userGuid, data) {
             <!-- Submit to Leaderboard Button -->
             <button
                 onclick="submitToLeaderboard('${psnId}', '${userGuid}', ${drPoints}, '${driverRating}', ${srValue}, '${sportsmanship}', ${totalRaces}, ${wins}, ${poles}, ${fastestLaps})"
+                class="btn btn-secondary"
+                style="width: 100%; font-size: 1.2rem; padding: 1.25rem;"
+                id="submitLeaderboardBtn"
+            >
+                🏆 Submit to Global Leaderboard
+            </button>
+            <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 1rem;">
+                Share your stats with the community and compete on the global rankings
+            </p>
+        </div>
+    `;
+
+    userStatsResults.style.display = 'block';
+}
+
+// Function to display stats from scraper (rank letters only, no DR points)
+function displayUserStatsFromScraper(psnId, userGuid, data) {
+    if (!data) {
+        userStatsResults.innerHTML = `
+            <div style="background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 2rem; text-align: center;">
+                <p style="color: #fca5a5;">No stats found for this profile.</p>
+            </div>
+        `;
+        userStatsResults.style.display = 'block';
+        return;
+    }
+
+    const driverRating = data.rank || 'E';
+    const sportsmanship = data.sr || 'E';
+    const totalRaces = data.raceCount || 0;
+    const wins = data.winCount || 0;
+    const poles = data.polePositionCount || 0;
+    const fastestLaps = data.fastestLapCount || 0;
+
+    userStatsResults.innerHTML = `
+        <div style="animation: fadeIn 0.5s ease-in;">
+            <!-- DR & SR Cards -->
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div style="background: linear-gradient(135deg, rgba(0,255,136,0.15) 0%, rgba(0,255,136,0.05) 100%); border: 2px solid rgba(0,255,136,0.4); border-radius: 16px; padding: 2rem; text-align: center; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));"></div>
+                    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 3px; color: var(--color-text-muted); margin-bottom: 0.5rem; font-weight: 600;">Driver Rating</div>
+                    <div style="font-size: 3.5rem; font-weight: 900; font-family: var(--font-display); color: var(--color-primary); line-height: 1; margin-bottom: 0.5rem;">${driverRating}</div>
+                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Rank</div>
+                </div>
+                <div style="background: linear-gradient(135deg, rgba(14,165,233,0.15) 0%, rgba(14,165,233,0.05) 100%); border: 2px solid rgba(14,165,233,0.4); border-radius: 16px; padding: 2rem; text-align: center; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--color-secondary), var(--color-primary));"></div>
+                    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 3px; color: var(--color-text-muted); margin-bottom: 0.5rem; font-weight: 600;">Sportsmanship</div>
+                    <div style="font-size: 3.5rem; font-weight: 900; font-family: var(--font-display); color: var(--color-secondary); line-height: 1; margin-bottom: 0.5rem;">${sportsmanship}</div>
+                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Grade</div>
+                </div>
+            </div>
+
+            <!-- Racing Stats -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--color-primary);">${totalRaces}</div>
+                    <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Races</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--color-primary);">${wins}</div>
+                    <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Wins</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--color-primary);">${poles}</div>
+                    <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Poles</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--color-primary);">${fastestLaps}</div>
+                    <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px;">Fast Laps</div>
+                </div>
+            </div>
+
+            <!-- PSN Badge -->
+            <div style="background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem;">
+                <div style="font-size: 1.75rem; font-weight: 800; color: var(--color-primary); font-family: var(--font-display); letter-spacing: 1px;">${psnId}</div>
+                <div style="font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 2px; margin-top: 0.25rem; font-weight: 600;">PSN ID • GT7 Sport Mode</div>
+            </div>
+
+            <!-- Download Widget Button -->
+            <button
+                onclick="downloadOBSWidget('${psnId}', '${userGuid}')"
+                class="btn btn-primary"
+                style="width: 100%; font-size: 1.2rem; padding: 1.25rem; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); border: none; box-shadow: 0 8px 32px rgba(0,255,136,0.3); margin-bottom: 1rem;"
+            >
+                📥 Download Custom OBS Widget
+            </button>
+
+            <!-- Submit to Leaderboard Button -->
+            <button
+                onclick="submitToLeaderboardFromScraper('${psnId}', '${userGuid}', '${driverRating}', '${sportsmanship}', ${totalRaces}, ${wins}, ${poles}, ${fastestLaps})"
                 class="btn btn-secondary"
                 style="width: 100%; font-size: 1.2rem; padding: 1.25rem;"
                 id="submitLeaderboardBtn"
@@ -1229,6 +1339,75 @@ async function submitToLeaderboard(psnId, userGuid, dr, rank, sr, srGrade, total
 
         // Show success message with ranking info
         alert(`🏆 Success!\n\nYour stats have been submitted to the global leaderboard!\n\nDR: ${dr.toLocaleString()} (${rank})\nWin Rate: ${winPercentage}%\nPole Rate: ${polePercentage}%\n\nCheck the Leaderboard section to see your ranking!`);
+
+    } catch (error) {
+        console.error('Error submitting to leaderboard:', error);
+        submitBtn.textContent = '❌ Error - Try Again';
+        alert('Error submitting to leaderboard. Please try again.');
+        setTimeout(() => {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }, 3000);
+    }
+}
+
+// Submit player stats to leaderboard (from scraper - rank letters only)
+async function submitToLeaderboardFromScraper(psnId, userGuid, rank, srGrade, totalRaces, wins, poles, fastestLaps) {
+    const submitBtn = document.getElementById('submitLeaderboardBtn');
+    const originalText = submitBtn.textContent;
+
+    try {
+        submitBtn.textContent = 'Submitting...';
+        submitBtn.disabled = true;
+
+        // Validate stats before submission
+        if (totalRaces === 0) {
+            alert('❌ Cannot submit to leaderboard\n\nNo Sport Mode stats found!\n\nYou need to participate in GT7 Sport Mode races first to have stats.\n\nOnce you\'ve completed some Sport Mode races, come back and submit again!');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+
+        // Calculate percentages
+        const winPercentage = totalRaces > 0 ? ((wins / totalRaces) * 100).toFixed(2) : 0;
+        const polePercentage = totalRaces > 0 ? ((poles / totalRaces) * 100).toFixed(2) : 0;
+        const fastestLapPercentage = totalRaces > 0 ? ((fastestLaps / totalRaces) * 100).toFixed(2) : 0;
+
+        // Upsert (insert or update) player data (without DR points, using rank letters)
+        const { data, error } = await supabaseClient
+            .from('players')
+            .upsert({
+                psn_id: psnId,
+                user_guid: userGuid,
+                dr: 0, // No DR points from scraper
+                rank: rank,
+                sr: 0, // No SR value from scraper
+                sr_grade: srGrade,
+                total_races: totalRaces,
+                wins: wins,
+                poles: poles,
+                fastest_laps: fastestLaps,
+                win_percentage: parseFloat(winPercentage),
+                pole_percentage: parseFloat(polePercentage),
+                fastest_lap_percentage: parseFloat(fastestLapPercentage),
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'user_guid'
+            });
+
+        if (error) throw error;
+
+        submitBtn.textContent = '✅ Submitted to Leaderboard!';
+        setTimeout(() => {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }, 3000);
+
+        // Refresh leaderboard if on that section
+        await fetchLeaderboard();
+
+        // Show success message with ranking info
+        alert(`🏆 Success!\n\nYour stats have been submitted to the global leaderboard!\n\nRank: ${rank}\nSR: ${srGrade}\nWin Rate: ${winPercentage}%\nPole Rate: ${polePercentage}%\n\nCheck the Leaderboard section to see your ranking!`);
 
     } catch (error) {
         console.error('Error submitting to leaderboard:', error);
