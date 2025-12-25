@@ -908,8 +908,8 @@ lookupStatsBtn?.addEventListener('click', async () => {
     lookupStatsBtn.disabled = true;
 
     try {
-        // Fetch stats using the User GUID
-        const statsUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${userGuid}`;
+        // Fetch stats using the User GUID and PSN ID
+        const statsUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${userGuid}&psn=${encodeURIComponent(psnId)}`;
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(statsUrl)}`;
         const statsResponse = await fetch(proxyUrl);
         const proxyData = await statsResponse.json();
