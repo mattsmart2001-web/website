@@ -1,5 +1,4 @@
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
+const { chromium } = require('playwright-chromium');
 
 exports.handler = async (event) => {
   // CORS headers
@@ -13,6 +12,8 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
+
+  let browser = null;
 
   try {
     const { profileUrl } = JSON.parse(event.body);
@@ -28,94 +29,108 @@ exports.handler = async (event) => {
     console.log('Scraping GT7 profile:', profileUrl);
 
     // Launch headless browser
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+    browser = await chromium.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--window-size=1920x1080'
+      ]
     });
 
-    const page = await browser.newPage();
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    });
+
+    const page = await context.newPage();
 
     // Navigate to profile
-    await page.goto(profileUrl, { waitUntil: 'networkidle0', timeout: 30000 });
+    await page.goto(profileUrl, {
+      waitUntil: 'networkidle',
+      timeout: 30000
+    });
 
-    // Wait for stats to load (wait for Sport section to appear)
-    await page.waitForSelector('body', { timeout: 10000 });
+    // Wait a bit for JavaScript to execute
+    await page.waitForTimeout(3000);
 
     // Extract stats from the page
     const stats = await page.evaluate(() => {
-      // Helper function to get text content by searching for label
-      const getStatByLabel = (label) => {
-        const elements = Array.from(document.querySelectorAll('*'));
-        const labelElement = elements.find(el =>
+      // Helper to find text by searching all elements
+      const findTextByLabel = (label) => {
+        const allElements = Array.from(document.querySelectorAll('*'));
+
+        // Find the label element
+        const labelEl = allElements.find(el =>
           el.textContent.trim() === label &&
           el.children.length === 0
         );
 
-        if (labelElement && labelElement.nextElementSibling) {
-          return labelElement.nextElementSibling.textContent.trim();
-        }
+        if (!labelEl) return null;
 
-        // Try finding in same parent
-        if (labelElement && labelElement.parentElement) {
-          const parent = labelElement.parentElement;
-          const nextSibling = Array.from(parent.childNodes).find(
-            (node, idx, arr) => {
-              const labelIdx = arr.indexOf(labelElement);
-              return idx > labelIdx && node.nodeType === Node.TEXT_NODE && node.textContent.trim();
+        // Try to find value in sibling or parent
+        const parent = labelEl.parentElement;
+        if (!parent) return null;
+
+        // Get all text nodes in parent
+        const siblings = Array.from(parent.childNodes);
+        const labelIndex = siblings.indexOf(labelEl);
+
+        // Look for next text node
+        for (let i = labelIndex + 1; i < siblings.length; i++) {
+          const sibling = siblings[i];
+          if (sibling.nodeType === Node.TEXT_NODE && sibling.textContent.trim()) {
+            return sibling.textContent.trim();
+          }
+          if (sibling.nodeType === Node.ELEMENT_NODE) {
+            const text = sibling.textContent.trim();
+            if (text && text !== label) {
+              return text;
             }
-          );
-          if (nextSibling) return nextSibling.textContent.trim();
+          }
         }
 
         return null;
       };
 
-      // Get DR and SR from header badges
+      // Extract DR and SR ratings
       let driverRating = 'E';
       let sportsmanshipRating = 'E';
 
-      // Look for Driver Rating
-      const drElements = Array.from(document.querySelectorAll('*'));
-      const drLabel = drElements.find(el => el.textContent.trim() === 'Driver Rating');
-      if (drLabel) {
-        const container = drLabel.closest('div');
-        if (container) {
-          const ratingText = Array.from(container.querySelectorAll('*'))
-            .find(el => /^[ABCDE]\+?$/.test(el.textContent.trim()));
-          if (ratingText) driverRating = ratingText.textContent.trim();
-        }
-      }
+      // Look for "Driver Rating" text and find the rating nearby
+      const allText = document.body.innerText;
 
-      // Look for Sportsmanship Rating
-      const srLabel = drElements.find(el => el.textContent.trim() === 'Sportsmanship Rating');
-      if (srLabel) {
-        const container = srLabel.closest('div');
-        if (container) {
-          const ratingText = Array.from(container.querySelectorAll('*'))
-            .find(el => /^[SABCDE]$/.test(el.textContent.trim()));
-          if (ratingText) sportsmanshipRating = ratingText.textContent.trim();
-        }
-      }
+      // Try to find DR
+      const drMatch = allText.match(/Driver\s+Rating[^\w]*([ABCDE]\+?)/i);
+      if (drMatch) driverRating = drMatch[1];
 
-      // Get Sport section stats
-      const races = getStatByLabel('Races') || '0';
-      const victories = getStatByLabel('Victories') || '0';
-      const polePositions = getStatByLabel('Pole Positions') || '0';
-      const fastestLaps = getStatByLabel('Fastest Laps') || '0';
+      // Try to find SR
+      const srMatch = allText.match(/Sportsmanship\s+Rating[^\w]*([SABCDE])/i);
+      if (srMatch) sportsmanshipRating = srMatch[1];
+
+      // Get Sport stats
+      const races = findTextByLabel('Races') || '0';
+      const victories = findTextByLabel('Victories') || '0';
+      const polePositions = findTextByLabel('Pole Positions') || '0';
+      const fastestLaps = findTextByLabel('Fastest Laps') || '0';
+
+      // Clean and parse numbers (remove commas)
+      const parseNum = (str) => parseInt(String(str).replace(/[,\s]/g, '')) || 0;
 
       return {
-        driverRating,
-        sportsmanshipRating,
-        races: parseInt(races.replace(/,/g, '')) || 0,
-        victories: parseInt(victories.replace(/,/g, '')) || 0,
-        polePositions: parseInt(polePositions.replace(/,/g, '')) || 0,
-        fastestLaps: parseInt(fastestLaps.replace(/,/g, '')) || 0,
+        driverRating: driverRating.toUpperCase(),
+        sportsmanshipRating: sportsmanshipRating.toUpperCase(),
+        races: parseNum(races),
+        victories: parseNum(victories),
+        polePositions: parseNum(polePositions),
+        fastestLaps: parseNum(fastestLaps),
       };
     });
 
     await browser.close();
+    browser = null;
 
     console.log('Scraped stats:', stats);
 
@@ -130,10 +145,16 @@ exports.handler = async (event) => {
 
   } catch (error) {
     console.error('Scraping error:', error);
+
+    if (browser) {
+      await browser.close();
+    }
+
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
+        success: false,
         error: 'Failed to scrape profile',
         message: error.message,
       }),
