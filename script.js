@@ -1,3 +1,8 @@
+// ===== SUPABASE CONFIGURATION =====
+const SUPABASE_URL = 'https://vcdrzlyyjsskiyqydads.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjZHJ6bHl5anNza2l5cXlkYWRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2NTEyOTAsImV4cCI6MjA4MjIyNzI5MH0.SqSizMAETa8KJyrwgWC7shpz19u__QWwQyAMYF_UpJs';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ===== THREE.JS 3D MODEL BACKGROUND =====
 const scene = new THREE.Scene();
 scene.background = null; // Transparent background
@@ -1000,12 +1005,22 @@ function displayUserStats(psnId, userGuid, data) {
             <button
                 onclick="downloadOBSWidget('${psnId}', '${userGuid}')"
                 class="btn btn-primary"
-                style="width: 100%; font-size: 1.2rem; padding: 1.25rem; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); border: none; box-shadow: 0 8px 32px rgba(0,255,136,0.3);"
+                style="width: 100%; font-size: 1.2rem; padding: 1.25rem; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); border: none; box-shadow: 0 8px 32px rgba(0,255,136,0.3); margin-bottom: 1rem;"
             >
                 📥 Download Custom OBS Widget
             </button>
+
+            <!-- Submit to Leaderboard Button -->
+            <button
+                onclick="submitToLeaderboard('${psnId}', '${userGuid}', ${drPoints}, '${driverRating}', ${srValue}, '${sportsmanship}', ${totalRaces}, ${wins}, ${poles}, ${fastestLaps})"
+                class="btn btn-secondary"
+                style="width: 100%; font-size: 1.2rem; padding: 1.25rem;"
+                id="submitLeaderboardBtn"
+            >
+                🏆 Submit to Global Leaderboard
+            </button>
             <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 1rem;">
-                Pre-configured with your PSN ID and stats • Ready to use in OBS Browser Source
+                Share your stats with the community and compete on the global rankings
             </p>
         </div>
     `;
@@ -1154,6 +1169,251 @@ function downloadOBSWidget(psnId, userGuid) {
     // Show success message
     alert(`✅ Widget downloaded!\n\nTo use in OBS:\n1. Add Browser Source\n2. Check "Local file"\n3. Select gt7-widget-${psnId}.html\n4. Set Width: 600, Height: 400\n5. Done!`);
 }
+
+// ===== LEADERBOARD FUNCTIONS =====
+
+// Submit player stats to leaderboard
+async function submitToLeaderboard(psnId, userGuid, dr, rank, sr, srGrade, totalRaces, wins, poles, fastestLaps) {
+    const submitBtn = document.getElementById('submitLeaderboardBtn');
+    const originalText = submitBtn.textContent;
+
+    try {
+        submitBtn.textContent = 'Submitting...';
+        submitBtn.disabled = true;
+
+        // Calculate percentages
+        const winPercentage = totalRaces > 0 ? ((wins / totalRaces) * 100).toFixed(2) : 0;
+        const polePercentage = totalRaces > 0 ? ((poles / totalRaces) * 100).toFixed(2) : 0;
+        const fastestLapPercentage = totalRaces > 0 ? ((fastestLaps / totalRaces) * 100).toFixed(2) : 0;
+
+        // Upsert (insert or update) player data
+        const { data, error } = await supabase
+            .from('players')
+            .upsert({
+                psn_id: psnId,
+                user_guid: userGuid,
+                dr: dr,
+                rank: rank,
+                sr: sr,
+                sr_grade: srGrade,
+                total_races: totalRaces,
+                wins: wins,
+                poles: poles,
+                fastest_laps: fastestLaps,
+                win_percentage: parseFloat(winPercentage),
+                pole_percentage: parseFloat(polePercentage),
+                fastest_lap_percentage: parseFloat(fastestLapPercentage),
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'user_guid'
+            });
+
+        if (error) throw error;
+
+        submitBtn.textContent = '✅ Submitted to Leaderboard!';
+        setTimeout(() => {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }, 3000);
+
+        // Refresh leaderboard if on that section
+        await fetchLeaderboard();
+
+        // Show success message with ranking info
+        alert(`🏆 Success!\n\nYour stats have been submitted to the global leaderboard!\n\nDR: ${dr.toLocaleString()} (${rank})\nWin Rate: ${winPercentage}%\nPole Rate: ${polePercentage}%\n\nCheck the Leaderboard section to see your ranking!`);
+
+    } catch (error) {
+        console.error('Error submitting to leaderboard:', error);
+        submitBtn.textContent = '❌ Error - Try Again';
+        alert('Error submitting to leaderboard. Please try again.');
+        setTimeout(() => {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }, 3000);
+    }
+}
+
+// Fetch and display leaderboard
+let currentSort = 'dr';
+let leaderboardData = [];
+
+async function fetchLeaderboard(sortBy = 'dr') {
+    const leaderboardResults = document.getElementById('leaderboardResults');
+
+    try {
+        leaderboardResults.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--color-text-muted);">
+                <p style="font-size: 1.2rem;">Loading leaderboard...</p>
+            </div>
+        `;
+
+        // Fetch all players
+        const { data, error } = await supabase
+            .from('players')
+            .select('*')
+            .order(sortBy, { ascending: false });
+
+        if (error) throw error;
+
+        leaderboardData = data || [];
+        currentSort = sortBy;
+        displayLeaderboard();
+
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+        leaderboardResults.innerHTML = `
+            <div style="background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 2rem; text-align: center;">
+                <p style="color: #fca5a5; font-size: 1.2rem;">Error loading leaderboard</p>
+                <p style="color: var(--color-text-muted); margin-top: 1rem;">Please try again later</p>
+            </div>
+        `;
+    }
+}
+
+function sortLeaderboard(sortBy) {
+    currentSort = sortBy;
+
+    // Sort the existing data
+    leaderboardData.sort((a, b) => {
+        return (b[sortBy] || 0) - (a[sortBy] || 0);
+    });
+
+    displayLeaderboard();
+}
+
+function displayLeaderboard() {
+    const leaderboardResults = document.getElementById('leaderboardResults');
+
+    if (!leaderboardData || leaderboardData.length === 0) {
+        leaderboardResults.innerHTML = `
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 3rem; text-align: center;">
+                <p style="color: var(--color-text-muted); font-size: 1.2rem; margin-bottom: 1rem;">No players on the leaderboard yet</p>
+                <p style="color: var(--color-text-muted);">Be the first to submit your stats!</p>
+            </div>
+        `;
+        return;
+    }
+
+    const sortLabels = {
+        dr: 'Driver Rating',
+        win_percentage: 'Win Percentage',
+        pole_percentage: 'Pole Percentage',
+        fastest_lap_percentage: 'Fastest Lap Percentage'
+    };
+
+    let html = `
+        <div style="margin-bottom: 1.5rem; text-align: center;">
+            <p style="color: var(--color-text-muted); font-size: 1rem;">
+                Sorted by: <span style="color: var(--color-primary); font-weight: 700;">${sortLabels[currentSort]}</span>
+            </p>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+                ${leaderboardData.length} player${leaderboardData.length !== 1 ? 's' : ''} ranked
+            </p>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div style="display: none; overflow-x: auto; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" class="desktop-leaderboard">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: rgba(0,255,136,0.1); border-bottom: 2px solid rgba(0,255,136,0.3);">
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">#</th>
+                        <th style="padding: 1rem; text-align: left; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">PSN ID</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">DR</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Rank</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">SR</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Races</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Win %</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Pole %</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">FL %</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    leaderboardData.forEach((player, index) => {
+        const rankColor = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--color-text-muted)';
+        const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+
+        html += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(0,255,136,0.05)'" onmouseout="this.style.background='transparent'">
+                <td style="padding: 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}</td>
+                <td style="padding: 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem;">${player.psn_id}</td>
+                <td style="padding: 1rem; text-align: center; color: var(--text-color); font-weight: 600;">${player.dr?.toLocaleString() || 0}</td>
+                <td style="padding: 1rem; text-align: center; color: var(--color-primary); font-weight: 800; font-size: 1.2rem;">${player.rank || 'E'}</td>
+                <td style="padding: 1rem; text-align: center; color: var(--color-secondary); font-weight: 800; font-size: 1.1rem;">${player.sr_grade || 'E'}</td>
+                <td style="padding: 1rem; text-align: center; color: var(--text-color);">${player.total_races?.toLocaleString() || 0}</td>
+                <td style="padding: 1rem; text-align: center; color: var(--color-primary); font-weight: 600;">${player.win_percentage?.toFixed(1) || 0}%</td>
+                <td style="padding: 1rem; text-align: center; color: var(--color-secondary); font-weight: 600;">${player.pole_percentage?.toFixed(1) || 0}%</td>
+                <td style="padding: 1rem; text-align: center; color: var(--color-primary); font-weight: 600;">${player.fastest_lap_percentage?.toFixed(1) || 0}%</td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="mobile-leaderboard">
+    `;
+
+    leaderboardData.forEach((player, index) => {
+        const rankColor = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--color-text-muted)';
+        const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+
+        html += `
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div>
+                        <div style="color: ${rankColor}; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem;">${rankIcon} #${index + 1}</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem;">${player.psn_id}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: var(--color-primary); font-weight: 800; font-size: 2rem; line-height: 1;">${player.rank || 'E'}</div>
+                        <div style="color: var(--text-color); font-size: 0.9rem;">${player.dr?.toLocaleString() || 0} DR</div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                    <div style="text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="color: var(--color-secondary); font-weight: 800; font-size: 1.5rem;">${player.sr_grade || 'E'}</div>
+                        <div style="color: var(--color-text-muted); font-size: 0.7rem; text-transform: uppercase;">SR</div>
+                    </div>
+                    <div style="text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="color: var(--text-color); font-weight: 700; font-size: 1.2rem;">${player.total_races?.toLocaleString() || 0}</div>
+                        <div style="color: var(--color-text-muted); font-size: 0.7rem; text-transform: uppercase;">Races</div>
+                    </div>
+                    <div style="text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.2rem;">${player.win_percentage?.toFixed(1) || 0}%</div>
+                        <div style="color: var(--color-text-muted); font-size: 0.7rem; text-transform: uppercase;">Win Rate</div>
+                    </div>
+                    <div style="text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                        <div style="color: var(--color-secondary); font-weight: 700; font-size: 1.2rem;">${player.pole_percentage?.toFixed(1) || 0}%</div>
+                        <div style="color: var(--color-text-muted); font-size: 0.7rem; text-transform: uppercase;">Pole Rate</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+        </div>
+
+        <style>
+            @media (min-width: 768px) {
+                .desktop-leaderboard { display: block !important; }
+                .mobile-leaderboard { display: none !important; }
+            }
+        </style>
+    `;
+
+    leaderboardResults.innerHTML = html;
+}
+
+// Load leaderboard when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    fetchLeaderboard();
+});
 
 // ===== CONSOLE WELCOME MESSAGE =====
 console.log('%cSPARKSTHEORY', 'color: #0ea5e9; font-size: 48px; font-weight: bold; font-family: Rajdhani, sans-serif;');

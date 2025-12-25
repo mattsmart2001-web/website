@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <!-- Three.js Background -->
@@ -29,6 +30,7 @@
             <a href="#music">Music</a>
             <a href="#checker">My GT7 Stats</a>
             <a href="#your-stats">Your GT7 Stats</a>
+            <a href="#leaderboard">Leaderboard</a>
             <a href="#contact">Contact</a>
         </div>
         <div class="nav-burger" id="navBurger">
@@ -246,6 +248,39 @@
 
                 <div id="userStatsResults" style="display: none;">
                     <!-- Stats will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- GT7 Leaderboard -->
+    <section class="section" id="leaderboard" style="background: var(--color-bg-secondary);">
+        <div class="container">
+            <h2 class="section-title">GT7 GLOBAL LEADERBOARD</h2>
+            <p style="text-align: center; color: var(--color-text-muted); margin-bottom: 2rem; font-size: 1.1rem;">
+                Community rankings based on Driver Rating and racing performance
+            </p>
+
+            <!-- Sort Controls -->
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem; flex-wrap: wrap;">
+                <button onclick="sortLeaderboard('dr')" class="btn btn-secondary" style="padding: 0.75rem 1.5rem;">
+                    Sort by DR
+                </button>
+                <button onclick="sortLeaderboard('win_percentage')" class="btn btn-secondary" style="padding: 0.75rem 1.5rem;">
+                    Sort by Win %
+                </button>
+                <button onclick="sortLeaderboard('pole_percentage')" class="btn btn-secondary" style="padding: 0.75rem 1.5rem;">
+                    Sort by Pole %
+                </button>
+                <button onclick="sortLeaderboard('fastest_lap_percentage')" class="btn btn-secondary" style="padding: 0.75rem 1.5rem;">
+                    Sort by FL %
+                </button>
+            </div>
+
+            <!-- Leaderboard Table -->
+            <div id="leaderboardResults" style="max-width: 1200px; margin: 0 auto;">
+                <div style="text-align: center; padding: 3rem; color: var(--color-text-muted);">
+                    <p style="font-size: 1.2rem;">Loading leaderboard...</p>
                 </div>
             </div>
         </div>
