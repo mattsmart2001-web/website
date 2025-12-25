@@ -1,4 +1,5 @@
-const { chromium } = require('playwright-chromium');
+const chromium = require('chrome-aws-lambda');
+const puppeteer = require('puppeteer-core');
 
 exports.handler = async (event) => {
   // CORS headers
@@ -28,28 +29,22 @@ exports.handler = async (event) => {
 
     console.log('Scraping GT7 profile:', profileUrl);
 
-    // Launch headless browser
-    browser = await chromium.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-        '--window-size=1920x1080'
-      ]
+    // Launch headless browser with chrome-aws-lambda
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
     });
 
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    });
+    const page = await browser.newPage();
 
-    const page = await context.newPage();
+    // Set user agent
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
     // Navigate to profile
     await page.goto(profileUrl, {
-      waitUntil: 'networkidle',
+      waitUntil: 'networkidle2',
       timeout: 30000
     });
 
