@@ -35,51 +35,39 @@ exports.handler = async (event) => {
     console.log('Search data type:', typeof searchData);
     console.log('Search data length:', Array.isArray(searchData) ? searchData.length : 'not an array');
 
-    if (!searchData || (Array.isArray(searchData) && searchData.length === 0)) {
+    // Check if we got data - response is an object with numeric keys
+    if (!searchData || Object.keys(searchData).length === 0) {
       return {
         statusCode: 404,
         headers,
-        body: JSON.stringify({
-          error: 'Player not found',
-          debug: {
-            searchResponse: searchData,
-            psnId: psnId
-          }
-        }),
+        body: JSON.stringify({ error: 'Player not found' }),
       };
     }
 
-    // Get first result - handle if response is object or array
-    const player = Array.isArray(searchData) ? searchData[0] : searchData;
+    // Get the latest entry (key "0" has the most recent stats)
+    const latestStats = searchData['0'] || searchData[0];
 
-    console.log('Player object:', JSON.stringify(player));
-    console.log('Player keys:', Object.keys(player || {}));
-    console.log('Player id:', player?.id);
-    console.log('Player user_id:', player?.user_id);
-    console.log('Player userId:', player?.userId);
-
-    // Try different possible ID field names
-    const playerId = player?.id || player?.user_id || player?.userId || player?.player_id;
-
-    if (!playerId) {
+    if (!latestStats) {
       return {
-        statusCode: 500,
+        statusCode: 404,
         headers,
-        body: JSON.stringify({
-          error: 'Could not extract player ID',
-          debug: {
-            player: player,
-            searchData: searchData
-          }
-        }),
+        body: JSON.stringify({ error: 'No stats found' }),
       };
     }
 
-    // Fetch detailed stats
-    const statsResponse = await fetch(`https://gtstats.live/api/player/${playerId}`);
-    const statsData = await statsResponse.json();
+    console.log('Latest stats:', JSON.stringify(latestStats));
 
-    console.log('Stats response:', statsData);
+    // Response already contains all stats we need!
+    const statsData = {
+      id: latestStats.userID,
+      rank: latestStats.rank,
+      dr: latestStats.dr,
+      sr: latestStats.sr,
+      raceCount: latestStats.raceCount,
+      winCount: latestStats.winCount,
+      polePositionCount: latestStats.polePositionCount,
+      fastestLapCount: latestStats.fastestLapCount,
+    };
 
     return {
       statusCode: 200,
