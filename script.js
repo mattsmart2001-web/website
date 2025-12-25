@@ -615,7 +615,10 @@ async function loadYouTubeVideos() {
         const response = await fetch('/.netlify/functions/youtube-videos');
         const data = await response.json();
 
+        console.log('YouTube function response:', data);
+
         if (!data.success) {
+            console.error('YouTube function error:', data);
             throw new Error(data.error || 'Failed to load videos');
         }
 
@@ -645,6 +648,8 @@ async function loadYouTubeVideos() {
             }).join('');
 
             console.log('YouTube videos loaded:', data.videos.length);
+        } else {
+            console.warn('No videos returned from function');
         }
     } catch (error) {
         console.error('Error loading YouTube videos:', error);
@@ -652,6 +657,7 @@ async function loadYouTubeVideos() {
         videosGrid.innerHTML = `
             <div class="video-placeholder">
                 <p>Unable to load videos. <a href="https://www.youtube.com/@SparksTheory" target="_blank">Visit my YouTube channel</a></p>
+                <p style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.5rem;">Error: ${error.message}</p>
             </div>
         `;
     }

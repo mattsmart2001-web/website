@@ -20,8 +20,12 @@ exports.handler = async (event) => {
     // Fetch latest videos from YouTube channel
     const videosUrl = `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${YOUTUBE_CHANNEL_ID}&part=snippet,id&order=date&maxResults=8&type=video`;
 
+    console.log('Fetching YouTube videos...');
     const response = await fetch(videosUrl);
     const data = await response.json();
+
+    console.log('YouTube API response status:', response.status);
+    console.log('YouTube API response:', JSON.stringify(data).substring(0, 200));
 
     if (data.error) {
       console.error('YouTube API error:', data.error);
@@ -30,22 +34,37 @@ exports.handler = async (event) => {
         headers,
         body: JSON.stringify({
           success: false,
-          error: data.error.message,
+          error: data.error.message || 'YouTube API error',
+          details: data.error,
         }),
       };
     }
 
+    if (!data.items || data.items.length === 0) {
+      console.warn('No videos found in response');
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          videos: [],
+        }),
+      };
+    }
+
+    console.log(`Successfully fetched ${data.items.length} videos`);
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        videos: data.items || [],
+        videos: data.items,
       }),
     };
 
   } catch (error) {
     console.error('Error fetching YouTube videos:', error);
+    console.error('Error stack:', error.stack);
     return {
       statusCode: 500,
       headers,
@@ -53,6 +72,7 @@ exports.handler = async (event) => {
         success: false,
         error: 'Failed to fetch videos',
         message: error.message,
+        stack: error.stack,
       }),
     };
   }
