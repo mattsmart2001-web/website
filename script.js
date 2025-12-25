@@ -797,80 +797,43 @@ const userStatsResults = document.getElementById('userStatsResults');
 
 lookupStatsBtn?.addEventListener('click', async () => {
     const psnId = psnIdInput.value.trim();
-    const profileUrl = gtProfileUrl.value.trim();
 
     if (!psnId) {
         alert('Please enter your PSN ID');
         return;
     }
 
-    if (!profileUrl) {
-        alert('Please enter your Gran Turismo profile URL');
-        return;
-    }
-
-    // Extract User GUID from profile URL
-    const guidMatch = profileUrl.match(/\/([a-f0-9-]{36})\//i);
-    if (!guidMatch) {
-        alert('Invalid profile URL. Please copy the full URL from your GT profile page.');
-        return;
-    }
-
-    const userGuid = guidMatch[1];
     lookupStatsBtn.textContent = 'Loading...';
     lookupStatsBtn.disabled = true;
 
     try {
-        // Call our Vercel Function scraper
-        const response = await fetch('https://gt7-scraper-zuyv.vercel.app/api/scrape-gt7', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ profileUrl }),
-        });
-
+        // Use gtstats.live API with PSN ID
+        const response = await fetch(`https://gtstats.live/api/search?psn=${encodeURIComponent(psnId)}`);
         const data = await response.json();
 
-        // Log debug info if available
-        if (data.debug) {
-            console.log('Scraper debug info:', data.debug);
+        console.log('gtstats.live API response:', data);
+
+        if (!data || data.length === 0) {
+            throw new Error('No stats found. Make sure you\'ve participated in GT World Series events.');
         }
 
-        if (!data.success) {
-            throw new Error(data.message || 'Failed to fetch stats');
-        }
+        // Get the first result (should be exact match)
+        const playerData = data[0];
 
-        const stats = data.stats;
+        // Fetch detailed stats using the user ID
+        const statsResponse = await fetch(`https://gtstats.live/api/player/${playerData.id}`);
+        const statsData = await statsResponse.json();
 
-        // Map scraped data to expected format
-        const statsData = {
-            rank: stats.driverRating,
-            sr: stats.sportsmanshipRating,
-            raceCount: stats.races,
-            winCount: stats.victories,
-            polePositionCount: stats.polePositions,
-            fastestLapCount: stats.fastestLaps,
-        };
+        console.log('Player stats:', statsData);
 
-        displayUserStatsFromScraper(psnId, userGuid, statsData);
+        displayUserStats(psnId, playerData.id, statsData);
     } catch (error) {
         console.error('Error fetching stats:', error);
-        let debugInfo = '';
-        if (error.response) {
-            try {
-                const errorData = await error.response.json();
-                if (errorData.debug) {
-                    debugInfo = `<details style="margin-top: 1rem; text-align: left;"><summary style="cursor: pointer; color: var(--color-text-muted);">Debug Info</summary><pre style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--color-text-muted); overflow-x: auto;">${JSON.stringify(errorData.debug, null, 2)}</pre></details>`;
-                }
-            } catch (e) {}
-        }
         userStatsResults.innerHTML = `
             <div style="background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 2rem; text-align: center;">
                 <p style="color: #fca5a5; font-size: 1.2rem; margin-bottom: 1rem;">Error Loading Stats</p>
-                <p style="color: var(--color-text-muted);">Please make sure you've participated in GT7 Sport Mode and copied the correct profile URL.</p>
-                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Error: ${error.message}</p>
-                ${debugInfo}
+                <p style="color: var(--color-text-muted);">No stats found. Make sure you've participated in <strong>GT World Series</strong> events.</p>
+                <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 1rem;">Note: gtstats.live only tracks GT World Series participants (~10% of Sport Mode players)</p>
             </div>
         `;
         userStatsResults.style.display = 'block';
