@@ -1,5 +1,5 @@
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
+const fetch = require('node-fetch');
+const cheerio = require('cheerio');
 
 exports.handler = async (event) => {
   // CORS headers
@@ -14,8 +14,6 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: '' };
   }
 
-  let browser = null;
-
   try {
     const { profileUrl } = JSON.parse(event.body);
 
@@ -27,116 +25,79 @@ exports.handler = async (event) => {
       };
     }
 
-    console.log('Scraping GT7 profile:', profileUrl);
+    console.log('Fetching GT7 profile:', profileUrl);
 
-    // Launch headless browser with @sparticuz/chromium
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+    // Fetch the HTML
+    const response = await fetch(profileUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      }
     });
 
-    const page = await browser.newPage();
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-    // Set user agent
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    const html = await response.text();
+    console.log('HTML length:', html.length);
+    console.log('HTML preview:', html.substring(0, 500));
 
-    // Navigate to profile
-    await page.goto(profileUrl, {
-      waitUntil: 'networkidle2',
-      timeout: 30000
-    });
+    // Load HTML into cheerio
+    const $ = cheerio.load(html);
 
-    // Wait a bit for JavaScript to execute
-    await page.waitForTimeout(3000);
+    // Extract text content
+    const pageText = $('body').text();
+    console.log('Page text length:', pageText.length);
+    console.log('Page text preview:', pageText.substring(0, 500));
 
-    // Extract stats from the page
-    const stats = await page.evaluate(() => {
-      // Helper to find text by searching all elements
-      const findTextByLabel = (label) => {
-        const allElements = Array.from(document.querySelectorAll('*'));
+    // Extract stats from page text using regex
+    let driverRating = 'E';
+    let sportsmanshipRating = 'E';
 
-        // Find the label element
-        const labelEl = allElements.find(el =>
-          el.textContent.trim() === label &&
-          el.children.length === 0
-        );
+    // Try to find DR
+    const drMatch = pageText.match(/Driver\s+Rating[^\w]*([ABCDE]\+?)/i);
+    if (drMatch) driverRating = drMatch[1];
 
-        if (!labelEl) return null;
+    // Try to find SR
+    const srMatch = pageText.match(/Sportsmanship\s+Rating[^\w]*([SABCDE])/i);
+    if (srMatch) sportsmanshipRating = srMatch[1];
 
-        // Try to find value in sibling or parent
-        const parent = labelEl.parentElement;
-        if (!parent) return null;
+    // Extract race stats using regex to find numbers after labels
+    const findNumberAfterLabel = (label) => {
+      const regex = new RegExp(label + '[^\\d]+(\\d[\\d,]*)', 'i');
+      const match = pageText.match(regex);
+      return match ? match[1].replace(/,/g, '') : '0';
+    };
 
-        // Get all text nodes in parent
-        const siblings = Array.from(parent.childNodes);
-        const labelIndex = siblings.indexOf(labelEl);
+    const races = findNumberAfterLabel('Races');
+    const victories = findNumberAfterLabel('Victories');
+    const polePositions = findNumberAfterLabel('Pole Positions?');
+    const fastestLaps = findNumberAfterLabel('Fastest Laps?');
 
-        // Look for next text node
-        for (let i = labelIndex + 1; i < siblings.length; i++) {
-          const sibling = siblings[i];
-          if (sibling.nodeType === Node.TEXT_NODE && sibling.textContent.trim()) {
-            return sibling.textContent.trim();
-          }
-          if (sibling.nodeType === Node.ELEMENT_NODE) {
-            const text = sibling.textContent.trim();
-            if (text && text !== label) {
-              return text;
-            }
-          }
-        }
+    // Clean and parse numbers
+    const parseNum = (str) => parseInt(String(str).replace(/[,\s]/g, '')) || 0;
 
-        return null;
-      };
+    const stats = {
+      driverRating: driverRating.toUpperCase(),
+      sportsmanshipRating: sportsmanshipRating.toUpperCase(),
+      races: parseNum(races),
+      victories: parseNum(victories),
+      polePositions: parseNum(polePositions),
+      fastestLaps: parseNum(fastestLaps),
+      _debug: {
+        pageTextLength: pageText.length,
+        pageTextPreview: pageText.substring(0, 500),
+        htmlPreview: html.substring(0, 500),
+        drMatch: drMatch ? drMatch[0] : null,
+        srMatch: srMatch ? srMatch[0] : null,
+        foundRaces: races,
+        foundVictories: victories,
+      }
+    };
 
-      // Extract DR and SR ratings
-      let driverRating = 'E';
-      let sportsmanshipRating = 'E';
-
-      // Look for "Driver Rating" text and find the rating nearby
-      const allText = document.body.innerText;
-
-      // Try to find DR
-      const drMatch = allText.match(/Driver\s+Rating[^\w]*([ABCDE]\+?)/i);
-      if (drMatch) driverRating = drMatch[1];
-
-      // Try to find SR
-      const srMatch = allText.match(/Sportsmanship\s+Rating[^\w]*([SABCDE])/i);
-      if (srMatch) sportsmanshipRating = srMatch[1];
-
-      // Get Sport stats
-      const races = findTextByLabel('Races') || '0';
-      const victories = findTextByLabel('Victories') || '0';
-      const polePositions = findTextByLabel('Pole Positions') || '0';
-      const fastestLaps = findTextByLabel('Fastest Laps') || '0';
-
-      // Clean and parse numbers (remove commas)
-      const parseNum = (str) => parseInt(String(str).replace(/[,\s]/g, '')) || 0;
-
-      return {
-        driverRating: driverRating.toUpperCase(),
-        sportsmanshipRating: sportsmanshipRating.toUpperCase(),
-        races: parseNum(races),
-        victories: parseNum(victories),
-        polePositions: parseNum(polePositions),
-        fastestLaps: parseNum(fastestLaps),
-        // Debug info
-        _debug: {
-          pageTextLength: allText.length,
-          pageTextPreview: allText.substring(0, 500),
-          drMatch: drMatch ? drMatch[0] : null,
-          srMatch: srMatch ? srMatch[0] : null,
-          foundRaces: races,
-          foundVictories: victories,
-        }
-      };
-    });
-
-    await browser.close();
-    browser = null;
-
-    console.log('Scraped stats:', stats);
+    console.log('Extracted stats:', stats);
     console.log('Debug info:', stats._debug);
 
     return {
@@ -145,24 +106,22 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         success: true,
         stats,
-        debug: stats._debug, // Include debug info in response
+        debug: stats._debug,
       }),
     };
 
   } catch (error) {
     console.error('Scraping error:', error);
-
-    if (browser) {
-      await browser.close();
-    }
+    console.error('Error stack:', error.stack);
 
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: 'Failed to scrape profile',
+        error: 'Failed to fetch profile',
         message: error.message,
+        stack: error.stack,
       }),
     };
   }

@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "SparksTheory GT7 Racing Website",
   "dependencies": {
-    "@sparticuz/chromium": "^116.0.0",
-    "puppeteer-core": "^19.0.0",
+    "cheerio": "^1.0.0-rc.12",
     "node-fetch": "^2.7.0"
   }
 }
