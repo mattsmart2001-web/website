@@ -1309,6 +1309,8 @@ async function submitToLeaderboardFromScraper(psnId, userGuid, rank, srGrade, to
 // Fetch and display leaderboard
 let currentSort = 'dr';
 let leaderboardData = [];
+let currentPage = 1;
+const itemsPerPage = 10;
 
 async function fetchLeaderboard(sortBy = 'dr') {
     const leaderboardResults = document.getElementById('leaderboardResults');
@@ -1345,11 +1347,24 @@ async function fetchLeaderboard(sortBy = 'dr') {
 
 function sortLeaderboard(sortBy) {
     currentSort = sortBy;
+    currentPage = 1; // Reset to first page when sorting
 
     // Sort the existing data
     leaderboardData.sort((a, b) => {
         return (b[sortBy] || 0) - (a[sortBy] || 0);
     });
+
+    displayLeaderboard();
+}
+
+function changePage(direction) {
+    const totalPages = Math.ceil(leaderboardData.length / itemsPerPage);
+
+    if (direction === 'prev' && currentPage > 1) {
+        currentPage--;
+    } else if (direction === 'next' && currentPage < totalPages) {
+        currentPage++;
+    }
 
     displayLeaderboard();
 }
@@ -1366,6 +1381,12 @@ function displayLeaderboard() {
         `;
         return;
     }
+
+    // Calculate pagination
+    const totalPages = Math.ceil(leaderboardData.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageData = leaderboardData.slice(startIndex, endIndex);
 
     const sortLabels = {
         dr: 'Driver Rating',
@@ -1403,7 +1424,8 @@ function displayLeaderboard() {
                 <tbody>
     `;
 
-    leaderboardData.forEach((player, index) => {
+    pageData.forEach((player, pageIndex) => {
+        const index = startIndex + pageIndex; // Global index for ranking
         const rankColor = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--color-text-muted)';
         const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
 
@@ -1431,7 +1453,8 @@ function displayLeaderboard() {
         <div class="mobile-leaderboard">
     `;
 
-    leaderboardData.forEach((player, index) => {
+    pageData.forEach((player, pageIndex) => {
+        const index = startIndex + pageIndex; // Global index for ranking
         const rankColor = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--color-text-muted)';
         const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
 
@@ -1470,6 +1493,31 @@ function displayLeaderboard() {
     });
 
     html += `
+        </div>
+
+        <!-- Pagination Controls -->
+        <div style="margin-top: 2rem; display: flex; justify-content: center; align-items: center; gap: 1.5rem;">
+            <button
+                onclick="changePage('prev')"
+                class="btn btn-secondary"
+                style="padding: 0.75rem 1.5rem; ${currentPage === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
+                ${currentPage === 1 ? 'disabled' : ''}
+            >
+                ← Previous
+            </button>
+
+            <div style="color: var(--color-text-muted); font-size: 1rem; font-weight: 600;">
+                Page ${currentPage} of ${totalPages}
+            </div>
+
+            <button
+                onclick="changePage('next')"
+                class="btn btn-secondary"
+                style="padding: 0.75rem 1.5rem; ${currentPage === totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
+                ${currentPage === totalPages ? 'disabled' : ''}
+            >
+                Next →
+            </button>
         </div>
 
         <style>
