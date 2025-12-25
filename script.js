@@ -821,8 +821,8 @@ lookupStatsBtn?.addEventListener('click', async () => {
     lookupStatsBtn.disabled = true;
 
     try {
-        // Call our Netlify Function scraper
-        const response = await fetch('/.netlify/functions/scrape-gt7-stats', {
+        // Call our Vercel Function scraper
+        const response = await fetch('https://gt7-scraper-zuyv.vercel.app/api/scrape-gt7', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
