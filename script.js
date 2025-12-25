@@ -1181,6 +1181,14 @@ async function submitToLeaderboard(psnId, userGuid, dr, rank, sr, srGrade, total
         submitBtn.textContent = 'Submitting...';
         submitBtn.disabled = true;
 
+        // Validate stats before submission
+        if (dr === 0 || totalRaces === 0) {
+            alert('❌ Cannot submit to leaderboard\n\nNo Sport Mode stats found!\n\nYou need to participate in GT7 Sport Mode races first to have stats.\n\nOnce you\'ve completed some Sport Mode races, come back and submit again!');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+
         // Calculate percentages
         const winPercentage = totalRaces > 0 ? ((wins / totalRaces) * 100).toFixed(2) : 0;
         const polePercentage = totalRaces > 0 ? ((poles / totalRaces) * 100).toFixed(2) : 0;
