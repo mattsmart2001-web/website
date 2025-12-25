@@ -30,18 +30,27 @@ exports.handler = async (event) => {
     const searchResponse = await fetch(`https://gtstats.live/api/search?psn=${encodeURIComponent(psnId)}`);
     const searchData = await searchResponse.json();
 
-    console.log('Search response:', searchData);
+    console.log('Search response status:', searchResponse.status);
+    console.log('Search response data:', JSON.stringify(searchData));
+    console.log('Search data type:', typeof searchData);
+    console.log('Search data length:', Array.isArray(searchData) ? searchData.length : 'not an array');
 
-    if (!searchData || searchData.length === 0) {
+    if (!searchData || (Array.isArray(searchData) && searchData.length === 0)) {
       return {
         statusCode: 404,
         headers,
-        body: JSON.stringify({ error: 'Player not found' }),
+        body: JSON.stringify({
+          error: 'Player not found',
+          debug: {
+            searchResponse: searchData,
+            psnId: psnId
+          }
+        }),
       };
     }
 
-    // Get first result
-    const player = searchData[0];
+    // Get first result - handle if response is object or array
+    const player = Array.isArray(searchData) ? searchData[0] : searchData;
 
     // Fetch detailed stats
     const statsResponse = await fetch(`https://gtstats.live/api/player/${player.id}`);
