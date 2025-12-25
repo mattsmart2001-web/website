@@ -1,7 +1,7 @@
 // ===== SUPABASE CONFIGURATION =====
 const SUPABASE_URL = 'https://vcdrzlyyjsskiyqydads.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjZHJ6bHl5anNza2l5cXlkYWRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2NTEyOTAsImV4cCI6MjA4MjIyNzI5MH0.SqSizMAETa8KJyrwgWC7shpz19u__QWwQyAMYF_UpJs';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== THREE.JS 3D MODEL BACKGROUND =====
 const scene = new THREE.Scene();
@@ -1187,7 +1187,7 @@ async function submitToLeaderboard(psnId, userGuid, dr, rank, sr, srGrade, total
         const fastestLapPercentage = totalRaces > 0 ? ((fastestLaps / totalRaces) * 100).toFixed(2) : 0;
 
         // Upsert (insert or update) player data
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('players')
             .upsert({
                 psn_id: psnId,
@@ -1248,7 +1248,7 @@ async function fetchLeaderboard(sortBy = 'dr') {
         `;
 
         // Fetch all players
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('players')
             .select('*')
             .order(sortBy, { ascending: false });
