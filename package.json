@@ -4,6 +4,7 @@
   "description": "SparksTheory GT7 Racing Website",
   "dependencies": {
     "playwright-core": "^1.40.1",
-    "playwright-chromium": "^1.40.1"
+    "playwright-chromium": "^1.40.1",
+    "node-fetch": "^2.7.0"
   }
 }
