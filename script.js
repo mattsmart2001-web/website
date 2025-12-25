@@ -570,34 +570,34 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 // ===== YOUTUBE INTEGRATION =====
-const YOUTUBE_CHANNEL_ID = 'UCuUCB1yQyF23u5ESGvNZKNg';
-const YOUTUBE_API_KEY = 'AIzaSyBRxCoE4FhqnNfVOHWgVxLApLSnxIlbQ4w';
+// YouTube API calls are now handled by Netlify Functions for security
 
 // Load YouTube subscriber count
 async function loadSubscriberCount() {
     try {
-        // Get subscriber count directly using channel ID
-        const statsUrl = `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${YOUTUBE_CHANNEL_ID}&key=${YOUTUBE_API_KEY}`;
-        const statsResponse = await fetch(statsUrl);
-        const statsData = await statsResponse.json();
+        // Get subscriber count from our Netlify Function
+        const response = await fetch('/.netlify/functions/youtube-stats');
+        const data = await response.json();
 
-        if (statsData.items && statsData.items.length > 0) {
-            const subCount = parseInt(statsData.items[0].statistics.subscriberCount);
-
-            // Format subscriber count
-            let formattedCount;
-            if (subCount >= 1000000) {
-                formattedCount = (subCount / 1000000).toFixed(1) + 'M+';
-            } else if (subCount >= 1000) {
-                formattedCount = (subCount / 1000).toFixed(1) + 'K+';
-            } else {
-                formattedCount = subCount + '+';
-            }
-
-            // Update the display
-            document.getElementById('subscriber-count').textContent = formattedCount;
-            console.log('YouTube subscriber count loaded:', formattedCount);
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to load subscriber count');
         }
+
+        const subCount = parseInt(data.subscriberCount);
+
+        // Format subscriber count
+        let formattedCount;
+        if (subCount >= 1000000) {
+            formattedCount = (subCount / 1000000).toFixed(1) + 'M+';
+        } else if (subCount >= 1000) {
+            formattedCount = (subCount / 1000).toFixed(1) + 'K+';
+        } else {
+            formattedCount = subCount + '+';
+        }
+
+        // Update the display
+        document.getElementById('subscriber-count').textContent = formattedCount;
+        console.log('YouTube subscriber count loaded:', formattedCount);
     } catch (error) {
         console.error('Error loading YouTube subscriber count:', error);
         // Keep the default "2.5K+" if API fails
@@ -611,13 +611,16 @@ async function loadYouTubeVideos() {
     const videosGrid = document.getElementById('videosGrid');
 
     try {
-        // Fetch latest videos from YouTube channel
-        const videosUrl = `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${YOUTUBE_CHANNEL_ID}&part=snippet,id&order=date&maxResults=8&type=video`;
-        const response = await fetch(videosUrl);
+        // Fetch videos from our Netlify Function
+        const response = await fetch('/.netlify/functions/youtube-videos');
         const data = await response.json();
 
-        if (data.items && data.items.length > 0) {
-            videosGrid.innerHTML = data.items.map(item => {
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to load videos');
+        }
+
+        if (data.videos && data.videos.length > 0) {
+            videosGrid.innerHTML = data.videos.map(item => {
                 const videoId = item.id.videoId;
                 const title = item.snippet.title;
                 const thumbnail = item.snippet.thumbnails.high.url;
@@ -641,7 +644,7 @@ async function loadYouTubeVideos() {
                 `;
             }).join('');
 
-            console.log('YouTube videos loaded:', data.items.length);
+            console.log('YouTube videos loaded:', data.videos.length);
         }
     } catch (error) {
         console.error('Error loading YouTube videos:', error);
