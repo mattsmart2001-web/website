@@ -1731,7 +1731,7 @@ function displayLeaderboard() {
 
     // Top 3 Podium Showcase
     let podiumHtml = '';
-    if (leaderboardData.length >= 3 && currentSort === 'dr') {
+    if (leaderboardData.length >= 3) {
         const top3 = leaderboardData.slice(0, 3);
 
         // Helper function for trend arrow in podium
@@ -1745,6 +1745,34 @@ function displayLeaderboard() {
             return '';
         };
 
+        // Determine podium title and stat display based on current sort
+        let podiumTitle = '🏆 Top 3 Champions 🏆';
+        let getMainStat = (player) => {
+            if (currentSort === 'dr') {
+                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; line-height: 1;">${player.rank || 'E'}</div>
+                        <div style="color: var(--text-color); font-size: 1.1rem; margin-top: 0.25rem;">${player.dr?.toLocaleString() || 0} DR</div>
+                        ${getTrendArrow(player)}`;
+            } else if (currentSort === 'win_percentage') {
+                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${player.win_percentage?.toFixed(1) || 0}%</div>
+                        <div style="color: var(--text-color); font-size: 1rem; margin-top: 0.25rem;">${player.wins || 0} / ${player.total_races || 0} Wins</div>`;
+            } else if (currentSort === 'pole_percentage') {
+                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${player.pole_percentage?.toFixed(1) || 0}%</div>
+                        <div style="color: var(--text-color); font-size: 1rem; margin-top: 0.25rem;">${player.poles || 0} / ${player.total_races || 0} Poles</div>`;
+            } else if (currentSort === 'fastest_lap_percentage') {
+                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${player.fastest_lap_percentage?.toFixed(1) || 0}%</div>
+                        <div style="color: var(--text-color); font-size: 1rem; margin-top: 0.25rem;">${player.fastest_laps || 0} / ${player.total_races || 0} FLs</div>`;
+            }
+        };
+
+        // Update title based on sort
+        if (currentSort === 'win_percentage') {
+            podiumTitle = '🏆 Top 3 Win Rate Leaders 🏆';
+        } else if (currentSort === 'pole_percentage') {
+            podiumTitle = '🏆 Top 3 Pole Position Masters 🏆';
+        } else if (currentSort === 'fastest_lap_percentage') {
+            podiumTitle = '🏆 Top 3 Fastest Lap Experts 🏆';
+        }
+
         const flag1 = top3[0].country_code ? getCountryFlag(top3[0].country_code) + ' ' : '';
         const flag2 = top3[1].country_code ? getCountryFlag(top3[1].country_code) + ' ' : '';
         const flag3 = top3[2].country_code ? getCountryFlag(top3[2].country_code) + ' ' : '';
@@ -1752,7 +1780,7 @@ function displayLeaderboard() {
         podiumHtml = `
             <div style="margin-bottom: 3rem;">
                 <h3 style="text-align: center; color: var(--color-primary); font-size: 1.5rem; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 2px;">
-                    🏆 Top 3 Champions 🏆
+                    ${podiumTitle}
                 </h3>
                 <div style="display: flex; justify-content: center; align-items: flex-end; gap: 2rem; flex-wrap: wrap; max-width: 900px; margin: 0 auto;">
                     <!-- 2nd Place -->
@@ -1761,12 +1789,7 @@ function displayLeaderboard() {
                         <div style="color: #c0c0c0; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#2</div>
                         <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${flag2}${top3[1].psn_id}</div>
                         <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
-                            <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; line-height: 1;">${top3[1].rank || 'E'}</div>
-                            <div style="color: var(--text-color); font-size: 1.1rem; margin-top: 0.25rem;">${top3[1].dr?.toLocaleString() || 0} DR</div>
-                            ${getTrendArrow(top3[1])}
-                        </div>
-                        <div style="color: var(--color-text-muted); font-size: 0.9rem;">
-                            ${top3[1].win_percentage?.toFixed(1) || 0}% Win Rate
+                            ${getMainStat(top3[1])}
                         </div>
                     </div>
 
@@ -1776,12 +1799,7 @@ function displayLeaderboard() {
                         <div style="color: #ffd700; font-weight: 900; font-size: 2.5rem; margin-bottom: 0.5rem; text-shadow: 0 0 20px rgba(255,215,0,0.5);">#1</div>
                         <div style="color: var(--color-primary); font-weight: 900; font-size: 1.5rem; margin-bottom: 1rem;">${flag1}${top3[0].psn_id}</div>
                         <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 1.25rem; margin-bottom: 0.5rem;">
-                            <div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${top3[0].rank || 'E'}</div>
-                            <div style="color: var(--text-color); font-size: 1.3rem; margin-top: 0.25rem; font-weight: 700;">${top3[0].dr?.toLocaleString() || 0} DR</div>
-                            ${getTrendArrow(top3[0])}
-                        </div>
-                        <div style="color: var(--color-text-muted); font-size: 1rem; font-weight: 600;">
-                            ${top3[0].win_percentage?.toFixed(1) || 0}% Win Rate
+                            ${getMainStat(top3[0])}
                         </div>
                     </div>
 
@@ -1791,12 +1809,7 @@ function displayLeaderboard() {
                         <div style="color: #cd7f32; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#3</div>
                         <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${flag3}${top3[2].psn_id}</div>
                         <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
-                            <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; line-height: 1;">${top3[2].rank || 'E'}</div>
-                            <div style="color: var(--text-color); font-size: 1.1rem; margin-top: 0.25rem;">${top3[2].dr?.toLocaleString() || 0} DR</div>
-                            ${getTrendArrow(top3[2])}
-                        </div>
-                        <div style="color: var(--color-text-muted); font-size: 0.9rem;">
-                            ${top3[2].win_percentage?.toFixed(1) || 0}% Win Rate
+                            ${getMainStat(top3[2])}
                         </div>
                     </div>
                 </div>
