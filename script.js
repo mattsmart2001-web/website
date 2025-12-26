@@ -1200,12 +1200,8 @@ function downloadOBSWidget(psnId, userGuid) {
         .race-stat:hover { border-color: var(--primary-color); transform: scale(1.05); }
         .race-stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); margin-bottom: 4px; }
         .race-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
-        .psn-badge { background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center; }
-        .psn-name { font-size: 1.5rem; font-weight: 800; color: var(--primary-color); letter-spacing: 1px; }
-        .psn-label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; }
         .loading { text-align: center; padding: 40px; color: var(--text-muted); font-size: 1.2rem; }
         .error { background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 20px; text-align: center; color: #fca5a5; }
-        .last-updated { text-align: center; font-size: 0.7rem; color: var(--text-muted); margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -1248,7 +1244,6 @@ function downloadOBSWidget(psnId, userGuid) {
             const wins = latestStats.winCount || 0;
             const poles = latestStats.polePositionCount || 0;
             const fastestLaps = latestStats.fastestLapCount || 0;
-            const now = new Date().toLocaleTimeString();
             widget.innerHTML = \`
                 <div class="stats-grid">
                     <div class="stat-card dr">
@@ -1268,11 +1263,6 @@ function downloadOBSWidget(psnId, userGuid) {
                     <div class="race-stat"><div class="race-stat-value">\${poles}</div><div class="race-stat-label">Poles</div></div>
                     <div class="race-stat"><div class="race-stat-value">\${fastestLaps}</div><div class="race-stat-label">Fast Laps</div></div>
                 </div>
-                <div class="psn-badge">
-                    <div class="psn-name">\${CONFIG.PSN_ID}</div>
-                    <div class="psn-label">PSN ID • GT7 Sport Mode</div>
-                </div>
-                <div class="last-updated">Last updated: \${now}</div>
             \`;
             lastData = data;
         }
