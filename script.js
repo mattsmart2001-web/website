@@ -928,6 +928,15 @@ function displayUserStats(psnId, userGuid, data) {
                 📥 Download Custom OBS Widget
             </button>
 
+            <!-- Share Stats Card Button -->
+            <button
+                onclick="generateShareableCard('${psnId}', ${drPoints}, '${driverRating}', ${srValue}, '${sportsmanship}', ${totalRaces}, ${wins}, ${poles}, ${fastestLaps})"
+                class="btn btn-secondary"
+                style="width: 100%; font-size: 1.2rem; padding: 1.25rem; margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(138,43,226,0.8), rgba(75,0,130,0.8)); border: none; box-shadow: 0 4px 16px rgba(138,43,226,0.3);"
+            >
+                📸 Download Shareable Stats Card
+            </button>
+
             <!-- Country Selector -->
             <div style="margin-bottom: 1rem;">
                 <label style="display: block; color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
@@ -1070,6 +1079,15 @@ function displayUserStatsFromScraper(psnId, userGuid, data) {
                 style="width: 100%; font-size: 1.2rem; padding: 1.25rem; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); border: none; box-shadow: 0 8px 32px rgba(0,255,136,0.3); margin-bottom: 1rem;"
             >
                 📥 Download Custom OBS Widget
+            </button>
+
+            <!-- Share Stats Card Button -->
+            <button
+                onclick="generateShareableCard('${psnId}', 0, '${driverRating}', 0, '${sportsmanship}', ${totalRaces}, ${wins}, ${poles}, ${fastestLaps})"
+                class="btn btn-secondary"
+                style="width: 100%; font-size: 1.2rem; padding: 1.25rem; margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(138,43,226,0.8), rgba(75,0,130,0.8)); border: none; box-shadow: 0 4px 16px rgba(138,43,226,0.3);"
+            >
+                📸 Download Shareable Stats Card
             </button>
 
             <!-- Country Selector -->
@@ -1284,6 +1302,159 @@ function downloadOBSWidget(psnId, userGuid) {
 
     // Show success message
     alert(`✅ Widget downloaded!\n\nTo use in OBS:\n1. Add Browser Source\n2. Check "Local file"\n3. Select gt7-widget-${psnId}.html\n4. Set Width: 600, Height: 400\n5. Done!`);
+}
+
+// Generate shareable stats card
+async function generateShareableCard(psnId, dr, rank, sr, srGrade, totalRaces, wins, poles, fastestLaps) {
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 675; // 16:9 aspect ratio for social media
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 1200, 675);
+    gradient.addColorStop(0, '#0a0e12');
+    gradient.addColorStop(0.5, '#121820');
+    gradient.addColorStop(1, '#0a0e12');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1200, 675);
+
+    // Add subtle grid pattern
+    ctx.strokeStyle = 'rgba(0, 255, 136, 0.03)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 1200; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, 675);
+        ctx.stroke();
+    }
+    for (let i = 0; i < 675; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(1200, i);
+        ctx.stroke();
+    }
+
+    // Border with glow
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#00ff88';
+    ctx.strokeRect(20, 20, 1160, 635);
+    ctx.shadowBlur = 0;
+
+    // Title
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('GT7 SPORT MODE STATS', 600, 90);
+
+    // PSN ID with background
+    ctx.fillStyle = 'rgba(0, 255, 136, 0.1)';
+    ctx.fillRect(300, 120, 600, 80);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 56px Arial';
+    ctx.fillText(psnId, 600, 175);
+
+    // Main stats section
+    const statY = 280;
+    const statSpacing = 280;
+
+    // DR/Rank
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillRect(100, statY, 220, 280);
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('DRIVER RATING', 210, statY + 40);
+
+    if (dr > 0) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 64px Arial';
+        ctx.fillText(dr.toLocaleString(), 210, statY + 130);
+    }
+
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 96px Arial';
+    ctx.fillText(rank, 210, statY + 240);
+
+    // SR
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillRect(340, statY, 220, 280);
+    ctx.fillStyle = '#7d4cdb';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('SPORTSMANSHIP', 450, statY + 40);
+    ctx.fillStyle = '#7d4cdb';
+    ctx.font = 'bold 96px Arial';
+    ctx.fillText(srGrade, 450, statY + 180);
+
+    // Races
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillRect(580, statY, 220, 135);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('RACES', 690, statY + 35);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';
+    ctx.fillText(totalRaces.toLocaleString(), 690, statY + 95);
+
+    // Wins
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillRect(580, statY + 145, 220, 135);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('WINS', 690, statY + 180);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';
+    const winRate = totalRaces > 0 ? ((wins / totalRaces) * 100).toFixed(1) : 0;
+    ctx.fillText(`${wins} (${winRate}%)`, 690, statY + 240);
+
+    // Poles
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillRect(820, statY, 220, 135);
+    ctx.fillStyle = '#00d9ff';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('POLE POSITIONS', 930, statY + 35);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';
+    const poleRate = totalRaces > 0 ? ((poles / totalRaces) * 100).toFixed(1) : 0;
+    ctx.fillText(`${poles} (${poleRate}%)`, 930, statY + 95);
+
+    // Fastest Laps
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillRect(820, statY + 145, 220, 135);
+    ctx.fillStyle = '#00d9ff';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('FASTEST LAPS', 930, statY + 180);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';
+    const flRate = totalRaces > 0 ? ((fastestLaps / totalRaces) * 100).toFixed(1) : 0;
+    ctx.fillText(`${fastestLaps} (${flRate}%)`, 930, statY + 240);
+
+    // Footer
+    ctx.fillStyle = 'rgba(0, 255, 136, 0.2)';
+    ctx.fillRect(0, 615, 1200, 60);
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('🏁 Gran Turismo 7', 40, 650);
+    ctx.textAlign = 'right';
+    ctx.fillText('sparkstheory.co.uk', 1160, 650);
+
+    // Convert canvas to blob and download
+    canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${psnId}-GT7-Stats.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        alert(`✅ Stats card downloaded!\n\nYour shareable GT7 stats card has been saved as:\n${psnId}-GT7-Stats.png\n\nShare it on social media! 🏁`);
+    });
 }
 
 // ===== LEADERBOARD FUNCTIONS =====
