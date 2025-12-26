@@ -11,6 +11,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 exports.handler = async (event, context) => {
   console.log('Starting leaderboard auto-update...');
+  console.log('Environment check - Supabase URL configured:', !!supabaseUrl);
 
   try {
     // Fetch all players from database
