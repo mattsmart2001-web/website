@@ -1306,141 +1306,158 @@ function downloadOBSWidget(psnId, userGuid) {
 
 // Generate shareable stats card
 async function generateShareableCard(psnId, dr, rank, sr, srGrade, totalRaces, wins, poles, fastestLaps) {
-    // Create canvas
+    // Create canvas (1920x1080 for better quality)
     const canvas = document.createElement('canvas');
-    canvas.width = 1200;
-    canvas.height = 675; // 16:9 aspect ratio for social media
+    canvas.width = 1920;
+    canvas.height = 1080;
     const ctx = canvas.getContext('2d');
 
     // Background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 1200, 675);
+    const gradient = ctx.createLinearGradient(0, 0, 1920, 1080);
     gradient.addColorStop(0, '#0a0e12');
     gradient.addColorStop(0.5, '#121820');
     gradient.addColorStop(1, '#0a0e12');
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 1200, 675);
+    ctx.fillRect(0, 0, 1920, 1080);
 
     // Add subtle grid pattern
     ctx.strokeStyle = 'rgba(0, 255, 136, 0.03)';
     ctx.lineWidth = 1;
-    for (let i = 0; i < 1200; i += 40) {
+    for (let i = 0; i < 1920; i += 60) {
         ctx.beginPath();
         ctx.moveTo(i, 0);
-        ctx.lineTo(i, 675);
+        ctx.lineTo(i, 1080);
         ctx.stroke();
     }
-    for (let i = 0; i < 675; i += 40) {
+    for (let i = 0; i < 1080; i += 60) {
         ctx.beginPath();
         ctx.moveTo(0, i);
-        ctx.lineTo(1200, i);
+        ctx.lineTo(1920, i);
         ctx.stroke();
     }
 
     // Border with glow
     ctx.strokeStyle = '#00ff88';
-    ctx.lineWidth = 4;
-    ctx.shadowBlur = 20;
+    ctx.lineWidth = 6;
+    ctx.shadowBlur = 30;
     ctx.shadowColor = '#00ff88';
-    ctx.strokeRect(20, 20, 1160, 635);
+    ctx.strokeRect(30, 30, 1860, 1020);
     ctx.shadowBlur = 0;
 
     // Title
     ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 48px Arial';
+    ctx.font = 'bold 72px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('GT7 SPORT MODE STATS', 600, 90);
+    ctx.fillText('GT7 SPORT MODE STATS', 960, 130);
 
     // PSN ID with background
     ctx.fillStyle = 'rgba(0, 255, 136, 0.1)';
-    ctx.fillRect(300, 120, 600, 80);
+    ctx.fillRect(460, 180, 1000, 120);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 56px Arial';
-    ctx.fillText(psnId, 600, 175);
+    ctx.font = 'bold 84px Arial';
+    ctx.fillText(psnId, 960, 270);
 
-    // Main stats section
-    const statY = 280;
-    const statSpacing = 280;
+    // Calculate stats
+    const winRate = totalRaces > 0 ? ((wins / totalRaces) * 100).toFixed(1) : 0;
+    const poleRate = totalRaces > 0 ? ((poles / totalRaces) * 100).toFixed(1) : 0;
+    const flRate = totalRaces > 0 ? ((fastestLaps / totalRaces) * 100).toFixed(1) : 0;
 
-    // DR/Rank
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.fillRect(100, statY, 220, 280);
+    // DR and SR Section (Top row - large cards)
+    const topY = 380;
+
+    // DR/Rank Card
+    ctx.fillStyle = 'rgba(0, 255, 136, 0.08)';
+    ctx.fillRect(120, topY, 400, 280);
     ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 24px Arial';
+    ctx.font = 'bold 32px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('DRIVER RATING', 210, statY + 40);
+    ctx.fillText('DRIVER RATING', 320, topY + 50);
 
     if (dr > 0) {
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 64px Arial';
-        ctx.fillText(dr.toLocaleString(), 210, statY + 130);
+        ctx.font = 'bold 56px Arial';
+        ctx.fillText(dr.toLocaleString(), 320, topY + 130);
     }
 
     ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 96px Arial';
-    ctx.fillText(rank, 210, statY + 240);
+    ctx.font = 'bold 120px Arial';
+    ctx.fillText(rank, 320, topY + 250);
 
-    // SR
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.fillRect(340, statY, 220, 280);
+    // SR Card
+    ctx.fillStyle = 'rgba(125, 76, 219, 0.08)';
+    ctx.fillRect(560, topY, 400, 280);
     ctx.fillStyle = '#7d4cdb';
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText('SPORTSMANSHIP', 450, statY + 40);
-    ctx.fillStyle = '#7d4cdb';
-    ctx.font = 'bold 96px Arial';
-    ctx.fillText(srGrade, 450, statY + 180);
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText('SPORTSMANSHIP', 760, topY + 50);
+    ctx.font = 'bold 120px Arial';
+    ctx.fillText(srGrade, 760, topY + 200);
 
-    // Races
+    // Races Card
     ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.fillRect(580, statY, 220, 135);
+    ctx.fillRect(1000, topY, 400, 280);
     ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText('RACES', 690, statY + 35);
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText('TOTAL RACES', 1200, topY + 50);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px Arial';
-    ctx.fillText(totalRaces.toLocaleString(), 690, statY + 95);
+    ctx.font = 'bold 84px Arial';
+    ctx.fillText(totalRaces.toLocaleString(), 1200, topY + 170);
+
+    // Bottom row - Stats (3 equal cards)
+    const bottomY = 700;
+    const cardWidth = 520;
+    const cardHeight = 240;
+    const cardGap = 80;
+    const startX = 160;
 
     // Wins
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.fillRect(580, statY + 145, 220, 135);
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.08)';
+    ctx.fillRect(startX, bottomY, cardWidth, cardHeight);
     ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText('WINS', 690, statY + 180);
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('WINS', startX + cardWidth/2, bottomY + 50);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px Arial';
-    const winRate = totalRaces > 0 ? ((wins / totalRaces) * 100).toFixed(1) : 0;
-    ctx.fillText(`${wins} (${winRate}%)`, 690, statY + 240);
+    ctx.font = 'bold 72px Arial';
+    ctx.fillText(wins.toLocaleString(), startX + cardWidth/2, bottomY + 130);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 36px Arial';
+    ctx.fillText(`${winRate}%`, startX + cardWidth/2, bottomY + 190);
 
     // Poles
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.fillRect(820, statY, 220, 135);
+    ctx.fillStyle = 'rgba(0, 217, 255, 0.08)';
+    ctx.fillRect(startX + cardWidth + cardGap, bottomY, cardWidth, cardHeight);
     ctx.fillStyle = '#00d9ff';
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText('POLE POSITIONS', 930, statY + 35);
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText('POLE POSITIONS', startX + cardWidth + cardGap + cardWidth/2, bottomY + 50);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px Arial';
-    const poleRate = totalRaces > 0 ? ((poles / totalRaces) * 100).toFixed(1) : 0;
-    ctx.fillText(`${poles} (${poleRate}%)`, 930, statY + 95);
+    ctx.font = 'bold 72px Arial';
+    ctx.fillText(poles.toLocaleString(), startX + cardWidth + cardGap + cardWidth/2, bottomY + 130);
+    ctx.fillStyle = '#00d9ff';
+    ctx.font = 'bold 36px Arial';
+    ctx.fillText(`${poleRate}%`, startX + cardWidth + cardGap + cardWidth/2, bottomY + 190);
 
     // Fastest Laps
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.fillRect(820, statY + 145, 220, 135);
-    ctx.fillStyle = '#00d9ff';
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText('FASTEST LAPS', 930, statY + 180);
+    ctx.fillStyle = 'rgba(255, 100, 255, 0.08)';
+    ctx.fillRect(startX + (cardWidth + cardGap) * 2, bottomY, cardWidth, cardHeight);
+    ctx.fillStyle = '#ff64ff';
+    ctx.font = 'bold 32px Arial';
+    ctx.fillText('FASTEST LAPS', startX + (cardWidth + cardGap) * 2 + cardWidth/2, bottomY + 50);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px Arial';
-    const flRate = totalRaces > 0 ? ((fastestLaps / totalRaces) * 100).toFixed(1) : 0;
-    ctx.fillText(`${fastestLaps} (${flRate}%)`, 930, statY + 240);
+    ctx.font = 'bold 72px Arial';
+    ctx.fillText(fastestLaps.toLocaleString(), startX + (cardWidth + cardGap) * 2 + cardWidth/2, bottomY + 130);
+    ctx.fillStyle = '#ff64ff';
+    ctx.font = 'bold 36px Arial';
+    ctx.fillText(`${flRate}%`, startX + (cardWidth + cardGap) * 2 + cardWidth/2, bottomY + 190);
 
     // Footer
     ctx.fillStyle = 'rgba(0, 255, 136, 0.2)';
-    ctx.fillRect(0, 615, 1200, 60);
+    ctx.fillRect(0, 990, 1920, 90);
     ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 20px Arial';
+    ctx.font = 'bold 32px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('🏁 Gran Turismo 7', 40, 650);
+    ctx.fillText('🏁 Gran Turismo 7', 60, 1045);
     ctx.textAlign = 'right';
-    ctx.fillText('sparkstheory.co.uk', 1160, 650);
+    ctx.fillText('sparkstheory.co.uk', 1860, 1045);
 
     // Convert canvas to blob and download
     canvas.toBlob((blob) => {
