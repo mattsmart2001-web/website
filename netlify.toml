@@ -6,3 +6,8 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[functions]
+  # Scheduled function to auto-update leaderboard stats
+  [functions."update-leaderboard"]
+    schedule = "0 * * * *"  # Every hour at minute 0
