@@ -48,6 +48,15 @@ exports.handler = async (event, context) => {
 
         console.log(`Updating ${player.psn_id}...`);
 
+        // Get current DR to calculate change
+        const { data: currentData } = await supabase
+          .from('players')
+          .select('dr')
+          .eq('psn_id', player.psn_id)
+          .single();
+
+        const previousDR = currentData?.dr || 0;
+
         // Fetch fresh stats from gtstats.live
         const response = await fetch(
           `https://gtstats.live/api/getDriverRatingPSN?psn=${encodeURIComponent(player.psn_id)}`,
@@ -65,6 +74,8 @@ exports.handler = async (event, context) => {
         }
 
         const stats = await response.json();
+        const newDR = stats.dr || 0;
+        const drChange = newDR - previousDR;
 
         // Calculate percentages
         const totalRaces = stats.raceCount || 0;
@@ -86,7 +97,8 @@ exports.handler = async (event, context) => {
         const { error: updateError } = await supabase
           .from('players')
           .update({
-            dr: stats.dr || 0,
+            dr: newDR,
+            dr_change: drChange,
             rank: stats.rank || 'E',
             sr: stats.sr || 0,
             sr_grade: getSRGrade(stats.sr),

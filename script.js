@@ -1399,6 +1399,18 @@ function displayLeaderboard() {
     let podiumHtml = '';
     if (leaderboardData.length >= 3 && currentSort === 'dr') {
         const top3 = leaderboardData.slice(0, 3);
+
+        // Helper function for trend arrow in podium
+        const getTrendArrow = (player) => {
+            if (player.dr_change !== undefined && player.dr_change !== null && player.dr_change !== 0) {
+                const changeColor = player.dr_change > 0 ? '#00ff88' : '#ff4444';
+                const arrowIcon = player.dr_change > 0 ? '↑' : '↓';
+                const changeSign = player.dr_change > 0 ? '+' : '';
+                return `<div style="color: ${changeColor}; font-size: 0.85rem; margin-top: 0.25rem;">${arrowIcon} ${changeSign}${player.dr_change}</div>`;
+            }
+            return '';
+        };
+
         podiumHtml = `
             <div style="margin-bottom: 3rem;">
                 <h3 style="text-align: center; color: var(--color-primary); font-size: 1.5rem; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 2px;">
@@ -1413,6 +1425,7 @@ function displayLeaderboard() {
                         <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
                             <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; line-height: 1;">${top3[1].rank || 'E'}</div>
                             <div style="color: var(--text-color); font-size: 1.1rem; margin-top: 0.25rem;">${top3[1].dr?.toLocaleString() || 0} DR</div>
+                            ${getTrendArrow(top3[1])}
                         </div>
                         <div style="color: var(--color-text-muted); font-size: 0.9rem;">
                             ${top3[1].win_percentage?.toFixed(1) || 0}% Win Rate
@@ -1427,6 +1440,7 @@ function displayLeaderboard() {
                         <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 1.25rem; margin-bottom: 0.5rem;">
                             <div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${top3[0].rank || 'E'}</div>
                             <div style="color: var(--text-color); font-size: 1.3rem; margin-top: 0.25rem; font-weight: 700;">${top3[0].dr?.toLocaleString() || 0} DR</div>
+                            ${getTrendArrow(top3[0])}
                         </div>
                         <div style="color: var(--color-text-muted); font-size: 1rem; font-weight: 600;">
                             ${top3[0].win_percentage?.toFixed(1) || 0}% Win Rate
@@ -1441,6 +1455,7 @@ function displayLeaderboard() {
                         <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
                             <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; line-height: 1;">${top3[2].rank || 'E'}</div>
                             <div style="color: var(--text-color); font-size: 1.1rem; margin-top: 0.25rem;">${top3[2].dr?.toLocaleString() || 0} DR</div>
+                            ${getTrendArrow(top3[2])}
                         </div>
                         <div style="color: var(--color-text-muted); font-size: 0.9rem;">
                             ${top3[2].win_percentage?.toFixed(1) || 0}% Win Rate
@@ -1485,11 +1500,20 @@ function displayLeaderboard() {
         const rankColor = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--color-text-muted)';
         const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
 
+        // DR Trend Arrow
+        let trendArrow = '';
+        if (player.dr_change !== undefined && player.dr_change !== null && player.dr_change !== 0) {
+            const changeColor = player.dr_change > 0 ? '#00ff88' : '#ff4444';
+            const arrowIcon = player.dr_change > 0 ? '↑' : '↓';
+            const changeSign = player.dr_change > 0 ? '+' : '';
+            trendArrow = `<span style="color: ${changeColor}; font-size: 0.9rem; margin-left: 0.5rem;">${arrowIcon} ${changeSign}${player.dr_change}</span>`;
+        }
+
         html += `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(0,255,136,0.05)'" onmouseout="this.style.background='transparent'">
                 <td style="padding: 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}</td>
                 <td style="padding: 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem;">${player.psn_id}</td>
-                <td style="padding: 1rem; text-align: center; color: var(--text-color); font-weight: 600;">${player.dr?.toLocaleString() || 0}</td>
+                <td style="padding: 1rem; text-align: center; color: var(--text-color); font-weight: 600;">${player.dr?.toLocaleString() || 0}${trendArrow}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--color-primary); font-weight: 800; font-size: 1.2rem;">${player.rank || 'E'}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--color-secondary); font-weight: 800; font-size: 1.1rem;">${player.sr_grade || 'E'}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--text-color);">${player.total_races?.toLocaleString() || 0}</td>
@@ -1514,6 +1538,15 @@ function displayLeaderboard() {
         const rankColor = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--color-text-muted)';
         const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
 
+        // DR Trend Arrow for mobile
+        let trendArrowMobile = '';
+        if (player.dr_change !== undefined && player.dr_change !== null && player.dr_change !== 0) {
+            const changeColor = player.dr_change > 0 ? '#00ff88' : '#ff4444';
+            const arrowIcon = player.dr_change > 0 ? '↑' : '↓';
+            const changeSign = player.dr_change > 0 ? '+' : '';
+            trendArrowMobile = `<div style="color: ${changeColor}; font-size: 0.75rem; margin-top: 0.25rem;">${arrowIcon} ${changeSign}${player.dr_change}</div>`;
+        }
+
         html += `
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
@@ -1524,6 +1557,7 @@ function displayLeaderboard() {
                     <div style="text-align: right;">
                         <div style="color: var(--color-primary); font-weight: 800; font-size: 2rem; line-height: 1;">${player.rank || 'E'}</div>
                         <div style="color: var(--text-color); font-size: 0.9rem;">${player.dr?.toLocaleString() || 0} DR</div>
+                        ${trendArrowMobile}
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
