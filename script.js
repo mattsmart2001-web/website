@@ -1348,7 +1348,7 @@ async function generateShareableCard(psnId, dr, rank, sr, srGrade, totalRaces, w
     ctx.shadowBlur = 20;
     ctx.shadowColor = 'rgba(0, 255, 136, 0.5)';
     ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 80px Arial';
+    ctx.font = 'bold 80px Orbitron';
     ctx.textAlign = 'center';
     ctx.fillText('GT7 SPORT MODE STATS', 960, 140);
     ctx.shadowBlur = 0;
@@ -1360,7 +1360,7 @@ async function generateShareableCard(psnId, dr, rank, sr, srGrade, totalRaces, w
     ctx.lineWidth = 2;
     ctx.strokeRect(410, 190, 1100, 110);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 76px Arial';
+    ctx.font = 'bold 76px Orbitron';
     ctx.fillText(psnId, 960, 270);
 
     // Calculate stats
@@ -1387,37 +1387,37 @@ async function generateShareableCard(psnId, dr, rank, sr, srGrade, totalRaces, w
     // DR/Rank Card
     drawCard(topStartX, topY, topCardWidth, topCardHeight, 'rgba(0, 255, 136, 0.1)', 'rgba(0, 255, 136, 0.4)');
     ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 30px Arial';
+    ctx.font = 'bold 30px Orbitron';
     ctx.textAlign = 'center';
     ctx.fillText('DRIVER RATING', topStartX + topCardWidth/2, topY + 45);
 
     if (dr > 0) {
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 52px Arial';
+        ctx.font = 'bold 52px Orbitron';
         ctx.fillText(dr.toLocaleString(), topStartX + topCardWidth/2, topY + 115);
     }
 
     ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 110px Arial';
+    ctx.font = 'bold 110px Orbitron';
     ctx.fillText(rank, topStartX + topCardWidth/2, topY + 230);
 
     // SR Card
     const srX = topStartX + topCardWidth + topGap;
     drawCard(srX, topY, topCardWidth, topCardHeight, 'rgba(125, 76, 219, 0.1)', 'rgba(125, 76, 219, 0.4)');
     ctx.fillStyle = '#b794f6';
-    ctx.font = 'bold 30px Arial';
+    ctx.font = 'bold 30px Orbitron';
     ctx.fillText('SPORTSMANSHIP', srX + topCardWidth/2, topY + 45);
-    ctx.font = 'bold 140px Arial';
+    ctx.font = 'bold 140px Orbitron';
     ctx.fillText(srGrade, srX + topCardWidth/2, topY + 185);
 
     // Total Races Card
     const racesX = srX + topCardWidth + topGap;
     drawCard(racesX, topY, topCardWidth, topCardHeight, 'rgba(255, 215, 0, 0.1)', 'rgba(255, 215, 0, 0.4)');
     ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 30px Arial';
+    ctx.font = 'bold 30px Orbitron';
     ctx.fillText('TOTAL RACES', racesX + topCardWidth/2, topY + 45);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 100px Arial';
+    ctx.font = 'bold 100px Orbitron';
     ctx.fillText(totalRaces.toLocaleString(), racesX + topCardWidth/2, topY + 175);
 
     // Bottom row - 3 cards with perfect centering
@@ -1430,40 +1430,40 @@ async function generateShareableCard(psnId, dr, rank, sr, srGrade, totalRaces, w
     // Wins Card
     drawCard(bottomStartX, bottomY, bottomCardWidth, bottomCardHeight, 'rgba(255, 215, 0, 0.08)', 'rgba(255, 215, 0, 0.3)');
     ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 28px Arial';
+    ctx.font = 'bold 28px Orbitron';
     ctx.textAlign = 'center';
     ctx.fillText('WINS', bottomStartX + bottomCardWidth/2, bottomY + 40);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 76px Arial';
+    ctx.font = 'bold 76px Orbitron';
     ctx.fillText(wins.toLocaleString(), bottomStartX + bottomCardWidth/2, bottomY + 125);
     ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 40px Arial';
+    ctx.font = 'bold 40px Orbitron';
     ctx.fillText(`${winRate}%`, bottomStartX + bottomCardWidth/2, bottomY + 185);
 
     // Poles Card
     const polesX = bottomStartX + bottomCardWidth + bottomGap;
     drawCard(polesX, bottomY, bottomCardWidth, bottomCardHeight, 'rgba(0, 217, 255, 0.08)', 'rgba(0, 217, 255, 0.3)');
     ctx.fillStyle = '#00d9ff';
-    ctx.font = 'bold 28px Arial';
+    ctx.font = 'bold 28px Orbitron';
     ctx.fillText('POLE POSITIONS', polesX + bottomCardWidth/2, bottomY + 40);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 76px Arial';
+    ctx.font = 'bold 76px Orbitron';
     ctx.fillText(poles.toLocaleString(), polesX + bottomCardWidth/2, bottomY + 125);
     ctx.fillStyle = '#00d9ff';
-    ctx.font = 'bold 40px Arial';
+    ctx.font = 'bold 40px Orbitron';
     ctx.fillText(`${poleRate}%`, polesX + bottomCardWidth/2, bottomY + 185);
 
     // Fastest Laps Card
     const flX = polesX + bottomCardWidth + bottomGap;
     drawCard(flX, bottomY, bottomCardWidth, bottomCardHeight, 'rgba(255, 100, 255, 0.08)', 'rgba(255, 100, 255, 0.3)');
     ctx.fillStyle = '#ff64ff';
-    ctx.font = 'bold 28px Arial';
+    ctx.font = 'bold 28px Orbitron';
     ctx.fillText('FASTEST LAPS', flX + bottomCardWidth/2, bottomY + 40);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 76px Arial';
+    ctx.font = 'bold 76px Orbitron';
     ctx.fillText(fastestLaps.toLocaleString(), flX + bottomCardWidth/2, bottomY + 125);
     ctx.fillStyle = '#ff64ff';
-    ctx.font = 'bold 40px Arial';
+    ctx.font = 'bold 40px Orbitron';
     ctx.fillText(`${flRate}%`, flX + bottomCardWidth/2, bottomY + 185);
 
     // Footer with gradient background
@@ -1474,7 +1474,7 @@ async function generateShareableCard(psnId, dr, rank, sr, srGrade, totalRaces, w
     ctx.fillRect(0, 960, 1920, 90);
 
     ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 34px Arial';
+    ctx.font = 'bold 34px Orbitron';
     ctx.textAlign = 'left';
     ctx.fillText('🏁 Gran Turismo 7', 70, 1015);
     ctx.textAlign = 'right';
