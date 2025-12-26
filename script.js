@@ -1571,7 +1571,19 @@ async function submitToLeaderboard(psnId, userGuid, dr, rank, sr, srGrade, total
     } catch (error) {
         console.error('Error submitting to leaderboard:', error);
         submitBtn.textContent = '❌ Error - Try Again';
-        alert('Error submitting to leaderboard. Please try again.');
+
+        // Show detailed error message
+        const errorMsg = error?.message || 'Unknown error occurred';
+        const errorDetails = error?.details || '';
+        const errorHint = error?.hint || '';
+
+        let alertMessage = '❌ Error submitting to leaderboard\n\n';
+        alertMessage += `Error: ${errorMsg}\n`;
+        if (errorDetails) alertMessage += `Details: ${errorDetails}\n`;
+        if (errorHint) alertMessage += `Hint: ${errorHint}\n`;
+
+        alert(alertMessage);
+
         setTimeout(() => {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
@@ -1653,7 +1665,19 @@ async function submitToLeaderboardFromScraper(psnId, userGuid, rank, srGrade, to
     } catch (error) {
         console.error('Error submitting to leaderboard:', error);
         submitBtn.textContent = '❌ Error - Try Again';
-        alert('Error submitting to leaderboard. Please try again.');
+
+        // Show detailed error message
+        const errorMsg = error?.message || 'Unknown error occurred';
+        const errorDetails = error?.details || '';
+        const errorHint = error?.hint || '';
+
+        let alertMessage = '❌ Error submitting to leaderboard\n\n';
+        alertMessage += `Error: ${errorMsg}\n`;
+        if (errorDetails) alertMessage += `Details: ${errorDetails}\n`;
+        if (errorHint) alertMessage += `Hint: ${errorHint}\n`;
+
+        alert(alertMessage);
+
         setTimeout(() => {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
