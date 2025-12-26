@@ -3,6 +3,18 @@ const SUPABASE_URL = 'https://vcdrzlyyjsskiyqydads.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjZHJ6bHl5anNza2l5cXlkYWRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2NTEyOTAsImV4cCI6MjA4MjIyNzI5MH0.SqSizMAETa8KJyrwgWC7shpz19u__QWwQyAMYF_UpJs';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ===== UTILITY FUNCTIONS =====
+
+// Convert country code to flag emoji
+function getCountryFlag(countryCode) {
+    if (!countryCode) return '';
+    const codePoints = countryCode
+        .toUpperCase()
+        .split('')
+        .map(char => 127397 + char.charCodeAt());
+    return String.fromCodePoint(...codePoints);
+}
+
 // ===== THREE.JS 3D MODEL BACKGROUND =====
 const scene = new THREE.Scene();
 scene.background = null; // Transparent background
@@ -916,6 +928,60 @@ function displayUserStats(psnId, userGuid, data) {
                 📥 Download Custom OBS Widget
             </button>
 
+            <!-- Country Selector -->
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
+                    Select Your Country
+                </label>
+                <select id="countrySelector" style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--text-color); font-size: 1rem;">
+                    <option value="">🌍 Select Country</option>
+                    <option value="US">🇺🇸 United States</option>
+                    <option value="GB">🇬🇧 United Kingdom</option>
+                    <option value="JP">🇯🇵 Japan</option>
+                    <option value="DE">🇩🇪 Germany</option>
+                    <option value="FR">🇫🇷 France</option>
+                    <option value="IT">🇮🇹 Italy</option>
+                    <option value="ES">🇪🇸 Spain</option>
+                    <option value="BR">🇧🇷 Brazil</option>
+                    <option value="CA">🇨🇦 Canada</option>
+                    <option value="AU">🇦🇺 Australia</option>
+                    <option value="NL">🇳🇱 Netherlands</option>
+                    <option value="BE">🇧🇪 Belgium</option>
+                    <option value="CH">🇨🇭 Switzerland</option>
+                    <option value="AT">🇦🇹 Austria</option>
+                    <option value="SE">🇸🇪 Sweden</option>
+                    <option value="NO">🇳🇴 Norway</option>
+                    <option value="DK">🇩🇰 Denmark</option>
+                    <option value="FI">🇫🇮 Finland</option>
+                    <option value="PT">🇵🇹 Portugal</option>
+                    <option value="PL">🇵🇱 Poland</option>
+                    <option value="CZ">🇨🇿 Czech Republic</option>
+                    <option value="MX">🇲🇽 Mexico</option>
+                    <option value="AR">🇦🇷 Argentina</option>
+                    <option value="CL">🇨🇱 Chile</option>
+                    <option value="NZ">🇳🇿 New Zealand</option>
+                    <option value="ZA">🇿🇦 South Africa</option>
+                    <option value="KR">🇰🇷 South Korea</option>
+                    <option value="CN">🇨🇳 China</option>
+                    <option value="TW">🇹🇼 Taiwan</option>
+                    <option value="HK">🇭🇰 Hong Kong</option>
+                    <option value="SG">🇸🇬 Singapore</option>
+                    <option value="TH">🇹🇭 Thailand</option>
+                    <option value="MY">🇲🇾 Malaysia</option>
+                    <option value="ID">🇮🇩 Indonesia</option>
+                    <option value="PH">🇵🇭 Philippines</option>
+                    <option value="IN">🇮🇳 India</option>
+                    <option value="AE">🇦🇪 UAE</option>
+                    <option value="SA">🇸🇦 Saudi Arabia</option>
+                    <option value="TR">🇹🇷 Turkey</option>
+                    <option value="RU">🇷🇺 Russia</option>
+                    <option value="GR">🇬🇷 Greece</option>
+                    <option value="IE">🇮🇪 Ireland</option>
+                    <option value="HU">🇭🇺 Hungary</option>
+                    <option value="RO">🇷🇴 Romania</option>
+                </select>
+            </div>
+
             <!-- Submit to Leaderboard Button -->
             <button
                 onclick="submitToLeaderboard('${psnId}', '${userGuid}', ${drPoints}, '${driverRating}', ${srValue}, '${sportsmanship}', ${totalRaces}, ${wins}, ${poles}, ${fastestLaps})"
@@ -1005,6 +1071,60 @@ function displayUserStatsFromScraper(psnId, userGuid, data) {
             >
                 📥 Download Custom OBS Widget
             </button>
+
+            <!-- Country Selector -->
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">
+                    Select Your Country
+                </label>
+                <select id="countrySelectorScraper" style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--text-color); font-size: 1rem;">
+                    <option value="">🌍 Select Country</option>
+                    <option value="US">🇺🇸 United States</option>
+                    <option value="GB">🇬🇧 United Kingdom</option>
+                    <option value="JP">🇯🇵 Japan</option>
+                    <option value="DE">🇩🇪 Germany</option>
+                    <option value="FR">🇫🇷 France</option>
+                    <option value="IT">🇮🇹 Italy</option>
+                    <option value="ES">🇪🇸 Spain</option>
+                    <option value="BR">🇧🇷 Brazil</option>
+                    <option value="CA">🇨🇦 Canada</option>
+                    <option value="AU">🇦🇺 Australia</option>
+                    <option value="NL">🇳🇱 Netherlands</option>
+                    <option value="BE">🇧🇪 Belgium</option>
+                    <option value="CH">🇨🇭 Switzerland</option>
+                    <option value="AT">🇦🇹 Austria</option>
+                    <option value="SE">🇸🇪 Sweden</option>
+                    <option value="NO">🇳🇴 Norway</option>
+                    <option value="DK">🇩🇰 Denmark</option>
+                    <option value="FI">🇫🇮 Finland</option>
+                    <option value="PT">🇵🇹 Portugal</option>
+                    <option value="PL">🇵🇱 Poland</option>
+                    <option value="CZ">🇨🇿 Czech Republic</option>
+                    <option value="MX">🇲🇽 Mexico</option>
+                    <option value="AR">🇦🇷 Argentina</option>
+                    <option value="CL">🇨🇱 Chile</option>
+                    <option value="NZ">🇳🇿 New Zealand</option>
+                    <option value="ZA">🇿🇦 South Africa</option>
+                    <option value="KR">🇰🇷 South Korea</option>
+                    <option value="CN">🇨🇳 China</option>
+                    <option value="TW">🇹🇼 Taiwan</option>
+                    <option value="HK">🇭🇰 Hong Kong</option>
+                    <option value="SG">🇸🇬 Singapore</option>
+                    <option value="TH">🇹🇭 Thailand</option>
+                    <option value="MY">🇲🇾 Malaysia</option>
+                    <option value="ID">🇮🇩 Indonesia</option>
+                    <option value="PH">🇵🇭 Philippines</option>
+                    <option value="IN">🇮🇳 India</option>
+                    <option value="AE">🇦🇪 UAE</option>
+                    <option value="SA">🇸🇦 Saudi Arabia</option>
+                    <option value="TR">🇹🇷 Turkey</option>
+                    <option value="RU">🇷🇺 Russia</option>
+                    <option value="GR">🇬🇷 Greece</option>
+                    <option value="IE">🇮🇪 Ireland</option>
+                    <option value="HU">🇭🇺 Hungary</option>
+                    <option value="RO">🇷🇴 Romania</option>
+                </select>
+            </div>
 
             <!-- Submit to Leaderboard Button -->
             <button
@@ -1177,6 +1297,18 @@ async function submitToLeaderboard(psnId, userGuid, dr, rank, sr, srGrade, total
         submitBtn.textContent = 'Submitting...';
         submitBtn.disabled = true;
 
+        // Get selected country
+        const countrySelector = document.getElementById('countrySelector');
+        const countryCode = countrySelector ? countrySelector.value : '';
+
+        // Validate country selection
+        if (!countryCode) {
+            alert('⚠️ Please select your country before submitting to the leaderboard!');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+
         // Validate stats before submission
         if (dr === 0 || totalRaces === 0) {
             alert('❌ Cannot submit to leaderboard\n\nNo Sport Mode stats found!\n\nYou need to participate in GT7 Sport Mode races first to have stats.\n\nOnce you\'ve completed some Sport Mode races, come back and submit again!');
@@ -1196,6 +1328,7 @@ async function submitToLeaderboard(psnId, userGuid, dr, rank, sr, srGrade, total
             .upsert({
                 psn_id: psnId,
                 user_guid: userGuid,
+                country_code: countryCode,
                 dr: dr,
                 rank: rank,
                 sr: sr,
@@ -1246,6 +1379,18 @@ async function submitToLeaderboardFromScraper(psnId, userGuid, rank, srGrade, to
         submitBtn.textContent = 'Submitting...';
         submitBtn.disabled = true;
 
+        // Get selected country
+        const countrySelector = document.getElementById('countrySelectorScraper');
+        const countryCode = countrySelector ? countrySelector.value : '';
+
+        // Validate country selection
+        if (!countryCode) {
+            alert('⚠️ Please select your country before submitting to the leaderboard!');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            return;
+        }
+
         // Validate stats before submission
         if (totalRaces === 0) {
             alert('❌ Cannot submit to leaderboard\n\nNo Sport Mode stats found!\n\nYou need to participate in GT7 Sport Mode races first to have stats.\n\nOnce you\'ve completed some Sport Mode races, come back and submit again!');
@@ -1265,6 +1410,7 @@ async function submitToLeaderboardFromScraper(psnId, userGuid, rank, srGrade, to
             .upsert({
                 psn_id: psnId,
                 user_guid: userGuid,
+                country_code: countryCode,
                 dr: 0, // No DR points from scraper
                 rank: rank,
                 sr: 0, // No SR value from scraper
@@ -1411,6 +1557,10 @@ function displayLeaderboard() {
             return '';
         };
 
+        const flag1 = top3[0].country_code ? getCountryFlag(top3[0].country_code) + ' ' : '';
+        const flag2 = top3[1].country_code ? getCountryFlag(top3[1].country_code) + ' ' : '';
+        const flag3 = top3[2].country_code ? getCountryFlag(top3[2].country_code) + ' ' : '';
+
         podiumHtml = `
             <div style="margin-bottom: 3rem;">
                 <h3 style="text-align: center; color: var(--color-primary); font-size: 1.5rem; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 2px;">
@@ -1421,7 +1571,7 @@ function displayLeaderboard() {
                     <div style="flex: 1; min-width: 200px; max-width: 250px; background: linear-gradient(135deg, rgba(192,192,192,0.2), rgba(192,192,192,0.05)); border: 2px solid #c0c0c0; border-radius: 16px; padding: 2rem 1.5rem; text-align: center; transform: translateY(20px);">
                         <div style="font-size: 3rem; margin-bottom: 0.5rem;">🥈</div>
                         <div style="color: #c0c0c0; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#2</div>
-                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${top3[1].psn_id}</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${flag2}${top3[1].psn_id}</div>
                         <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
                             <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; line-height: 1;">${top3[1].rank || 'E'}</div>
                             <div style="color: var(--text-color); font-size: 1.1rem; margin-top: 0.25rem;">${top3[1].dr?.toLocaleString() || 0} DR</div>
@@ -1436,7 +1586,7 @@ function displayLeaderboard() {
                     <div style="flex: 1; min-width: 200px; max-width: 270px; background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,215,0,0.05)); border: 3px solid #ffd700; border-radius: 16px; padding: 2.5rem 1.5rem; text-align: center; box-shadow: 0 8px 32px rgba(255,215,0,0.3);">
                         <div style="font-size: 4rem; margin-bottom: 0.5rem;">🥇</div>
                         <div style="color: #ffd700; font-weight: 900; font-size: 2.5rem; margin-bottom: 0.5rem; text-shadow: 0 0 20px rgba(255,215,0,0.5);">#1</div>
-                        <div style="color: var(--color-primary); font-weight: 900; font-size: 1.5rem; margin-bottom: 1rem;">${top3[0].psn_id}</div>
+                        <div style="color: var(--color-primary); font-weight: 900; font-size: 1.5rem; margin-bottom: 1rem;">${flag1}${top3[0].psn_id}</div>
                         <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 1.25rem; margin-bottom: 0.5rem;">
                             <div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${top3[0].rank || 'E'}</div>
                             <div style="color: var(--text-color); font-size: 1.3rem; margin-top: 0.25rem; font-weight: 700;">${top3[0].dr?.toLocaleString() || 0} DR</div>
@@ -1451,7 +1601,7 @@ function displayLeaderboard() {
                     <div style="flex: 1; min-width: 200px; max-width: 250px; background: linear-gradient(135deg, rgba(205,127,50,0.2), rgba(205,127,50,0.05)); border: 2px solid #cd7f32; border-radius: 16px; padding: 2rem 1.5rem; text-align: center; transform: translateY(20px);">
                         <div style="font-size: 3rem; margin-bottom: 0.5rem;">🥉</div>
                         <div style="color: #cd7f32; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#3</div>
-                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${top3[2].psn_id}</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${flag3}${top3[2].psn_id}</div>
                         <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
                             <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; line-height: 1;">${top3[2].rank || 'E'}</div>
                             <div style="color: var(--text-color); font-size: 1.1rem; margin-top: 0.25rem;">${top3[2].dr?.toLocaleString() || 0} DR</div>
@@ -1509,10 +1659,13 @@ function displayLeaderboard() {
             trendArrow = `<span style="color: ${changeColor}; font-size: 0.9rem; margin-left: 0.5rem;">${arrowIcon} ${changeSign}${player.dr_change}</span>`;
         }
 
+        // Country Flag
+        const countryFlag = player.country_code ? getCountryFlag(player.country_code) + ' ' : '';
+
         html += `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(0,255,136,0.05)'" onmouseout="this.style.background='transparent'">
                 <td style="padding: 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}</td>
-                <td style="padding: 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem;">${player.psn_id}</td>
+                <td style="padding: 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem;">${countryFlag}${player.psn_id}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--text-color); font-weight: 600;">${player.dr?.toLocaleString() || 0}${trendArrow}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--color-primary); font-weight: 800; font-size: 1.2rem;">${player.rank || 'E'}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--color-secondary); font-weight: 800; font-size: 1.1rem;">${player.sr_grade || 'E'}</td>
@@ -1547,12 +1700,15 @@ function displayLeaderboard() {
             trendArrowMobile = `<div style="color: ${changeColor}; font-size: 0.75rem; margin-top: 0.25rem;">${arrowIcon} ${changeSign}${player.dr_change}</div>`;
         }
 
+        // Country Flag for mobile
+        const countryFlagMobile = player.country_code ? getCountryFlag(player.country_code) + ' ' : '';
+
         html += `
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
                     <div>
                         <div style="color: ${rankColor}; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem;">${rankIcon} #${index + 1}</div>
-                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem;">${player.psn_id}</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem;">${countryFlagMobile}${player.psn_id}</div>
                     </div>
                     <div style="text-align: right;">
                         <div style="color: var(--color-primary); font-weight: 800; font-size: 2rem; line-height: 1;">${player.rank || 'E'}</div>
