@@ -1395,7 +1395,63 @@ function displayLeaderboard() {
         fastest_lap_percentage: 'Fastest Lap Percentage'
     };
 
-    let html = `
+    // Top 3 Podium Showcase
+    let podiumHtml = '';
+    if (leaderboardData.length >= 3 && currentSort === 'dr') {
+        const top3 = leaderboardData.slice(0, 3);
+        podiumHtml = `
+            <div style="margin-bottom: 3rem;">
+                <h3 style="text-align: center; color: var(--color-primary); font-size: 1.5rem; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 2px;">
+                    🏆 Top 3 Champions 🏆
+                </h3>
+                <div style="display: flex; justify-content: center; align-items: flex-end; gap: 2rem; flex-wrap: wrap; max-width: 900px; margin: 0 auto;">
+                    <!-- 2nd Place -->
+                    <div style="flex: 1; min-width: 200px; max-width: 250px; background: linear-gradient(135deg, rgba(192,192,192,0.2), rgba(192,192,192,0.05)); border: 2px solid #c0c0c0; border-radius: 16px; padding: 2rem 1.5rem; text-align: center; transform: translateY(20px);">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🥈</div>
+                        <div style="color: #c0c0c0; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#2</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${top3[1].psn_id}</div>
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
+                            <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; line-height: 1;">${top3[1].rank || 'E'}</div>
+                            <div style="color: var(--text-color); font-size: 1.1rem; margin-top: 0.25rem;">${top3[1].dr?.toLocaleString() || 0} DR</div>
+                        </div>
+                        <div style="color: var(--color-text-muted); font-size: 0.9rem;">
+                            ${top3[1].win_percentage?.toFixed(1) || 0}% Win Rate
+                        </div>
+                    </div>
+
+                    <!-- 1st Place (Champion) -->
+                    <div style="flex: 1; min-width: 200px; max-width: 270px; background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,215,0,0.05)); border: 3px solid #ffd700; border-radius: 16px; padding: 2.5rem 1.5rem; text-align: center; box-shadow: 0 8px 32px rgba(255,215,0,0.3);">
+                        <div style="font-size: 4rem; margin-bottom: 0.5rem;">🥇</div>
+                        <div style="color: #ffd700; font-weight: 900; font-size: 2.5rem; margin-bottom: 0.5rem; text-shadow: 0 0 20px rgba(255,215,0,0.5);">#1</div>
+                        <div style="color: var(--color-primary); font-weight: 900; font-size: 1.5rem; margin-bottom: 1rem;">${top3[0].psn_id}</div>
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 1.25rem; margin-bottom: 0.5rem;">
+                            <div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${top3[0].rank || 'E'}</div>
+                            <div style="color: var(--text-color); font-size: 1.3rem; margin-top: 0.25rem; font-weight: 700;">${top3[0].dr?.toLocaleString() || 0} DR</div>
+                        </div>
+                        <div style="color: var(--color-text-muted); font-size: 1rem; font-weight: 600;">
+                            ${top3[0].win_percentage?.toFixed(1) || 0}% Win Rate
+                        </div>
+                    </div>
+
+                    <!-- 3rd Place -->
+                    <div style="flex: 1; min-width: 200px; max-width: 250px; background: linear-gradient(135deg, rgba(205,127,50,0.2), rgba(205,127,50,0.05)); border: 2px solid #cd7f32; border-radius: 16px; padding: 2rem 1.5rem; text-align: center; transform: translateY(20px);">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🥉</div>
+                        <div style="color: #cd7f32; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#3</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${top3[2].psn_id}</div>
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
+                            <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; line-height: 1;">${top3[2].rank || 'E'}</div>
+                            <div style="color: var(--text-color); font-size: 1.1rem; margin-top: 0.25rem;">${top3[2].dr?.toLocaleString() || 0} DR</div>
+                        </div>
+                        <div style="color: var(--color-text-muted); font-size: 0.9rem;">
+                            ${top3[2].win_percentage?.toFixed(1) || 0}% Win Rate
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    let html = podiumHtml + `
         <div style="margin-bottom: 1.5rem; text-align: center;">
             <p style="color: var(--color-text-muted); font-size: 1rem;">
                 Sorted by: <span style="color: var(--color-primary); font-weight: 700;">${sortLabels[currentSort]}</span>
