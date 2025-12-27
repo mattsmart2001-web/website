@@ -1250,12 +1250,25 @@ function downloadOBSWidget(psnId, userGuid) {
         }
         let scrollPosition = 0;
         const scrollSpeed = 0.5;
+        let resetWidth = null;
         function smoothScroll() {
             const ticker = document.querySelector('.stats-ticker');
             if (!ticker) { requestAnimationFrame(smoothScroll); return; }
+            if (resetWidth === null) {
+                const allItems = ticker.querySelectorAll('.stat-item');
+                const firstSetCount = allItems.length / 2;
+                let width = 0;
+                for (let i = 0; i < firstSetCount; i++) {
+                    const item = allItems[i];
+                    width += item.offsetWidth;
+                    if (i < firstSetCount - 1) width += 40;
+                    width += 2;
+                    if (i < firstSetCount - 1) width += 40;
+                }
+                resetWidth = width;
+            }
             scrollPosition += scrollSpeed;
-            const tickerWidth = ticker.scrollWidth / 2;
-            if (scrollPosition >= tickerWidth) { scrollPosition = scrollPosition - tickerWidth; }
+            if (scrollPosition >= resetWidth) { scrollPosition = scrollPosition % resetWidth; }
             ticker.style.transform = \`translateX(-\${scrollPosition}px)\`;
             requestAnimationFrame(smoothScroll);
         }

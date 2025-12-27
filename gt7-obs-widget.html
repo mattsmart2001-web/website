@@ -375,6 +375,7 @@
         // Continuous smooth scrolling
         let scrollPosition = 0;
         const scrollSpeed = 0.5; // pixels per frame
+        let resetWidth = null;
 
         function smoothScroll() {
             const ticker = document.querySelector('.stats-ticker');
@@ -383,14 +384,32 @@
                 return;
             }
 
+            // Calculate reset width once
+            if (resetWidth === null) {
+                // Count stat items in first set (should be 8 items)
+                const allItems = ticker.querySelectorAll('.stat-item');
+                const firstSetCount = allItems.length / 2;
+                let width = 0;
+
+                // Calculate width of first set by measuring actual elements
+                for (let i = 0; i < firstSetCount; i++) {
+                    const item = allItems[i];
+                    width += item.offsetWidth;
+                    // Add gap between items (40px) except for last item
+                    if (i < firstSetCount - 1) width += 40;
+                    // Add separator width
+                    width += 2;
+                    if (i < firstSetCount - 1) width += 40;
+                }
+
+                resetWidth = width;
+            }
+
             scrollPosition += scrollSpeed;
 
-            // Get the width of one set of stats (1/2 of total since we duplicate once)
-            const tickerWidth = ticker.scrollWidth / 2;
-
-            // Reset position seamlessly when first set scrolls completely off
-            if (scrollPosition >= tickerWidth) {
-                scrollPosition = scrollPosition - tickerWidth;
+            // Reset seamlessly using modulo
+            if (scrollPosition >= resetWidth) {
+                scrollPosition = scrollPosition % resetWidth;
             }
 
             ticker.style.transform = `translateX(-${scrollPosition}px)`;
