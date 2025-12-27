@@ -14,27 +14,33 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { psnId } = event.queryStringParameters || {};
+    const { psnId, profileUrl } = event.queryStringParameters || {};
 
-    if (!psnId) {
+    // Check if we have either psnId or profileUrl
+    if (!psnId && !profileUrl) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'PSN ID is required' }),
+        body: JSON.stringify({ error: 'PSN ID or Profile URL is required' }),
       };
     }
 
-    console.log('Fetching gtstats for:', psnId);
+    let apiUrl;
+    if (profileUrl) {
+      // Use lookupPSN endpoint for GT7 profile URLs
+      console.log('Looking up profile URL:', profileUrl);
+      apiUrl = `https://gtstats.live/api/lookupPSN?psn=${encodeURIComponent(profileUrl)}`;
+    } else {
+      // Use getDriverRatingPSN endpoint for PSN IDs
+      console.log('Fetching gtstats for PSN:', psnId);
+      apiUrl = `https://gtstats.live/api/getDriverRatingPSN?psn=${encodeURIComponent(psnId)}`;
+    }
 
-    // Use the getDriverRatingPSN endpoint that accepts PSN directly
-    const apiResponse = await fetch(
-      `https://gtstats.live/api/getDriverRatingPSN?psn=${encodeURIComponent(psnId)}`,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
-      }
-    );
+    const apiResponse = await fetch(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
 
     if (!apiResponse.ok) {
       console.log('API fetch failed:', apiResponse.status);
