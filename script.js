@@ -836,70 +836,13 @@ lookupStatsBtn?.addEventListener('click', async () => {
         displayUserStats(psnId, statsData.id, statsData);
     } catch (error) {
         console.error('Error fetching stats:', error);
-        // Show fallback option to enter GT7 profile URL
         userStatsResults.innerHTML = `
             <div style="background: rgba(239,68,68,0.1); border: 2px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 2rem; text-align: center;">
-                <p style="color: #fca5a5; font-size: 1.2rem; margin-bottom: 1rem;">❌ Player Not Found</p>
-                <p style="color: var(--color-text-muted); margin-bottom: 2rem;">This PSN ID isn't in our database yet. Please provide your GT7 profile URL instead:</p>
-
-                <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
-                    <label style="display: block; text-align: left; margin-bottom: 0.5rem; color: var(--color-text-muted); font-size: 0.9rem;">
-                        GT7 Profile URL
-                    </label>
-                    <input
-                        type="text"
-                        id="fallbackProfileUrl"
-                        placeholder="https://www.gran-turismo.com/..."
-                        style="width: 100%; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: var(--text-color); font-size: 1rem;"
-                    />
-                    <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.5rem; text-align: left;">
-                        Find this at: Gran Turismo website → My Page → Profile
-                    </p>
-                </div>
-
-                <button
-                    id="lookupProfileUrlBtn"
-                    class="btn btn-primary"
-                    style="width: 100%; padding: 0.75rem;"
-                >
-                    Lookup via Profile URL
-                </button>
+                <p style="color: #fca5a5; font-size: 1.2rem; margin-bottom: 1rem;">Error Loading Stats</p>
+                <p style="color: var(--color-text-muted);">Player not found in our database. If you get an error, DM me in discord and I will add you to the database.</p>
             </div>
         `;
         userStatsResults.style.display = 'block';
-
-        // Add event listener for the fallback button
-        document.getElementById('lookupProfileUrlBtn')?.addEventListener('click', async () => {
-            const profileUrl = document.getElementById('fallbackProfileUrl').value.trim();
-
-            if (!profileUrl) {
-                alert('Please enter your GT7 profile URL');
-                return;
-            }
-
-            const btn = document.getElementById('lookupProfileUrlBtn');
-            btn.textContent = 'Loading...';
-            btn.disabled = true;
-
-            try {
-                // Use lookupPSN endpoint
-                const response = await fetch(`/.netlify/functions/gtstats-proxy?profileUrl=${encodeURIComponent(profileUrl)}`);
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error || 'Failed to fetch profile');
-                }
-
-                const statsData = data.player;
-                displayUserStats(psnId, statsData.id, statsData);
-            } catch (err) {
-                console.error('Profile URL lookup error:', err);
-                alert('Failed to fetch profile. Please check the URL and try again.');
-            } finally {
-                btn.textContent = 'Lookup via Profile URL';
-                btn.disabled = false;
-            }
-        });
     } finally {
         lookupStatsBtn.textContent = 'View My Stats';
         lookupStatsBtn.disabled = false;
