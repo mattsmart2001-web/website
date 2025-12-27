@@ -76,7 +76,7 @@
         .dr-display {
             display: flex;
             flex-direction: row;
-            align-items: baseline;
+            align-items: center;
             gap: 8px;
         }
 
@@ -94,17 +94,6 @@
             font-weight: 700;
             color: rgba(255, 255, 255, 0.9);
             line-height: 1;
-        }
-
-        .dr-label {
-            font-size: 0.55rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-            position: absolute;
-            bottom: 8px;
-            left: 20px;
         }
 
         /* Scrolling section - Stats ticker */
@@ -145,24 +134,19 @@
         }
 
         .stat-value {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 900;
-            color: var(--primary-color);
+            color: var(--secondary-color);
             line-height: 1;
-            text-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+            text-shadow: 0 0 10px rgba(14, 165, 233, 0.4);
         }
 
         .stat-label {
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 2px;
             font-weight: 600;
-        }
-
-        .stat-item.sr .stat-value {
-            color: var(--secondary-color);
-            text-shadow: 0 0 10px rgba(14, 165, 233, 0.4);
         }
 
         .stat-separator {

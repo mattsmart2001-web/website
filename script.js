@@ -1185,17 +1185,15 @@ function downloadOBSWidget(psnId, userGuid) {
         .widget-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); z-index: 10; }
         .static-section { position: absolute; left: 0; top: 0; width: 280px; height: 100%; background: linear-gradient(90deg, var(--bg-color) 0%, var(--bg-color) 85%, transparent 100%); border-right: 2px solid var(--border-color); display: flex; align-items: center; padding: 0 20px; gap: 15px; z-index: 5; }
         .flag-container { font-size: 3rem; line-height: 1; filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.3)); }
-        .dr-display { display: flex; flex-direction: row; align-items: baseline; gap: 8px; }
+        .dr-display { display: flex; flex-direction: row; align-items: center; gap: 8px; }
         .dr-rank { font-size: 5rem; font-weight: 900; color: var(--primary-color); line-height: 1; text-shadow: 0 0 20px rgba(0, 255, 136, 0.6); letter-spacing: -2px; }
         .dr-points { font-size: 1.8rem; font-weight: 700; color: rgba(255, 255, 255, 0.9); line-height: 1; }
-        .dr-label { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; position: absolute; bottom: 8px; left: 20px; }
         .scrolling-section { position: absolute; left: 280px; top: 0; right: 0; height: 100%; overflow: hidden; }
         .stats-ticker { display: flex; align-items: center; height: 100%; gap: 40px; padding: 0 20px; animation: scroll-left 20s linear infinite; white-space: nowrap; }
         @keyframes scroll-left { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 100px; }
-        .stat-value { font-size: 2rem; font-weight: 900; color: var(--primary-color); line-height: 1; text-shadow: 0 0 10px rgba(0, 255, 136, 0.4); }
-        .stat-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
-        .stat-item.sr .stat-value { color: var(--secondary-color); text-shadow: 0 0 10px rgba(14, 165, 233, 0.4); }
+        .stat-value { font-size: 2.5rem; font-weight: 900; color: var(--secondary-color); line-height: 1; text-shadow: 0 0 10px rgba(14, 165, 233, 0.4); }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
         .stat-separator { width: 2px; height: 50px; background: linear-gradient(180deg, transparent, var(--border-color), transparent); }
         .loading { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: var(--text-muted); font-size: 1rem; }
         .error { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); color: #fca5a5; font-size: 0.9rem; }
