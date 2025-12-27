@@ -1189,7 +1189,7 @@ function downloadOBSWidget(psnId, userGuid) {
         .dr-rank { font-size: 5rem; font-weight: 900; color: var(--primary-color); line-height: 1; text-shadow: 0 0 20px rgba(0, 255, 136, 0.6); letter-spacing: -2px; }
         .dr-points { font-size: 1.8rem; font-weight: 700; color: rgba(255, 255, 255, 0.9); line-height: 1; }
         .stats-section { position: absolute; left: 280px; top: 0; right: 0; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0 40px; }
-        .stat-display { display: flex; align-items: center; gap: 20px; opacity: 0; transition: opacity 0.6s ease-in-out; }
+        .stat-display { position: absolute; display: flex; align-items: center; gap: 20px; opacity: 0; transition: opacity 0.6s ease-in-out; }
         .stat-display.active { opacity: 1; }
         .stat-name { font-size: 1.8rem; font-weight: 700; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; letter-spacing: 2px; }
         .stat-divider { font-size: 2rem; color: var(--primary-color); font-weight: 900; }
