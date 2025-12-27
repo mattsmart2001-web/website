@@ -1184,7 +1184,7 @@ function downloadOBSWidget(psnId, userGuid) {
         .widget-container { width: 1000px; height: 100px; position: relative; background: var(--bg-color); border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 255, 136, 0.2); }
         .widget-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); z-index: 10; }
         .static-section { position: absolute; left: 0; top: 0; width: 280px; height: 100%; background: linear-gradient(90deg, var(--bg-color) 0%, var(--bg-color) 85%, transparent 100%); border-right: 2px solid var(--border-color); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 0 20px; gap: 2px; z-index: 5; }
-        .psn-name { font-size: 1.1rem; font-weight: 700; color: rgba(255, 255, 255, 0.8); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .psn-name { font-size: 1.1rem; font-weight: 700; color: rgba(255, 255, 255, 0.8); text-transform: uppercase; letter-spacing: 1px; line-height: 1; margin-top: 8px; margin-bottom: 2px; }
         .dr-display { display: flex; flex-direction: row; align-items: baseline; gap: 12px; }
         .dr-rank { font-size: 5rem; font-weight: 900; color: var(--primary-color); line-height: 1; text-shadow: 0 0 20px rgba(0, 255, 136, 0.6); letter-spacing: -2px; }
         .dr-points { font-size: 1.8rem; font-weight: 700; color: rgba(255, 255, 255, 0.9); line-height: 1; }
