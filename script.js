@@ -1189,8 +1189,7 @@ function downloadOBSWidget(psnId, userGuid) {
         .dr-rank { font-size: 5rem; font-weight: 900; color: var(--primary-color); line-height: 1; text-shadow: 0 0 20px rgba(0, 255, 136, 0.6); letter-spacing: -2px; }
         .dr-points { font-size: 1.8rem; font-weight: 700; color: rgba(255, 255, 255, 0.9); line-height: 1; }
         .scrolling-section { position: absolute; left: 280px; top: 0; right: 0; height: 100%; overflow: hidden; }
-        .stats-ticker { display: flex; align-items: center; height: 100%; gap: 40px; padding: 0 20px; animation: scroll-left 20s linear infinite; white-space: nowrap; }
-        @keyframes scroll-left { 0% { transform: translateX(0); } 100% { transform: translateX(-66.666%); } }
+        .stats-ticker { display: flex; align-items: center; height: 100%; gap: 40px; padding: 0 20px; white-space: nowrap; will-change: transform; }
         .stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 100px; }
         .stat-value { font-size: 2.5rem; font-weight: 900; color: var(--secondary-color); line-height: 1; text-shadow: 0 0 10px rgba(14, 165, 233, 0.4); }
         .stat-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
@@ -1249,7 +1248,19 @@ function downloadOBSWidget(psnId, userGuid) {
             try { const data = await fetchGT7Stats(); displayStats(data); }
             catch (error) { document.getElementById('widget').innerHTML = \`<div class="error">Error loading stats - Retrying in \${CONFIG.REFRESH_INTERVAL / 1000}s...</div>\`; }
         }
+        let scrollPosition = 0;
+        const scrollSpeed = 0.5;
+        function smoothScroll() {
+            const ticker = document.querySelector('.stats-ticker');
+            if (!ticker) { requestAnimationFrame(smoothScroll); return; }
+            scrollPosition += scrollSpeed;
+            const tickerWidth = ticker.scrollWidth / 2;
+            if (scrollPosition >= tickerWidth) { scrollPosition = scrollPosition - tickerWidth; }
+            ticker.style.transform = \`translateX(-\${scrollPosition}px)\`;
+            requestAnimationFrame(smoothScroll);
+        }
         updateStats();
+        smoothScroll();
         setInterval(updateStats, CONFIG.REFRESH_INTERVAL);
         console.log('GT7 Horizontal OBS Widget loaded - PSN:', CONFIG.PSN_ID);
     </script>

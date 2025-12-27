@@ -119,17 +119,8 @@
             height: 100%;
             gap: 40px;
             padding: 0 20px;
-            animation: scroll-left 20s linear infinite;
             white-space: nowrap;
-        }
-
-        @keyframes scroll-left {
-            0% {
-                transform: translateX(0);
-            }
-            100% {
-                transform: translateX(-66.666%);
-            }
+            will-change: transform;
         }
 
         .stat-item {
@@ -362,48 +353,6 @@
                             <div class="stat-value">${flRate}%</div>
                             <div class="stat-label">FL Rate</div>
                         </div>
-
-                        <!-- Third set for extra smooth loop -->
-                        <div class="stat-separator"></div>
-                        <div class="stat-item sr">
-                            <div class="stat-value">${sportsmanship}</div>
-                            <div class="stat-label">SR ${srValue}</div>
-                        </div>
-                        <div class="stat-separator"></div>
-                        <div class="stat-item">
-                            <div class="stat-value">${totalRaces}</div>
-                            <div class="stat-label">Races</div>
-                        </div>
-                        <div class="stat-separator"></div>
-                        <div class="stat-item">
-                            <div class="stat-value">${wins}</div>
-                            <div class="stat-label">Wins</div>
-                        </div>
-                        <div class="stat-separator"></div>
-                        <div class="stat-item">
-                            <div class="stat-value">${winRate}%</div>
-                            <div class="stat-label">Win Rate</div>
-                        </div>
-                        <div class="stat-separator"></div>
-                        <div class="stat-item">
-                            <div class="stat-value">${poles}</div>
-                            <div class="stat-label">Poles</div>
-                        </div>
-                        <div class="stat-separator"></div>
-                        <div class="stat-item">
-                            <div class="stat-value">${poleRate}%</div>
-                            <div class="stat-label">Pole Rate</div>
-                        </div>
-                        <div class="stat-separator"></div>
-                        <div class="stat-item">
-                            <div class="stat-value">${fastestLaps}</div>
-                            <div class="stat-label">Fast Laps</div>
-                        </div>
-                        <div class="stat-separator"></div>
-                        <div class="stat-item">
-                            <div class="stat-value">${flRate}%</div>
-                            <div class="stat-label">FL Rate</div>
-                        </div>
                     </div>
                 </div>
             `;
@@ -423,8 +372,36 @@
             }
         }
 
+        // Continuous smooth scrolling
+        let scrollPosition = 0;
+        const scrollSpeed = 0.5; // pixels per frame
+
+        function smoothScroll() {
+            const ticker = document.querySelector('.stats-ticker');
+            if (!ticker) {
+                requestAnimationFrame(smoothScroll);
+                return;
+            }
+
+            scrollPosition += scrollSpeed;
+
+            // Get the width of one set of stats (1/2 of total since we duplicate once)
+            const tickerWidth = ticker.scrollWidth / 2;
+
+            // Reset position seamlessly when first set scrolls completely off
+            if (scrollPosition >= tickerWidth) {
+                scrollPosition = scrollPosition - tickerWidth;
+            }
+
+            ticker.style.transform = `translateX(-${scrollPosition}px)`;
+            requestAnimationFrame(smoothScroll);
+        }
+
         // Initial load
         updateStats();
+
+        // Start smooth scrolling
+        smoothScroll();
 
         // Auto-refresh
         setInterval(updateStats, CONFIG.REFRESH_INTERVAL);
