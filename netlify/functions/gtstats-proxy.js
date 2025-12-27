@@ -54,18 +54,45 @@ exports.handler = async (event) => {
     const data = await apiResponse.json();
     console.log('API response:', JSON.stringify(data, null, 2));
 
-    // Map the API response to our expected format
-    // lookupPSN returns different format than getDriverRatingPSN
-    const statsData = {
-      id: data.userID || data.id,
-      rank: data.rank,
-      dr: data.dr,
-      sr: data.sr,
-      raceCount: data.raceCount || 0,
-      winCount: data.winCount || 0,
-      polePositionCount: data.polePositionCount || 0,
-      fastestLapCount: data.fastestLapCount || 0,
-    };
+    // Handle lookupPSN response format (returns { users: [...] })
+    let statsData;
+    if (profileUrl && data.users) {
+      // lookupPSN returns array of users
+      if (!data.users || data.users.length === 0) {
+        console.log('No users found in lookupPSN response');
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'No Sport Mode data found for this profile. Make sure the player has participated in GT World Series events.'
+          }),
+        };
+      }
+      const user = data.users[0];
+      statsData = {
+        id: user.userID || user.id,
+        rank: user.rank,
+        dr: user.dr,
+        sr: user.sr,
+        raceCount: user.raceCount || 0,
+        winCount: user.winCount || 0,
+        polePositionCount: user.polePositionCount || 0,
+        fastestLapCount: user.fastestLapCount || 0,
+      };
+    } else {
+      // getDriverRatingPSN returns direct object
+      statsData = {
+        id: data.userID || data.id,
+        rank: data.rank,
+        dr: data.dr,
+        sr: data.sr,
+        raceCount: data.raceCount || 0,
+        winCount: data.winCount || 0,
+        polePositionCount: data.polePositionCount || 0,
+        fastestLapCount: data.fastestLapCount || 0,
+      };
+    }
 
     console.log('Mapped stats data:', JSON.stringify(statsData, null, 2));
 
