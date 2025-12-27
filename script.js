@@ -2133,13 +2133,22 @@ async function showDRGraph(userGuid, psnId) {
 }
 
 // Close modal handlers
-document.getElementById('closeGraphModal')?.addEventListener('click', () => {
-    document.getElementById('drGraphModal').style.display = 'none';
-});
+document.addEventListener('DOMContentLoaded', () => {
+    const closeBtn = document.getElementById('closeGraphModal');
+    const modal = document.getElementById('drGraphModal');
 
-document.getElementById('drGraphModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'drGraphModal') {
-        document.getElementById('drGraphModal').style.display = 'none';
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'drGraphModal') {
+                modal.style.display = 'none';
+            }
+        });
     }
 });
 
