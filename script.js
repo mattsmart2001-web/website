@@ -1907,7 +1907,7 @@ function displayLeaderboard() {
         html += `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(0,255,136,0.05)'" onmouseout="this.style.background='transparent'">
                 <td style="padding: 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}</td>
-                <td style="padding: 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem;">${countryFlag}${player.psn_id}</td>
+                <td style="padding: 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlag}${player.psn_id}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--text-color); font-weight: 600;">${player.dr?.toLocaleString() || 0}${trendArrow}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--color-primary); font-weight: 800; font-size: 1.2rem;">${player.rank || 'E'}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--color-secondary); font-weight: 800; font-size: 1.1rem;">${player.sr_grade || 'E'}</td>
@@ -1950,7 +1950,7 @@ function displayLeaderboard() {
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
                     <div>
                         <div style="color: ${rankColor}; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem;">${rankIcon} #${index + 1}</div>
-                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem;">${countryFlagMobile}${player.psn_id}</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlagMobile}${player.psn_id}</div>
                     </div>
                     <div style="text-align: right;">
                         <div style="color: var(--color-primary); font-weight: 800; font-size: 2rem; line-height: 1;">${player.rank || 'E'}</div>
@@ -2028,6 +2028,119 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Auto-refreshing leaderboard...');
         fetchLeaderboard(currentSort);
     }, 3600000); // 1 hour = 3,600,000 milliseconds
+});
+
+// ===== DR HISTORY GRAPH =====
+let drChartInstance = null;
+
+async function showDRGraph(userGuid, psnId) {
+    const modal = document.getElementById('drGraphModal');
+    const playerName = document.getElementById('graphPlayerName');
+    const canvas = document.getElementById('drChart');
+
+    playerName.textContent = `${psnId} - DR History (Last 7 Days)`;
+    modal.style.display = 'flex';
+
+    try {
+        // Fetch player history
+        const response = await fetch(`/.netlify/functions/player-history?userGuid=${encodeURIComponent(userGuid)}&days=7`);
+        const data = await response.json();
+
+        if (!data.success || data.history.length === 0) {
+            canvas.parentElement.innerHTML += '<p style="color: var(--color-text-muted); text-align: center; margin-top: 2rem;">No history data available yet. Check back after the hourly update!</p>';
+            return;
+        }
+
+        // Prepare chart data
+        const labels = data.history.map(h => new Date(h.recorded_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
+        const drData = data.history.map(h => h.dr);
+
+        // Destroy existing chart if it exists
+        if (drChartInstance) {
+            drChartInstance.destroy();
+        }
+
+        // Create chart
+        drChartInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Driver Rating',
+                    data: drData,
+                    borderColor: '#00ff88',
+                    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#00ff88',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(10, 14, 18, 0.9)',
+                        titleColor: '#00ff88',
+                        bodyColor: '#fff',
+                        borderColor: '#00ff88',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: false,
+                        callbacks: {
+                            title: (items) => items[0].label,
+                            label: (item) => `DR: ${item.parsed.y.toLocaleString()}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            callback: (value) => value.toLocaleString()
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching DR history:', error);
+        canvas.parentElement.innerHTML += '<p style="color: #fca5a5; text-align: center; margin-top: 2rem;">Error loading history data</p>';
+    }
+}
+
+// Close modal handlers
+document.getElementById('closeGraphModal')?.addEventListener('click', () => {
+    document.getElementById('drGraphModal').style.display = 'none';
+});
+
+document.getElementById('drGraphModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'drGraphModal') {
+        document.getElementById('drGraphModal').style.display = 'none';
+    }
 });
 
 // ===== CONSOLE WELCOME MESSAGE =====

@@ -119,6 +119,27 @@ exports.handler = async (event, context) => {
           errorCount++;
         } else {
           console.log(`✓ Updated ${player.psn_id}: DR ${stats.dr}, Rank ${stats.rank}`);
+
+          // Save historical snapshot
+          const { error: historyError } = await supabase
+            .from('player_history')
+            .insert({
+              user_guid: player.user_guid,
+              psn_id: player.psn_id,
+              dr: newDR,
+              rank: stats.rank || 'E',
+              sr: stats.sr || 0,
+              sr_grade: getSRGrade(stats.sr),
+              total_races: totalRaces,
+              wins: wins,
+              poles: poles,
+              fastest_laps: fastestLaps,
+            });
+
+          if (historyError) {
+            console.error(`Error saving history for ${player.psn_id}:`, historyError);
+          }
+
           successCount++;
         }
 
