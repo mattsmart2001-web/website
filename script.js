@@ -1761,7 +1761,8 @@ function displayLeaderboard() {
         dr: 'Driver Rating',
         win_percentage: 'Win Percentage',
         pole_percentage: 'Pole Percentage',
-        fastest_lap_percentage: 'Fastest Lap Percentage'
+        fastest_lap_percentage: 'Fastest Lap Percentage',
+        total_races: 'Total Races'
     };
 
     // Top 3 Podium Showcase
@@ -1796,6 +1797,9 @@ function displayLeaderboard() {
             } else if (currentSort === 'fastest_lap_percentage') {
                 return `<div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${player.fastest_lap_percentage?.toFixed(1) || 0}%</div>
                         <div style="color: var(--text-color); font-size: 1rem; margin-top: 0.25rem;">${player.fastest_laps || 0} / ${player.total_races || 0} FLs</div>`;
+            } else if (currentSort === 'total_races') {
+                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${player.total_races?.toLocaleString() || 0}</div>
+                        <div style="color: var(--text-color); font-size: 1rem; margin-top: 0.25rem;">Total Races</div>`;
             }
         };
 
@@ -1806,6 +1810,8 @@ function displayLeaderboard() {
             podiumTitle = '🏆 Top 3 Pole Position Masters 🏆';
         } else if (currentSort === 'fastest_lap_percentage') {
             podiumTitle = '🏆 Top 3 Fastest Lap Experts 🏆';
+        } else if (currentSort === 'total_races') {
+            podiumTitle = '🏆 Top 3 Most Active Racers 🏆';
         }
 
         const flag1 = top3[0].country_code ? getCountryFlag(top3[0].country_code) + ' ' : '';
