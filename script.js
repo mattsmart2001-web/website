@@ -1188,12 +1188,12 @@ function downloadOBSWidget(psnId, userGuid) {
         .dr-display { display: flex; flex-direction: row; align-items: baseline; gap: 12px; }
         .dr-rank { font-size: 5rem; font-weight: 900; color: var(--primary-color); line-height: 1; text-shadow: 0 0 20px rgba(0, 255, 136, 0.6); letter-spacing: -2px; }
         .dr-points { font-size: 1.8rem; font-weight: 700; color: rgba(255, 255, 255, 0.9); line-height: 1; }
-        .scrolling-section { position: absolute; left: 280px; top: 0; right: 0; height: 100%; overflow: hidden; }
-        .stats-ticker { display: flex; align-items: center; height: 100%; gap: 40px; padding: 0 20px; white-space: nowrap; will-change: transform; }
-        .stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 100px; }
-        .stat-value { font-size: 2.5rem; font-weight: 900; color: var(--secondary-color); line-height: 1; text-shadow: 0 0 10px rgba(14, 165, 233, 0.4); }
-        .stat-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
-        .stat-separator { width: 2px; height: 50px; background: linear-gradient(180deg, transparent, var(--border-color), transparent); }
+        .stats-section { position: absolute; left: 280px; top: 0; right: 0; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0 40px; }
+        .stat-display { display: flex; align-items: center; gap: 20px; opacity: 0; transition: opacity 0.6s ease-in-out; }
+        .stat-display.active { opacity: 1; }
+        .stat-name { font-size: 1.8rem; font-weight: 700; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; letter-spacing: 2px; }
+        .stat-divider { font-size: 2rem; color: var(--primary-color); font-weight: 900; }
+        .stat-number { font-size: 3rem; font-weight: 900; color: var(--secondary-color); line-height: 1; text-shadow: 0 0 15px rgba(14, 165, 233, 0.5); }
         .loading { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: var(--text-muted); font-size: 1rem; }
         .error { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); color: #fca5a5; font-size: 0.9rem; }
     </style>
@@ -1242,38 +1242,23 @@ function downloadOBSWidget(psnId, userGuid) {
             const poleRate = totalRaces > 0 ? ((poles / totalRaces) * 100).toFixed(1) : '0.0';
             const flRate = totalRaces > 0 ? ((fastestLaps / totalRaces) * 100).toFixed(1) : '0.0';
             const flag = getCountryFlag(CONFIG.COUNTRY_CODE);
-            widget.innerHTML = \`<div class="static-section"><div class="psn-name">\${CONFIG.PSN_ID}</div><div class="dr-display"><div class="dr-rank">\${driverRating}</div><div class="dr-points">\${drPoints.toLocaleString()}</div></div></div><div class="scrolling-section"><div class="stats-ticker"><div class="stat-item"><div class="stat-value">\${sportsmanship}</div><div class="stat-label">SR \${srValue}</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${totalRaces}</div><div class="stat-label">Races</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${wins}</div><div class="stat-label">Wins</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${winRate}%</div><div class="stat-label">Win Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${poles}</div><div class="stat-label">Poles</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${poleRate}%</div><div class="stat-label">Pole Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${fastestLaps}</div><div class="stat-label">Fast Laps</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${flRate}%</div><div class="stat-label">FL Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${sportsmanship}</div><div class="stat-label">SR \${srValue}</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${totalRaces}</div><div class="stat-label">Races</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${wins}</div><div class="stat-label">Wins</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${winRate}%</div><div class="stat-label">Win Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${poles}</div><div class="stat-label">Poles</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${poleRate}%</div><div class="stat-label">Pole Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${fastestLaps}</div><div class="stat-label">Fast Laps</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${flRate}%</div><div class="stat-label">FL Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${sportsmanship}</div><div class="stat-label">SR \${srValue}</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${totalRaces}</div><div class="stat-label">Races</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${wins}</div><div class="stat-label">Wins</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${winRate}%</div><div class="stat-label">Win Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${poles}</div><div class="stat-label">Poles</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${poleRate}%</div><div class="stat-label">Pole Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${fastestLaps}</div><div class="stat-label">Fast Laps</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${flRate}%</div><div class="stat-label">FL Rate</div></div></div></div>\`;
+            widget.innerHTML = \`<div class="static-section"><div class="psn-name">\${CONFIG.PSN_ID}</div><div class="dr-display"><div class="dr-rank">\${driverRating}</div><div class="dr-points">\${drPoints.toLocaleString()}</div></div></div><div class="stats-section"><div class="stat-display"><div class="stat-name">SPORTSMANSHIP</div><div class="stat-divider">-</div><div class="stat-number">\${sportsmanship}</div></div><div class="stat-display"><div class="stat-name">RACES</div><div class="stat-divider">-</div><div class="stat-number">\${totalRaces.toLocaleString()}</div></div><div class="stat-display"><div class="stat-name">WINS</div><div class="stat-divider">-</div><div class="stat-number">\${wins.toLocaleString()}</div></div><div class="stat-display"><div class="stat-name">WIN RATE</div><div class="stat-divider">-</div><div class="stat-number">\${winRate}%</div></div><div class="stat-display"><div class="stat-name">POLES</div><div class="stat-divider">-</div><div class="stat-number">\${poles.toLocaleString()}</div></div><div class="stat-display"><div class="stat-name">POLE RATE</div><div class="stat-divider">-</div><div class="stat-number">\${poleRate}%</div></div><div class="stat-display"><div class="stat-name">FAST LAPS</div><div class="stat-divider">-</div><div class="stat-number">\${fastestLaps.toLocaleString()}</div></div><div class="stat-display"><div class="stat-name">FL RATE</div><div class="stat-divider">-</div><div class="stat-number">\${flRate}%</div></div></div>\`;
         }
         async function updateStats() {
             try { const data = await fetchGT7Stats(); displayStats(data); }
             catch (error) { document.getElementById('widget').innerHTML = \`<div class="error">Error loading stats - Retrying in \${CONFIG.REFRESH_INTERVAL / 1000}s...</div>\`; }
         }
-        let scrollPosition = 0;
-        const scrollSpeed = 0.5;
-        let resetWidth = null;
-        function smoothScroll() {
-            const ticker = document.querySelector('.stats-ticker');
-            if (!ticker) { requestAnimationFrame(smoothScroll); return; }
-            if (resetWidth === null) {
-                const allItems = ticker.querySelectorAll('.stat-item');
-                const firstSetCount = allItems.length / 2;
-                let width = 0;
-                for (let i = 0; i < firstSetCount; i++) {
-                    const item = allItems[i];
-                    width += item.offsetWidth;
-                    if (i < firstSetCount - 1) width += 40;
-                    width += 2;
-                    if (i < firstSetCount - 1) width += 40;
-                }
-                resetWidth = width;
-            }
-            scrollPosition += scrollSpeed;
-            if (scrollPosition >= resetWidth) { scrollPosition = scrollPosition % resetWidth; }
-            ticker.style.transform = \`translateX(-\${scrollPosition}px)\`;
-            requestAnimationFrame(smoothScroll);
+        let currentStatIndex = 0;
+        const statDisplayTime = 8000;
+        function cycleStats() {
+            const allStats = document.querySelectorAll('.stat-display');
+            if (allStats.length === 0) return;
+            allStats.forEach(stat => stat.classList.remove('active'));
+            allStats[currentStatIndex].classList.add('active');
+            currentStatIndex = (currentStatIndex + 1) % allStats.length;
         }
         updateStats();
-        smoothScroll();
+        setTimeout(() => { cycleStats(); setInterval(cycleStats, statDisplayTime); }, 500);
         setInterval(updateStats, CONFIG.REFRESH_INTERVAL);
         console.log('GT7 Horizontal OBS Widget loaded - PSN:', CONFIG.PSN_ID);
     </script>
