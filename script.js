@@ -1201,7 +1201,7 @@ function downloadOBSWidget(psnId, userGuid) {
 <body>
     <div class="widget-container" id="widget"><div class="loading">Loading GT7 stats...</div></div>
     <script>
-        const CONFIG = { PSN_ID: '${psnId}', USER_ID: '${userGuid}', COUNTRY_CODE: '', REFRESH_INTERVAL: 600000, USE_CORS_PROXY: true };
+        const CONFIG = { PSN_ID: '${psnId}', USER_ID: '${userGuid}', COUNTRY_CODE: '', REFRESH_INTERVAL: 180000, USE_CORS_PROXY: true };
         function getCountryFlag(countryCode) { if (!countryCode) return ''; const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt()); return String.fromCodePoint(...codePoints); }
         async function fetchGT7Stats() {
             try {
