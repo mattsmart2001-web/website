@@ -2343,9 +2343,25 @@ async function showDRGraph(userGuid, psnId) {
             return;
         }
 
-        // Prepare chart data
-        const labels = data.history.map(h => new Date(h.recorded_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
-        const drData = data.history.map(h => h.dr);
+        // Group data by day (aggregate hourly data into daily points)
+        const dailyData = {};
+        data.history.forEach(h => {
+            const date = new Date(h.recorded_at);
+            const dayKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+            // Keep the latest entry for each day
+            if (!dailyData[dayKey] || new Date(h.recorded_at) > new Date(dailyData[dayKey].recorded_at)) {
+                dailyData[dayKey] = h;
+            }
+        });
+
+        // Convert to arrays sorted by date
+        const sortedDays = Object.keys(dailyData).sort((a, b) =>
+            new Date(dailyData[a].recorded_at) - new Date(dailyData[b].recorded_at)
+        );
+
+        const labels = sortedDays;
+        const drData = sortedDays.map(day => dailyData[day].dr);
 
         // Destroy existing chart if it exists
         if (drChartInstance) {
