@@ -52,19 +52,22 @@ exports.handler = async (event) => {
     }
 
     const data = await apiResponse.json();
-    console.log('API response:', data);
+    console.log('API response:', JSON.stringify(data, null, 2));
 
     // Map the API response to our expected format
+    // lookupPSN returns different format than getDriverRatingPSN
     const statsData = {
-      id: data.userID,
+      id: data.userID || data.id,
       rank: data.rank,
       dr: data.dr,
       sr: data.sr,
-      raceCount: data.raceCount,
-      winCount: data.winCount,
-      polePositionCount: data.polePositionCount,
-      fastestLapCount: data.fastestLapCount,
+      raceCount: data.raceCount || 0,
+      winCount: data.winCount || 0,
+      polePositionCount: data.polePositionCount || 0,
+      fastestLapCount: data.fastestLapCount || 0,
     };
+
+    console.log('Mapped stats data:', JSON.stringify(statsData, null, 2));
 
     return {
       statusCode: 200,
