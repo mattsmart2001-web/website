@@ -1175,40 +1175,37 @@ function downloadOBSWidget(psnId, userGuid) {
             --primary-color: #00ff88;
             --secondary-color: #0ea5e9;
             --bg-color: rgba(10, 14, 18, 0.95);
-            --border-color: rgba(255, 255, 255, 0.1);
+            --border-color: rgba(0, 255, 136, 0.3);
             --text-color: #ffffff;
             --text-muted: #94a3b8;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: transparent; color: var(--text-color); padding: 20px; }
-        .widget-container { max-width: 600px; animation: fadeIn 0.5s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px; }
-        .stat-card { background: var(--bg-color); border: 2px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center; position: relative; overflow: hidden; transition: all 0.3s ease; }
-        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); }
-        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3); }
-        .stat-card.dr { border-color: var(--primary-color); }
-        .stat-card.sr { border-color: var(--secondary-color); }
-        .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
-        .stat-value { font-size: 3.5rem; font-weight: 900; line-height: 1; margin-bottom: 8px; }
-        .dr .stat-value { color: var(--primary-color); text-shadow: 0 0 20px rgba(0, 255, 136, 0.5); }
-        .sr .stat-value { color: var(--secondary-color); text-shadow: 0 0 20px rgba(14, 165, 233, 0.5); }
-        .stat-points { font-size: 1.1rem; font-weight: 700; color: rgba(255, 255, 255, 0.9); }
-        .stat-points span { color: var(--text-muted); font-weight: 500; font-size: 0.9rem; }
-        .race-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
-        .race-stat { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; text-align: center; transition: all 0.3s ease; }
-        .race-stat:hover { border-color: var(--primary-color); transform: scale(1.05); }
-        .race-stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); margin-bottom: 4px; }
-        .race-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
-        .loading { text-align: center; padding: 40px; color: var(--text-muted); font-size: 1.2rem; }
-        .error { background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 20px; text-align: center; color: #fca5a5; }
+        body { font-family: 'Rajdhani', 'Segoe UI', sans-serif; background: transparent; color: var(--text-color); overflow: hidden; }
+        .widget-container { width: 1000px; height: 100px; position: relative; background: var(--bg-color); border: 2px solid var(--border-color); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 255, 136, 0.2); }
+        .widget-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); z-index: 10; }
+        .static-section { position: absolute; left: 0; top: 0; width: 280px; height: 100%; background: linear-gradient(90deg, var(--bg-color) 0%, var(--bg-color) 85%, transparent 100%); border-right: 2px solid var(--border-color); display: flex; align-items: center; padding: 0 20px; gap: 15px; z-index: 5; }
+        .flag-container { font-size: 3rem; line-height: 1; filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.3)); }
+        .dr-display { display: flex; flex-direction: column; gap: 2px; }
+        .dr-rank { font-size: 3.5rem; font-weight: 900; color: var(--primary-color); line-height: 1; text-shadow: 0 0 20px rgba(0, 255, 136, 0.6); letter-spacing: -2px; }
+        .dr-points { font-size: 1.1rem; font-weight: 700; color: rgba(255, 255, 255, 0.9); line-height: 1; }
+        .dr-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
+        .scrolling-section { position: absolute; left: 280px; top: 0; right: 0; height: 100%; overflow: hidden; }
+        .stats-ticker { display: flex; align-items: center; height: 100%; gap: 40px; padding: 0 20px; animation: scroll-left 20s linear infinite; white-space: nowrap; }
+        @keyframes scroll-left { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 100px; }
+        .stat-value { font-size: 2rem; font-weight: 900; color: var(--primary-color); line-height: 1; text-shadow: 0 0 10px rgba(0, 255, 136, 0.4); }
+        .stat-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
+        .stat-item.sr .stat-value { color: var(--secondary-color); text-shadow: 0 0 10px rgba(14, 165, 233, 0.4); }
+        .stat-separator { width: 2px; height: 50px; background: linear-gradient(180deg, transparent, var(--border-color), transparent); }
+        .loading { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: var(--text-muted); font-size: 1rem; }
+        .error { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); color: #fca5a5; font-size: 0.9rem; }
     </style>
 </head>
 <body>
     <div class="widget-container" id="widget"><div class="loading">Loading GT7 stats...</div></div>
     <script>
-        const CONFIG = { PSN_ID: '${psnId}', USER_ID: '${userGuid}', REFRESH_INTERVAL: 30000, USE_CORS_PROXY: true };
-        let lastData = null;
+        const CONFIG = { PSN_ID: '${psnId}', USER_ID: '${userGuid}', COUNTRY_CODE: '', REFRESH_INTERVAL: 30000, USE_CORS_PROXY: true };
+        function getCountryFlag(countryCode) { if (!countryCode) return ''; const codePoints = countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt()); return String.fromCodePoint(...codePoints); }
         async function fetchGT7Stats() {
             try {
                 const apiUrl = \`https://gtstats.live/api/getDriverStatsHistory?user_id=\${CONFIG.USER_ID}&psn=\${encodeURIComponent(CONFIG.PSN_ID)}\`;
@@ -1232,7 +1229,7 @@ function downloadOBSWidget(psnId, userGuid) {
         function displayStats(data) {
             const widget = document.getElementById('widget');
             if (!data || (Array.isArray(data) && data.length === 0)) {
-                widget.innerHTML = '<div class="error"><h2>No Stats Found</h2><p>Unable to load stats for ' + CONFIG.PSN_ID + '</p></div>';
+                widget.innerHTML = '<div class="error">No stats found for ${psnId}</div>';
                 return;
             }
             const latestStats = data["0"] || data[0] || data;
@@ -1244,37 +1241,19 @@ function downloadOBSWidget(psnId, userGuid) {
             const wins = latestStats.winCount || 0;
             const poles = latestStats.polePositionCount || 0;
             const fastestLaps = latestStats.fastestLapCount || 0;
-            widget.innerHTML = \`
-                <div class="stats-grid">
-                    <div class="stat-card dr">
-                        <div class="stat-label">Driver Rating</div>
-                        <div class="stat-value">\${driverRating}</div>
-                        <div class="stat-points">\${drPoints.toLocaleString()} <span>points</span></div>
-                    </div>
-                    <div class="stat-card sr">
-                        <div class="stat-label">Sportsmanship</div>
-                        <div class="stat-value">\${sportsmanship}</div>
-                        <div class="stat-points">\${srValue} <span>rating</span></div>
-                    </div>
-                </div>
-                <div class="race-stats">
-                    <div class="race-stat"><div class="race-stat-value">\${totalRaces}</div><div class="race-stat-label">Races</div></div>
-                    <div class="race-stat"><div class="race-stat-value">\${wins}</div><div class="race-stat-label">Wins</div></div>
-                    <div class="race-stat"><div class="race-stat-value">\${poles}</div><div class="race-stat-label">Poles</div></div>
-                    <div class="race-stat"><div class="race-stat-value">\${fastestLaps}</div><div class="race-stat-label">Fast Laps</div></div>
-                </div>
-            \`;
-            lastData = data;
+            const winRate = totalRaces > 0 ? ((wins / totalRaces) * 100).toFixed(1) : '0.0';
+            const poleRate = totalRaces > 0 ? ((poles / totalRaces) * 100).toFixed(1) : '0.0';
+            const flRate = totalRaces > 0 ? ((fastestLaps / totalRaces) * 100).toFixed(1) : '0.0';
+            const flag = getCountryFlag(CONFIG.COUNTRY_CODE);
+            widget.innerHTML = \`<div class="static-section"><div class="flag-container">\${flag}</div><div class="dr-display"><div class="dr-rank">\${driverRating}</div><div class="dr-points">\${drPoints.toLocaleString()}</div><div class="dr-label">Driver Rating</div></div></div><div class="scrolling-section"><div class="stats-ticker"><div class="stat-item sr"><div class="stat-value">\${sportsmanship}</div><div class="stat-label">SR \${srValue}</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${totalRaces}</div><div class="stat-label">Races</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${wins}</div><div class="stat-label">Wins</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${winRate}%</div><div class="stat-label">Win Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${poles}</div><div class="stat-label">Poles</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${poleRate}%</div><div class="stat-label">Pole Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${fastestLaps}</div><div class="stat-label">Fast Laps</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${flRate}%</div><div class="stat-label">FL Rate</div></div><div class="stat-separator"></div><div class="stat-item sr"><div class="stat-value">\${sportsmanship}</div><div class="stat-label">SR \${srValue}</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${totalRaces}</div><div class="stat-label">Races</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${wins}</div><div class="stat-label">Wins</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${winRate}%</div><div class="stat-label">Win Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${poles}</div><div class="stat-label">Poles</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${poleRate}%</div><div class="stat-label">Pole Rate</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${fastestLaps}</div><div class="stat-label">Fast Laps</div></div><div class="stat-separator"></div><div class="stat-item"><div class="stat-value">\${flRate}%</div><div class="stat-label">FL Rate</div></div></div></div>\`;
         }
         async function updateStats() {
             try { const data = await fetchGT7Stats(); displayStats(data); }
-            catch (error) {
-                document.getElementById('widget').innerHTML = \`<div class="error"><h2>Error Loading Stats</h2><p>\${error.message}</p><p style="font-size: 0.8rem; margin-top: 10px;">Retrying in \${CONFIG.REFRESH_INTERVAL / 1000} seconds...</p></div>\`;
-            }
+            catch (error) { document.getElementById('widget').innerHTML = \`<div class="error">Error loading stats - Retrying in \${CONFIG.REFRESH_INTERVAL / 1000}s...</div>\`; }
         }
         updateStats();
         setInterval(updateStats, CONFIG.REFRESH_INTERVAL);
-        console.log('GT7 OBS Widget loaded - PSN:', CONFIG.PSN_ID);
+        console.log('GT7 Horizontal OBS Widget loaded - PSN:', CONFIG.PSN_ID);
     </script>
 </body>
 </html>`;
@@ -1291,7 +1270,7 @@ function downloadOBSWidget(psnId, userGuid) {
     URL.revokeObjectURL(url);
 
     // Show success message
-    alert(`✅ Widget downloaded!\n\nTo use in OBS:\n1. Add Browser Source\n2. Check "Local file"\n3. Select gt7-widget-${psnId}.html\n4. Set Width: 600, Height: 400\n5. Done!`);
+    alert(`✅ Widget downloaded!\n\nTo use in OBS:\n1. Add Browser Source\n2. Check "Local file"\n3. Select gt7-widget-${psnId}.html\n4. Set Width: 1000, Height: 100\n5. Done!\n\nOptional: Edit COUNTRY_CODE in the file to add your flag (e.g., 'US', 'GB', 'JP')`);
 }
 
 // Generate shareable stats card
