@@ -1738,6 +1738,51 @@ function changePage(direction) {
     displayLeaderboard();
 }
 
+// ===== CHAMPION SCORE SYSTEM =====
+function calculateChampionScore(player) {
+    // Minimum 10 races to qualify
+    if (!player.total_races || player.total_races < 10) {
+        return null;
+    }
+
+    // Calculate component scores (0-100 scale)
+    const drScore = Math.min((player.dr || 0) / 500, 1) * 100;
+    const winRate = player.total_races > 0 ? (player.wins || 0) / player.total_races * 100 : 0;
+    const srScore = (player.sr || 0) / 99 * 100;
+    const poleRate = player.total_races > 0 ? (player.poles || 0) / player.total_races * 100 : 0;
+    const flRate = player.total_races > 0 ? (player.fastest_laps || 0) / player.total_races * 100 : 0;
+
+    // Apply weights: DR(40%) + Win(25%) + SR(15%) + Pole(10%) + FL(10%)
+    const championScore = (
+        drScore * 0.40 +
+        winRate * 0.25 +
+        srScore * 0.15 +
+        poleRate * 0.10 +
+        flRate * 0.10
+    );
+
+    return {
+        total: championScore,
+        breakdown: {
+            dr: drScore,
+            winRate: winRate,
+            sr: srScore,
+            poleRate: poleRate,
+            flRate: flRate
+        }
+    };
+}
+
+function getChampionTier(score) {
+    if (score >= 80) return { name: 'Legend', icon: '👑', color: '#ffd700' };
+    if (score >= 70) return { name: 'Champion', icon: '🏆', color: '#00ff88' };
+    if (score >= 60) return { name: 'Elite', icon: '🥇', color: '#c0c0c0' };
+    if (score >= 50) return { name: 'Master', icon: '🥈', color: '#cd7f32' };
+    if (score >= 40) return { name: 'Expert', icon: '⭐', color: '#60a5fa' };
+    if (score >= 30) return { name: 'Skilled', icon: '🔷', color: '#94a3b8' };
+    return { name: 'Contender', icon: '🔸', color: '#64748b' };
+}
+
 function displayLeaderboard() {
     const leaderboardResults = document.getElementById('leaderboardResults');
 
@@ -2017,6 +2062,253 @@ function displayLeaderboard() {
     `;
 
     leaderboardResults.innerHTML = html;
+}
+
+// ===== CHAMPION RANKINGS =====
+let currentView = 'leaderboard'; // Track current view
+
+function switchView(view) {
+    currentView = view;
+    const leaderboardTab = document.getElementById('leaderboardTab');
+    const championTab = document.getElementById('championTab');
+    const leaderboardResults = document.getElementById('leaderboardResults');
+    const championResults = document.getElementById('championResults');
+
+    if (view === 'leaderboard') {
+        // Update tab styles
+        leaderboardTab.style.background = 'linear-gradient(135deg, var(--color-primary), #00cc6a)';
+        leaderboardTab.style.border = 'none';
+        championTab.style.background = '';
+        championTab.className = 'btn btn-secondary';
+
+        // Show/hide sections
+        leaderboardResults.style.display = 'block';
+        championResults.style.display = 'none';
+    } else {
+        // Update tab styles
+        championTab.style.background = 'linear-gradient(135deg, var(--color-primary), #00cc6a)';
+        championTab.style.border = 'none';
+        leaderboardTab.style.background = '';
+        leaderboardTab.className = 'btn btn-secondary';
+
+        // Show/hide sections
+        leaderboardResults.style.display = 'none';
+        championResults.style.display = 'block';
+
+        // Display champion rankings
+        displayChampionRankings();
+    }
+}
+
+function displayChampionRankings() {
+    const championResults = document.getElementById('championResults');
+
+    if (!leaderboardData || leaderboardData.length === 0) {
+        championResults.innerHTML = `
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 3rem; text-align: center;">
+                <p style="color: var(--color-text-muted); font-size: 1.2rem; margin-bottom: 1rem;">No champions yet</p>
+                <p style="color: var(--color-text-muted);">Be the first to qualify!</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Calculate champion scores for all players
+    const championsData = leaderboardData
+        .map(player => {
+            const score = calculateChampionScore(player);
+            if (!score) return null;
+            return { ...player, championScore: score };
+        })
+        .filter(p => p !== null)
+        .sort((a, b) => b.championScore.total - a.championScore.total);
+
+    if (championsData.length === 0) {
+        championResults.innerHTML = `
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 3rem; text-align: center;">
+                <p style="color: var(--color-text-muted); font-size: 1.2rem; margin-bottom: 1rem;">No qualified champions yet</p>
+                <p style="color: var(--color-text-muted);">Players need at least 10 races to qualify for Champion Rankings</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Top 3 Champion Podium
+    let podiumHtml = '';
+    if (championsData.length >= 3) {
+        const top3 = championsData.slice(0, 3);
+
+        const flag1 = top3[0].country_code ? getCountryFlag(top3[0].country_code) + ' ' : '';
+        const flag2 = top3[1].country_code ? getCountryFlag(top3[1].country_code) + ' ' : '';
+        const flag3 = top3[2].country_code ? getCountryFlag(top3[2].country_code) + ' ' : '';
+
+        const tier1 = getChampionTier(top3[0].championScore.total);
+        const tier2 = getChampionTier(top3[1].championScore.total);
+        const tier3 = getChampionTier(top3[2].championScore.total);
+
+        podiumHtml = `
+            <div style="margin-bottom: 3rem;">
+                <h3 style="text-align: center; color: var(--color-primary); font-size: 1.5rem; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 2px;">
+                    👑 Top 3 Overall Champions 👑
+                </h3>
+                <div style="display: flex; justify-content: center; align-items: flex-end; gap: 2rem; flex-wrap: wrap; max-width: 900px; margin: 0 auto;">
+                    <!-- 2nd Place -->
+                    <div style="flex: 1; min-width: 200px; max-width: 250px; background: linear-gradient(135deg, rgba(192,192,192,0.2), rgba(192,192,192,0.05)); border: 2px solid #c0c0c0; border-radius: 16px; padding: 2rem 1.5rem; text-align: center; transform: translateY(20px);">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🥈</div>
+                        <div style="color: #c0c0c0; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#2</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${flag2}${top3[1].psn_id}</div>
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
+                            <div style="color: ${tier2.color}; font-size: 2rem; margin-bottom: 0.5rem;">${tier2.icon}</div>
+                            <div style="color: ${tier2.color}; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">${tier2.name}</div>
+                            <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem;">${top3[1].championScore.total.toFixed(1)}</div>
+                            <div style="color: var(--color-text-muted); font-size: 0.9rem;">Champion Score</div>
+                        </div>
+                    </div>
+
+                    <!-- 1st Place (Champion) -->
+                    <div style="flex: 1; min-width: 200px; max-width: 270px; background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,215,0,0.05)); border: 3px solid #ffd700; border-radius: 16px; padding: 2.5rem 1.5rem; text-align: center; box-shadow: 0 8px 32px rgba(255,215,0,0.3);">
+                        <div style="font-size: 4rem; margin-bottom: 0.5rem;">🥇</div>
+                        <div style="color: #ffd700; font-weight: 900; font-size: 2.5rem; margin-bottom: 0.5rem; text-shadow: 0 0 20px rgba(255,215,0,0.5);">#1</div>
+                        <div style="color: var(--color-primary); font-weight: 900; font-size: 1.5rem; margin-bottom: 1rem;">${flag1}${top3[0].psn_id}</div>
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 1.25rem; margin-bottom: 0.5rem;">
+                            <div style="color: ${tier1.color}; font-size: 2.5rem; margin-bottom: 0.5rem;">${tier1.icon}</div>
+                            <div style="color: ${tier1.color}; font-weight: 700; font-size: 1.2rem; margin-bottom: 0.5rem;">${tier1.name}</div>
+                            <div style="color: var(--color-primary); font-weight: 800; font-size: 3rem;">${top3[0].championScore.total.toFixed(1)}</div>
+                            <div style="color: var(--color-text-muted); font-size: 0.9rem;">Champion Score</div>
+                        </div>
+                    </div>
+
+                    <!-- 3rd Place -->
+                    <div style="flex: 1; min-width: 200px; max-width: 250px; background: linear-gradient(135deg, rgba(205,127,50,0.2), rgba(205,127,50,0.05)); border: 2px solid #cd7f32; border-radius: 16px; padding: 2rem 1.5rem; text-align: center; transform: translateY(20px);">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🥉</div>
+                        <div style="color: #cd7f32; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#3</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${flag3}${top3[2].psn_id}</div>
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
+                            <div style="color: ${tier3.color}; font-size: 2rem; margin-bottom: 0.5rem;">${tier3.icon}</div>
+                            <div style="color: ${tier3.color}; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">${tier3.name}</div>
+                            <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem;">${top3[2].championScore.total.toFixed(1)}</div>
+                            <div style="color: var(--color-text-muted); font-size: 0.9rem;">Champion Score</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    let html = podiumHtml + `
+        <div style="margin-bottom: 1.5rem; text-align: center;">
+            <p style="color: var(--color-text-muted); font-size: 1rem;">
+                ${championsData.length} qualified champion${championsData.length !== 1 ? 's' : ''}
+            </p>
+            <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.5rem;">
+                Champion Score: DR(40%) + Win%(25%) + SR(15%) + Pole%(10%) + FL%(10%)
+            </p>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div style="display: none; overflow-x: auto; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" class="desktop-leaderboard">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: rgba(0,255,136,0.1); border-bottom: 2px solid rgba(0,255,136,0.3);">
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">#</th>
+                        <th style="padding: 1rem; text-align: left; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">PSN ID</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Tier</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Score</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">DR</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Win%</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">SR</th>
+                        <th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Races</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    championsData.forEach((player, index) => {
+        const tier = getChampionTier(player.championScore.total);
+        const countryFlag = player.country_code ? getCountryFlag(player.country_code) + ' ' : '';
+        const breakdown = player.championScore.breakdown;
+
+        html += `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.3s ease;" onmouseover="this.style.background='rgba(0,255,136,0.05)'" onmouseout="this.style.background='transparent'">
+                        <td style="padding: 1rem; text-align: center; color: var(--color-text-muted); font-weight: 700;">${index + 1}</td>
+                        <td style="padding: 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlag}${player.psn_id}</td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <div style="color: ${tier.color}; font-size: 1.5rem;">${tier.icon}</div>
+                            <div style="color: ${tier.color}; font-size: 0.85rem; font-weight: 600;">${tier.name}</div>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;" title="DR: ${breakdown.dr.toFixed(1)} | Win: ${breakdown.winRate.toFixed(1)} | SR: ${breakdown.sr.toFixed(1)} | Pole: ${breakdown.poleRate.toFixed(1)} | FL: ${breakdown.flRate.toFixed(1)}">
+                            <div style="color: var(--color-primary); font-weight: 800; font-size: 1.5rem;">${player.championScore.total.toFixed(1)}</div>
+                            <div style="color: var(--color-text-muted); font-size: 0.75rem;">hover for breakdown</div>
+                        </td>
+                        <td style="padding: 1rem; text-align: center; color: var(--text-color);">${player.dr?.toLocaleString() || 0}</td>
+                        <td style="padding: 1rem; text-align: center; color: var(--text-color);">${player.win_percentage?.toFixed(1) || 0}%</td>
+                        <td style="padding: 1rem; text-align: center; color: var(--text-color);">${player.sr || 0}</td>
+                        <td style="padding: 1rem; text-align: center; color: var(--text-color);">${player.total_races?.toLocaleString() || 0}</td>
+                    </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div style="display: none;" class="mobile-leaderboard">
+    `;
+
+    championsData.forEach((player, index) => {
+        const tier = getChampionTier(player.championScore.total);
+        const countryFlagMobile = player.country_code ? getCountryFlag(player.country_code) + ' ' : '';
+        const breakdown = player.championScore.breakdown;
+
+        html += `
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div>
+                        <div style="color: var(--color-text-muted); font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem;">#${index + 1}</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlagMobile}${player.psn_id}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: ${tier.color}; font-size: 2rem;">${tier.icon}</div>
+                        <div style="color: ${tier.color}; font-size: 0.9rem; font-weight: 600;">${tier.name}</div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-bottom: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                    <div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; margin-bottom: 0.25rem;">${player.championScore.total.toFixed(1)}</div>
+                    <div style="color: var(--color-text-muted); font-size: 0.9rem;">Champion Score</div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; font-size: 0.9rem;">
+                    <div>
+                        <span style="color: var(--color-text-muted);">DR:</span>
+                        <span style="color: var(--text-color); margin-left: 0.25rem; font-weight: 600;">${breakdown.dr.toFixed(1)}</span>
+                    </div>
+                    <div>
+                        <span style="color: var(--color-text-muted);">Win%:</span>
+                        <span style="color: var(--text-color); margin-left: 0.25rem; font-weight: 600;">${breakdown.winRate.toFixed(1)}</span>
+                    </div>
+                    <div>
+                        <span style="color: var(--color-text-muted);">SR:</span>
+                        <span style="color: var(--text-color); margin-left: 0.25rem; font-weight: 600;">${breakdown.sr.toFixed(1)}</span>
+                    </div>
+                    <div>
+                        <span style="color: var(--color-text-muted);">Pole%:</span>
+                        <span style="color: var(--text-color); margin-left: 0.25rem; font-weight: 600;">${breakdown.poleRate.toFixed(1)}</span>
+                    </div>
+                    <div style="grid-column: 1 / -1;">
+                        <span style="color: var(--color-text-muted);">FL%:</span>
+                        <span style="color: var(--text-color); margin-left: 0.25rem; font-weight: 600;">${breakdown.flRate.toFixed(1)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+        </div>
+    `;
+
+    championResults.innerHTML = html;
 }
 
 // Load leaderboard when page loads
