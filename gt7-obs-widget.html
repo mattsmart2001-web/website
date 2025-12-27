@@ -61,16 +61,32 @@
             background: linear-gradient(90deg, var(--bg-color) 0%, var(--bg-color) 85%, transparent 100%);
             border-right: 2px solid var(--border-color);
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
             padding: 0 20px;
-            gap: 15px;
+            gap: 6px;
             z-index: 5;
         }
 
+        .flag-psn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .flag-container {
-            font-size: 3rem;
+            font-size: 2.5rem;
             line-height: 1;
             filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.3));
+        }
+
+        .psn-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.8);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .dr-display {
@@ -263,11 +279,13 @@
             widget.innerHTML = `
                 <!-- Static DR/Rank Section -->
                 <div class="static-section">
-                    <div class="flag-container">${flag}</div>
+                    <div class="flag-psn">
+                        <div class="flag-container">${flag}</div>
+                        <div class="psn-name">${CONFIG.PSN_ID}</div>
+                    </div>
                     <div class="dr-display">
                         <div class="dr-rank">${driverRating}</div>
                         <div class="dr-points">${drPoints.toLocaleString()}</div>
-                        <div class="dr-label">Driver Rating</div>
                     </div>
                 </div>
 
