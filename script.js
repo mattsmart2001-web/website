@@ -1935,10 +1935,13 @@ function displayLeaderboard() {
         // Country Flag
         const countryFlag = player.country_code ? getCountryFlag(player.country_code) + ' ' : '';
 
+        // Special emoji for specific players
+        const specialEmoji = player.psn_id === 'marris_GT7' ? ' 🎂' : '';
+
         html += `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(0,255,136,0.05)'" onmouseout="this.style.background='transparent'">
                 <td style="padding: 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}</td>
-                <td style="padding: 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlag}${player.psn_id}</td>
+                <td style="padding: 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlag}${player.psn_id}${specialEmoji}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--text-color); font-weight: 600;">${player.dr?.toLocaleString() || 0}${trendArrow}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--color-primary); font-weight: 800; font-size: 1.2rem;">${player.rank || 'E'}</td>
                 <td style="padding: 1rem; text-align: center; color: var(--color-secondary); font-weight: 800; font-size: 1.1rem;">${player.sr_grade || 'E'}</td>
@@ -1976,12 +1979,15 @@ function displayLeaderboard() {
         // Country Flag for mobile
         const countryFlagMobile = player.country_code ? getCountryFlag(player.country_code) + ' ' : '';
 
+        // Special emoji for specific players (mobile)
+        const specialEmojiMobile = player.psn_id === 'marris_GT7' ? ' 🎂' : '';
+
         html += `
             <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
                     <div>
                         <div style="color: ${rankColor}; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem;">${rankIcon} #${index + 1}</div>
-                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlagMobile}${player.psn_id}</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlagMobile}${player.psn_id}${specialEmojiMobile}</div>
                     </div>
                     <div style="text-align: right;">
                         <div style="color: var(--color-primary); font-weight: 800; font-size: 2rem; line-height: 1;">${player.rank || 'E'}</div>
