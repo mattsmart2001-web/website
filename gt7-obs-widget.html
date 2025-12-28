@@ -243,13 +243,28 @@
                 const apiUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${CONFIG.USER_ID}&psn=${encodeURIComponent(CONFIG.PSN_ID)}`;
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
 
-                const response = await fetch(proxyUrl);
+                console.log('Fetching DR history from:', proxyUrl);
+
+                // Add 15 second timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                const response = await fetch(proxyUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const proxyData = await response.json();
                 const data = JSON.parse(proxyData.contents);
 
                 drHistoryCache = data;
                 return data;
             } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.error('DR history request timeout after 15 seconds');
+                }
                 console.error('Error fetching DR history:', error);
                 return null;
             }
@@ -262,13 +277,29 @@
                     ? `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`
                     : apiUrl;
 
-                const response = await fetch(url);
+                console.log('Fetching from:', url);
+
+                // Add 15 second timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const data = CONFIG.USE_CORS_PROXY
                     ? JSON.parse((await response.json()).contents)
                     : await response.json();
 
                 return data;
             } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.error('Request timeout after 15 seconds');
+                    throw new Error('Request timeout');
+                }
                 console.error('Error fetching GT7 stats:', error);
                 throw error;
             }
@@ -329,14 +360,22 @@
 
         async function updateStats() {
             try {
+                console.log('Fetching stats for:', CONFIG.PSN_ID);
                 const data = await fetchGT7Stats();
+                console.log('Stats received:', data);
                 await displayStats(data);
             } catch (error) {
                 console.error('Failed to update stats:', error);
+                // Show error in widget
+                document.getElementById('psnName').innerHTML = `
+                    <div class="stat-label">ERROR</div>
+                    <div class="loading" style="color: #ff4444;">Failed to load stats. Check console.</div>
+                `;
             }
         }
 
         // Initial load
+        console.log('Widget starting with config:', CONFIG);
         updateStats();
 
         // Auto-refresh every 5 minutes
