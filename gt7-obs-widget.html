@@ -239,69 +239,81 @@
         async function fetchDRHistory() {
             if (drHistoryCache) return drHistoryCache;
 
-            try {
-                const apiUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${CONFIG.USER_ID}&psn=${encodeURIComponent(CONFIG.PSN_ID)}`;
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
+            const apiUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${CONFIG.USER_ID}&psn=${encodeURIComponent(CONFIG.PSN_ID)}`;
 
-                console.log('Fetching DR history from:', proxyUrl);
+            const proxies = [
+                { name: 'allorigins', url: `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`, parseResponse: (r) => JSON.parse(r.contents) },
+                { name: 'corsproxy.io', url: `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`, parseResponse: (r) => r },
+                { name: 'direct', url: apiUrl, parseResponse: (r) => r }
+            ];
 
-                // Add 15 second timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
+            for (const proxy of proxies) {
+                try {
+                    console.log(`Trying ${proxy.name} for DR history:`, proxy.url);
 
-                const response = await fetch(proxyUrl, { signal: controller.signal });
-                clearTimeout(timeoutId);
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const response = await fetch(proxy.url, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const responseData = await response.json();
+                    const data = proxy.parseResponse(responseData);
+
+                    console.log(`✓ ${proxy.name} succeeded for DR history`);
+                    drHistoryCache = data;
+                    return data;
+                } catch (error) {
+                    console.warn(`✗ ${proxy.name} failed for DR history:`, error.message);
+                    if (proxy === proxies[proxies.length - 1]) {
+                        console.error('All proxies failed for DR history');
+                        return null;
+                    }
                 }
-
-                const proxyData = await response.json();
-                const data = JSON.parse(proxyData.contents);
-
-                drHistoryCache = data;
-                return data;
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    console.error('DR history request timeout after 15 seconds');
-                }
-                console.error('Error fetching DR history:', error);
-                return null;
             }
         }
 
         async function fetchGT7Stats() {
-            try {
-                const apiUrl = `https://gtstats.live/api/getDriverRatingPSN?psn=${encodeURIComponent(CONFIG.PSN_ID)}`;
-                const url = CONFIG.USE_CORS_PROXY
-                    ? `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`
-                    : apiUrl;
+            const apiUrl = `https://gtstats.live/api/getDriverRatingPSN?psn=${encodeURIComponent(CONFIG.PSN_ID)}`;
 
-                console.log('Fetching from:', url);
+            // Try multiple CORS proxies as fallbacks
+            const proxies = [
+                { name: 'allorigins', url: `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`, parseResponse: (r) => JSON.parse(r.contents) },
+                { name: 'corsproxy.io', url: `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`, parseResponse: (r) => r },
+                { name: 'direct', url: apiUrl, parseResponse: (r) => r }
+            ];
 
-                // Add 15 second timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
+            for (const proxy of proxies) {
+                try {
+                    console.log(`Trying ${proxy.name}:`, proxy.url);
 
-                const response = await fetch(url, { signal: controller.signal });
-                clearTimeout(timeoutId);
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const response = await fetch(proxy.url, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const responseData = await response.json();
+                    const data = proxy.parseResponse(responseData);
+
+                    console.log(`✓ ${proxy.name} succeeded`);
+                    return data;
+                } catch (error) {
+                    console.warn(`✗ ${proxy.name} failed:`, error.message);
+                    if (proxy === proxies[proxies.length - 1]) {
+                        // Last proxy failed, throw error
+                        throw new Error('All CORS proxies failed');
+                    }
+                    // Continue to next proxy
                 }
-
-                const data = CONFIG.USE_CORS_PROXY
-                    ? JSON.parse((await response.json()).contents)
-                    : await response.json();
-
-                return data;
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    console.error('Request timeout after 15 seconds');
-                    throw new Error('Request timeout');
-                }
-                console.error('Error fetching GT7 stats:', error);
-                throw error;
             }
         }
 
