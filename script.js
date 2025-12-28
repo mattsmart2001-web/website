@@ -211,7 +211,7 @@ function getTagsHTML(userGuid) {
         const tag = PLAYER_TAGS.find(t => t.id === tagId);
         if (tag) {
             const tooltip = noteData.note ? `${tag.label} - ${noteData.note}` : tag.label;
-            html += `<span style="background: ${tag.color}30; border: 1px solid ${tag.color}; color: ${tag.color}; padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 0.4rem; white-space: nowrap;" title="${tooltip}">${tag.icon} ${tag.label}</span>`;
+            html += `<span style="background: ${tag.color}20; border: 1px solid ${tag.color}80; color: ${tag.color}; padding: 0.1rem 0.35rem; border-radius: 10px; font-size: 0.65rem; font-weight: 600; white-space: nowrap;" title="${tooltip}">${tag.icon}</span>`;
         }
     });
     return html;
@@ -2372,9 +2372,9 @@ function displayLeaderboard() {
             <tr id="${rowId}" style="background: ${rowGradient}; border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(180deg, rgba(96,197,255,0.08) 0%, rgba(14,165,233,0.08) 50%, rgba(96,197,255,0.08) 100%)'" onmouseout="this.style.background='${rowGradient}'">
                 <td style="padding: 0.6rem 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}${rankChangeIndicator}</td>
                 <td style="padding: 0.6rem 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <span onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" style="cursor: pointer;" title="Click to view DR history">${countryFlag}${player.psn_id}${specialEmoji}</span>
-                        <button onclick='event.stopPropagation(); showNoteEditor(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: var(--color-text-muted); padding: 0.25rem 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,255,136,0.1)'; this.style.borderColor='var(--color-primary)'; this.style.color='var(--color-primary)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.2)'; this.style.color='var(--color-text-muted)'" title="Add note">📝</button>
+                        <button onclick='event.stopPropagation(); showNoteEditor(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.15rem 0.5rem; border-radius: 12px; cursor: pointer; font-size: 0.65rem; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;" onmouseover="this.style.background='rgba(0,255,136,0.1)'; this.style.borderColor='var(--color-primary)'; this.style.color='var(--color-primary)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.15)'; this.style.color='var(--color-text-muted)'" title="Add personal note">add note</button>
                         ${tagsHTML}
                     </div>
                 </td>
