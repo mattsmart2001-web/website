@@ -1903,7 +1903,7 @@ function displayLeaderboard() {
         <div style="display: none; overflow-x: auto; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" class="desktop-leaderboard">
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr style="background: linear-gradient(90deg, rgba(0,255,136,0.15) 0%, rgba(14,165,233,0.15) 50%, rgba(0,255,136,0.15) 100%); border-bottom: 2px solid rgba(0,255,136,0.3);">
+                    <tr style="background: linear-gradient(180deg, rgba(0,255,136,0.15) 0%, rgba(14,165,233,0.15) 50%, rgba(0,255,136,0.15) 100%); border-bottom: 2px solid rgba(0,255,136,0.3);">
                         <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">#</th>
                         <th style="padding: 0.6rem 1rem; text-align: left; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">PSN ID</th>
                         <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">DR</th>
@@ -1939,10 +1939,10 @@ function displayLeaderboard() {
         const specialEmoji = player.psn_id === 'marris_GT7' ? ' 🎂' : '';
 
         // Subtle gradient for each row
-        const rowGradient = `linear-gradient(90deg, rgba(0,255,136,0.02) 0%, rgba(14,165,233,0.02) 50%, rgba(0,255,136,0.02) 100%)`;
+        const rowGradient = `linear-gradient(180deg, rgba(0,255,136,0.02) 0%, rgba(14,165,233,0.02) 50%, rgba(0,255,136,0.02) 100%)`;
 
         html += `
-            <tr style="background: ${rowGradient}; border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(90deg, rgba(0,255,136,0.08) 0%, rgba(14,165,233,0.08) 50%, rgba(0,255,136,0.08) 100%)'" onmouseout="this.style.background='${rowGradient}'">
+            <tr style="background: ${rowGradient}; border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(180deg, rgba(0,255,136,0.08) 0%, rgba(14,165,233,0.08) 50%, rgba(0,255,136,0.08) 100%)'" onmouseout="this.style.background='${rowGradient}'">
                 <td style="padding: 0.6rem 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}</td>
                 <td style="padding: 0.6rem 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlag}${player.psn_id}${specialEmoji}</td>
                 <td style="padding: 0.6rem 1rem; text-align: center; color: var(--text-color); font-weight: 600;">${player.dr?.toLocaleString() || 0}${trendArrow}</td>
