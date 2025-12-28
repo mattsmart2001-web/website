@@ -1366,7 +1366,22 @@ function displayUserStatsFromScraper(psnId, userGuid, data) {
 
 // Function to generate and download custom OBS widget
 // OBS Widget Generator - Updated 2025-12-28 with fallback CORS proxies
-function downloadOBSWidget(psnId, userGuid) {
+async function downloadOBSWidget(psnId, userGuid) {
+    // Fetch the template from the standalone widget file
+    const response = await fetch('gt7-obs-widget.html');
+    let widgetContent = await response.text();
+
+    // Replace the CONFIG values with user's data
+    widgetContent = widgetContent.replace(
+        "PSN_ID: 'SparksTheory'",
+        `PSN_ID: '${psnId}'`
+    ).replace(
+        "USER_ID: '85596fe8-f2f8-45c1-9474-f3357e8d9446'",
+        `USER_ID: '${userGuid}'`
+    );
+
+    /*
+    // OLD METHOD - Manual template (keeping for reference)
     const widgetContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1416,6 +1431,7 @@ function downloadOBSWidget(psnId, userGuid) {
     </script>
 </body>
 </html>`;
+    */
 
     // Create blob and download
     const blob = new Blob([widgetContent], { type: 'text/html' });
