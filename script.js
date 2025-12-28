@@ -1365,6 +1365,7 @@ function displayUserStatsFromScraper(psnId, userGuid, data) {
 }
 
 // Function to generate and download custom OBS widget
+// OBS Widget Generator - Updated 2025-12-28 with fallback CORS proxies
 function downloadOBSWidget(psnId, userGuid) {
     const widgetContent = `<!DOCTYPE html>
 <html lang="en">
