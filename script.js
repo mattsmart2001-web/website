@@ -57,49 +57,6 @@ function animateCounters(selector, duration = 1000) {
     });
 }
 
-// Theme Toggle
-function toggleTheme() {
-    const html = document.documentElement;
-    const currentTheme = html.getAttribute('data-theme');
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-
-    html.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-
-    // Update toggle button
-    const icon = document.getElementById('themeIcon');
-    const text = document.getElementById('themeText');
-
-    if (newTheme === 'light') {
-        icon.textContent = '☀️';
-        text.textContent = 'Light Mode';
-    } else {
-        icon.textContent = '🌙';
-        text.textContent = 'Dark Mode';
-    }
-}
-
-// Initialize theme on page load
-function initializeTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    const html = document.documentElement;
-    const icon = document.getElementById('themeIcon');
-    const text = document.getElementById('themeText');
-
-    if (savedTheme === 'light') {
-        html.setAttribute('data-theme', 'light');
-        if (icon) icon.textContent = '☀️';
-        if (text) text.textContent = 'Light Mode';
-    } else {
-        html.setAttribute('data-theme', 'dark');
-        if (icon) icon.textContent = '🌙';
-        if (text) text.textContent = 'Dark Mode';
-    }
-}
-
-// Initialize theme immediately
-initializeTheme();
-
 // ===== THREE.JS 3D MODEL BACKGROUND =====
 const scene = new THREE.Scene();
 scene.background = null; // Transparent background
