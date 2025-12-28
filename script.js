@@ -1804,10 +1804,12 @@ function createSparkline(historyData, width = 80, height = 30) {
     }
 
     // Convert history object to array and get last 30 data points
+    // API returns newest first, so reverse to get chronological order (oldest to newest)
     const dataPoints = Object.values(historyData)
         .map(entry => entry.dr || 0)
         .filter(dr => dr > 0)
-        .slice(-30); // Last 30 data points
+        .slice(-30) // Last 30 data points
+        .reverse(); // Reverse to get oldest-to-newest order for plotting
 
     if (dataPoints.length < 2) {
         return '<svg width="80" height="30"></svg>'; // Need at least 2 points
@@ -1827,6 +1829,7 @@ function createSparkline(historyData, width = 80, height = 30) {
     }).join(' ');
 
     // Determine color based on trend (first vs last)
+    // Now first = oldest, last = newest
     const trend = dataPoints[dataPoints.length - 1] - dataPoints[0];
     const color = trend >= 0 ? '#00ff88' : '#ff4444';
 
