@@ -15,6 +15,91 @@ function getCountryFlag(countryCode) {
     return String.fromCodePoint(...codePoints);
 }
 
+// Animate number counting up
+function animateCounter(element, start, end, duration = 1000, decimals = 0, suffix = '') {
+    if (!element) return;
+
+    const startTime = performance.now();
+    const range = end - start;
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Easing function (easeOutQuad)
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+        const current = start + (range * easeProgress);
+        element.textContent = current.toFixed(decimals) + suffix;
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            element.textContent = end.toFixed(decimals) + suffix;
+        }
+    }
+
+    requestAnimationFrame(update);
+}
+
+// Animate multiple counters with stagger effect
+function animateCounters(selector, duration = 1000) {
+    const elements = document.querySelectorAll(selector);
+    elements.forEach((el, index) => {
+        const target = parseFloat(el.dataset.target || el.textContent.replace(/[^0-9.-]/g, ''));
+        const decimals = parseInt(el.dataset.decimals || 0);
+        const suffix = el.dataset.suffix || '';
+
+        // Stagger start time
+        setTimeout(() => {
+            animateCounter(el, 0, target, duration, decimals, suffix);
+        }, index * 50);
+    });
+}
+
+// Theme Toggle
+function toggleTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+
+    // Update toggle button
+    const icon = document.getElementById('themeIcon');
+    const text = document.getElementById('themeText');
+
+    if (newTheme === 'light') {
+        icon.textContent = '☀️';
+        text.textContent = 'Light Mode';
+    } else {
+        icon.textContent = '🌙';
+        text.textContent = 'Dark Mode';
+    }
+}
+
+// Initialize theme on page load
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    const html = document.documentElement;
+    const icon = document.getElementById('themeIcon');
+    const text = document.getElementById('themeText');
+
+    if (savedTheme === 'light') {
+        html.setAttribute('data-theme', 'light');
+        if (icon) icon.textContent = '☀️';
+        if (text) text.textContent = 'Light Mode';
+    } else {
+        html.setAttribute('data-theme', 'dark');
+        if (icon) icon.textContent = '🌙';
+        if (text) text.textContent = 'Dark Mode';
+    }
+}
+
+// Initialize theme immediately
+initializeTheme();
+
 // ===== THREE.JS 3D MODEL BACKGROUND =====
 const scene = new THREE.Scene();
 scene.background = null; // Transparent background
@@ -1772,6 +1857,46 @@ function getChampionTier(score) {
 // DR History Cache for Trend Graphs
 const drHistoryCache = {};
 
+// Rank change tracking
+function saveLeaderboardPositions(leaderboardData) {
+    const positions = {};
+    leaderboardData.forEach((player, index) => {
+        positions[player.user_guid] = index + 1; // 1-based ranking
+    });
+    localStorage.setItem('leaderboard_positions', JSON.stringify(positions));
+    localStorage.setItem('leaderboard_timestamp', Date.now().toString());
+}
+
+function getPositionChange(userGuid, currentPosition) {
+    try {
+        const savedPositions = localStorage.getItem('leaderboard_positions');
+        if (!savedPositions) return null;
+
+        const positions = JSON.parse(savedPositions);
+        const previousPosition = positions[userGuid];
+
+        if (!previousPosition) return null;
+
+        const change = previousPosition - currentPosition; // Positive = moved up
+        return change;
+    } catch (error) {
+        console.error('Error getting position change:', error);
+        return null;
+    }
+}
+
+function getRankChangeIndicator(change) {
+    if (!change || change === 0) return '';
+
+    const isPositive = change > 0;
+    const absChange = Math.abs(change);
+    const color = isPositive ? '#00ff88' : '#ff4444';
+    const arrow = isPositive ? '↑' : '↓';
+    const prefix = isPositive ? '+' : '';
+
+    return `<span style="color: ${color}; font-size: 0.8rem; font-weight: 600; margin-left: 0.5rem; animation: rankChange 0.5s ease-out;">${arrow}${absChange}</span>`;
+}
+
 // Fetch DR history for a player
 async function fetchDRHistory(userGuid, psnId) {
     // Check cache first
@@ -2114,6 +2239,11 @@ function displayLeaderboard() {
         // Special emoji for specific players
         const specialEmoji = player.psn_id === 'marris_GT7' ? ' 🎂' : '';
 
+        // Position change tracking
+        const currentPosition = index + 1;
+        const positionChange = getPositionChange(player.user_guid, currentPosition);
+        const rankChangeIndicator = getRankChangeIndicator(positionChange);
+
         // Subtle gradient for each row
         const rowGradient = `linear-gradient(180deg, rgba(96,197,255,0.02) 0%, rgba(14,165,233,0.02) 50%, rgba(96,197,255,0.02) 100%)`;
 
@@ -2122,7 +2252,7 @@ function displayLeaderboard() {
 
         html += `
             <tr id="${rowId}" style="background: ${rowGradient}; border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(180deg, rgba(96,197,255,0.08) 0%, rgba(14,165,233,0.08) 50%, rgba(96,197,255,0.08) 100%)'" onmouseout="this.style.background='${rowGradient}'">
-                <td style="padding: 0.6rem 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}</td>
+                <td style="padding: 0.6rem 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}${rankChangeIndicator}</td>
                 <td style="padding: 0.6rem 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlag}${player.psn_id}${specialEmoji}</td>
                 <td style="padding: 0.6rem 1rem; text-align: center; color: var(--text-color); font-weight: 600;">${player.dr?.toLocaleString() || 0}${trendArrow}</td>
                 <td id="${trendCellId}" style="padding: 0.6rem 1rem; text-align: center;">
@@ -2252,6 +2382,9 @@ function displayLeaderboard() {
     `;
 
     leaderboardResults.innerHTML = html;
+
+    // Save current positions for rank change tracking
+    saveLeaderboardPositions(leaderboardData);
 }
 
 // ===== CHAMPION RANKINGS =====
