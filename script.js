@@ -57,6 +57,166 @@ function animateCounters(selector, duration = 1000) {
     });
 }
 
+// ===== PLAYER NOTES & TAGS =====
+
+// Available tags
+const PLAYER_TAGS = [
+    { id: 'rival', label: 'Rival', icon: '🏁', color: '#ef4444' },
+    { id: 'friend', label: 'Friend', icon: '👥', color: '#00ff88' },
+    { id: 'clean', label: 'Clean Racer', icon: '🤝', color: '#0ea5e9' },
+    { id: 'dirty', label: 'Dirty Driver', icon: '⚠️', color: '#f59e0b' },
+    { id: 'discord', label: 'Discord', icon: '💬', color: '#5865f2' },
+    { id: 'learning', label: 'Learning From', icon: '🎓', color: '#8b5cf6' }
+];
+
+// Get player notes from localStorage
+function getPlayerNote(userGuid) {
+    try {
+        const notes = JSON.parse(localStorage.getItem('player_notes') || '{}');
+        return notes[userGuid] || null;
+    } catch (error) {
+        console.error('Error getting player note:', error);
+        return null;
+    }
+}
+
+// Save player note to localStorage
+function savePlayerNote(userGuid, note, tags) {
+    try {
+        const notes = JSON.parse(localStorage.getItem('player_notes') || '{}');
+        if (!note && (!tags || tags.length === 0)) {
+            // Remove note if both note and tags are empty
+            delete notes[userGuid];
+        } else {
+            notes[userGuid] = { note, tags, updated: Date.now() };
+        }
+        localStorage.setItem('player_notes', JSON.stringify(notes));
+    } catch (error) {
+        console.error('Error saving player note:', error);
+    }
+}
+
+// Show note editor modal
+function showNoteEditor(player) {
+    const existingNote = getPlayerNote(player.user_guid);
+    const currentNote = existingNote?.note || '';
+    const currentTags = existingNote?.tags || [];
+
+    const modalId = `note-editor-${Date.now()}`;
+
+    let html = `
+        <div id="${modalId}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 1rem;" onclick="this.remove()">
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid rgba(0,255,136,0.3); border-radius: 16px; max-width: 500px; width: 100%; padding: 2rem;" onclick="event.stopPropagation()">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 style="color: var(--color-primary); font-size: 1.3rem; margin: 0;">📝 Notes for ${player.psn_id}</h3>
+                    <button onclick="document.getElementById('${modalId}').remove()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.4rem 0.8rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Close</button>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Personal Note</label>
+                    <textarea id="noteText" placeholder="Add your personal notes about this driver..." style="width: 100%; min-height: 100px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.75rem; color: var(--color-text); font-family: var(--font-primary); font-size: 0.95rem; resize: vertical;" onmouseover="this.style.borderColor='rgba(0,255,136,0.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.1)'">${currentNote}</textarea>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Quick Tags</label>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;" id="tagSelector">
+    `;
+
+    PLAYER_TAGS.forEach(tag => {
+        const isSelected = currentTags.includes(tag.id);
+        html += `
+            <button
+                data-tag="${tag.id}"
+                onclick="toggleTag(this)"
+                style="background: ${isSelected ? tag.color + '40' : 'rgba(255,255,255,0.05)'}; border: 2px solid ${isSelected ? tag.color : 'rgba(255,255,255,0.1)'}; color: ${isSelected ? tag.color : 'var(--color-text-muted)'}; padding: 0.6rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;"
+                onmouseover="if(!this.dataset.selected) { this.style.background='rgba(255,255,255,0.1)'; this.style.borderColor='${tag.color}'; }"
+                onmouseout="if(!this.dataset.selected) { this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.1)'; }"
+            >
+                <span style="font-size: 1.2rem;">${tag.icon}</span>
+                <span>${tag.label}</span>
+            </button>
+        `;
+    });
+
+    html += `
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem;">
+                    <button onclick="saveNote('${player.user_guid}', '${modalId}')" style="flex: 1; background: linear-gradient(135deg, rgba(0,255,136,0.2), rgba(14,165,233,0.2)); border: 2px solid rgba(0,255,136,0.5); color: var(--color-primary); padding: 0.75rem; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(0,255,136,0.3), rgba(14,165,233,0.3))'" onmouseout="this.style.background='linear-gradient(135deg, rgba(0,255,136,0.2), rgba(14,165,233,0.2))'">💾 Save Note</button>
+                    <button onclick="deleteNote('${player.user_guid}', '${modalId}')" style="background: rgba(239,68,68,0.2); border: 2px solid rgba(239,68,68,0.5); color: #ef4444; padding: 0.75rem 1.25rem; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">🗑️ Delete</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    // Mark selected tags
+    currentTags.forEach(tagId => {
+        const btn = document.querySelector(`[data-tag="${tagId}"]`);
+        if (btn) btn.dataset.selected = 'true';
+    });
+}
+
+// Toggle tag selection
+function toggleTag(button) {
+    const isSelected = button.dataset.selected === 'true';
+    const tag = PLAYER_TAGS.find(t => t.id === button.dataset.tag);
+
+    if (isSelected) {
+        button.dataset.selected = 'false';
+        button.style.background = 'rgba(255,255,255,0.05)';
+        button.style.borderColor = 'rgba(255,255,255,0.1)';
+        button.style.color = 'var(--color-text-muted)';
+    } else {
+        button.dataset.selected = 'true';
+        button.style.background = tag.color + '40';
+        button.style.borderColor = tag.color;
+        button.style.color = tag.color;
+    }
+}
+
+// Save note from modal
+function saveNote(userGuid, modalId) {
+    const noteText = document.getElementById('noteText').value.trim();
+    const selectedTags = Array.from(document.querySelectorAll('[data-tag][data-selected="true"]'))
+        .map(btn => btn.dataset.tag);
+
+    savePlayerNote(userGuid, noteText, selectedTags);
+    document.getElementById(modalId).remove();
+
+    // Refresh leaderboard to show updated tags
+    displayLeaderboard();
+}
+
+// Delete note from modal
+function deleteNote(userGuid, modalId) {
+    if (confirm('Delete all notes and tags for this player?')) {
+        savePlayerNote(userGuid, '', []);
+        document.getElementById(modalId).remove();
+        displayLeaderboard();
+    }
+}
+
+// Get tags display HTML
+function getTagsHTML(userGuid) {
+    const noteData = getPlayerNote(userGuid);
+    if (!noteData || (!noteData.tags || noteData.tags.length === 0)) {
+        return '';
+    }
+
+    let html = '';
+    noteData.tags.forEach(tagId => {
+        const tag = PLAYER_TAGS.find(t => t.id === tagId);
+        if (tag) {
+            const tooltip = noteData.note ? `${tag.label} - ${noteData.note}` : tag.label;
+            html += `<span style="background: ${tag.color}30; border: 1px solid ${tag.color}; color: ${tag.color}; padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 0.4rem; white-space: nowrap;" title="${tooltip}">${tag.icon} ${tag.label}</span>`;
+        }
+    });
+    return html;
+}
+
 // ===== THREE.JS 3D MODEL BACKGROUND =====
 const scene = new THREE.Scene();
 scene.background = null; // Transparent background
@@ -2206,11 +2366,18 @@ function displayLeaderboard() {
 
         const rowId = `row-${player.user_guid}`;
         const trendCellId = `trend-${player.user_guid}`;
+        const tagsHTML = getTagsHTML(player.user_guid);
 
         html += `
             <tr id="${rowId}" style="background: ${rowGradient}; border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(180deg, rgba(96,197,255,0.08) 0%, rgba(14,165,233,0.08) 50%, rgba(96,197,255,0.08) 100%)'" onmouseout="this.style.background='${rowGradient}'">
                 <td style="padding: 0.6rem 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}${rankChangeIndicator}</td>
-                <td style="padding: 0.6rem 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlag}${player.psn_id}${specialEmoji}</td>
+                <td style="padding: 0.6rem 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" style="cursor: pointer;" title="Click to view DR history">${countryFlag}${player.psn_id}${specialEmoji}</span>
+                        <button onclick='event.stopPropagation(); showNoteEditor(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: var(--color-text-muted); padding: 0.25rem 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,255,136,0.1)'; this.style.borderColor='var(--color-primary)'; this.style.color='var(--color-primary)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.2)'; this.style.color='var(--color-text-muted)'" title="Add note">📝</button>
+                        ${tagsHTML}
+                    </div>
+                </td>
                 <td style="padding: 0.6rem 1rem; text-align: center; color: var(--text-color); font-weight: 600;">${player.dr?.toLocaleString() || 0}${trendArrow}</td>
                 <td id="${trendCellId}" style="padding: 0.6rem 1rem; text-align: center;">
                     <div style="display: flex; align-items: center; justify-content: center; min-height: 30px;">
