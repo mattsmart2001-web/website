@@ -1376,7 +1376,7 @@ function downloadOBSWidget(psnId, userGuid) {
         :root { --primary-color: #0ea5e9; --secondary-color: #38bdf8; --bg-color: rgba(10, 14, 18, 0.95); --border-color: rgba(96, 197, 255, 0.3); --text-color: #ffffff; --text-muted: #94a3b8; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', 'Segoe UI', sans-serif; background: transparent; color: var(--text-color); overflow: hidden; }
-        .widget-container { width: 1400px; height: 60px; background: linear-gradient(180deg, rgba(96,197,255,0.08) 0%, rgba(14,165,233,0.08) 50%, rgba(96,197,255,0.08) 100%); border: 2px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; padding: 0 1rem; gap: 1.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); }
+        .widget-container { width: 850px; height: 60px; background: linear-gradient(180deg, rgba(96,197,255,0.08) 0%, rgba(14,165,233,0.08) 50%, rgba(96,197,255,0.08) 100%); border: 2px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; padding: 0 1rem; gap: 0.8rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); }
         .widget-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); }
         .stat-item { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
         .stat-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
@@ -1428,7 +1428,7 @@ function downloadOBSWidget(psnId, userGuid) {
     URL.revokeObjectURL(url);
 
     // Show success message
-    alert(`✅ Widget downloaded!\n\nTo use in OBS:\n1. Add Browser Source\n2. Check "Local file"\n3. Select gt7-widget-${psnId}.html\n4. Set Width: 1400, Height: 60\n5. Done!\n\nRefreshes every 5 minutes automatically.`);
+    alert(`✅ Widget downloaded!\n\nTo use in OBS:\n1. Add Browser Source\n2. Check "Local file"\n3. Select gt7-widget-${psnId}.html\n4. Set Width: 850, Height: 60\n5. Done!\n\nRefreshes every 5 minutes automatically.`);
 }
 
 // Generate shareable stats card
