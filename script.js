@@ -1885,13 +1885,14 @@ function findSimilarDrivers(targetPlayer, allPlayers, limit = 5) {
 // Show similar drivers modal
 function showSimilarDrivers(player) {
     const similarDrivers = findSimilarDrivers(player, leaderboardData, 5);
+    const modalId = `similar-drivers-modal-${Date.now()}`;
 
     let html = `
-        <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 1rem;" onclick="this.remove()">
+        <div id="${modalId}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 1rem;" onclick="this.remove()">
             <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid rgba(0,255,136,0.3); border-radius: 16px; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 2rem;" onclick="event.stopPropagation()">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                     <h3 style="color: var(--color-primary); font-size: 1.5rem; margin: 0;">Similar Drivers to ${player.psn_id}</h3>
-                    <button onclick="this.closest('[onclick]').remove()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">Close</button>
+                    <button onclick="document.getElementById('${modalId}').remove()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Close</button>
                 </div>
 
                 <div style="background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
