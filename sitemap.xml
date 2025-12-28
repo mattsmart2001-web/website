@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+    <!-- Homepage -->
+    <url>
+        <loc>https://sparkstheory.co.uk/</loc>
+        <lastmod>2025-12-28</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+
+    <!-- GT7 Stats Tracker -->
+    <url>
+        <loc>https://sparkstheory.co.uk/#gt7-stats</loc>
+        <lastmod>2025-12-28</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <!-- GT7 Leaderboard -->
+    <url>
+        <loc>https://sparkstheory.co.uk/#leaderboard</loc>
+        <lastmod>2025-12-28</lastmod>
+        <changefreq>hourly</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <!-- Champion Rankings -->
+    <url>
+        <loc>https://sparkstheory.co.uk/#champions</loc>
+        <lastmod>2025-12-28</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.8</priority>
+    </url>
+
+    <!-- GT7 OBS Widget (Standalone) -->
+    <url>
+        <loc>https://sparkstheory.co.uk/gt7-obs-widget.html</loc>
+        <lastmod>2025-12-28</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+</urlset>
