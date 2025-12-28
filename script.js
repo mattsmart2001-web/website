@@ -1769,6 +1769,176 @@ function getChampionTier(score) {
     return { name: 'Contender', icon: '🔸', color: '#64748b' };
 }
 
+// DR History Cache for Trend Graphs
+const drHistoryCache = {};
+
+// Fetch DR history for a player
+async function fetchDRHistory(userGuid, psnId) {
+    // Check cache first
+    const cacheKey = `${userGuid}_${psnId}`;
+    if (drHistoryCache[cacheKey]) {
+        return drHistoryCache[cacheKey];
+    }
+
+    try {
+        const apiUrl = `https://gtstats.live/api/getDriverStatsHistory?user_id=${userGuid}&psn=${encodeURIComponent(psnId)}`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
+
+        const response = await fetch(proxyUrl);
+        const proxyData = await response.json();
+        const data = JSON.parse(proxyData.contents);
+
+        // Cache the result
+        drHistoryCache[cacheKey] = data;
+        return data;
+    } catch (error) {
+        console.error('Error fetching DR history:', error);
+        return null;
+    }
+}
+
+// Create sparkline SVG for DR trend
+function createSparkline(historyData, width = 80, height = 30) {
+    if (!historyData || typeof historyData !== 'object') {
+        return '<svg width="80" height="30"></svg>'; // Empty SVG
+    }
+
+    // Convert history object to array and get last 30 data points
+    const dataPoints = Object.values(historyData)
+        .map(entry => entry.dr || 0)
+        .filter(dr => dr > 0)
+        .slice(-30); // Last 30 data points
+
+    if (dataPoints.length < 2) {
+        return '<svg width="80" height="30"></svg>'; // Need at least 2 points
+    }
+
+    // Calculate min/max for scaling
+    const minDR = Math.min(...dataPoints);
+    const maxDR = Math.max(...dataPoints);
+    const range = maxDR - minDR || 1; // Avoid division by zero
+
+    // Create SVG path
+    const stepX = width / (dataPoints.length - 1);
+    const points = dataPoints.map((dr, i) => {
+        const x = i * stepX;
+        const y = height - ((dr - minDR) / range * (height - 4)) - 2; // 2px padding
+        return `${x},${y}`;
+    }).join(' ');
+
+    // Determine color based on trend (first vs last)
+    const trend = dataPoints[dataPoints.length - 1] - dataPoints[0];
+    const color = trend >= 0 ? '#00ff88' : '#ff4444';
+
+    return `<svg width="${width}" height="${height}" style="display: block;">
+        <polyline
+            points="${points}"
+            fill="none"
+            stroke="${color}"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            opacity="0.8"
+        />
+    </svg>`;
+}
+
+// Calculate similarity between two players
+function calculateSimilarity(player1, player2) {
+    // Normalize DR (0-100000 range)
+    const drDiff = Math.abs((player1.dr || 0) - (player2.dr || 0)) / 100000;
+
+    // Win rate difference
+    const winDiff = Math.abs((player1.win_percentage || 0) - (player2.win_percentage || 0)) / 100;
+
+    // Pole rate difference
+    const poleDiff = Math.abs((player1.pole_percentage || 0) - (player2.pole_percentage || 0)) / 100;
+
+    // FL rate difference
+    const flDiff = Math.abs((player1.fastest_lap_percentage || 0) - (player2.fastest_lap_percentage || 0)) / 100;
+
+    // SR grade similarity (convert to number)
+    const srGrades = { 'E': 0, 'D': 1, 'C': 2, 'B': 3, 'A': 4, 'S': 5 };
+    const sr1 = srGrades[player1.sr_grade] || 0;
+    const sr2 = srGrades[player2.sr_grade] || 0;
+    const srDiff = Math.abs(sr1 - sr2) / 5;
+
+    // Weighted similarity score (lower is more similar)
+    // DR is most important, then win rate, then others
+    const similarity = (drDiff * 0.4) + (winDiff * 0.25) + (poleDiff * 0.15) + (flDiff * 0.15) + (srDiff * 0.05);
+
+    return 1 - similarity; // Convert to similarity score (higher is more similar)
+}
+
+// Find similar drivers
+function findSimilarDrivers(targetPlayer, allPlayers, limit = 5) {
+    return allPlayers
+        .filter(p => p.user_guid !== targetPlayer.user_guid) // Exclude the target player
+        .map(p => ({
+            player: p,
+            similarity: calculateSimilarity(targetPlayer, p)
+        }))
+        .sort((a, b) => b.similarity - a.similarity) // Sort by similarity descending
+        .slice(0, limit); // Take top N
+}
+
+// Show similar drivers modal
+function showSimilarDrivers(player) {
+    const similarDrivers = findSimilarDrivers(player, leaderboardData, 5);
+
+    let html = `
+        <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 1rem;" onclick="this.remove()">
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid rgba(0,255,136,0.3); border-radius: 16px; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; padding: 2rem;" onclick="event.stopPropagation()">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3 style="color: var(--color-primary); font-size: 1.5rem; margin: 0;">Similar Drivers to ${player.psn_id}</h3>
+                    <button onclick="this.closest('[onclick]').remove()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">Close</button>
+                </div>
+
+                <div style="background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+                    <div style="font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.5rem;">YOUR STATS</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;">
+                        <div><span style="color: var(--color-primary); font-weight: 700;">${player.rank || 'E'}</span> <span style="color: var(--color-text-muted); font-size: 0.85rem;">Rank</span></div>
+                        <div><span style="color: var(--color-primary); font-weight: 700;">${player.win_percentage?.toFixed(1) || 0}%</span> <span style="color: var(--color-text-muted); font-size: 0.85rem;">Win</span></div>
+                        <div><span style="color: var(--color-secondary); font-weight: 700;">${player.pole_percentage?.toFixed(1) || 0}%</span> <span style="color: var(--color-text-muted); font-size: 0.85rem;">Pole</span></div>
+                        <div><span style="color: var(--color-primary); font-weight: 700;">${player.fastest_lap_percentage?.toFixed(1) || 0}%</span> <span style="color: var(--color-text-muted); font-size: 0.85rem;">FL</span></div>
+                    </div>
+                </div>
+
+                <div style="color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Players with similar racing profiles (match score out of 100%):</div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+    `;
+
+    similarDrivers.forEach((item, index) => {
+        const p = item.player;
+        const matchScore = (item.similarity * 100).toFixed(0);
+        const countryFlag = p.country_code ? getCountryFlag(p.country_code) + ' ' : '';
+
+        html += `
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <div style="font-weight: 700; color: var(--color-primary); font-size: 1.1rem;">${countryFlag}${p.psn_id}</div>
+                    <div style="background: linear-gradient(135deg, rgba(0,255,136,0.2), rgba(14,165,233,0.2)); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem; color: white; font-weight: 600;">${matchScore}% Match</div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.5rem; font-size: 0.9rem;">
+                    <div><span style="color: var(--color-text-muted);">Rank:</span> <span style="color: var(--color-primary); font-weight: 600;">${p.rank || 'E'}</span></div>
+                    <div><span style="color: var(--color-text-muted);">Win:</span> <span style="color: var(--color-primary); font-weight: 600;">${p.win_percentage?.toFixed(1) || 0}%</span></div>
+                    <div><span style="color: var(--color-text-muted);">Pole:</span> <span style="color: var(--color-secondary); font-weight: 600;">${p.pole_percentage?.toFixed(1) || 0}%</span></div>
+                    <div><span style="color: var(--color-text-muted);">FL:</span> <span style="color: var(--color-primary); font-weight: 600;">${p.fastest_lap_percentage?.toFixed(1) || 0}%</span></div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
 function displayLeaderboard() {
     const leaderboardResults = document.getElementById('leaderboardResults');
 
@@ -1907,12 +2077,14 @@ function displayLeaderboard() {
                         <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">#</th>
                         <th style="padding: 0.6rem 1rem; text-align: left; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">PSN ID</th>
                         <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">DR</th>
+                        <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Trend</th>
                         <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Rank</th>
                         <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">SR</th>
                         <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Races</th>
                         <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Win %</th>
                         <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Pole %</th>
                         <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">FL %</th>
+                        <th style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Similar</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1941,19 +2113,38 @@ function displayLeaderboard() {
         // Subtle gradient for each row
         const rowGradient = `linear-gradient(180deg, rgba(96,197,255,0.02) 0%, rgba(14,165,233,0.02) 50%, rgba(96,197,255,0.02) 100%)`;
 
+        const rowId = `row-${player.user_guid}`;
+        const trendCellId = `trend-${player.user_guid}`;
+
         html += `
-            <tr style="background: ${rowGradient}; border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(180deg, rgba(96,197,255,0.08) 0%, rgba(14,165,233,0.08) 50%, rgba(96,197,255,0.08) 100%)'" onmouseout="this.style.background='${rowGradient}'">
+            <tr id="${rowId}" style="background: ${rowGradient}; border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(180deg, rgba(96,197,255,0.08) 0%, rgba(14,165,233,0.08) 50%, rgba(96,197,255,0.08) 100%)'" onmouseout="this.style.background='${rowGradient}'">
                 <td style="padding: 0.6rem 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}</td>
                 <td style="padding: 0.6rem 1rem; color: var(--color-primary); font-weight: 700; font-size: 1rem; cursor: pointer;" onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" title="Click to view DR history">${countryFlag}${player.psn_id}${specialEmoji}</td>
                 <td style="padding: 0.6rem 1rem; text-align: center; color: var(--text-color); font-weight: 600;">${player.dr?.toLocaleString() || 0}${trendArrow}</td>
+                <td id="${trendCellId}" style="padding: 0.6rem 1rem; text-align: center;">
+                    <div style="display: flex; align-items: center; justify-content: center; min-height: 30px;">
+                        <div style="color: var(--color-text-muted); font-size: 0.75rem;">...</div>
+                    </div>
+                </td>
                 <td style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-weight: 800; font-size: 1.2rem;">${player.rank || 'E'}</td>
                 <td style="padding: 0.6rem 1rem; text-align: center; color: var(--color-secondary); font-weight: 800; font-size: 1.1rem;">${player.sr_grade || 'E'}</td>
                 <td style="padding: 0.6rem 1rem; text-align: center; color: var(--text-color);">${player.total_races?.toLocaleString() || 0}</td>
                 <td style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-weight: 600;">${player.win_percentage?.toFixed(1) || 0}%</td>
                 <td style="padding: 0.6rem 1rem; text-align: center; color: var(--color-secondary); font-weight: 600;">${player.pole_percentage?.toFixed(1) || 0}%</td>
                 <td style="padding: 0.6rem 1rem; text-align: center; color: var(--color-primary); font-weight: 600;">${player.fastest_lap_percentage?.toFixed(1) || 0}%</td>
+                <td style="padding: 0.6rem 1rem; text-align: center;">
+                    <button onclick='showSimilarDrivers(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: linear-gradient(135deg, rgba(0,255,136,0.1), rgba(14,165,233,0.1)); border: 1px solid rgba(0,255,136,0.3); color: var(--color-primary); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(0,255,136,0.2), rgba(14,165,233,0.2))'" onmouseout="this.style.background='linear-gradient(135deg, rgba(0,255,136,0.1), rgba(14,165,233,0.1))'">Find</button>
+                </td>
             </tr>
         `;
+
+        // Fetch and display sparkline asynchronously
+        fetchDRHistory(player.user_guid, player.psn_id).then(historyData => {
+            const cell = document.getElementById(trendCellId);
+            if (cell && historyData) {
+                cell.innerHTML = `<div style="display: flex; align-items: center; justify-content: center;">${createSparkline(historyData, 80, 30)}</div>`;
+            }
+        });
     });
 
     html += `
