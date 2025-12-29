@@ -2409,11 +2409,35 @@ function displayLeaderboard() {
     // Show "no results" message if filter returns empty
     if (filteredData.length === 0) {
         leaderboardResults.innerHTML = `
+            <!-- Search Bar (always visible) -->
+            <div style="max-width: 600px; margin: 0 auto 2rem;">
+                <input
+                    type="text"
+                    id="leaderboardSearch"
+                    placeholder="🔍 Search by PSN name..."
+                    oninput="filterLeaderboard()"
+                    value="${searchFilter}"
+                    style="width: 100%; padding: 1rem 1.5rem; background: rgba(255,255,255,0.05); border: 2px solid rgba(96,197,255,0.3); border-radius: 12px; color: white; font-size: 1rem; transition: all 0.3s;"
+                    onfocus="this.style.borderColor='var(--color-primary)'; this.style.background='rgba(255,255,255,0.08)'"
+                    onblur="this.style.borderColor='rgba(96,197,255,0.3)'; this.style.background='rgba(255,255,255,0.05)'"
+                />
+            </div>
+
             <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 3rem; text-align: center;">
                 <p style="color: var(--color-text-muted); font-size: 1.2rem; margin-bottom: 1rem;">No players found matching "${searchFilter}"</p>
-                <p style="color: var(--color-text-muted);">Try a different search term</p>
+                <p style="color: var(--color-text-muted);">Try a different search term or clear the search box</p>
             </div>
         `;
+
+        // Re-focus the search input after DOM update
+        requestAnimationFrame(() => {
+            const searchInput = document.getElementById('leaderboardSearch');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+            }
+        });
+
         return;
     }
 
