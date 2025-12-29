@@ -2087,7 +2087,15 @@ function filterLeaderboard() {
     const searchInput = document.getElementById('leaderboardSearch');
     searchFilter = searchInput ? searchInput.value.toLowerCase().trim() : '';
     currentPage = 1; // Reset to first page when filtering
+
+    // Preserve scroll position to prevent page jump
+    const scrollY = window.scrollY;
     displayLeaderboard();
+
+    // Restore scroll position after DOM update
+    requestAnimationFrame(() => {
+        window.scrollTo(0, scrollY);
+    });
 }
 
 function getFilteredLeaderboardData() {
