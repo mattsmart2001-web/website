@@ -2086,15 +2086,24 @@ function sortLeaderboard(sortBy) {
 function filterLeaderboard() {
     const searchInput = document.getElementById('leaderboardSearch');
     searchFilter = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    currentPage = 1; // Reset to first page when filtering
 
-    // Preserve scroll position to prevent page jump
+    // Save cursor position and scroll position
+    const cursorPosition = searchInput ? searchInput.selectionStart : 0;
     const scrollY = window.scrollY;
+
+    currentPage = 1; // Reset to first page when filtering
     displayLeaderboard();
 
-    // Restore scroll position after DOM update
+    // Restore scroll position and input focus after DOM update
     requestAnimationFrame(() => {
         window.scrollTo(0, scrollY);
+
+        // Re-focus the input and restore cursor position
+        const newSearchInput = document.getElementById('leaderboardSearch');
+        if (newSearchInput) {
+            newSearchInput.focus();
+            newSearchInput.setSelectionRange(cursorPosition, cursorPosition);
+        }
     });
 }
 
