@@ -1888,6 +1888,156 @@ function getRivalPlayerData(userGuid) {
     return leaderboardData.find(p => p.user_guid === userGuid);
 }
 
+// ===== DRIVER COMPARISON SYSTEM =====
+let comparisonPlayers = [];
+const MAX_COMPARISON = 3;
+
+function getComparisonPlayers() {
+    return comparisonPlayers;
+}
+
+function isInComparison(userGuid) {
+    return comparisonPlayers.some(p => p.user_guid === userGuid);
+}
+
+function addToComparison(player) {
+    // Check if already in comparison
+    if (isInComparison(player.user_guid)) {
+        // Remove from comparison
+        removeFromComparison(player.user_guid);
+        return false;
+    }
+
+    // Check max limit
+    if (comparisonPlayers.length >= MAX_COMPARISON) {
+        alert(`Maximum of ${MAX_COMPARISON} players for comparison. Remove one first or click "Compare Now".`);
+        return false;
+    }
+
+    // Add to comparison
+    comparisonPlayers.push(player);
+    displayLeaderboard(); // Refresh to show updated UI
+    return true;
+}
+
+function removeFromComparison(userGuid) {
+    comparisonPlayers = comparisonPlayers.filter(p => p.user_guid !== userGuid);
+    displayLeaderboard(); // Refresh to show updated UI
+}
+
+function clearComparison() {
+    comparisonPlayers = [];
+    displayLeaderboard();
+}
+
+function showComparison() {
+    if (comparisonPlayers.length < 2) {
+        alert('Please select at least 2 players to compare.');
+        return;
+    }
+
+    const players = comparisonPlayers;
+
+    // Build comparison modal
+    const modalHtml = `
+        <div id="comparisonModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow-y: auto;" onclick="if(event.target.id==='comparisonModal') closeComparison()">
+            <div style="background: linear-gradient(135deg, rgba(10,14,18,0.98), rgba(20,24,28,0.98)); border: 2px solid var(--color-primary); border-radius: 16px; padding: 2rem; max-width: 1200px; width: 100%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+                <!-- Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid rgba(96,197,255,0.3);">
+                    <h2 style="color: var(--color-primary); font-size: 1.8rem; margin: 0;">Driver Comparison</h2>
+                    <button onclick="closeComparison()" style="background: rgba(255,0,0,0.1); border: 1px solid #ff4444; color: #ff4444; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600;">✕ Close</button>
+                </div>
+
+                <!-- Player Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                    ${players.map((player, idx) => {
+                        const countryFlag = player.country_code ? getCountryFlag(player.country_code) + ' ' : '';
+                        const position = leaderboardData.findIndex(p => p.user_guid === player.user_guid) + 1;
+                        return `
+                            <div style="background: linear-gradient(135deg, rgba(96,197,255,0.1), rgba(14,165,233,0.05)); border: 2px solid var(--color-primary); border-radius: 12px; padding: 1.5rem; text-align: center;">
+                                <div style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;">Player ${idx + 1}</div>
+                                <div style="color: var(--color-primary); font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#${position}</div>
+                                <div style="color: var(--text-color); font-weight: 700; font-size: 1.5rem; margin-bottom: 1rem;">${countryFlag}${player.psn_id}</div>
+                                <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                                    <div style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px;">
+                                        <div style="color: var(--color-primary); font-weight: 800; font-size: 1.8rem;">${player.rank || 'E'}</div>
+                                        <div style="color: var(--color-text-muted); font-size: 0.7rem;">RANK</div>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px;">
+                                        <div style="color: var(--color-secondary); font-weight: 800; font-size: 1.8rem;">${player.sr_grade || 'E'}</div>
+                                        <div style="color: var(--color-text-muted); font-size: 0.7rem;">SR</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+
+                <!-- Stats Comparison Table -->
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: linear-gradient(180deg, rgba(96,197,255,0.15) 0%, rgba(14,165,233,0.15) 100%); border-bottom: 2px solid var(--color-primary);">
+                                <th style="padding: 1rem; text-align: left; color: var(--color-primary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Stat</th>
+                                ${players.map((p, idx) => `<th style="padding: 1rem; text-align: center; color: var(--color-primary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Player ${idx + 1}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${generateComparisonRow('Driver Rating', players, p => p.dr || 0, true, v => v.toLocaleString())}
+                            ${generateComparisonRow('Total Races', players, p => p.total_races || 0, true, v => v.toLocaleString())}
+                            ${generateComparisonRow('Win Rate', players, p => p.win_percentage || 0, true, v => v.toFixed(1) + '%')}
+                            ${generateComparisonRow('Wins', players, p => p.wins || 0, true, v => v.toLocaleString())}
+                            ${generateComparisonRow('Pole Rate', players, p => p.pole_percentage || 0, true, v => v.toFixed(1) + '%')}
+                            ${generateComparisonRow('Poles', players, p => p.poles || 0, true, v => v.toLocaleString())}
+                            ${generateComparisonRow('Fastest Lap Rate', players, p => p.fastest_lap_percentage || 0, true, v => v.toFixed(1) + '%')}
+                            ${generateComparisonRow('Fastest Laps', players, p => p.fastest_laps || 0, true, v => v.toLocaleString())}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Actions -->
+                <div style="margin-top: 2rem; text-align: center;">
+                    <button onclick="closeComparison(); clearComparison();" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); border: none; color: white; padding: 1rem 2rem; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700;">Clear & Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add modal to page
+    const existingModal = document.getElementById('comparisonModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function generateComparisonRow(label, players, getValue, higherIsBetter, formatValue) {
+    const values = players.map(getValue);
+    const maxValue = Math.max(...values);
+    const minValue = Math.min(...values);
+
+    return `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding: 1rem; color: var(--text-color); font-weight: 600;">${label}</td>
+            ${players.map(player => {
+                const value = getValue(player);
+                const isMax = value === maxValue && maxValue !== minValue;
+                const isMin = value === minValue && maxValue !== minValue;
+                const isBest = higherIsBetter ? isMax : isMin;
+
+                return `<td style="padding: 1rem; text-align: center; color: ${isBest ? '#00ff88' : 'var(--text-color)'}; font-weight: ${isBest ? '800' : '600'}; font-size: ${isBest ? '1.2rem' : '1rem'};">${formatValue(value)}</td>`;
+            }).join('')}
+        </tr>
+    `;
+}
+
+function closeComparison() {
+    const modal = document.getElementById('comparisonModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
 async function fetchLeaderboard(sortBy = 'dr') {
     const leaderboardResults = document.getElementById('leaderboardResults');
 
@@ -2411,7 +2561,33 @@ function displayLeaderboard() {
         `;
     }
 
-    let html = rivalsHtml + podiumHtml + `
+    // Comparison Bar
+    let comparisonBarHtml = '';
+    if (comparisonPlayers.length > 0) {
+        comparisonBarHtml = `
+            <div style="position: sticky; top: 20px; z-index: 100; margin-bottom: 2rem; background: linear-gradient(135deg, rgba(14,165,233,0.2), rgba(96,197,255,0.2)); border: 2px solid var(--color-primary); border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 20px rgba(14,165,233,0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.2rem; margin-bottom: 0.5rem;">Selected for Comparison (${comparisonPlayers.length}/${MAX_COMPARISON})</div>
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                            ${comparisonPlayers.map(p => `
+                                <div style="background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="color: var(--text-color); font-weight: 600;">${p.psn_id}</span>
+                                    <button onclick='removeFromComparison("${p.user_guid}")' style="background: rgba(255,0,0,0.2); border: 1px solid #ff4444; color: #ff4444; padding: 0.15rem 0.4rem; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">✕</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button onclick="showComparison()" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700; box-shadow: 0 2px 10px rgba(14,165,233,0.4);">📊 Compare Now</button>
+                        <button onclick="clearComparison()" style="background: rgba(255,0,0,0.1); border: 1px solid #ff4444; color: #ff4444; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700;">Clear All</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    let html = rivalsHtml + comparisonBarHtml + podiumHtml + `
         <div style="margin-bottom: 1.5rem; text-align: center;">
             <p style="color: var(--color-text-muted); font-size: 1rem;">
                 Sorted by: <span style="color: var(--color-primary); font-weight: 700;">${sortLabels[currentSort]}</span>
@@ -2488,6 +2664,12 @@ function displayLeaderboard() {
             ? `<button onclick='event.stopPropagation(); removeRival("${player.user_guid}")' style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.4); color: #ffd700; padding: 0.15rem 0.5rem; border-radius: 12px; cursor: pointer; font-size: 0.65rem; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;" onmouseover="this.style.background='rgba(255,0,0,0.1)'; this.style.borderColor='#ff4444'; this.style.color='#ff4444'" onmouseout="this.style.background='rgba(255,215,0,0.1)'; this.style.borderColor='rgba(255,215,0,0.4)'; this.style.color='#ffd700'" title="Remove from rivals">⭐ rival</button>`
             : `<button onclick='event.stopPropagation(); addRival(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.15rem 0.5rem; border-radius: 12px; cursor: pointer; font-size: 0.65rem; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;" onmouseover="this.style.background='rgba(255,215,0,0.1)'; this.style.borderColor='#ffd700'; this.style.color='#ffd700'" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.15)'; this.style.color='var(--color-text-muted)'" title="Pin as rival">pin rival</button>`;
 
+        // Comparison button HTML
+        const playerInComparison = isInComparison(player.user_guid);
+        const compareButton = playerInComparison
+            ? `<button onclick='event.stopPropagation(); addToComparison(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(14,165,233,0.2); border: 1px solid var(--color-primary); color: var(--color-primary); padding: 0.15rem 0.5rem; border-radius: 12px; cursor: pointer; font-size: 0.65rem; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;" title="Remove from comparison">✓ selected</button>`
+            : `<button onclick='event.stopPropagation(); addToComparison(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.15rem 0.5rem; border-radius: 12px; cursor: pointer; font-size: 0.65rem; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;" onmouseover="this.style.background='rgba(14,165,233,0.1)'; this.style.borderColor='var(--color-primary)'; this.style.color='var(--color-primary)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.15)'; this.style.color='var(--color-text-muted)'" title="Add to comparison">compare</button>`;
+
         html += `
             <tr id="${rowId}" style="background: ${rowGradient}; border-bottom: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;" onmouseover="this.style.background='${rowHoverGradient}'" onmouseout="this.style.background='${rowGradient}'">
                 <td style="padding: 0.6rem 1rem; text-align: center; color: ${rankColor}; font-weight: 700; font-size: 1.1rem;">${rankIcon} ${index + 1}${rankChangeIndicator}</td>
@@ -2495,6 +2677,7 @@ function displayLeaderboard() {
                     <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
                         <span onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" style="cursor: pointer;" title="Click to view DR history">${countryFlag}${player.psn_id}${specialEmoji}</span>
                         ${rivalButton}
+                        ${compareButton}
                         <button onclick='event.stopPropagation(); showNoteEditor(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.15rem 0.5rem; border-radius: 12px; cursor: pointer; font-size: 0.65rem; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;" onmouseover="this.style.background='rgba(0,255,136,0.1)'; this.style.borderColor='var(--color-primary)'; this.style.color='var(--color-primary)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.15)'; this.style.color='var(--color-text-muted)'" title="Add personal note">add note</button>
                         ${tagsHTML}
                     </div>
@@ -2565,6 +2748,12 @@ function displayLeaderboard() {
             ? `<button onclick='event.stopPropagation(); removeRival("${player.user_guid}")' style="background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.4); color: #ffd700; padding: 0.4rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">⭐ Rival</button>`
             : `<button onclick='event.stopPropagation(); addRival(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.4rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">Pin Rival</button>`;
 
+        // Comparison button for mobile
+        const playerInComparisonMobile = isInComparison(player.user_guid);
+        const compareButtonMobile = playerInComparisonMobile
+            ? `<button onclick='event.stopPropagation(); addToComparison(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(14,165,233,0.2); border: 1px solid var(--color-primary); color: var(--color-primary); padding: 0.4rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">✓ Selected</button>`
+            : `<button onclick='event.stopPropagation(); addToComparison(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.4rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">Compare</button>`;
+
         html += `
             <div style="background: ${cardBg}; border: ${cardBorder}; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
@@ -2580,6 +2769,7 @@ function displayLeaderboard() {
                 </div>
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
                     ${rivalButtonMobile}
+                    ${compareButtonMobile}
                     <button onclick='event.stopPropagation(); showNoteEditor(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.4rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">Add Note</button>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
