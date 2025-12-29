@@ -2479,7 +2479,7 @@ function displayLeaderboard() {
                 const changeColor = player.dr_change > 0 ? '#00ff88' : '#ff4444';
                 const arrowIcon = player.dr_change > 0 ? '↑' : '↓';
                 const changeSign = player.dr_change > 0 ? '+' : '';
-                return `<div style="color: ${changeColor}; font-size: 0.85rem; margin-top: 0.25rem;">${arrowIcon} ${changeSign}${player.dr_change}</div>`;
+                return `<div style="color: ${changeColor}; font-size: 0.65rem; margin-top: 0.15rem;">${arrowIcon} ${changeSign}${player.dr_change}</div>`;
             }
             return '';
         };
@@ -2488,21 +2488,21 @@ function displayLeaderboard() {
         let podiumTitle = '🏆 Top 3 Champions 🏆';
         let getMainStat = (player) => {
             if (currentSort === 'dr') {
-                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 2.5rem; line-height: 1;">${player.rank || 'E'}</div>
-                        <div style="color: var(--text-color); font-size: 1.1rem; margin-top: 0.25rem;">${player.dr?.toLocaleString() || 0} DR</div>
+                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 1.4rem; line-height: 1;">${player.rank || 'E'}</div>
+                        <div style="color: var(--text-color); font-size: 0.75rem; margin-top: 0.15rem;">${player.dr?.toLocaleString() || 0} DR</div>
                         ${getTrendArrow(player)}`;
             } else if (currentSort === 'win_percentage') {
-                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${player.win_percentage?.toFixed(1) || 0}%</div>
-                        <div style="color: var(--text-color); font-size: 1rem; margin-top: 0.25rem;">${player.wins || 0} / ${player.total_races || 0} Wins</div>`;
+                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 1.6rem; line-height: 1;">${player.win_percentage?.toFixed(1) || 0}%</div>
+                        <div style="color: var(--text-color); font-size: 0.7rem; margin-top: 0.15rem;">${player.wins || 0} / ${player.total_races || 0} Wins</div>`;
             } else if (currentSort === 'pole_percentage') {
-                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${player.pole_percentage?.toFixed(1) || 0}%</div>
-                        <div style="color: var(--text-color); font-size: 1rem; margin-top: 0.25rem;">${player.poles || 0} / ${player.total_races || 0} Poles</div>`;
+                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 1.6rem; line-height: 1;">${player.pole_percentage?.toFixed(1) || 0}%</div>
+                        <div style="color: var(--text-color); font-size: 0.7rem; margin-top: 0.15rem;">${player.poles || 0} / ${player.total_races || 0} Poles</div>`;
             } else if (currentSort === 'fastest_lap_percentage') {
-                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${player.fastest_lap_percentage?.toFixed(1) || 0}%</div>
-                        <div style="color: var(--text-color); font-size: 1rem; margin-top: 0.25rem;">${player.fastest_laps || 0} / ${player.total_races || 0} FLs</div>`;
+                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 1.6rem; line-height: 1;">${player.fastest_lap_percentage?.toFixed(1) || 0}%</div>
+                        <div style="color: var(--text-color); font-size: 0.7rem; margin-top: 0.15rem;">${player.fastest_laps || 0} / ${player.total_races || 0} FLs</div>`;
             } else if (currentSort === 'total_races') {
-                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 3rem; line-height: 1;">${player.total_races?.toLocaleString() || 0}</div>
-                        <div style="color: var(--text-color); font-size: 1rem; margin-top: 0.25rem;">Total Races</div>`;
+                return `<div style="color: var(--color-primary); font-weight: 800; font-size: 1.6rem; line-height: 1;">${player.total_races?.toLocaleString() || 0}</div>
+                        <div style="color: var(--text-color); font-size: 0.7rem; margin-top: 0.15rem;">Total Races</div>`;
             }
         };
 
@@ -2522,37 +2522,37 @@ function displayLeaderboard() {
         const flag3 = top3[2].country_code ? getCountryFlag(top3[2].country_code) + ' ' : '';
 
         podiumHtml = `
-            <div style="margin-bottom: 3rem;">
-                <h3 style="text-align: center; color: var(--color-primary); font-size: 1.5rem; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 2px;">
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="text-align: center; color: var(--color-primary); font-size: 1rem; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
                     ${podiumTitle}
                 </h3>
-                <div style="display: flex; justify-content: center; align-items: flex-end; gap: 2rem; flex-wrap: wrap; max-width: 900px; margin: 0 auto;">
+                <div style="display: flex; justify-content: center; align-items: flex-end; gap: 1rem; flex-wrap: wrap; max-width: 800px; margin: 0 auto;">
                     <!-- 2nd Place -->
-                    <div style="flex: 1; min-width: 200px; max-width: 250px; background: linear-gradient(135deg, rgba(192,192,192,0.2), rgba(192,192,192,0.05)); border: 2px solid #c0c0c0; border-radius: 16px; padding: 2rem 1.5rem; text-align: center; transform: translateY(20px);">
-                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🥈</div>
-                        <div style="color: #c0c0c0; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#2</div>
-                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${flag2}${top3[1].psn_id}</div>
-                        <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
+                    <div style="flex: 1; min-width: 140px; max-width: 180px; background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(192,192,192,0.05)); border: 1px solid #c0c0c0; border-radius: 8px; padding: 0.75rem; text-align: center; transform: translateY(10px);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">🥈</div>
+                        <div style="color: #c0c0c0; font-weight: 800; font-size: 1.2rem; margin-bottom: 0.25rem;">#2</div>
+                        <div style="color: var(--color-primary); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem;">${flag2}${top3[1].psn_id}</div>
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 6px; padding: 0.5rem;">
                             ${getMainStat(top3[1])}
                         </div>
                     </div>
 
                     <!-- 1st Place (Champion) -->
-                    <div style="flex: 1; min-width: 200px; max-width: 270px; background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,215,0,0.05)); border: 3px solid #ffd700; border-radius: 16px; padding: 2.5rem 1.5rem; text-align: center; box-shadow: 0 8px 32px rgba(255,215,0,0.3);">
-                        <div style="font-size: 4rem; margin-bottom: 0.5rem;">🥇</div>
-                        <div style="color: #ffd700; font-weight: 900; font-size: 2.5rem; margin-bottom: 0.5rem; text-shadow: 0 0 20px rgba(255,215,0,0.5);">#1</div>
-                        <div style="color: var(--color-primary); font-weight: 900; font-size: 1.5rem; margin-bottom: 1rem;">${flag1}${top3[0].psn_id}</div>
-                        <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 1.25rem; margin-bottom: 0.5rem;">
+                    <div style="flex: 1; min-width: 150px; max-width: 190px; background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05)); border: 2px solid #ffd700; border-radius: 8px; padding: 0.85rem; text-align: center; box-shadow: 0 4px 16px rgba(255,215,0,0.2);">
+                        <div style="font-size: 2rem; margin-bottom: 0.25rem;">🥇</div>
+                        <div style="color: #ffd700; font-weight: 900; font-size: 1.4rem; margin-bottom: 0.25rem; text-shadow: 0 0 10px rgba(255,215,0,0.4);">#1</div>
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem;">${flag1}${top3[0].psn_id}</div>
+                        <div style="background: rgba(255,255,255,0.08); border-radius: 6px; padding: 0.6rem;">
                             ${getMainStat(top3[0])}
                         </div>
                     </div>
 
                     <!-- 3rd Place -->
-                    <div style="flex: 1; min-width: 200px; max-width: 250px; background: linear-gradient(135deg, rgba(205,127,50,0.2), rgba(205,127,50,0.05)); border: 2px solid #cd7f32; border-radius: 16px; padding: 2rem 1.5rem; text-align: center; transform: translateY(20px);">
-                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🥉</div>
-                        <div style="color: #cd7f32; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#3</div>
-                        <div style="color: var(--color-primary); font-weight: 700; font-size: 1.3rem; margin-bottom: 1rem;">${flag3}${top3[2].psn_id}</div>
-                        <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
+                    <div style="flex: 1; min-width: 140px; max-width: 180px; background: linear-gradient(135deg, rgba(205,127,50,0.15), rgba(205,127,50,0.05)); border: 1px solid #cd7f32; border-radius: 8px; padding: 0.75rem; text-align: center; transform: translateY(10px);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">🥉</div>
+                        <div style="color: #cd7f32; font-weight: 800; font-size: 1.2rem; margin-bottom: 0.25rem;">#3</div>
+                        <div style="color: var(--color-primary); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem;">${flag3}${top3[2].psn_id}</div>
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 6px; padding: 0.5rem;">
                             ${getMainStat(top3[2])}
                         </div>
                     </div>
