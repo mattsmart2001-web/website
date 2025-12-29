@@ -2597,6 +2597,20 @@ function displayLeaderboard() {
             </p>
         </div>
 
+        <!-- Search Bar -->
+        <div style="max-width: 600px; margin: 0 auto 2rem;">
+            <input
+                type="text"
+                id="leaderboardSearch"
+                placeholder="🔍 Search by PSN name..."
+                oninput="filterLeaderboard()"
+                value="${searchFilter}"
+                style="width: 100%; padding: 1rem 1.5rem; background: rgba(255,255,255,0.05); border: 2px solid rgba(96,197,255,0.3); border-radius: 12px; color: white; font-size: 1rem; transition: all 0.3s;"
+                onfocus="this.style.borderColor='var(--color-primary)'; this.style.background='rgba(255,255,255,0.08)'"
+                onblur="this.style.borderColor='rgba(96,197,255,0.3)'; this.style.background='rgba(255,255,255,0.05)'"
+            />
+        </div>
+
         <!-- Desktop Table View -->
         <div style="display: none; overflow-x: auto; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" class="desktop-leaderboard">
             <table style="width: 100%; border-collapse: collapse;">
@@ -2621,7 +2635,7 @@ function displayLeaderboard() {
     pageData.forEach((player, pageIndex) => {
         const index = startIndex + pageIndex; // Global index for ranking
         const rankColor = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--color-text-muted)';
-        const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+        const rankIcon = ''; // Removed emoji badges
 
         // DR Trend Arrow
         let trendArrow = '';
@@ -2721,7 +2735,7 @@ function displayLeaderboard() {
     pageData.forEach((player, pageIndex) => {
         const index = startIndex + pageIndex; // Global index for ranking
         const rankColor = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : 'var(--color-text-muted)';
-        const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+        const rankIcon = ''; // Removed emoji badges
 
         // DR Trend Arrow for mobile
         let trendArrowMobile = '';
