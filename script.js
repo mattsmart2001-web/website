@@ -1834,6 +1834,7 @@ let currentSort = 'dr';
 let leaderboardData = [];
 let currentPage = 1;
 const itemsPerPage = 10;
+let searchFilter = '';
 
 async function fetchLeaderboard(sortBy = 'dr') {
     const leaderboardResults = document.getElementById('leaderboardResults');
@@ -1878,6 +1879,25 @@ function sortLeaderboard(sortBy) {
     });
 
     displayLeaderboard();
+}
+
+function filterLeaderboard() {
+    const searchInput = document.getElementById('leaderboardSearch');
+    searchFilter = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    currentPage = 1; // Reset to first page when filtering
+    displayLeaderboard();
+}
+
+function getFilteredLeaderboardData() {
+    if (!searchFilter) {
+        return leaderboardData;
+    }
+
+    return leaderboardData.filter(player => {
+        const psnName = (player.psn_id || '').toLowerCase();
+        const rank = (player.rank || '').toLowerCase();
+        return psnName.includes(searchFilter) || rank.includes(searchFilter);
+    });
 }
 
 function changePage(direction) {
@@ -2164,11 +2184,25 @@ function displayLeaderboard() {
         return;
     }
 
-    // Calculate pagination
-    const totalPages = Math.ceil(leaderboardData.length / itemsPerPage);
+    // Get filtered data
+    const filteredData = getFilteredLeaderboardData();
+
+    // Show "no results" message if filter returns empty
+    if (filteredData.length === 0) {
+        leaderboardResults.innerHTML = `
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 3rem; text-align: center;">
+                <p style="color: var(--color-text-muted); font-size: 1.2rem; margin-bottom: 1rem;">No players found matching "${searchFilter}"</p>
+                <p style="color: var(--color-text-muted);">Try a different search term</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Calculate pagination with filtered data
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const pageData = leaderboardData.slice(startIndex, endIndex);
+    const pageData = filteredData.slice(startIndex, endIndex);
 
     const sortLabels = {
         dr: 'Driver Rating',

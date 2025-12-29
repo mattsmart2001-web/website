@@ -316,6 +316,19 @@
                 </button>
             </div>
 
+            <!-- Search and Filters -->
+            <div style="max-width: 600px; margin: 0 auto 2rem;">
+                <input
+                    type="text"
+                    id="leaderboardSearch"
+                    placeholder="🔍 Search by PSN name..."
+                    oninput="filterLeaderboard()"
+                    style="width: 100%; padding: 1rem 1.5rem; background: rgba(255,255,255,0.05); border: 2px solid rgba(96,197,255,0.3); border-radius: 12px; color: white; font-size: 1rem; transition: all 0.3s;"
+                    onfocus="this.style.borderColor='var(--color-primary)'; this.style.background='rgba(255,255,255,0.08)'"
+                    onblur="this.style.borderColor='rgba(96,197,255,0.3)'; this.style.background='rgba(255,255,255,0.05)'"
+                />
+            </div>
+
             <!-- Leaderboard Table -->
             <div id="leaderboardResults" style="max-width: 1200px; margin: 0 auto;">
                 <div style="text-align: center; padding: 3rem; color: var(--color-text-muted);">
