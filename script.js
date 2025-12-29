@@ -1936,6 +1936,9 @@ function showComparison() {
         return;
     }
 
+    // Scroll to top so modal is visible
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     const players = comparisonPlayers;
 
     // Build comparison modal
