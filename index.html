@@ -195,8 +195,38 @@
             <div class="music-content">
                 <p class="music-description">Check out my music on Spotify - the perfect soundtrack for your racing sessions</p>
                 <div class="spotify-embed">
-                    <iframe style="border-radius:12px" src="https://open.spotify.com/embed/artist/78N80RXrnQEve1nEi8XF9J?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+                    <iframe
+                        id="spotify-iframe"
+                        style="border-radius:12px"
+                        src="https://open.spotify.com/embed/artist/78N80RXrnQEve1nEi8XF9J?utm_source=generator"
+                        width="100%"
+                        height="352"
+                        frameBorder="0"
+                        allowfullscreen=""
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        onload="clearTimeout(window.spotifyTimeout)"
+                        onerror="document.getElementById('spotify-fallback').style.display='block'; this.style.display='none';">
+                    </iframe>
+                    <div id="spotify-fallback" style="display:none; text-align:center; padding:2rem; background:rgba(255,255,255,0.05); border-radius:12px;">
+                        <p style="margin-bottom:1rem;">Spotify embed is taking a while to load...</p>
+                        <a href="https://open.spotify.com/artist/78N80RXrnQEve1nEi8XF9J"
+                           target="_blank"
+                           style="display:inline-block; background:var(--color-primary); color:white; padding:0.75rem 1.5rem; border-radius:8px; text-decoration:none; font-weight:600;">
+                            Listen on Spotify →
+                        </a>
+                    </div>
                 </div>
+                <script>
+                    // Show fallback if iframe doesn't load within 12 seconds
+                    window.spotifyTimeout = setTimeout(() => {
+                        const iframe = document.getElementById('spotify-iframe');
+                        const fallback = document.getElementById('spotify-fallback');
+                        if (iframe && fallback) {
+                            fallback.style.display = 'block';
+                            iframe.style.display = 'none';
+                        }
+                    }, 12000);
+                </script>
             </div>
         </div>
     </section>
