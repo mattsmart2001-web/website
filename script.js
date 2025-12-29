@@ -1936,9 +1936,6 @@ function showComparison() {
         return;
     }
 
-    // Scroll to top so modal is visible
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
     const players = comparisonPlayers;
 
     // Build comparison modal
@@ -2631,7 +2628,7 @@ function displayLeaderboard() {
         `;
     }
 
-    let html = rivalsHtml + comparisonBarHtml + podiumHtml + `
+    let html = rivalsHtml + podiumHtml + `
         <div style="margin-bottom: 1.5rem; text-align: center;">
             <p style="color: var(--color-text-muted); font-size: 1rem;">
                 Sorted by: <span style="color: var(--color-primary); font-weight: 700;">${sortLabels[currentSort]}</span>
@@ -2654,6 +2651,8 @@ function displayLeaderboard() {
                 onblur="this.style.borderColor='rgba(96,197,255,0.3)'; this.style.background='rgba(255,255,255,0.05)'"
             />
         </div>
+
+        ${comparisonBarHtml}
 
         <!-- Desktop Table View -->
         <div style="display: none; overflow-x: auto; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);" class="desktop-leaderboard">
