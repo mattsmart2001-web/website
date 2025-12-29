@@ -2700,7 +2700,6 @@ function displayLeaderboard() {
                         <span onclick="showDRGraph('${player.user_guid}', '${player.psn_id}')" style="cursor: pointer;" title="Click to view DR history">${countryFlag}${player.psn_id}${specialEmoji}</span>
                         ${rivalButton}
                         ${compareButton}
-                        <button onclick='event.stopPropagation(); showNoteEditor(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.15rem 0.5rem; border-radius: 12px; cursor: pointer; font-size: 0.65rem; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;" onmouseover="this.style.background='rgba(0,255,136,0.1)'; this.style.borderColor='var(--color-primary)'; this.style.color='var(--color-primary)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.15)'; this.style.color='var(--color-text-muted)'" title="Add personal note">add note</button>
                         ${tagsHTML}
                     </div>
                 </td>
@@ -2792,7 +2791,6 @@ function displayLeaderboard() {
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
                     ${rivalButtonMobile}
                     ${compareButtonMobile}
-                    <button onclick='event.stopPropagation(); showNoteEditor(${JSON.stringify(player).replace(/'/g, "\\'")} )' style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.4rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: 600;">Add Note</button>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
                     <div style="text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px;">
