@@ -2828,7 +2828,7 @@ function displayLeaderboard() {
         let specialBadge = '';
         if (player.psn_id === 'marris_GT7') {
             specialBadge = ' 🎂';
-        } else if (player.psn_id.toUpperCase().startsWith('TCR')) {
+        } else if (player.psn_id.toUpperCase().startsWith('TCR') || player.psn_id.toUpperCase().includes('HOGSTON')) {
             specialBadge = ' <img src="TCR.jpeg" alt="TCR" style="height: 1em; width: auto; vertical-align: middle; margin-left: 0.25rem; border-radius: 2px;">';
         }
         const specialEmoji = specialBadge;
@@ -2933,7 +2933,7 @@ function displayLeaderboard() {
         let specialBadgeMobile = '';
         if (player.psn_id === 'marris_GT7') {
             specialBadgeMobile = ' 🎂';
-        } else if (player.psn_id.toUpperCase().startsWith('TCR')) {
+        } else if (player.psn_id.toUpperCase().startsWith('TCR') || player.psn_id.toUpperCase().includes('HOGSTON')) {
             specialBadgeMobile = ' <img src="TCR.jpeg" alt="TCR" style="height: 1em; width: auto; vertical-align: middle; margin-left: 0.25rem; border-radius: 2px;">';
         }
         const specialEmojiMobile = specialBadgeMobile;
