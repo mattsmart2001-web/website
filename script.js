@@ -2577,22 +2577,22 @@ function displayLeaderboard() {
                 <h3 style="text-align: center; color: var(--color-primary); font-size: 0.85rem; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
                     ${podiumTitle}
                 </h3>
-                <div style="display: flex; justify-content: center; gap: 0.5rem; max-width: 1200px; margin: 0 auto;">
-                    <!-- 2nd Place -->
-                    <div style="flex: 1; background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(192,192,192,0.05)); border: 1px solid #c0c0c0; border-radius: 8px; padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
-                        <div style="color: #c0c0c0; font-weight: 800; font-size: 1rem;">🥈 #2</div>
-                        <div style="flex: 1; color: var(--color-primary); font-weight: 600; font-size: 0.9rem;">${flag2}${top3[1].psn_id}</div>
-                        <div style="text-align: right;">
-                            ${getMainStat(top3[1])}
-                        </div>
-                    </div>
-
+                <div class="podium-container" style="display: flex; justify-content: center; gap: 0.5rem; max-width: 1200px; margin: 0 auto;">
                     <!-- 1st Place (Champion) -->
                     <div style="flex: 1; background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05)); border: 2px solid #ffd700; border-radius: 8px; padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 2px 8px rgba(255,215,0,0.2);">
                         <div style="color: #ffd700; font-weight: 900; font-size: 1.1rem; text-shadow: 0 0 10px rgba(255,215,0,0.4);">🥇 #1</div>
                         <div style="flex: 1; color: var(--color-primary); font-weight: 700; font-size: 0.95rem;">${flag1}${top3[0].psn_id}</div>
                         <div style="text-align: right;">
                             ${getMainStat(top3[0])}
+                        </div>
+                    </div>
+
+                    <!-- 2nd Place -->
+                    <div style="flex: 1; background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(192,192,192,0.05)); border: 1px solid #c0c0c0; border-radius: 8px; padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="color: #c0c0c0; font-weight: 800; font-size: 1rem;">🥈 #2</div>
+                        <div style="flex: 1; color: var(--color-primary); font-weight: 600; font-size: 0.9rem;">${flag2}${top3[1].psn_id}</div>
+                        <div style="text-align: right;">
+                            ${getMainStat(top3[1])}
                         </div>
                     </div>
 
@@ -2985,17 +2985,7 @@ function displayChampionRankings() {
                 <h3 style="text-align: center; color: var(--color-primary); font-size: 0.85rem; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
                     👑 Top 3 Overall Champions 👑
                 </h3>
-                <div style="display: flex; justify-content: center; gap: 0.5rem; max-width: 1200px; margin: 0 auto;">
-                    <!-- 2nd Place -->
-                    <div style="flex: 1; background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(192,192,192,0.05)); border: 1px solid #c0c0c0; border-radius: 8px; padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
-                        <div style="color: #c0c0c0; font-weight: 800; font-size: 1rem;">🥈 #2</div>
-                        <div style="flex: 1; color: var(--color-primary); font-weight: 600; font-size: 0.9rem;">${flag2}${top3[1].psn_id}</div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; text-align: right;">
-                            <div style="color: ${tier2.color}; font-size: 0.9rem;">${tier2.icon} ${tier2.name}</div>
-                            <div style="color: var(--color-primary); font-weight: 800; font-size: 1rem;">${top3[1].championScore.total.toFixed(1)}</div>
-                        </div>
-                    </div>
-
+                <div class="podium-container" style="display: flex; justify-content: center; gap: 0.5rem; max-width: 1200px; margin: 0 auto;">
                     <!-- 1st Place (Champion) -->
                     <div style="flex: 1; background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05)); border: 2px solid #ffd700; border-radius: 8px; padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 2px 8px rgba(255,215,0,0.2);">
                         <div style="color: #ffd700; font-weight: 900; font-size: 1.1rem; text-shadow: 0 0 10px rgba(255,215,0,0.4);">🥇 #1</div>
@@ -3003,6 +2993,16 @@ function displayChampionRankings() {
                         <div style="display: flex; align-items: center; gap: 0.5rem; text-align: right;">
                             <div style="color: ${tier1.color}; font-size: 0.95rem;">${tier1.icon} ${tier1.name}</div>
                             <div style="color: var(--color-primary); font-weight: 800; font-size: 1.1rem;">${top3[0].championScore.total.toFixed(1)}</div>
+                        </div>
+                    </div>
+
+                    <!-- 2nd Place -->
+                    <div style="flex: 1; background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(192,192,192,0.05)); border: 1px solid #c0c0c0; border-radius: 8px; padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="color: #c0c0c0; font-weight: 800; font-size: 1rem;">🥈 #2</div>
+                        <div style="flex: 1; color: var(--color-primary); font-weight: 600; font-size: 0.9rem;">${flag2}${top3[1].psn_id}</div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; text-align: right;">
+                            <div style="color: ${tier2.color}; font-size: 0.9rem;">${tier2.icon} ${tier2.name}</div>
+                            <div style="color: var(--color-primary); font-weight: 800; font-size: 1rem;">${top3[1].championScore.total.toFixed(1)}</div>
                         </div>
                     </div>
 

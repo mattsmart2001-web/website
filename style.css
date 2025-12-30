@@ -1397,6 +1397,10 @@ body {
     .about-image {
         height: 300px;
     }
+
+    .podium-container {
+        flex-direction: column !important;
+    }
 }
 
 @media (max-width: 480px) {
