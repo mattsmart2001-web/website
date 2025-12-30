@@ -1159,6 +1159,7 @@ function displayUserStats(psnId, userGuid, data) {
                     <option value="NL">🇳🇱 Netherlands</option>
                     <option value="BE">🇧🇪 Belgium</option>
                     <option value="CH">🇨🇭 Switzerland</option>
+                    <option value="SI">🇸🇮 Slovenia</option>
                     <option value="AT">🇦🇹 Austria</option>
                     <option value="SE">🇸🇪 Sweden</option>
                     <option value="NO">🇳🇴 Norway</option>
@@ -1312,6 +1313,7 @@ function displayUserStatsFromScraper(psnId, userGuid, data) {
                     <option value="NL">🇳🇱 Netherlands</option>
                     <option value="BE">🇧🇪 Belgium</option>
                     <option value="CH">🇨🇭 Switzerland</option>
+                    <option value="SI">🇸🇮 Slovenia</option>
                     <option value="AT">🇦🇹 Austria</option>
                     <option value="SE">🇸🇪 Sweden</option>
                     <option value="NO">🇳🇴 Norway</option>
