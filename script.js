@@ -2830,6 +2830,8 @@ function displayLeaderboard() {
             specialBadge = ' 🎂';
         } else if (player.psn_id.toUpperCase().startsWith('TCR') || player.psn_id.toUpperCase().includes('HOGSTON')) {
             specialBadge = ' <img src="TCR.jpeg" alt="TCR" style="height: 1em; width: auto; vertical-align: middle; margin-left: 0.25rem; border-radius: 2px;">';
+        } else if (player.psn_id.toUpperCase().startsWith('DG')) {
+            specialBadge = ' <img src="DG.jpg" alt="DG" style="height: 1em; width: auto; vertical-align: middle; margin-left: 0.25rem; border-radius: 2px;">';
         }
         const specialEmoji = specialBadge;
 
@@ -2935,6 +2937,8 @@ function displayLeaderboard() {
             specialBadgeMobile = ' 🎂';
         } else if (player.psn_id.toUpperCase().startsWith('TCR') || player.psn_id.toUpperCase().includes('HOGSTON')) {
             specialBadgeMobile = ' <img src="TCR.jpeg" alt="TCR" style="height: 1em; width: auto; vertical-align: middle; margin-left: 0.25rem; border-radius: 2px;">';
+        } else if (player.psn_id.toUpperCase().startsWith('DG')) {
+            specialBadgeMobile = ' <img src="DG.jpg" alt="DG" style="height: 1em; width: auto; vertical-align: middle; margin-left: 0.25rem; border-radius: 2px;">';
         }
         const specialEmojiMobile = specialBadgeMobile;
 
