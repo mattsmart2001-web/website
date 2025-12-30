@@ -2824,8 +2824,14 @@ function displayLeaderboard() {
         // Country Flag
         const countryFlag = player.country_code ? getCountryFlag(player.country_code) + ' ' : '';
 
-        // Special emoji for specific players
-        const specialEmoji = player.psn_id === 'marris_GT7' ? ' 🎂' : '';
+        // Special badges for specific players
+        let specialBadge = '';
+        if (player.psn_id === 'marris_GT7') {
+            specialBadge = ' 🎂';
+        } else if (player.psn_id.toUpperCase().startsWith('TCR')) {
+            specialBadge = ' <span style="display: inline-block; background: linear-gradient(135deg, #FFE600, #FF0000); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.65rem; font-weight: 900; color: #000; letter-spacing: 0.5px; vertical-align: middle; margin-left: 0.25rem;">TCR</span>';
+        }
+        const specialEmoji = specialBadge;
 
         // Position change tracking
         const currentPosition = index + 1;
@@ -2923,8 +2929,14 @@ function displayLeaderboard() {
         // Country Flag for mobile
         const countryFlagMobile = player.country_code ? getCountryFlag(player.country_code) + ' ' : '';
 
-        // Special emoji for specific players (mobile)
-        const specialEmojiMobile = player.psn_id === 'marris_GT7' ? ' 🎂' : '';
+        // Special badges for specific players (mobile)
+        let specialBadgeMobile = '';
+        if (player.psn_id === 'marris_GT7') {
+            specialBadgeMobile = ' 🎂';
+        } else if (player.psn_id.toUpperCase().startsWith('TCR')) {
+            specialBadgeMobile = ' <span style="display: inline-block; background: linear-gradient(135deg, #FFE600, #FF0000); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.65rem; font-weight: 900; color: #000; letter-spacing: 0.5px; vertical-align: middle; margin-left: 0.25rem;">TCR</span>';
+        }
+        const specialEmojiMobile = specialBadgeMobile;
 
         // Rival tracking for mobile
         const playerIsRivalMobile = isRival(player.user_guid);
