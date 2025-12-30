@@ -1888,6 +1888,44 @@ function getRivalPlayerData(userGuid) {
     return leaderboardData.find(p => p.user_guid === userGuid);
 }
 
+// ===== USER PSN ID MANAGEMENT =====
+function getUserPSN() {
+    return localStorage.getItem('gt7_user_psn');
+}
+
+function setUserPSN(psnId) {
+    if (!psnId || psnId.trim() === '') {
+        alert('Please enter a valid PSN ID');
+        return false;
+    }
+    localStorage.setItem('gt7_user_psn', psnId.trim());
+    displayLeaderboard(); // Refresh to show updated UI
+    return true;
+}
+
+function clearUserPSN() {
+    localStorage.removeItem('gt7_user_psn');
+    displayLeaderboard(); // Refresh to show updated UI
+}
+
+function getUserPlayerData() {
+    const userPSN = getUserPSN();
+    if (!userPSN) return null;
+    return leaderboardData.find(p => p.psn_id.toLowerCase() === userPSN.toLowerCase());
+}
+
+function showSetPSNPrompt() {
+    const currentPSN = getUserPSN();
+    const message = currentPSN
+        ? `Current PSN: ${currentPSN}\n\nEnter new PSN ID or click Cancel to keep current:`
+        : 'Enter your PSN ID to enable detailed rival comparisons:';
+
+    const newPSN = prompt(message, currentPSN || '');
+    if (newPSN !== null && newPSN.trim() !== '') {
+        setUserPSN(newPSN);
+    }
+}
+
 // ===== DRIVER COMPARISON SYSTEM =====
 let comparisonPlayers = [];
 const MAX_COMPARISON = 3;
@@ -2455,58 +2493,143 @@ function displayLeaderboard() {
         total_races: 'Total Races'
     };
 
-    // Rivals Section
+    // Rivals Section with Detailed Comparisons
     let rivalsHtml = '';
     const rivals = getRivals();
+    const userPSN = getUserPSN();
+    const userData = getUserPlayerData();
+
     if (rivals.length > 0) {
-        const rivalCards = rivals.map(rival => {
-            const rivalPlayer = getRivalPlayerData(rival.user_guid);
-            if (!rivalPlayer) {
-                return `<div style="flex: 1; min-width: 200px; max-width: 250px; background: rgba(255,255,255,0.03); border: 2px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 1.5rem; text-align: center;">
-                    <div style="color: var(--color-text-muted); font-size: 0.9rem;">Player not found</div>
-                    <div style="color: var(--color-primary); font-weight: 700; margin: 0.5rem 0;">${rival.psn_id}</div>
-                    <button onclick='removeRival("${rival.user_guid}")' style="background: rgba(255,0,0,0.1); border: 1px solid #ff4444; color: #ff4444; padding: 0.4rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.75rem; margin-top: 1rem;">Remove</button>
-                </div>`;
-            }
-
-            const rivalPosition = filteredData.findIndex(p => p.user_guid === rival.user_guid) + 1;
-            const countryFlag = rivalPlayer.country_code ? getCountryFlag(rivalPlayer.country_code) + ' ' : '';
-
-            return `<div style="flex: 1; min-width: 200px; max-width: 250px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.05)); border: 2px solid rgba(255,215,0,0.5); border-radius: 12px; padding: 1.5rem; text-align: center; position: relative;">
-                <div style="position: absolute; top: 0.5rem; right: 0.5rem; font-size: 1.5rem;">⭐</div>
-                <div style="color: #ffd700; font-weight: 900; font-size: 2rem; margin-bottom: 0.5rem;">#${rivalPosition || '?'}</div>
-                <div style="color: var(--color-primary); font-weight: 700; font-size: 1.1rem; margin-bottom: 1rem;">${countryFlag}${rivalPlayer.psn_id}</div>
-                <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem;">
-                    <div style="color: var(--color-primary); font-weight: 800; font-size: 1.5rem; line-height: 1;">${rivalPlayer.rank || 'E'}</div>
-                    <div style="color: var(--text-color); font-size: 0.9rem; margin-top: 0.25rem;">${rivalPlayer.dr?.toLocaleString() || 0} DR</div>
+        // If user hasn't set their PSN, show prompt
+        if (!userPSN || !userData) {
+            rivalsHtml = `
+                <div style="margin-bottom: 3rem; padding: 2rem; background: linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,165,0,0.02)); border: 2px solid rgba(255,215,0,0.2); border-radius: 16px; text-align: center;">
+                    <h3 style="color: #ffd700; font-size: 1.3rem; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 2px;">
+                        ⭐ Your Rivals (${rivals.length}/${MAX_RIVALS})
+                    </h3>
+                    <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">Set your PSN ID to see detailed comparisons with your rivals</p>
+                    <button onclick="showSetPSNPrompt()" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700; box-shadow: 0 2px 10px rgba(14,165,233,0.4);">Set Your PSN ID</button>
                 </div>
-                <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.75rem;">
-                    <div style="flex: 1; background: rgba(255,255,255,0.03); border-radius: 6px; padding: 0.4rem;">
-                        <div style="color: var(--color-text-muted); font-size: 0.65rem;">SR</div>
-                        <div style="color: var(--color-secondary); font-weight: 700; font-size: 0.9rem;">${rivalPlayer.sr_grade || 'E'}</div>
-                    </div>
-                    <div style="flex: 1; background: rgba(255,255,255,0.03); border-radius: 6px; padding: 0.4rem;">
-                        <div style="color: var(--color-text-muted); font-size: 0.65rem;">Win%</div>
-                        <div style="color: var(--color-primary); font-weight: 700; font-size: 0.9rem;">${rivalPlayer.win_percentage?.toFixed(1) || 0}%</div>
-                    </div>
-                </div>
-                <button onclick='removeRival("${rival.user_guid}")' style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.4rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.75rem; margin-top: 1rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,0,0,0.1)'; this.style.borderColor='#ff4444'; this.style.color='#ff4444'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.15)'; this.style.color='var(--color-text-muted)'">Unpin</button>
-            </div>`;
-        }).join('');
+            `;
+        } else {
+            // Show detailed comparisons
+            const userPosition = filteredData.findIndex(p => p.user_guid === userData.user_guid) + 1;
 
-        rivalsHtml = `
-            <div style="margin-bottom: 3rem; padding: 2rem; background: linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,165,0,0.02)); border: 2px solid rgba(255,215,0,0.2); border-radius: 16px;">
-                <h3 style="text-align: center; color: #ffd700; font-size: 1.3rem; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 2px;">
-                    ⭐ Your Rivals (${rivals.length}/${MAX_RIVALS})
-                </h3>
-                <div style="display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap;">
+            const rivalCards = rivals.map(rival => {
+                const rivalPlayer = getRivalPlayerData(rival.user_guid);
+                if (!rivalPlayer) {
+                    return `<div style="background: rgba(255,255,255,0.03); border: 2px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+                        <div style="color: var(--color-text-muted); font-size: 0.9rem;">Player not found</div>
+                        <div style="color: var(--color-primary); font-weight: 700; margin: 0.5rem 0;">${rival.psn_id}</div>
+                        <button onclick='removeRival("${rival.user_guid}")' style="background: rgba(255,0,0,0.1); border: 1px solid #ff4444; color: #ff4444; padding: 0.4rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.75rem; margin-top: 1rem;">Remove</button>
+                    </div>`;
+                }
+
+                const rivalPosition = filteredData.findIndex(p => p.user_guid === rival.user_guid) + 1;
+                const positionGap = rivalPosition - userPosition;
+                const drGap = (rivalPlayer.dr || 0) - (userData.dr || 0);
+                const winGap = (rivalPlayer.win_percentage || 0) - (userData.win_percentage || 0);
+                const poleGap = (rivalPlayer.pole_percentage || 0) - (userData.pole_percentage || 0);
+                const flGap = (rivalPlayer.fastest_lap_percentage || 0) - (userData.fastest_lap_percentage || 0);
+
+                const aheadBehind = positionGap < 0
+                    ? `<span style="color: #00ff88;">▲ ${Math.abs(positionGap)} ahead</span>`
+                    : positionGap > 0
+                        ? `<span style="color: #ff4444;">▼ ${positionGap} behind</span>`
+                        : `<span style="color: #ffd700;">● Tied</span>`;
+
+                const countryFlag = rivalPlayer.country_code ? getCountryFlag(rivalPlayer.country_code) + ' ' : '';
+
+                // Comparison bars helper
+                const makeComparisonBar = (yourVal, theirVal, label, suffix = '%') => {
+                    const maxVal = Math.max(yourVal, theirVal, 1);
+                    const yourWidth = (yourVal / maxVal) * 100;
+                    const theirWidth = (theirVal / maxVal) * 100;
+                    const gap = theirVal - yourVal;
+                    const gapColor = gap > 0 ? '#ff4444' : gap < 0 ? '#00ff88' : '#ffd700';
+                    const gapText = gap > 0 ? `+${gap.toFixed(1)}` : gap.toFixed(1);
+
+                    return `
+                        <div style="margin-bottom: 0.75rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                                <span style="color: var(--color-text-muted); font-size: 0.75rem;">${label}</span>
+                                <span style="color: ${gapColor}; font-size: 0.75rem; font-weight: 700;">${gapText}${suffix}</span>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <div style="flex: 1; background: rgba(255,255,255,0.05); border-radius: 4px; height: 24px; position: relative; overflow: hidden;">
+                                    <div style="position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, rgba(96,197,255,0.3), rgba(96,197,255,0.6)); width: ${yourWidth}%;"></div>
+                                    <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white;">${yourVal.toFixed(1)}${suffix}</div>
+                                </div>
+                                <div style="width: 30px; text-align: center; color: var(--color-text-muted); font-size: 0.7rem;">VS</div>
+                                <div style="flex: 1; background: rgba(255,255,255,0.05); border-radius: 4px; height: 24px; position: relative; overflow: hidden;">
+                                    <div style="position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, rgba(255,215,0,0.3), rgba(255,215,0,0.6)); width: ${theirWidth}%;"></div>
+                                    <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white;">${theirVal.toFixed(1)}${suffix}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                };
+
+                return `
+                    <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.05)); border: 2px solid rgba(255,215,0,0.5); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+                        <!-- Header -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,215,0,0.3);">
+                            <div style="flex: 1;">
+                                <div style="color: var(--color-primary); font-weight: 700; font-size: 1.1rem; margin-bottom: 0.25rem;">${countryFlag}${rivalPlayer.psn_id}</div>
+                                <div style="color: var(--color-text-muted); font-size: 0.85rem;">Rank #${rivalPosition} • ${aheadBehind}</div>
+                            </div>
+                            <button onclick='removeRival("${rival.user_guid}")' style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: var(--color-text-muted); padding: 0.4rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.75rem;">Remove</button>
+                        </div>
+
+                        <!-- DR Comparison -->
+                        <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <div style="text-align: center; flex: 1;">
+                                    <div style="color: var(--color-text-muted); font-size: 0.75rem; margin-bottom: 0.25rem;">You</div>
+                                    <div style="color: var(--color-primary); font-weight: 800; font-size: 1.3rem;">${userData.rank || 'E'}</div>
+                                    <div style="color: var(--text-color); font-size: 0.8rem;">${(userData.dr || 0).toLocaleString()} DR</div>
+                                </div>
+                                <div style="color: var(--color-text-muted); font-size: 1.5rem;">⚔️</div>
+                                <div style="text-align: center; flex: 1;">
+                                    <div style="color: var(--color-text-muted); font-size: 0.75rem; margin-bottom: 0.25rem;">Rival</div>
+                                    <div style="color: #ffd700; font-weight: 800; font-size: 1.3rem;">${rivalPlayer.rank || 'E'}</div>
+                                    <div style="color: var(--text-color); font-size: 0.8rem;">${(rivalPlayer.dr || 0).toLocaleString()} DR</div>
+                                </div>
+                            </div>
+                            <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 6px; margin-top: 0.5rem;">
+                                <span style="color: ${drGap > 0 ? '#ff4444' : drGap < 0 ? '#00ff88' : '#ffd700'}; font-weight: 700; font-size: 0.9rem;">
+                                    ${drGap > 0 ? `+${drGap.toLocaleString()}` : drGap.toLocaleString()} DR gap
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Stats Comparisons -->
+                        <div>
+                            ${makeComparisonBar(userData.win_percentage || 0, rivalPlayer.win_percentage || 0, 'Win Rate')}
+                            ${makeComparisonBar(userData.pole_percentage || 0, rivalPlayer.pole_percentage || 0, 'Pole Rate')}
+                            ${makeComparisonBar(userData.fastest_lap_percentage || 0, rivalPlayer.fastest_lap_percentage || 0, 'Fastest Lap Rate')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            rivalsHtml = `
+                <div style="margin-bottom: 3rem; padding: 2rem; background: linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,165,0,0.02)); border: 2px solid rgba(255,215,0,0.2); border-radius: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="color: #ffd700; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 2px; margin: 0;">
+                            ⭐ Rival Comparisons (${rivals.length}/${MAX_RIVALS})
+                        </h3>
+                        <button onclick="showSetPSNPrompt()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,215,0,0.3); color: #ffd700; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">
+                            Change PSN (${userPSN})
+                        </button>
+                    </div>
+                    <div style="color: var(--color-text-muted); text-align: center; font-size: 0.85rem; margin-bottom: 1.5rem;">
+                        You: ${countryFlag = userData.country_code ? getCountryFlag(userData.country_code) + ' ' : ''}${userData.psn_id} • Rank #${userPosition}
+                    </div>
                     ${rivalCards}
                 </div>
-                <p style="text-align: center; color: var(--color-text-muted); font-size: 0.85rem; margin-top: 1.5rem; font-style: italic;">
-                    Track up to ${MAX_RIVALS} rivals and monitor their progress on the leaderboard
-                </p>
-            </div>
-        `;
+            `;
+        }
     }
 
     // Top 3 Podium Showcase
