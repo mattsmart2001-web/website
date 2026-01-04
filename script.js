@@ -3279,13 +3279,14 @@ function displayChampionRankings() {
 
 // Load leaderboard when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    fetchLeaderboard();
+    // DISABLED: API calls removed for ethical review
+    // fetchLeaderboard();
 
-    // Auto-refresh leaderboard every 1 hour
-    setInterval(() => {
-        console.log('Auto-refreshing leaderboard...');
-        fetchLeaderboard(currentSort);
-    }, 3600000); // 1 hour = 3,600,000 milliseconds
+    // DISABLED: Auto-refresh leaderboard every 1 hour
+    // setInterval(() => {
+    //     console.log('Auto-refreshing leaderboard...');
+    //     fetchLeaderboard(currentSort);
+    // }, 3600000); // 1 hour = 3,600,000 milliseconds
 });
 
 // ===== DR HISTORY GRAPH =====
