@@ -1708,8 +1708,8 @@ async function submitToLeaderboard(psnId, userGuid, dr, rank, sr, srGrade, total
             submitBtn.disabled = false;
         }, 3000);
 
-        // Refresh leaderboard if on that section
-        await fetchLeaderboard();
+        // DISABLED: Refresh leaderboard if on that section
+        // await fetchLeaderboard();
 
         // Show success message with ranking info
         alert(`🏆 Success!\n\nYour stats have been submitted to the global leaderboard!\n\nDR: ${dr.toLocaleString()} (${rank})\nWin Rate: ${winPercentage}%\nPole Rate: ${polePercentage}%\n\nCheck the Leaderboard section to see your ranking!`);
@@ -1802,8 +1802,8 @@ async function submitToLeaderboardFromScraper(psnId, userGuid, rank, srGrade, to
             submitBtn.disabled = false;
         }, 3000);
 
-        // Refresh leaderboard if on that section
-        await fetchLeaderboard();
+        // DISABLED: Refresh leaderboard if on that section
+        // await fetchLeaderboard();
 
         // Show success message with ranking info
         alert(`🏆 Success!\n\nYour stats have been submitted to the global leaderboard!\n\nRank: ${rank}\nSR: ${srGrade}\nWin Rate: ${winPercentage}%\nPole Rate: ${polePercentage}%\n\nCheck the Leaderboard section to see your ranking!`);
