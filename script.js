@@ -2896,13 +2896,13 @@ function displayLeaderboard() {
             </tr>
         `;
 
-        // Fetch and display sparkline asynchronously
-        fetchDRHistory(player.user_guid, player.psn_id).then(historyData => {
-            const cell = document.getElementById(trendCellId);
-            if (cell && historyData) {
-                cell.innerHTML = `<div style="display: flex; align-items: center; justify-content: center;">${createSparkline(historyData, 80, 30)}</div>`;
-            }
-        });
+        // DISABLED: Fetch and display sparkline asynchronously (API calls removed for ethical review)
+        // fetchDRHistory(player.user_guid, player.psn_id).then(historyData => {
+        //     const cell = document.getElementById(trendCellId);
+        //     if (cell && historyData) {
+        //         cell.innerHTML = `<div style="display: flex; align-items: center; justify-content: center;">${createSparkline(historyData, 80, 30)}</div>`;
+        //     }
+        // });
     });
 
     html += `
