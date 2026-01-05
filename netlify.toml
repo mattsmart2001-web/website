@@ -8,6 +8,7 @@
   status = 200
 
 [functions]
-  # Scheduled function to auto-update leaderboard stats
-  [functions."update-leaderboard"]
-    schedule = "0 * * * *"  # Every hour at minute 0
+  # DISABLED: Scheduled function to auto-update leaderboard stats
+  # Disabled for ethical review - awaiting permission from gtstats.live
+  # [functions."update-leaderboard"]
+  #   schedule = "0 * * * *"  # Every hour at minute 0
