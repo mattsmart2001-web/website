@@ -333,7 +333,42 @@ async def broadcast(message: str):
 # ═══════════════════════════════════════════════════════════════
 #  GT7 UDP RECEIVER
 # ═══════════════════════════════════════════════════════════════
-async def gt7_receiver(ps5_ip: Optional[str] = None):
+def _send_hb(ip: str) -> None:
+    """Send a single heartbeat ('A') to the PS5."""
+    try:
+        hb_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        hb_sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        hb_sock.sendto(b'A', (ip, SEND_PORT))
+        hb_sock.close()
+    except Exception:
+        pass
+
+
+async def heartbeat_loop(ps5_ip_ref: list) -> None:
+    """
+    Runs independently — sends a heartbeat every HEARTBEAT_INT seconds.
+    ps5_ip_ref is a one-element list so the receiver can update the IP
+    and this task picks it up without needing nonlocal across coroutines.
+
+    On startup we also broadcast to 255.255.255.255 so GT7 knows our IP
+    and begins streaming even before we receive the first packet.
+    """
+    # Initial broadcast — kick-starts GT7 data stream
+    log.info("Sending initial broadcast heartbeat to start GT7 stream...")
+    _send_hb('255.255.255.255')
+
+    while True:
+        await asyncio.sleep(HEARTBEAT_INT)
+        ip = ps5_ip_ref[0]
+        if ip:
+            log.debug(f"Heartbeat → {ip}:{SEND_PORT}")
+            _send_hb(ip)
+        else:
+            # PS5 not yet found — keep broadcasting so GT7 knows our IP
+            _send_hb('255.255.255.255')
+
+
+async def gt7_receiver(ps5_ip: Optional[str] = None, ps5_ip_ref: Optional[list] = None):
     """Receive and decode GT7 UDP packets, broadcast over WebSocket."""
 
     # Create UDP socket
@@ -348,25 +383,11 @@ async def gt7_receiver(ps5_ip: Optional[str] = None):
     log.info(f"Listening for GT7 telemetry on UDP port {GT7_PORT}")
     log.info(f"Make sure GT7 → Settings → Assists → Send Vehicle Data is ON")
 
-    last_heartbeat = 0
     packet_count   = 0
     last_packet_id = -1
     detected_ip    = ps5_ip
-
-    # Heartbeat keeps the data stream alive
-    async def send_heartbeat():
-        nonlocal last_heartbeat, detected_ip
-        now = time.time()
-        if now - last_heartbeat < HEARTBEAT_INT:
-            return
-        last_heartbeat = now
-        if detected_ip:
-            try:
-                hb_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                hb_sock.sendto(b'A', (detected_ip, SEND_PORT))
-                hb_sock.close()
-            except Exception:
-                pass
+    if ps5_ip_ref is not None and ps5_ip:
+        ps5_ip_ref[0] = ps5_ip
 
     while True:
         await asyncio.sleep(0)  # yield to event loop
@@ -384,15 +405,16 @@ async def gt7_receiver(ps5_ip: Optional[str] = None):
         # Auto-detect PS5 IP
         if detected_ip is None:
             detected_ip = addr[0]
+            if ps5_ip_ref is not None:
+                ps5_ip_ref[0] = detected_ip
             log.info(f"GT7 detected at {detected_ip}")
+            # Immediately send a directed heartbeat so GT7 keeps streaming to us
+            _send_hb(detected_ip)
             await broadcast(json.dumps({
                 "type": "gt7_detected",
                 "ip": detected_ip,
                 "message": f"GT7 found at {detected_ip} — receiving telemetry"
             }))
-
-        # Send heartbeat to keep stream alive
-        await send_heartbeat()
 
         # Decrypt packet
         decrypted = decrypt_packet(raw)
@@ -450,13 +472,17 @@ async def main():
     print("  Press Ctrl+C to stop.")
     print("=" * 55)
 
-    # Start WebSocket server and GT7 receiver concurrently
+    # Shared reference so heartbeat_loop can learn the PS5 IP once detected
+    ps5_ip_ref = [ps5_ip]
+
+    # Start WebSocket server, GT7 receiver, and heartbeat loop concurrently
     ws_server = await websockets.serve(ws_handler, WS_HOST, WS_PORT)
     log.info(f"WebSocket server running on ws://localhost:{WS_PORT}")
 
     await asyncio.gather(
         ws_server.wait_closed(),
-        gt7_receiver(ps5_ip)
+        gt7_receiver(ps5_ip, ps5_ip_ref),
+        heartbeat_loop(ps5_ip_ref),
     )
 
 

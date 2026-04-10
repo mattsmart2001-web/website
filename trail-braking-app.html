@@ -978,7 +978,7 @@ function handleGT7Message(msg){
 }
 
 function applyLiveTelemetry(d){
-  if(playing) return; // don't override play animation
+  if(playing) stopPlay(); // live data takes priority over play animation
 
   // Map GT7 data to our state
   S.brake  = clamp(Math.round(d.brake),  0, 100);
