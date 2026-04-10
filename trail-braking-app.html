@@ -288,13 +288,54 @@ function getRacingLine(W,H){
   const key=W+'x'+H;
   if(racingLinePts&&lastTrackSize===key) return racingLinePts;
   lastTrackSize=key;
-  // Scale normalised coords to canvas
-  // Track centre path: entry from left at y≈80%, corner at x≈70%, exit upward at x≈70%
-  // Racing line: outer entry wall (high Y), late apex (low X/high Y within corner), outer exit wall (high X)
-  const p0={x:W*0.03, y:H*0.85};  // entry: near outer (bottom) wall
-  const cp={x:W*0.70, y:H*0.82};  // control: pulls line to outer on entry, late apex
-  const p1={x:W*0.72, y:H*0.03};  // exit: near outer (right) wall
-  racingLinePts = sampleQBez(p0,cp,p1,300);
+
+  // Compute the apex point on the inner kerb using the SAME maths as the apex dot drawing,
+  // so the racing line is guaranteed to pass exactly through it.
+  const tc_p0={x:W*0.03,y:H*0.78};
+  const tc_cp={x:W*0.68,y:H*0.76};
+  const tc_p1={x:W*0.69,y:H*0.03};
+  const trackW=Math.min(W,H)*0.17;
+  const apex_t=0.50;
+  const m1=1-apex_t;
+  const apCentre={
+    x:m1*m1*tc_p0.x+2*m1*apex_t*tc_cp.x+apex_t*apex_t*tc_p1.x,
+    y:m1*m1*tc_p0.y+2*m1*apex_t*tc_cp.y+apex_t*apex_t*tc_p1.y
+  };
+  const apTang={
+    x:2*(1-apex_t)*(tc_cp.x-tc_p0.x)+2*apex_t*(tc_p1.x-tc_cp.x),
+    y:2*(1-apex_t)*(tc_cp.y-tc_p0.y)+2*apex_t*(tc_p1.y-tc_cp.y)
+  };
+  const apTLen=Math.sqrt(apTang.x*apTang.x+apTang.y*apTang.y);
+  const apNorm={x:apTang.y/apTLen,y:-apTang.x/apTLen};
+  const toCp={x:tc_cp.x-apCentre.x,y:tc_cp.y-apCentre.y};
+  const dot2=apNorm.x*toCp.x+apNorm.y*toCp.y;
+  const apInward=dot2>0?-1:1;
+  const apInset=trackW*0.5-4;
+  const apexPt={
+    x:apCentre.x+apNorm.x*apInward*apInset,
+    y:apCentre.y+apNorm.y*apInward*apInset
+  };
+
+  // Racing line: one smooth cubic bezier from entry outer wall → apex inner kerb → exit outer wall
+  const entryPt={x:W*0.03,  y:H*0.865};  // near outer (bottom) wall on entry
+  const exitPt ={x:W*0.725, y:H*0.03};   // near outer (right) wall on exit
+
+  // Two control points for a cubic bezier (4-point)
+  // cp1 keeps entry wide and late, cp2 sweeps cleanly to exit outer wall
+  // Both are positioned so the curve naturally passes through apexPt
+  const cp1={x:apexPt.x*0.6+entryPt.x*0.4, y:entryPt.y};
+  const cp2={x:exitPt.x, y:apexPt.y*0.6+exitPt.y*0.4};
+
+  // Sample cubic bezier
+  const n=300;
+  racingLinePts=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n, m=1-t;
+    racingLinePts.push({
+      x:m*m*m*entryPt.x+3*m*m*t*cp1.x+3*m*t*t*cp2.x+t*t*t*exitPt.x,
+      y:m*m*m*entryPt.y+3*m*m*t*cp1.y+3*m*t*t*cp2.y+t*t*t*exitPt.y
+    });
+  }
   return racingLinePts;
 }
 
@@ -402,7 +443,7 @@ function drawTrack(){
   const lbls=[
     {t:.10,txt:'FULL BRAKE',col:'#ff2d3b'},
     {t:.36,txt:'TRAIL BRK', col:'#ffc31a'},
-    {t:.53,txt:'APEX',      col:'#00e5a0'},
+    // APEX label removed — shown directly on inner kerb dot instead
     {t:.78,txt:'POWER OUT', col:'#1ab4ff'},
   ];
   lbls.forEach(({t,txt,col},li)=>{
@@ -462,10 +503,38 @@ function drawTrack(){
   CX.fillStyle='#ff2d3b';CX.fillRect(10,-2.5,4,5);
   CX.restore();
 
-  // Apex dot
-  const ap=lerpPts(rl,.53);
-  CX.save();CX.shadowBlur=10;CX.shadowColor='#00e5a0';
-  CX.beginPath();CX.arc(ap.x,ap.y,5,0,Math.PI*2);CX.fillStyle='#00e5a0';CX.fill();
+  // Apex dot — placed on the INNER KERB (inside of corner)
+  // Sample track centre path at t=0.5 (tightest point of bend)
+  // then offset inward (toward control point) by half track width
+  const apex_t = 0.50;
+  const m1 = 1 - apex_t;
+  const apCentre = {
+    x: m1*m1*tc_p0.x + 2*m1*apex_t*tc_cp.x + apex_t*apex_t*tc_p1.x,
+    y: m1*m1*tc_p0.y + 2*m1*apex_t*tc_cp.y + apex_t*apex_t*tc_p1.y
+  };
+  // Tangent at t=0.5 on the quadratic bezier
+  const apTang = {
+    x: 2*(1-apex_t)*(tc_cp.x-tc_p0.x) + 2*apex_t*(tc_p1.x-tc_cp.x),
+    y: 2*(1-apex_t)*(tc_cp.y-tc_p0.y) + 2*apex_t*(tc_p1.y-tc_cp.y)
+  };
+  const apTLen = Math.sqrt(apTang.x*apTang.x + apTang.y*apTang.y);
+  // Normal pointing LEFT of travel direction = inward for a right-hand corner
+  const apNorm = { x: apTang.y/apTLen, y: -apTang.x/apTLen };
+  // Check which side the control point is on — inner side faces toward cp
+  const toCp = { x: tc_cp.x - apCentre.x, y: tc_cp.y - apCentre.y };
+  const dot = apNorm.x*toCp.x + apNorm.y*toCp.y;
+  const apInward = dot > 0 ? -1 : 1;
+  const apInset = trackW * 0.5 - 4; // half-width minus a little margin
+  const ap = {
+    x: apCentre.x + apNorm.x * apInward * apInset,
+    y: apCentre.y + apNorm.y * apInward * apInset
+  };
+  CX.save();CX.shadowBlur=12;CX.shadowColor='#00e5a0';
+  CX.beginPath();CX.arc(ap.x,ap.y,6,0,Math.PI*2);CX.fillStyle='#00e5a0';CX.fill();
+  // Small label
+  CX.font='bold 8px JetBrains Mono,monospace';CX.fillStyle='#00e5a0';
+  CX.textAlign='center';CX.globalAlpha=.8;
+  CX.fillText('APEX', ap.x + apNorm.x*apInward*(-18), ap.y + apNorm.y*apInward*(-18));
   CX.restore();
 
   // Watermark
@@ -568,7 +637,7 @@ function wPos(e){
 function drawWheel(){
   WX.clearRect(0,0,WC.width,WC.height);WX.fillStyle='#0d0f18';WX.fillRect(0,0,WC.width,WC.height);
   const stF=S.steer/100,col=tcol(S.brake+S.steer+S.accel);
-  WX.save();WX.translate(WCX,WCY);WX.rotate(wheelAngle);
+  WX.save();WX.translate(WCX,WCY);WX.rotate(-wheelAngle);
   WX.beginPath();WX.arc(0,0,WR,0,Math.PI*2);WX.strokeStyle='#252840';WX.lineWidth=8;WX.stroke();
   if(stF>0){WX.beginPath();WX.arc(0,0,WR,-Math.PI/2,-Math.PI/2+stF*Math.PI*2);WX.strokeStyle=col;WX.lineWidth=8;WX.globalAlpha=.75;WX.stroke();WX.globalAlpha=1;}
   [0,-Math.PI*.65,Math.PI*.65].forEach(a=>{WX.save();WX.rotate(a);WX.beginPath();WX.moveTo(0,0);WX.lineTo(0,-WR*.55);WX.strokeStyle='#353850';WX.lineWidth=5;WX.lineCap='round';WX.stroke();WX.restore();});
