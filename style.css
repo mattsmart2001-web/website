@@ -1006,6 +1006,112 @@ body {
     width: 100%;
 }
 
+/* ===== TOOLS SECTION ===== */
+.tools-section {
+    background: var(--color-bg-secondary);
+}
+
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 2.5rem;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.tool-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.tool-card:hover {
+    border-color: rgba(14, 165, 233, 0.4);
+    transform: translateY(-6px);
+    box-shadow: 0 16px 48px rgba(14, 165, 233, 0.12);
+}
+
+.tool-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tool-icon {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(56, 189, 248, 0.15));
+    border: 1px solid rgba(14, 165, 233, 0.3);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tool-icon svg {
+    width: 26px;
+    height: 26px;
+    color: var(--color-primary);
+}
+
+.tool-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--color-primary);
+    background: rgba(14, 165, 233, 0.1);
+    border: 1px solid rgba(14, 165, 233, 0.25);
+    border-radius: 20px;
+    padding: 0.3rem 0.8rem;
+}
+
+.tool-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text);
+    letter-spacing: 1px;
+    line-height: 1.2;
+}
+
+.tool-description {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    line-height: 1.7;
+}
+
+.tool-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tool-tag {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 0.25rem 0.6rem;
+}
+
+.tool-btn {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+}
+
 /* ===== CHECKER SECTION ===== */
 .checker-section {
     background: var(--color-bg-secondary);
