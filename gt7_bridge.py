@@ -232,6 +232,9 @@ class GT7Packet:
         self.tyre_rl_rps = self._f(self.TYRE_RL_RPS)
         self.tyre_rr_rps = self._f(self.TYRE_RR_RPS)
         self.vehicle_id  = self._i(self.VEHICLE_ID)
+        self.fuel_cap  = self._f(self.FUEL_CAP)
+        self.min_alert = self._h(self.MIN_ALERT)
+        self.max_alert = self._h(self.MAX_ALERT)
 
         # Derived: lateral G from angular velocity and speed
         speed = max(self.speed_ms, 0.1)
@@ -272,6 +275,9 @@ class GT7Packet:
             "posX":         round(self.pos_x, 2),
             "posY":         round(self.pos_y, 2),
             "posZ":         round(self.pos_z, 2),
+            "rpmMax":       int(self.max_alert) if self.max_alert > 1000 else 9000,
+            "fuelCap":      round(self.fuel_cap, 2),
+            "rotYaw":       round(self.rot_yaw, 4),
         }
 
 
