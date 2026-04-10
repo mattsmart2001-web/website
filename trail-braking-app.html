@@ -408,7 +408,7 @@ function drawTrack(){
   lbls.forEach(({t,txt,col},li)=>{
     const p=lerpPts(rl,t);
     // offset label away from car position
-    const act=(li===0&&carT<=.26)||(li===1&&carT>.26&&carT<=.50)||(li===2&&carT>.50&&carT<=.64)||(li===3&&carT>.64);
+    const act=(li===activePhase);
     CX.save();
     CX.font=`bold 8px 'JetBrains Mono',monospace`;
     CX.fillStyle=col;CX.textAlign='center';CX.globalAlpha=act?1:.28;
@@ -475,7 +475,7 @@ function drawTrack(){
 
   // Pills
   const phn=['FULL BRAKING','TRAIL BRAKING','APEX','POWER EXIT'];
-  const pi=carT<.26?0:carT<.50?1:carT<.64?2:3;
+  const pi=activePhase;
   const pTotEl=document.getElementById('pTot');
   pTotEl.style.color=gc;pTotEl.style.borderColor=gc+'44';
   document.getElementById('pTotDot').style.background=gc;
@@ -621,32 +621,97 @@ function syncPedals(){
 }
 
 // ════════════════════════════════════════════════════════
+//  ACTIVE PHASE — only changes via button or play, NEVER
+//  from input changes. Car position locked to this phase.
+// ════════════════════════════════════════════════════════
+let activePhase = 1; // start on trail braking
+
+// Car positions for each phase on the racing line
+const PHASE_CAR_T = [0.20, 0.38, 0.53, 0.77];
+
+// Ideal traction range for each phase (what "good" looks like here)
+// [min, max] total %
+const PHASE_IDEAL = [
+  [80, 100],  // P1 full brake: 80–100% normal, mostly brake
+  [88, 100],  // P2 trail: should be near limit the whole time
+  [85, 100],  // P3 apex: full steer, tiny brake trace
+  [60, 95],   // P4 exit: building throttle, steer unwinding
+];
+
+// Phase-contextual status messages
+function phaseStatusMsg(phase, tot){
+  const pNames = ['Full Braking','Trail Braking','Apex','Power Exit'];
+  const name = pNames[phase];
+  const [idealMin, idealMax] = PHASE_IDEAL[phase];
+
+  if(tot > 108){
+    return{
+      col:'#ff2d3b', bg:'rgba(255,45,59,.07)',
+      txt:`🔴  GRIP LOST in ${name} — way over limit. ${
+        phase===0?'Ease the brake pedal — progressive, not on/off.':
+        phase===1?'Release brake faster as you add steering — you\'re trying to do both at 100%.':
+        phase===2?'Too much combined load at apex — you\'ve lost the front end.':
+        'Unwind the steering before full throttle — you\'ve asked too much.'
+      }`
+    };
+  }
+  if(tot > 100){
+    return{
+      col:'#ff7c1e', bg:'rgba(255,124,30,.06)',
+      txt:`⚠  Over 100% in ${name}. ${
+        phase===0?'Brake pressure too high for the tyres — modulate smoothly.':
+        phase===1?'Trail braking budget exceeded — reduce brake OR steering slightly.':
+        phase===2?'Just over the apex limit — ease steering input a fraction.':
+        'Throttle + steering is too much — unwind the wheel first.'
+      }`
+    };
+  }
+  if(tot >= idealMin){
+    return{
+      col:'#ffc31a', bg:'rgba(255,195,26,.05)',
+      txt:`⚡  ${name} — traction at ${tot}%, right at the limit. ${
+        phase===0?'Peak braking in a straight line. Max deceleration before turn-in.':
+        phase===1?'Perfect trail braking — brake releasing as steering loads up. Keep it smooth.':
+        phase===2?'Clipping the apex. All traction on cornering. Brake trace almost zero.':
+        'Strong exit — throttle building as steering unwinds. Stay smooth.'
+      }`
+    };
+  }
+  // Under ideal range
+  return{
+    col:'#00e5a0', bg:'rgba(0,229,160,.05)',
+    txt:`✓  ${name} at ${tot}% — in reserve. ${
+      phase===0?`You could brake ${idealMin-tot}% harder here — push the braking later.`:
+      phase===1?'You\'re not at the trail braking limit — load it up more, release brake slower.':
+      phase===2?'Apex traction below limit — more steering angle available, or brake slightly longer.':
+      'Exit traction in reserve — you can get on the throttle harder or sooner.'
+    }`
+  };
+}
+
+// ════════════════════════════════════════════════════════
 //  STATUS + CAR POSITION
 // ════════════════════════════════════════════════════════
 function updateStatus(){
-  const tot=S.brake+S.steer+S.accel,col=tcol(tot);
+  const tot=S.brake+S.steer+S.accel, col=tcol(tot);
   document.getElementById('totFill').style.width=Math.min(tot/1.2,100)+'%';
   document.getElementById('totFill').style.background=col;
   document.getElementById('totVal').textContent=tot+'%';
   document.getElementById('totVal').style.color=col;
+
+  // Phase-aware status message
   const msg=document.getElementById('statusMsg');
-  let bg,txt;
-  if(tot<=80){bg='rgba(0,229,160,.05)';txt='✓  In reserve — tyres have grip to spare. Brake later, carry more speed in.';}
-  else if(tot<=95){bg='rgba(255,195,26,.05)';txt='⚡  At the limit — perfect trail braking. Release brake smoothly as you add steering.';}
-  else if(tot<=108){bg='rgba(255,124,30,.05)';txt='⚠  Over 100% — grip blown. Understeer or oversteer imminent. Ease off now.';}
-  else{bg='rgba(255,45,59,.07)';txt='🔴  GRIP LOST — Way over limit. Reduce brake or steering immediately.';}
-  msg.style.color=col;msg.style.background=bg;msg.style.borderColor=col;msg.textContent=txt;
+  const {col:mc, bg, txt} = phaseStatusMsg(activePhase, tot);
+  msg.style.color=mc; msg.style.background=bg; msg.style.borderColor=mc; msg.textContent=txt;
+
   document.getElementById('tcHint').style.color=tot>100?'#ff2d3b':tot>90?'#ffc31a':'#525870';
   document.getElementById('tcHint').textContent=tot>100?'Over limit — ease off!':tot>90?'At the limit — stay precise':'Drag dot · wheel · pedals · or PLAY';
-  // Map inputs to car position on line (only when not playing)
-  if(!playing){
-    if(S.brake>70&&S.steer<15)       carT=0.20;
-    else if(S.brake>20&&S.steer>15&&S.accel<10) carT=0.38;
-    else if(S.brake<15&&S.steer>55&&S.accel<10) carT=0.53;
-    else                                          carT=0.77;
-  }
-  const ph=S.brake>70&&S.steer<15?0:S.brake>20&&S.steer>15&&S.accel<10?1:S.brake<15&&S.steer>55&&S.accel<10?2:3;
-  document.querySelectorAll('.pb').forEach((b,i)=>b.classList.toggle('active',i===ph));
+
+  // Car stays locked to active phase position (not driven by inputs)
+  if(!playing) carT = PHASE_CAR_T[activePhase];
+
+  // Phase buttons highlight active phase only — NEVER change from input detection
+  document.querySelectorAll('.pb').forEach((b,i)=>b.classList.toggle('active',i===activePhase));
 }
 
 // ════════════════════════════════════════════════════════
@@ -659,10 +724,18 @@ function syncAll(resyncDot=true){
 }
 
 // ════════════════════════════════════════════════════════
-//  PHASE PRESETS
+//  PHASE PRESETS — clicking a phase locks to it and sets
+//  the reference inputs for that phase
 // ════════════════════════════════════════════════════════
 const PHASES=[{brake:95,steer:5,accel:0},{brake:58,steer:40,accel:0},{brake:4,steer:92,accel:0},{brake:0,steer:22,accel:65}];
-function setPhase(i){stopPlay();const ph=PHASES[i];animTo('brake',ph.brake);animTo('steer',ph.steer);animTo('accel',ph.accel);}
+function setPhase(i){
+  stopPlay();
+  activePhase=i;
+  const ph=PHASES[i];
+  animTo('brake',ph.brake);
+  animTo('steer',ph.steer);
+  animTo('accel',ph.accel);
+}
 function animTo(key,to){
   const from=S[key],t0=performance.now(),dur=520;
   function tick(now){const p=Math.min((now-t0)/dur,1),e=1-Math.pow(1-p,3);S[key]=Math.round(from+(to-from)*e);syncAll(true);if(p<1)requestAnimationFrame(tick);}
@@ -700,24 +773,10 @@ function playTick(now){
   document.getElementById('ppf').style.width=(playT*100)+'%';
   const kf=interpKF(playT);
   S.brake=kf.brake;S.steer=kf.steer;S.accel=kf.accel;
-  // Car follows racing line directly and smoothly
   carT=playT;
-  // Sync all displays
-  const tot=S.brake+S.steer+S.accel,col=tcol(tot);
-  document.getElementById('totFill').style.width=Math.min(tot/1.2,100)+'%';
-  document.getElementById('totFill').style.background=col;
-  document.getElementById('totVal').textContent=tot+'%';
-  document.getElementById('totVal').style.color=col;
-  const msg=document.getElementById('statusMsg');
-  let bg,txt;
-  if(tot<=80){bg='rgba(0,229,160,.05)';txt='✓  In reserve — throttle on straight, building speed.';}
-  else if(tot<=95){bg='rgba(255,195,26,.05)';txt='⚡  At the limit — perfect trail braking technique.';}
-  else if(tot<=108){bg='rgba(255,124,30,.05)';txt='⚠  Just over 100% — easing off...';}
-  else{bg='rgba(255,45,59,.07)';txt='🔴  GRIP LOST';}
-  msg.style.color=col;msg.style.background=bg;msg.style.borderColor=col;msg.textContent=txt;
-  const ph2=carT<.26?0:carT<.50?1:carT<.64?2:3;
-  document.querySelectorAll('.pb').forEach((b,i)=>b.classList.toggle('active',i===ph2));
-  syncPedals();syncWheel();syncDot();
+  // Update activePhase as corner progresses so status reflects current phase
+  activePhase=carT<.26?0:carT<.50?1:carT<.64?2:3;
+  updateStatus();syncPedals();syncWheel();syncDot();
   drawTrack();
   if(playT<1)playRAF=requestAnimationFrame(playTick);
   else setTimeout(stopPlay,800);
