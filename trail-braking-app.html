@@ -93,6 +93,34 @@ h1 em{font-style:normal;color:var(--red);text-shadow:0 0 20px rgba(255,45,59,.5)
 ::-webkit-scrollbar{width:3px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--bor);border-radius:2px;}
+
+/* ── LIVE GT7 CONNECTION ── */
+.gt7-status{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.15em;display:flex;align-items:center;gap:.4rem;padding:.22rem .55rem;border-radius:20px;border:1px solid;transition:all .3s;}
+.gt7-status.disconnected{color:var(--mut);border-color:var(--bor);}
+.gt7-status.connecting{color:var(--gold);border-color:rgba(255,195,26,.3);}
+.gt7-status.connected{color:var(--grn);border-color:rgba(0,229,160,.3);}
+.gt7-status.live{color:var(--red);border-color:rgba(255,45,59,.4);background:rgba(255,45,59,.06);}
+.gt7-dot{width:6px;height:6px;border-radius:50%;}
+.gt7-status.disconnected .gt7-dot{background:var(--mut);}
+.gt7-status.connecting .gt7-dot{background:var(--gold);animation:lp 0.8s ease-in-out infinite;}
+.gt7-status.connected .gt7-dot{background:var(--grn);}
+.gt7-status.live .gt7-dot{background:var(--red);animation:lp 0.4s ease-in-out infinite;}
+.live-mode-banner{display:none;position:absolute;top:.5rem;right:.5rem;font-family:'JetBrains Mono',monospace;font-size:.48rem;letter-spacing:.15em;color:var(--red);background:rgba(255,45,59,.1);border:1px solid rgba(255,45,59,.3);padding:.22rem .55rem;border-radius:4px;z-index:10;}
+.live-mode-banner.vis{display:block;}
+/* Lap recorder */
+.lap-section{flex:0 0 auto;padding:.6rem .75rem;border-bottom:1px solid var(--bor);display:none;}
+.lap-section.vis{display:block;}
+.lap-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;}
+.lap-btn{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.1em;padding:.25rem .55rem;border-radius:4px;border:1px solid;cursor:pointer;transition:all .18s;text-transform:uppercase;}
+.lap-btn.rec{border-color:var(--red);color:var(--red);background:rgba(255,45,59,.07);}
+.lap-btn.rec.active{background:rgba(255,45,59,.18);}
+.lap-btn.replay{border-color:var(--gold);color:var(--gold);background:rgba(255,195,26,.07);}
+.lap-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;}
+.lap-stat{background:var(--sur);border:1px solid var(--bor);border-radius:4px;padding:.3rem .4rem;}
+.lap-stat-lbl{font-family:'JetBrains Mono',monospace;font-size:.38rem;letter-spacing:.1em;color:var(--mut);text-transform:uppercase;}
+.lap-stat-val{font-family:'Bebas Neue',sans-serif;font-size:.9rem;line-height:1.1;transition:color .2s;}
+/* Speed readout */
+.speed-pill{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--wht);opacity:.5;letter-spacing:.05em;}
 </style>
 </head>
 <body>
@@ -103,6 +131,10 @@ h1 em{font-style:normal;color:var(--red);text-shadow:0 0 20px rgba(255,45,59,.5)
     <div class="hdr-sub">// THE 100% TRACTION RULE — INTERACTIVE SIM</div>
   </div>
   <div class="hdr-r">
+    <div class="gt7-status disconnected" id="gt7Status">
+      <div class="gt7-dot"></div>
+      <span id="gt7StatusTxt">GT7 OFFLINE</span>
+    </div>
     <button class="play-btn" id="playBtn" onclick="togglePlay()">
       <span id="playIcon" style="font-size:.7rem">▶</span>
       <span id="playLabel">PLAY CORNER</span>
@@ -112,6 +144,7 @@ h1 em{font-style:normal;color:var(--red);text-shadow:0 0 20px rgba(255,45,59,.5)
 </header>
 <div class="app">
   <div class="corner-panel"><canvas id="cC"></canvas>
+    <div class="live-mode-banner" id="liveBanner">⬤ GT7 LIVE</div>
     <div class="overlay">
       <div class="pill" id="pTot"><div class="pdot" id="pTotDot"></div><span id="pTotTxt">TRACTION: 80%</span></div>
       <div class="pill" style="color:var(--gold);border-color:rgba(255,195,26,.3)"><div class="pdot" style="background:var(--gold)"></div><span id="pPhTxt">TRAIL BRAKING</span></div>
@@ -119,6 +152,21 @@ h1 em{font-style:normal;color:var(--red);text-shadow:0 0 20px rgba(255,45,59,.5)
   </div>
   <div class="drag-handle" id="dh"></div>
   <div class="right" id="rp">
+    <!-- LAP RECORDER — only visible when GT7 connected -->
+    <div class="lap-section" id="lapSection">
+      <div class="lap-header">
+        <div class="plabel" style="margin:0">// Lap Recorder</div>
+        <div style="display:flex;gap:4px">
+          <button class="lap-btn rec" id="recBtn" onclick="toggleRecord()">⬤ REC</button>
+          <button class="lap-btn replay" id="replayBtn" onclick="replayLap()" style="display:none">▶ REPLAY</button>
+        </div>
+      </div>
+      <div class="lap-stats">
+        <div class="lap-stat"><div class="lap-stat-lbl">Speed</div><div class="lap-stat-val" id="lsSpeed" style="color:var(--grn)">0</div></div>
+        <div class="lap-stat"><div class="lap-stat-lbl">Max G</div><div class="lap-stat-val" id="lsMaxG" style="color:var(--gold)">0.0</div></div>
+        <div class="lap-stat"><div class="lap-stat-lbl">Over 100%</div><div class="lap-stat-val" id="lsOver" style="color:var(--red)">0</div></div>
+      </div>
+    </div>
     <div class="tc-sec">
       <div class="plabel">// Traction Circle</div>
       <canvas id="tC" width="200" height="200"></canvas>
@@ -872,6 +920,160 @@ window.addEventListener('touchmove',e=>{
 },{passive:false});
 window.addEventListener('mouseup',()=>{dhDrag=false;dh.classList.remove('active');});
 window.addEventListener('touchend',()=>{dhDrag=false;dh.classList.remove('active');});
+
+// ════════════════════════════════════════════════════════
+//  GT7 LIVE CONNECTION
+// ════════════════════════════════════════════════════════
+const WS_URL = 'ws://localhost:8765';
+let ws = null, wsReconnectTimer = null;
+let liveMode = false;
+let recording = false;
+let lapData = [];           // recorded frames
+let maxG = 0, overCount = 0;
+let replayData = null, replayIdx = 0, replayRAF = null;
+
+function gt7Connect(){
+  if(ws && ws.readyState === WebSocket.OPEN) return;
+  setGT7Status('connecting','CONNECTING...');
+  try {
+    ws = new WebSocket(WS_URL);
+    ws.onopen = () => {
+      setGT7Status('connected','GT7 BRIDGE READY');
+      clearTimeout(wsReconnectTimer);
+    };
+    ws.onmessage = e => {
+      try { handleGT7Message(JSON.parse(e.data)); }
+      catch(err){}
+    };
+    ws.onclose = () => {
+      setGT7Status('disconnected','GT7 OFFLINE');
+      setLiveMode(false);
+      wsReconnectTimer = setTimeout(gt7Connect, 3000);
+    };
+    ws.onerror = () => {
+      setGT7Status('disconnected','GT7 OFFLINE');
+      setLiveMode(false);
+    };
+  } catch(e){
+    setGT7Status('disconnected','GT7 OFFLINE');
+    wsReconnectTimer = setTimeout(gt7Connect, 3000);
+  }
+}
+
+function handleGT7Message(msg){
+  if(msg.type === 'connected'){
+    setGT7Status('connected','BRIDGE READY');
+    return;
+  }
+  if(msg.type === 'gt7_detected'){
+    setGT7Status('live','GT7 LIVE');
+    setLiveMode(true);
+    return;
+  }
+  if(msg.type === 'telemetry'){
+    setGT7Status('live','GT7 LIVE');
+    setLiveMode(true);
+    applyLiveTelemetry(msg);
+  }
+}
+
+function applyLiveTelemetry(d){
+  if(playing) return; // don't override play animation
+
+  // Map GT7 data to our state
+  S.brake  = clamp(Math.round(d.brake),  0, 100);
+  S.steer  = clamp(Math.round(Math.abs(d.steer)), 0, 100);
+  S.accel  = clamp(Math.round(d.throttle), 0, 100);
+
+  // Speed display
+  document.getElementById('gt7StatusTxt').textContent =
+    'GT7 LIVE · ' + Math.round(d.speed) + ' KM/H · G' + Math.round(d.gear);
+
+  // Update lap stats
+  document.getElementById('lsSpeed').textContent = Math.round(d.speed);
+  const latG = Math.abs(d.latG||0);
+  if(latG > maxG){ maxG = latG; document.getElementById('lsMaxG').textContent = latG.toFixed(2)+'g'; }
+  const tot = S.brake + S.steer + S.accel;
+  if(tot > 100) { overCount++; document.getElementById('lsOver').textContent = overCount; }
+
+  // Record if active
+  if(recording){
+    lapData.push({
+      brake: S.brake, steer: S.steer, accel: S.accel,
+      speed: Math.round(d.speed), gear: d.gear,
+      latG: d.latG, longG: d.longG,
+      t: Date.now()
+    });
+  }
+
+  // Sync all UI without moving car T (live data doesn't have corner position)
+  updateStatus();
+  syncPedals();
+  syncWheel();
+  syncDot();
+  drawTrack();
+}
+
+function setLiveMode(on){
+  liveMode = on;
+  document.getElementById('liveBanner').classList.toggle('vis', on);
+  document.getElementById('lapSection').classList.toggle('vis', on);
+  document.getElementById('playBtn').style.opacity = on ? '0.4' : '1';
+  document.getElementById('playBtn').title = on ? 'Disabled in live mode' : '';
+}
+
+function setGT7Status(state, txt){
+  const el = document.getElementById('gt7Status');
+  el.className = 'gt7-status ' + state;
+  document.getElementById('gt7StatusTxt').textContent = txt;
+}
+
+// ── LAP RECORDER ──
+function toggleRecord(){
+  recording = !recording;
+  const btn = document.getElementById('recBtn');
+  if(recording){
+    lapData = []; maxG = 0; overCount = 0;
+    document.getElementById('lsMaxG').textContent = '0.0';
+    document.getElementById('lsOver').textContent = '0';
+    btn.classList.add('active');
+    btn.textContent = '■ STOP';
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '⬤ REC';
+    if(lapData.length > 10){
+      replayData = [...lapData];
+      document.getElementById('replayBtn').style.display = 'block';
+    }
+  }
+}
+
+function replayLap(){
+  if(!replayData || replayData.length === 0) return;
+  if(liveMode) return; // only replay when not live
+  stopPlay();
+  replayIdx = 0;
+  playReplayFrame();
+}
+
+function playReplayFrame(){
+  if(replayIdx >= replayData.length) return;
+  const frame = replayData[replayIdx];
+  S.brake = frame.brake; S.steer = frame.steer; S.accel = frame.accel;
+  // Map replay position to carT
+  carT = clamp(replayIdx / replayData.length, 0, 1);
+  syncAll(true);
+  replayIdx++;
+  // Match original timing using timestamps
+  const nextFrame = replayData[replayIdx];
+  if(nextFrame){
+    const delay = clamp(nextFrame.t - frame.t, 8, 100);
+    replayRAF = setTimeout(playReplayFrame, delay);
+  }
+}
+
+// Auto-attempt connection on load
+setTimeout(gt7Connect, 500);
 
 // ════════════════════════════════════════════════════════
 //  INIT
