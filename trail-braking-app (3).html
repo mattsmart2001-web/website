@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trail Braking — The 100% Rule</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap');
+:root{
+  --bg:#07080d;--sur:#0d0f18;--pan:#0f1119;--bor:#1c1f2e;
+  --red:#ff2d3b;--gold:#ffc31a;--grn:#00e5a0;--blu:#1ab4ff;
+  --wht:#eef0f8;--mut:#525870;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--wht);font-family:'Rajdhani',sans-serif;}
+body{display:flex;flex-direction:column;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:.018;pointer-events:none;z-index:9999;}
+
+header{flex:0 0 auto;padding:.75rem 1.4rem .65rem;border-bottom:1px solid var(--bor);display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
+header::before{content:'';position:absolute;top:-50px;left:-50px;width:220px;height:220px;background:radial-gradient(circle,rgba(255,45,59,.1) 0%,transparent 70%);pointer-events:none;}
+.hdr-l{position:relative;}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:.48rem;letter-spacing:.35em;color:var(--red);text-transform:uppercase;margin-bottom:.1rem;}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.4rem,3vw,2.2rem);letter-spacing:.06em;line-height:1;}
+h1 em{font-style:normal;color:var(--red);text-shadow:0 0 20px rgba(255,45,59,.5);}
+.hdr-sub{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.14em;color:var(--mut);margin-top:.1rem;}
+.hdr-r{display:flex;align-items:center;gap:1rem;}
+.live{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.2em;color:var(--grn);display:flex;align-items:center;gap:.35rem;}
+.ldot{width:5px;height:5px;border-radius:50%;background:var(--grn);animation:lp 1.2s ease-in-out infinite;}
+@keyframes lp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.5)}}
+.play-btn{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.14em;padding:.38rem .8rem;border-radius:4px;border:1px solid var(--gold);background:rgba(255,195,26,.07);color:var(--gold);cursor:pointer;display:flex;align-items:center;gap:.4rem;transition:background .2s;text-transform:uppercase;}
+.play-btn:hover{background:rgba(255,195,26,.15);}
+.play-btn.playing{border-color:var(--red);background:rgba(255,45,59,.08);color:var(--red);}
+
+.app{flex:1;display:flex;min-height:0;}
+.corner-panel{flex:1;position:relative;overflow:hidden;background:var(--bg);min-width:0;}
+#cC{display:block;width:100%;height:100%;}
+.overlay{position:absolute;bottom:.75rem;left:.75rem;display:flex;flex-direction:column;gap:.25rem;pointer-events:none;}
+.pill{font-family:'JetBrains Mono',monospace;font-size:.48rem;letter-spacing:.1em;padding:.2rem .48rem;border-radius:20px;border:1px solid;background:rgba(7,8,13,.92);display:flex;align-items:center;gap:.32rem;backdrop-filter:blur(4px);transition:color .22s,border-color .22s;}
+.pdot{width:5px;height:5px;border-radius:50%;}
+
+.drag-handle{flex:0 0 5px;background:var(--bor);cursor:col-resize;position:relative;z-index:10;transition:background .2s;}
+.drag-handle:hover,.drag-handle.active{background:var(--gold);}
+.drag-handle::after{content:'⋮⋮';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:.55rem;color:var(--mut);}
+
+.right{flex:0 0 330px;display:flex;flex-direction:column;background:var(--sur);overflow:hidden;min-width:220px;max-width:520px;}
+.tc-sec{flex:0 0 auto;padding:.75rem .75rem .55rem;border-bottom:1px solid var(--bor);display:flex;flex-direction:column;align-items:center;gap:.4rem;}
+.plabel{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.22em;color:var(--mut);text-transform:uppercase;align-self:flex-start;}
+#tC{cursor:crosshair;display:block;}
+.tc-leg{display:flex;gap:.75rem;font-family:'JetBrains Mono',monospace;font-size:.44rem;color:var(--mut);letter-spacing:.06em;}
+.tc-leg span{display:flex;align-items:center;gap:.22rem;}
+.ll{width:6px;height:6px;border-radius:50%;display:inline-block;}
+.tc-hint{font-family:'JetBrains Mono',monospace;font-size:.46rem;color:var(--mut);text-align:center;line-height:1.4;transition:color .22s;}
+.ctrl{flex:1;padding:.75rem;overflow-y:auto;display:flex;flex-direction:column;gap:.7rem;background:var(--pan);}
+.phases{display:flex;gap:2px;}
+.pb{flex:1;padding:.42rem .08rem;background:var(--sur);border:1px solid var(--bor);border-radius:4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:border-color .15s,background .15s;position:relative;overflow:hidden;}
+.pb::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.pb[data-i="0"]::after{background:var(--red);}
+.pb[data-i="1"]::after{background:linear-gradient(90deg,var(--red),var(--gold));}
+.pb[data-i="2"]::after{background:var(--grn);}
+.pb[data-i="3"]::after{background:var(--blu);}
+.pb.active{border-color:var(--gold);background:rgba(255,195,26,.05);}
+.pb .pn{font-family:'JetBrains Mono',monospace;font-size:.4rem;letter-spacing:.1em;color:var(--mut);}
+.pb .pt{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:.64rem;color:var(--wht);}
+.pb.active .pt{color:var(--gold);}
+.pbar{width:100%;height:3px;border-radius:2px;background:var(--bor);overflow:hidden;display:flex;}
+.ps{height:100%;}
+.ctl-row{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;align-items:start;}
+.ctl-lbl{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;color:var(--mut);text-transform:uppercase;text-align:center;margin-bottom:.22rem;}
+.wheel-wrap{display:flex;flex-direction:column;align-items:center;}
+#wC{cursor:grab;display:block;}
+.wval{font-family:'Bebas Neue',sans-serif;font-size:.9rem;line-height:1;text-align:center;margin-top:.2rem;transition:color .2s;}
+.pedals-wrap{display:flex;flex-direction:column;align-items:center;}
+.pedal-row{display:flex;gap:.5rem;align-items:flex-end;}
+.pedal{display:flex;flex-direction:column;align-items:center;gap:.2rem;touch-action:none;}
+.pt{width:32px;height:72px;background:#0a0c14;border-radius:5px;position:relative;overflow:hidden;border:1px solid #252840;cursor:ns-resize;}
+.pf{position:absolute;bottom:0;left:0;right:0;border-radius:4px;}
+.pnotch{position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(255,255,255,.08);}
+.plbl2{font-family:'JetBrains Mono',monospace;font-size:.42rem;letter-spacing:.1em;font-weight:700;text-transform:uppercase;}
+.pval{font-family:'Bebas Neue',sans-serif;font-size:.88rem;line-height:1;transition:color .15s;}
+.phint{font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mut);text-align:center;line-height:1.4;margin-top:.15rem;}
+.tot{background:var(--sur);border:1px solid var(--bor);border-radius:5px;padding:.6rem .7rem;display:flex;flex-direction:column;gap:.38rem;}
+.tot-hdr{display:flex;justify-content:space-between;align-items:baseline;}
+.tot-lbl{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.18em;color:var(--mut);text-transform:uppercase;}
+.tot-val{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;line-height:1;transition:color .22s;}
+.tot-track{height:6px;background:var(--bor);border-radius:3px;position:relative;}
+.tot-fill{height:100%;border-radius:3px;transition:width .08s,background .22s;}
+.tot-track::after{content:'100%';position:absolute;top:-14px;left:83.3%;font-family:'JetBrains Mono',monospace;font-size:.38rem;color:rgba(255,255,255,.2);transform:translateX(-50%);}
+.tot-tick{position:absolute;top:-3px;bottom:-3px;left:83.3%;width:2px;background:rgba(255,255,255,.18);}
+.status{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.03em;line-height:1.65;padding:.48rem .62rem;border-radius:4px;border-left:3px solid;transition:all .22s;}
+.pp{height:3px;background:var(--bor);border-radius:2px;overflow:hidden;display:none;}
+.pp.vis{display:block;}
+.ppf{height:100%;background:var(--gold);width:0%;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--bor);border-radius:2px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="hdr-l">
+    <div class="eyebrow">Gran Turismo 7 — Racing Science</div>
+    <h1>TRAIL BRAK<em>ING</em></h1>
+    <div class="hdr-sub">// THE 100% TRACTION RULE — INTERACTIVE SIM</div>
+  </div>
+  <div class="hdr-r">
+    <button class="play-btn" id="playBtn" onclick="togglePlay()">
+      <span id="playIcon" style="font-size:.7rem">▶</span>
+      <span id="playLabel">PLAY CORNER</span>
+    </button>
+    <div class="live"><div class="ldot"></div>LIVE SIM</div>
+  </div>
+</header>
+<div class="app">
+  <div class="corner-panel"><canvas id="cC"></canvas>
+    <div class="overlay">
+      <div class="pill" id="pTot"><div class="pdot" id="pTotDot"></div><span id="pTotTxt">TRACTION: 80%</span></div>
+      <div class="pill" style="color:var(--gold);border-color:rgba(255,195,26,.3)"><div class="pdot" style="background:var(--gold)"></div><span id="pPhTxt">TRAIL BRAKING</span></div>
+    </div>
+  </div>
+  <div class="drag-handle" id="dh"></div>
+  <div class="right" id="rp">
+    <div class="tc-sec">
+      <div class="plabel">// Traction Circle</div>
+      <canvas id="tC" width="200" height="200"></canvas>
+      <div class="tc-leg">
+        <span><i class="ll" style="background:var(--grn)"></i>SAFE</span>
+        <span><i class="ll" style="background:var(--gold)"></i>LIMIT</span>
+        <span><i class="ll" style="background:var(--red)"></i>OVER</span>
+      </div>
+      <div class="tc-hint" id="tcHint">Drag dot · use wheel &amp; pedals · or hit PLAY</div>
+    </div>
+    <div class="ctrl">
+      <div class="pp" id="pp"><div class="ppf" id="ppf"></div></div>
+      <div class="plabel">// Corner Phases</div>
+      <div class="phases">
+        <button class="pb" data-i="0" onclick="setPhase(0)"><span class="pn">P1</span><span class="pt">BRAKE</span><div class="pbar"><div class="ps" style="background:var(--red);width:95%"></div></div></button>
+        <button class="pb" data-i="1" onclick="setPhase(1)"><span class="pn">P2</span><span class="pt">TRAIL</span><div class="pbar"><div class="ps" style="background:var(--red);width:55%"></div><div class="ps" style="background:var(--grn);width:42%"></div></div></button>
+        <button class="pb" data-i="2" onclick="setPhase(2)"><span class="pn">P3</span><span class="pt">APEX</span><div class="pbar"><div class="ps" style="background:var(--red);width:4%"></div><div class="ps" style="background:var(--grn);width:92%"></div></div></button>
+        <button class="pb" data-i="3" onclick="setPhase(3)"><span class="pn">P4</span><span class="pt">EXIT</span><div class="pbar"><div class="ps" style="background:var(--blu);width:62%"></div><div class="ps" style="background:var(--grn);width:25%"></div></div></button>
+      </div>
+      <div class="plabel">// Driver Inputs</div>
+      <div class="ctl-row">
+        <div class="wheel-wrap">
+          <div class="ctl-lbl">Steering</div>
+          <canvas id="wC" width="110" height="110"></canvas>
+          <div class="wval" id="wVal">0%</div>
+        </div>
+        <div class="pedals-wrap">
+          <div class="ctl-lbl">Pedals</div>
+          <div class="pedal-row">
+            <div class="pedal">
+              <div class="pval" id="vBrake" style="color:var(--red)">0%</div>
+              <div class="pt" id="ptB"><div class="pnotch"></div><div class="pf" id="fB" style="background:var(--red);height:0%"></div></div>
+              <div class="plbl2" style="color:var(--red)">BRK</div>
+            </div>
+            <div class="pedal">
+              <div class="pval" id="vAccel" style="color:var(--blu)">0%</div>
+              <div class="pt" id="ptA"><div class="pnotch"></div><div class="pf" id="fA" style="background:var(--blu);height:0%"></div></div>
+              <div class="plbl2" style="color:var(--blu)">THR</div>
+            </div>
+          </div>
+          <div class="phint">Drag up to press</div>
+        </div>
+      </div>
+      <div class="tot">
+        <div class="tot-hdr"><span class="tot-lbl">Traction Budget</span><span class="tot-val" id="totVal">80%</span></div>
+        <div class="tot-track"><div class="tot-fill" id="totFill"></div><div class="tot-tick"></div></div>
+      </div>
+      <div class="status" id="statusMsg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════
+const S = { brake:50, steer:30, accel:0 };
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function lerp(a,b,t){return a+(b-a)*t;}
+function tcol(t){return t<=80?'#00e5a0':t<=100?'#ffc31a':'#ff2d3b';}
+function lerpC(a,b,t){
+  const pa=parseInt(a.slice(1),16),pb=parseInt(b.slice(1),16);
+  const r=(v,s)=>(v>>s)&0xff;
+  return`rgb(${Math.round(r(pa,16)+(r(pb,16)-r(pa,16))*t)},${Math.round(r(pa,8)+(r(pb,8)-r(pa,8))*t)},${Math.round(r(pa,0)+(r(pb,0)-r(pa,0))*t)})`;
+}
+function phaseCl(t){
+  if(t<.28)return lerpC('#ff2d3b','#ffc31a',t/.28);
+  if(t<.52)return lerpC('#ffc31a','#00e5a0',(t-.28)/.24);
+  return lerpC('#00e5a0','#1ab4ff',(t-.52)/.48);
+}
+
+// ════════════════════════════════════════════════════════
+//  PLAY KEYFRAMES  — smooth, realistic corner
+// ════════════════════════════════════════════════════════
+const KF = [
+  {t:0.00, b:0,  s:2,  a:72}, // arriving on power
+  {t:0.09, b:0,  s:2,  a:72},
+  {t:0.12, b:12, s:2,  a:0 }, // lift throttle
+  {t:0.17, b:75, s:3,  a:0 }, // heavy braking
+  {t:0.23, b:95, s:4,  a:0 }, // peak braking
+  {t:0.30, b:88, s:6,  a:0 }, // sustained brake
+  {t:0.34, b:70, s:16, a:0 }, // turn-in, trail begins
+  {t:0.39, b:55, s:34, a:0 }, // trail braking
+  {t:0.44, b:38, s:54, a:0 }, // releasing brake, adding steer
+  {t:0.49, b:18, s:74, a:0 }, // nearly at apex
+  {t:0.53, b:4,  s:90, a:0 }, // apex — kiss inner kerb
+  {t:0.58, b:0,  s:80, a:10}, // past apex, small throttle
+  {t:0.64, b:0,  s:60, a:30}, // unwinding steer, building throttle
+  {t:0.71, b:0,  s:38, a:52}, // exit arc, strong power
+  {t:0.80, b:0,  s:18, a:65}, // nearly straight
+  {t:0.90, b:0,  s:6,  a:70}, // exit straight, full power
+  {t:1.00, b:0,  s:2,  a:72},
+];
+function interpKF(t){
+  let a=KF[0],b=KF[KF.length-1];
+  for(let i=0;i<KF.length-1;i++){if(t>=KF[i].t&&t<=KF[i+1].t){a=KF[i];b=KF[i+1];break;}}
+  const sp=b.t-a.t,f=sp===0?0:(t-a.t)/sp;
+  const e=f*f*(3-2*f); // smoothstep
+  return{brake:Math.round(lerp(a.b,b.b,e)),steer:Math.round(lerp(a.s,b.s,e)),accel:Math.round(lerp(a.a,b.a,e))};
+}
+
+// ════════════════════════════════════════════════════════
+//  TRACK + RACING LINE
+//
+//  APPROACH: Use the EXACT same quadratic bezier path for
+//  both the track stroke and the racing line, just at
+//  different stroke-offsets. This is what the original
+//  working version used and it is guaranteed to stay on track.
+//
+//  The track centre-path in normalised [0..1] coords:
+//    Start:  (0.04, 0.82)  — left side, entry straight
+//    CP:     (0.72, 0.82)  — corner bend control point
+//    End:    (0.72, 0.04)  — top, exit straight
+//
+//  The track is drawn as a thick stroke on this path.
+//  The racing line is a thinner stroke on a SLIGHTLY INSET
+//  version of the same path, offset toward the inner kerb
+//  at the apex and outer walls on entry/exit.
+//
+//  Car position: sampled from the racing line path at t=carT
+// ════════════════════════════════════════════════════════
+const CC = document.getElementById('cC');
+const CX = CC.getContext('2d');
+let carT = 0.3, flashAnim = 0;
+
+// Quadratic bezier evaluation
+function qbez(p0,cp,p1,t){
+  const m=1-t;
+  return{
+    x:m*m*p0.x+2*m*t*cp.x+t*t*p1.x,
+    y:m*m*p0.y+2*m*t*cp.y+t*t*p1.y
+  };
+}
+
+// Build dense point array from a quadratic bezier
+function sampleQBez(p0,cp,p1,n=300){
+  const pts=[];
+  for(let i=0;i<=n;i++) pts.push(qbez(p0,cp,p1,i/n));
+  return pts;
+}
+
+function lerpPts(pts,t){
+  if(t<=0)return{...pts[0]};
+  if(t>=1)return{...pts[pts.length-1]};
+  const raw=t*(pts.length-1),i=Math.floor(raw),f=raw-i;
+  return{x:lerp(pts[i].x,pts[i+1].x,f),y:lerp(pts[i].y,pts[i+1].y,f)};
+}
+
+function resizeTrack(){
+  CC.width =CC.offsetWidth||CC.parentElement.clientWidth;
+  CC.height=CC.offsetHeight||CC.parentElement.clientHeight;
+  drawTrack();
+}
+window.addEventListener('resize',resizeTrack);
+
+// Racing line — inset from track centre toward outer wall on entry/exit,
+// clipping inner at apex. Uses slightly adjusted control point.
+// Track path (normalised): P0=(0.05,0.80) CP=(0.70,0.80) P1=(0.70,0.05)
+// Racing line:              P0=(0.05,0.88) CP=(0.68,0.78) P1=(0.67,0.05)
+// (lower Y on entry = nearer outer/bottom wall, lower X on exit = nearer outer/right wall — wait,
+//  in canvas Y increases downward, so higher Y = lower on screen = outer wall on entry)
+
+let racingLinePts = null;
+let lastTrackSize = '';
+
+function getRacingLine(W,H){
+  const key=W+'x'+H;
+  if(racingLinePts&&lastTrackSize===key) return racingLinePts;
+  lastTrackSize=key;
+  // Scale normalised coords to canvas
+  // Track centre path: entry from left at y≈80%, corner at x≈70%, exit upward at x≈70%
+  // Racing line: outer entry wall (high Y), late apex (low X/high Y within corner), outer exit wall (high X)
+  const p0={x:W*0.03, y:H*0.85};  // entry: near outer (bottom) wall
+  const cp={x:W*0.70, y:H*0.82};  // control: pulls line to outer on entry, late apex
+  const p1={x:W*0.72, y:H*0.03};  // exit: near outer (right) wall
+  racingLinePts = sampleQBez(p0,cp,p1,300);
+  return racingLinePts;
+}
+
+function drawTrack(){
+  const W=CC.width,H=CC.height;
+  if(!W||!H)return;
+  CX.clearRect(0,0,W,H);
+
+  // Background
+  const bgr=CX.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,Math.max(W,H));
+  bgr.addColorStop(0,'#0a0c16');bgr.addColorStop(1,'#07080d');
+  CX.fillStyle=bgr;CX.fillRect(0,0,W,H);
+
+  // ── Track (thick stroke on the centre path) ──
+  // Track centre slightly inside of racing line
+  const tc_p0={x:W*0.03,y:H*0.78};
+  const tc_cp={x:W*0.68,y:H*0.76};
+  const tc_p1={x:W*0.69,y:H*0.03};
+  const trackW=Math.min(W,H)*0.17;
+
+  const tot=S.brake+S.steer+S.accel;
+  const gc=tcol(tot);
+
+  // Track surface
+  CX.beginPath();
+  CX.moveTo(tc_p0.x,tc_p0.y);
+  CX.quadraticCurveTo(tc_cp.x,tc_cp.y,tc_p1.x,tc_p1.y);
+  CX.strokeStyle='#12141e';
+  CX.lineWidth=trackW;
+  CX.lineCap='butt';
+  CX.lineJoin='round';
+  CX.stroke();
+
+  // Outer wall glow
+  CX.beginPath();
+  CX.moveTo(tc_p0.x,tc_p0.y);
+  CX.quadraticCurveTo(tc_cp.x,tc_cp.y,tc_p1.x,tc_p1.y);
+  CX.strokeStyle=gc;
+  CX.lineWidth=trackW+2;
+  CX.globalAlpha=tot>100?.14:tot>90?.07:.025;
+  CX.stroke();
+  CX.globalAlpha=1;
+
+  // Outer wall line
+  CX.beginPath();
+  CX.moveTo(tc_p0.x,tc_p0.y);
+  CX.quadraticCurveTo(tc_cp.x,tc_cp.y,tc_p1.x,tc_p1.y);
+  CX.strokeStyle='#1c1f30';
+  CX.lineWidth=trackW+2;
+  CX.globalAlpha=1;
+  CX.stroke();
+  // Inner wall line
+  CX.beginPath();
+  CX.moveTo(tc_p0.x,tc_p0.y);
+  CX.quadraticCurveTo(tc_cp.x,tc_cp.y,tc_p1.x,tc_p1.y);
+  CX.strokeStyle='#1c1f30';
+  CX.lineWidth=trackW-2;
+  CX.stroke();
+  // Track surface fill (redrawn on top of wall lines)
+  CX.beginPath();
+  CX.moveTo(tc_p0.x,tc_p0.y);
+  CX.quadraticCurveTo(tc_cp.x,tc_cp.y,tc_p1.x,tc_p1.y);
+  CX.strokeStyle='#12141e';
+  CX.lineWidth=trackW-3;
+  CX.stroke();
+
+  // Wall highlight
+  CX.beginPath();
+  CX.moveTo(tc_p0.x,tc_p0.y);
+  CX.quadraticCurveTo(tc_cp.x,tc_cp.y,tc_p1.x,tc_p1.y);
+  CX.strokeStyle=gc;
+  CX.lineWidth=trackW+2;
+  CX.globalAlpha=tot>100?.18:tot>90?.09:.03;
+  CX.stroke();
+  CX.globalAlpha=1;
+
+  // Grid dashes along track
+  const gridPts=sampleQBez(tc_p0,tc_cp,tc_p1,60);
+  CX.save();
+  for(let i=2;i<gridPts.length-2;i+=3){
+    const p=gridPts[i];
+    const tang_x=gridPts[i+1].x-gridPts[i-1].x;
+    const tang_y=gridPts[i+1].y-gridPts[i-1].y;
+    const len=Math.sqrt(tang_x*tang_x+tang_y*tang_y);
+    const nx=-tang_y/len,ny=tang_x/len; // normal
+    const hw=trackW*0.48;
+    CX.beginPath();
+    CX.moveTo(p.x+nx*hw,p.y+ny*hw);
+    CX.lineTo(p.x-nx*hw,p.y-ny*hw);
+    CX.strokeStyle='rgba(255,255,255,.04)';
+    CX.lineWidth=1;
+    CX.stroke();
+  }
+  CX.restore();
+
+  // ── Racing line ──
+  const rl=getRacingLine(W,H);
+  for(let i=0;i<rl.length-1;i++){
+    const t=i/(rl.length-1);
+    CX.beginPath();CX.moveTo(rl[i].x,rl[i].y);CX.lineTo(rl[i+1].x,rl[i+1].y);
+    CX.strokeStyle=phaseCl(t);CX.lineWidth=2.5;CX.globalAlpha=.6;CX.stroke();CX.globalAlpha=1;
+  }
+
+  // ── Phase labels ──
+  const lbls=[
+    {t:.10,txt:'FULL BRAKE',col:'#ff2d3b'},
+    {t:.36,txt:'TRAIL BRK', col:'#ffc31a'},
+    {t:.53,txt:'APEX',      col:'#00e5a0'},
+    {t:.78,txt:'POWER OUT', col:'#1ab4ff'},
+  ];
+  lbls.forEach(({t,txt,col},li)=>{
+    const p=lerpPts(rl,t);
+    // offset label away from car position
+    const act=(li===0&&carT<=.26)||(li===1&&carT>.26&&carT<=.50)||(li===2&&carT>.50&&carT<=.64)||(li===3&&carT>.64);
+    CX.save();
+    CX.font=`bold 8px 'JetBrains Mono',monospace`;
+    CX.fillStyle=col;CX.textAlign='center';CX.globalAlpha=act?1:.28;
+    // offset label to the left/inside of path
+    const np=lerpPts(rl,Math.min(t+.01,1));
+    const tang_x=np.x-p.x,tang_y=np.y-p.y;
+    const tl=Math.sqrt(tang_x*tang_x+tang_y*tang_y)||1;
+    const nx=-tang_y/tl,ny=tang_x/tl;
+    CX.fillText(txt, p.x-nx*24-8, p.y-ny*24-4);
+    CX.beginPath();CX.arc(p.x,p.y,2,0,Math.PI*2);CX.fillStyle=col;CX.globalAlpha=act?.8:.2;CX.fill();
+    CX.restore();
+  });
+
+  // ── Car ──
+  const cp=lerpPts(rl,carT);
+  const np2=lerpPts(rl,Math.min(carT+.003,1));
+  const cAng=Math.atan2(np2.y-cp.y,np2.x-cp.x);
+
+  // Tyre trail
+  for(let i=1;i<=18;i++){
+    const tp=lerpPts(rl,Math.max(0,carT-i*.003));
+    CX.beginPath();CX.arc(tp.x,tp.y,2,0,Math.PI*2);
+    CX.fillStyle=gc;CX.globalAlpha=(18-i)/18*.14;CX.fill();CX.globalAlpha=1;
+  }
+
+  // Car glow
+  const grd=CX.createRadialGradient(cp.x,cp.y,0,cp.x,cp.y,28);
+  grd.addColorStop(0,gc+'44');grd.addColorStop(1,'transparent');
+  CX.beginPath();CX.arc(cp.x,cp.y,28,0,Math.PI*2);CX.fillStyle=grd;CX.fill();
+
+  // Traction ring around car
+  const aR=22;
+  CX.save();CX.translate(cp.x,cp.y);CX.rotate(cAng-Math.PI/2);
+  CX.beginPath();CX.arc(0,0,aR,0,Math.PI*2);CX.strokeStyle='#1a1d2e';CX.lineWidth=5;CX.stroke();
+  const br=S.brake/100,st=S.steer/100,ac=S.accel/100;
+  if(br>0){CX.beginPath();CX.arc(0,0,aR,0,br*Math.PI*2);CX.strokeStyle='#ff2d3b';CX.lineWidth=5;CX.globalAlpha=.9;CX.stroke();CX.globalAlpha=1;}
+  if(st>0){CX.beginPath();CX.arc(0,0,aR,br*Math.PI*2,(br+st)*Math.PI*2);CX.strokeStyle='#00e5a0';CX.lineWidth=5;CX.globalAlpha=.9;CX.stroke();CX.globalAlpha=1;}
+  if(ac>0){CX.beginPath();CX.arc(0,0,aR,(br+st)*Math.PI*2,(br+st+ac)*Math.PI*2);CX.strokeStyle='#1ab4ff';CX.lineWidth=5;CX.globalAlpha=.9;CX.stroke();CX.globalAlpha=1;}
+  if(tot>100){
+    flashAnim=(flashAnim+.13)%(Math.PI*2);
+    CX.beginPath();CX.arc(0,0,aR+6,0,Math.PI*2);
+    CX.strokeStyle='#ff2d3b';CX.lineWidth=2;
+    CX.globalAlpha=.15+Math.sin(flashAnim)*.18;CX.stroke();CX.globalAlpha=1;
+  }
+  CX.restore();
+
+  // Car body
+  CX.save();CX.translate(cp.x,cp.y);CX.rotate(cAng);
+  CX.fillStyle='#ffc31a';CX.beginPath();CX.roundRect(-13,-6,26,12,3);CX.fill();
+  CX.fillStyle='#07080d';CX.beginPath();CX.ellipse(1,0,6,3.5,0,0,Math.PI*2);CX.fill();
+  CX.fillStyle='#ff2d3b';CX.fillRect(10,-2.5,4,5);
+  CX.restore();
+
+  // Apex dot
+  const ap=lerpPts(rl,.53);
+  CX.save();CX.shadowBlur=10;CX.shadowColor='#00e5a0';
+  CX.beginPath();CX.arc(ap.x,ap.y,5,0,Math.PI*2);CX.fillStyle='#00e5a0';CX.fill();
+  CX.restore();
+
+  // Watermark
+  CX.font=`900 ${Math.min(W,H)*.048}px 'Bebas Neue',sans-serif`;
+  CX.fillStyle='rgba(255,255,255,.018)';CX.textAlign='right';
+  CX.fillText('100% RULE',W-14,H-14);
+
+  // Pills
+  const phn=['FULL BRAKING','TRAIL BRAKING','APEX','POWER EXIT'];
+  const pi=carT<.26?0:carT<.50?1:carT<.64?2:3;
+  const pTotEl=document.getElementById('pTot');
+  pTotEl.style.color=gc;pTotEl.style.borderColor=gc+'44';
+  document.getElementById('pTotDot').style.background=gc;
+  document.getElementById('pTotTxt').textContent='TRACTION: '+tot+'%';
+  document.getElementById('pPhTxt').textContent=phn[pi];
+}
+
+// ════════════════════════════════════════════════════════
+//  TRACTION CIRCLE
+// ════════════════════════════════════════════════════════
+const TC=document.getElementById('tC');
+const TX=TC.getContext('2d');
+const TCW=TC.width,TCH=TC.height,TCX=TCW/2,TCY=TCH/2,TR=76;
+let dotX=TCX+20,dotY=TCY+38,tcDrag=false,ripples=[],flashTC=0;
+
+function trPos(e){
+  const r=TC.getBoundingClientRect(),sx=TCW/r.width,sy=TCH/r.height;
+  const cx2=e.touches?e.touches[0].clientX:e.clientX,cy2=e.touches?e.touches[0].clientY:e.clientY;
+  return[(cx2-r.left)*sx,(cy2-r.top)*sy];
+}
+function drawTC(){
+  TX.clearRect(0,0,TCW,TCH);
+  const bg=TX.createRadialGradient(TCX,TCY,0,TCX,TCY,TR*1.4);
+  bg.addColorStop(0,'#0f1120');bg.addColorStop(1,'#07080d');
+  TX.fillStyle=bg;TX.fillRect(0,0,TCW,TCH);
+  ripples=ripples.filter(r=>r.a>.01);
+  ripples.forEach(r=>{TX.beginPath();TX.arc(TCX,TCY,r.r,0,Math.PI*2);TX.strokeStyle=r.c;TX.globalAlpha=r.a;TX.lineWidth=1.5;TX.stroke();TX.globalAlpha=1;r.r+=1.4;r.a*=.9;});
+  const zg=TX.createRadialGradient(TCX,TCY,0,TCX,TCY,TR);
+  zg.addColorStop(0,'rgba(0,229,160,.07)');zg.addColorStop(.7,'rgba(255,195,26,.06)');
+  zg.addColorStop(.92,'rgba(255,45,59,.1)');zg.addColorStop(1,'rgba(255,45,59,.22)');
+  TX.beginPath();TX.arc(TCX,TCY,TR,0,Math.PI*2);TX.fillStyle=zg;TX.fill();
+  [.33,.66,1].forEach(f=>{TX.beginPath();TX.arc(TCX,TCY,TR*f,0,Math.PI*2);TX.strokeStyle=f===1?'rgba(255,195,26,.3)':'rgba(255,255,255,.05)';TX.lineWidth=f===1?1.5:.7;TX.stroke();});
+  const tot=S.brake+S.steer+S.accel;
+  if(tot>100){
+    flashTC=(flashTC+.12)%(Math.PI*2);
+    TX.beginPath();TX.arc(TCX,TCY,TR+5,0,Math.PI*2);TX.strokeStyle='#ff2d3b';TX.lineWidth=2;
+    TX.globalAlpha=.12+Math.sin(flashTC)*.16;TX.stroke();TX.globalAlpha=1;
+    requestAnimationFrame(drawTC);
+  }
+  TX.strokeStyle='rgba(255,255,255,.07)';TX.lineWidth=1;
+  TX.beginPath();TX.moveTo(TCX,TCY-TR-4);TX.lineTo(TCX,TCY+TR+4);TX.stroke();
+  TX.beginPath();TX.moveTo(TCX-TR-4,TCY);TX.lineTo(TCX+TR+4,TCY);TX.stroke();
+  TX.font='7px JetBrains Mono,monospace';TX.fillStyle='rgba(255,255,255,.2)';TX.textAlign='center';
+  TX.fillText('ACCEL',TCX,TCY-TR-8);TX.fillText('BRAKE',TCX,TCY+TR+15);
+  TX.textAlign='left';TX.fillText('R',TCX+TR+7,TCY+3);TX.textAlign='right';TX.fillText('L',TCX-TR-7,TCY+3);
+  const dx=dotX-TCX,dy=dotY-TCY,dist=Math.sqrt(dx*dx+dy*dy),pct=Math.round(dist/TR*100),col=tcol(pct);
+  TX.beginPath();TX.moveTo(TCX,TCY);TX.arc(TCX,TCY,Math.min(dist,TR*1.1),0,Math.min(pct/100,1.1)*Math.PI*2);TX.closePath();TX.fillStyle=col;TX.globalAlpha=.055;TX.fill();TX.globalAlpha=1;
+  TX.save();TX.shadowBlur=12;TX.shadowColor=col;TX.beginPath();TX.moveTo(TCX,TCY);TX.lineTo(dotX,dotY);TX.strokeStyle=col;TX.lineWidth=2.5;TX.stroke();TX.restore();
+  if(pct>90){TX.beginPath();TX.arc(dotX,dotY,16,0,Math.PI*2);TX.fillStyle=col;TX.globalAlpha=.14;TX.fill();TX.globalAlpha=1;}
+  TX.beginPath();TX.arc(dotX,dotY,10,0,Math.PI*2);TX.fillStyle='#eef0f8';TX.fill();
+  TX.save();TX.shadowBlur=14;TX.shadowColor=col;TX.strokeStyle=col;TX.lineWidth=2.5;TX.stroke();TX.restore();
+  TX.font='bold 7px Bebas Neue,sans-serif';TX.fillStyle=col;TX.textAlign='center';TX.fillText(pct+'%',dotX,dotY-14);
+}
+TC.addEventListener('mousedown',e=>{const[mx,my]=trPos(e);if(Math.hypot(mx-dotX,my-dotY)<22)tcDrag=true;});
+TC.addEventListener('touchstart',e=>{const[mx,my]=trPos(e);if(Math.hypot(mx-dotX,my-dotY)<26){tcDrag=true;e.preventDefault();}},{passive:false});
+function onTCMove(e){
+  if(!tcDrag)return;if(e.cancelable)e.preventDefault();
+  const[mx,my]=trPos(e),ddx=mx-TCX,ddy=my-TCY,d=Math.sqrt(ddx*ddx+ddy*ddy),mr=TR+28;
+  if(d>mr){dotX=TCX+ddx/d*mr;dotY=TCY+ddy/d*mr;}else{dotX=mx;dotY=my;}
+  S.brake=clamp(Math.round((dotY-TCY)/TR*100),0,100);
+  S.accel=clamp(Math.round((TCY-dotY)/TR*100),0,100);
+  S.steer=clamp(Math.round(Math.abs(dotX-TCX)/TR*100),0,100);
+  ripples.push({r:TR*.5,a:.22,c:tcol(S.brake+S.steer+S.accel)});
+  syncAll(false);
+}
+window.addEventListener('mousemove',onTCMove);
+window.addEventListener('touchmove',onTCMove,{passive:false});
+window.addEventListener('mouseup',()=>tcDrag=false);
+window.addEventListener('touchend',()=>tcDrag=false);
+function syncDot(){
+  const bF=S.brake/100,aF=S.accel/100,sF=S.steer/100;
+  const d=Math.sqrt(sF*sF+(bF-aF)*(bF-aF))*TR,ang=Math.atan2(bF-aF,sF);
+  dotX=TCX+Math.cos(ang)*Math.min(d,TR+28);
+  dotY=TCY+Math.sin(ang)*Math.min(d,TR+28);
+  drawTC();
+}
+
+// ════════════════════════════════════════════════════════
+//  STEERING WHEEL
+// ════════════════════════════════════════════════════════
+const WC=document.getElementById('wC'),WX=WC.getContext('2d');
+const WCX=WC.width/2,WCY=WC.height/2,WR=42;
+let wheelAngle=0,wDrag=false,wStart=null,wA0=0;
+const MAX_W=Math.PI;
+function wPos(e){
+  const r=WC.getBoundingClientRect(),sx=WC.width/r.width,sy=WC.height/r.height;
+  const cx2=e.touches?e.touches[0].clientX:e.clientX,cy2=e.touches?e.touches[0].clientY:e.clientY;
+  return[(cx2-r.left)*sx,(cy2-r.top)*sy];
+}
+function drawWheel(){
+  WX.clearRect(0,0,WC.width,WC.height);WX.fillStyle='#0d0f18';WX.fillRect(0,0,WC.width,WC.height);
+  const stF=S.steer/100,col=tcol(S.brake+S.steer+S.accel);
+  WX.save();WX.translate(WCX,WCY);WX.rotate(wheelAngle);
+  WX.beginPath();WX.arc(0,0,WR,0,Math.PI*2);WX.strokeStyle='#252840';WX.lineWidth=8;WX.stroke();
+  if(stF>0){WX.beginPath();WX.arc(0,0,WR,-Math.PI/2,-Math.PI/2+stF*Math.PI*2);WX.strokeStyle=col;WX.lineWidth=8;WX.globalAlpha=.75;WX.stroke();WX.globalAlpha=1;}
+  [0,-Math.PI*.65,Math.PI*.65].forEach(a=>{WX.save();WX.rotate(a);WX.beginPath();WX.moveTo(0,0);WX.lineTo(0,-WR*.55);WX.strokeStyle='#353850';WX.lineWidth=5;WX.lineCap='round';WX.stroke();WX.restore();});
+  WX.beginPath();WX.arc(0,0,9,0,Math.PI*2);WX.fillStyle=col;WX.fill();
+  WX.beginPath();WX.arc(0,0,4,0,Math.PI*2);WX.fillStyle='#07080d';WX.fill();
+  WX.beginPath();WX.arc(0,-WR+2,3.5,0,Math.PI*2);WX.fillStyle='#ffc31a';WX.fill();
+  WX.restore();
+  if(S.steer>4){WX.font='bold 10px JetBrains Mono,monospace';WX.fillStyle=col;WX.textAlign='center';WX.fillText(wheelAngle>=0?'▶':'◀',WCX,WCY+WR+16);}
+  const w=document.getElementById('wVal');w.textContent=Math.round(S.steer)+'%';w.style.color=col;
+}
+WC.style.cursor='grab';
+WC.addEventListener('mousedown',e=>{const[mx,my]=wPos(e);if(Math.hypot(mx-WCX,my-WCY)<WR+10){wDrag=true;WC.style.cursor='grabbing';wStart={x:mx,y:my};wA0=wheelAngle;}});
+WC.addEventListener('touchstart',e=>{const[mx,my]=wPos(e);if(Math.hypot(mx-WCX,my-WCY)<WR+10){wDrag=true;wStart={x:mx,y:my};wA0=wheelAngle;e.preventDefault();}},{passive:false});
+function onWMove(e){
+  if(!wDrag)return;if(e.cancelable)e.preventDefault();
+  const[mx,my]=wPos(e);
+  const a0=Math.atan2(wStart.y-WCY,wStart.x-WCX),a1=Math.atan2(my-WCY,mx-WCX);
+  let da=a1-a0;while(da>Math.PI)da-=Math.PI*2;while(da<-Math.PI)da+=Math.PI*2;
+  wheelAngle=clamp(wA0+da,-MAX_W,MAX_W);
+  S.steer=clamp(Math.round(Math.abs(wheelAngle)/MAX_W*100),0,100);
+  syncAll(false);syncDot();
+}
+window.addEventListener('mousemove',onWMove);window.addEventListener('touchmove',onWMove,{passive:false});
+window.addEventListener('mouseup',()=>{wDrag=false;WC.style.cursor='grab';});window.addEventListener('touchend',()=>wDrag=false);
+function syncWheel(){
+  const sign=wheelAngle>=0?1:-1;
+  wheelAngle=(S.steer/100)*MAX_W*(S.steer===0?1:sign);
+  drawWheel();
+}
+
+// ════════════════════════════════════════════════════════
+//  PEDALS
+// ════════════════════════════════════════════════════════
+function setupPedal(id,key){
+  const el=document.getElementById(id);
+  let active=false,sy=0,sv=0;
+  const gy=e=>e.touches?e.touches[0].clientY:e.clientY;
+  el.addEventListener('mousedown',e=>{active=true;sy=gy(e);sv=S[key];e.preventDefault();});
+  el.addEventListener('touchstart',e=>{active=true;sy=gy(e);sv=S[key];e.preventDefault();},{passive:false});
+  window.addEventListener('mousemove',e=>{if(!active)return;S[key]=clamp(Math.round(sv+(sy-gy(e))*1.3),0,100);syncAll(true);});
+  window.addEventListener('touchmove',e=>{if(!active)return;e.preventDefault();S[key]=clamp(Math.round(sv+(sy-gy(e))*1.3),0,100);syncAll(true);},{passive:false});
+  window.addEventListener('mouseup',()=>active=false);window.addEventListener('touchend',()=>active=false);
+}
+setupPedal('ptB','brake');setupPedal('ptA','accel');
+function syncPedals(){
+  document.getElementById('fB').style.height=S.brake+'%';
+  document.getElementById('fA').style.height=S.accel+'%';
+  document.getElementById('vBrake').textContent=S.brake+'%';
+  document.getElementById('vAccel').textContent=S.accel+'%';
+}
+
+// ════════════════════════════════════════════════════════
+//  STATUS + CAR POSITION
+// ════════════════════════════════════════════════════════
+function updateStatus(){
+  const tot=S.brake+S.steer+S.accel,col=tcol(tot);
+  document.getElementById('totFill').style.width=Math.min(tot/1.2,100)+'%';
+  document.getElementById('totFill').style.background=col;
+  document.getElementById('totVal').textContent=tot+'%';
+  document.getElementById('totVal').style.color=col;
+  const msg=document.getElementById('statusMsg');
+  let bg,txt;
+  if(tot<=80){bg='rgba(0,229,160,.05)';txt='✓  In reserve — tyres have grip to spare. Brake later, carry more speed in.';}
+  else if(tot<=95){bg='rgba(255,195,26,.05)';txt='⚡  At the limit — perfect trail braking. Release brake smoothly as you add steering.';}
+  else if(tot<=108){bg='rgba(255,124,30,.05)';txt='⚠  Over 100% — grip blown. Understeer or oversteer imminent. Ease off now.';}
+  else{bg='rgba(255,45,59,.07)';txt='🔴  GRIP LOST — Way over limit. Reduce brake or steering immediately.';}
+  msg.style.color=col;msg.style.background=bg;msg.style.borderColor=col;msg.textContent=txt;
+  document.getElementById('tcHint').style.color=tot>100?'#ff2d3b':tot>90?'#ffc31a':'#525870';
+  document.getElementById('tcHint').textContent=tot>100?'Over limit — ease off!':tot>90?'At the limit — stay precise':'Drag dot · wheel · pedals · or PLAY';
+  // Map inputs to car position on line (only when not playing)
+  if(!playing){
+    if(S.brake>70&&S.steer<15)       carT=0.20;
+    else if(S.brake>20&&S.steer>15&&S.accel<10) carT=0.38;
+    else if(S.brake<15&&S.steer>55&&S.accel<10) carT=0.53;
+    else                                          carT=0.77;
+  }
+  const ph=S.brake>70&&S.steer<15?0:S.brake>20&&S.steer>15&&S.accel<10?1:S.brake<15&&S.steer>55&&S.accel<10?2:3;
+  document.querySelectorAll('.pb').forEach((b,i)=>b.classList.toggle('active',i===ph));
+}
+
+// ════════════════════════════════════════════════════════
+//  MASTER SYNC
+// ════════════════════════════════════════════════════════
+function syncAll(resyncDot=true){
+  updateStatus();syncPedals();syncWheel();
+  if(resyncDot)syncDot();else drawTC();
+  drawTrack();
+}
+
+// ════════════════════════════════════════════════════════
+//  PHASE PRESETS
+// ════════════════════════════════════════════════════════
+const PHASES=[{brake:95,steer:5,accel:0},{brake:58,steer:40,accel:0},{brake:4,steer:92,accel:0},{brake:0,steer:22,accel:65}];
+function setPhase(i){stopPlay();const ph=PHASES[i];animTo('brake',ph.brake);animTo('steer',ph.steer);animTo('accel',ph.accel);}
+function animTo(key,to){
+  const from=S[key],t0=performance.now(),dur=520;
+  function tick(now){const p=Math.min((now-t0)/dur,1),e=1-Math.pow(1-p,3);S[key]=Math.round(from+(to-from)*e);syncAll(true);if(p<1)requestAnimationFrame(tick);}
+  requestAnimationFrame(tick);
+}
+
+// ════════════════════════════════════════════════════════
+//  PLAY — smooth animation through full corner
+// ════════════════════════════════════════════════════════
+let playing=false,playT=0,playRAF=null,playLast=null;
+const PLAY_DUR=10000; // 10 seconds
+
+function togglePlay(){if(playing)stopPlay();else startPlay();}
+function startPlay(){
+  playing=true;playT=0;playLast=null;
+  document.getElementById('playBtn').classList.add('playing');
+  document.getElementById('playIcon').textContent='■';
+  document.getElementById('playLabel').textContent='STOP';
+  document.getElementById('pp').classList.add('vis');
+  playRAF=requestAnimationFrame(playTick);
+}
+function stopPlay(){
+  playing=false;if(playRAF)cancelAnimationFrame(playRAF);
+  document.getElementById('playBtn').classList.remove('playing');
+  document.getElementById('playIcon').textContent='▶';
+  document.getElementById('playLabel').textContent='PLAY CORNER';
+  document.getElementById('pp').classList.remove('vis');
+  document.getElementById('ppf').style.width='0%';
+}
+function playTick(now){
+  if(!playing)return;
+  if(!playLast)playLast=now;
+  const dt=now-playLast;playLast=now;
+  playT=Math.min(playT+dt/PLAY_DUR,1);
+  document.getElementById('ppf').style.width=(playT*100)+'%';
+  const kf=interpKF(playT);
+  S.brake=kf.brake;S.steer=kf.steer;S.accel=kf.accel;
+  // Car follows racing line directly and smoothly
+  carT=playT;
+  // Sync all displays
+  const tot=S.brake+S.steer+S.accel,col=tcol(tot);
+  document.getElementById('totFill').style.width=Math.min(tot/1.2,100)+'%';
+  document.getElementById('totFill').style.background=col;
+  document.getElementById('totVal').textContent=tot+'%';
+  document.getElementById('totVal').style.color=col;
+  const msg=document.getElementById('statusMsg');
+  let bg,txt;
+  if(tot<=80){bg='rgba(0,229,160,.05)';txt='✓  In reserve — throttle on straight, building speed.';}
+  else if(tot<=95){bg='rgba(255,195,26,.05)';txt='⚡  At the limit — perfect trail braking technique.';}
+  else if(tot<=108){bg='rgba(255,124,30,.05)';txt='⚠  Just over 100% — easing off...';}
+  else{bg='rgba(255,45,59,.07)';txt='🔴  GRIP LOST';}
+  msg.style.color=col;msg.style.background=bg;msg.style.borderColor=col;msg.textContent=txt;
+  const ph2=carT<.26?0:carT<.50?1:carT<.64?2:3;
+  document.querySelectorAll('.pb').forEach((b,i)=>b.classList.toggle('active',i===ph2));
+  syncPedals();syncWheel();syncDot();
+  drawTrack();
+  if(playT<1)playRAF=requestAnimationFrame(playTick);
+  else setTimeout(stopPlay,800);
+}
+
+// ════════════════════════════════════════════════════════
+//  DRAG HANDLE — resize right panel
+// ════════════════════════════════════════════════════════
+const dh=document.getElementById('dh'),rp=document.getElementById('rp');
+let dhDrag=false;
+dh.addEventListener('mousedown',e=>{dhDrag=true;dh.classList.add('active');e.preventDefault();});
+dh.addEventListener('touchstart',e=>{dhDrag=true;dh.classList.add('active');e.preventDefault();},{passive:false});
+window.addEventListener('mousemove',e=>{
+  if(!dhDrag)return;
+  const ar=document.querySelector('.app').getBoundingClientRect();
+  rp.style.flex='none';rp.style.width=clamp(ar.right-e.clientX,220,520)+'px';
+  racingLinePts=null;resizeTrack();
+});
+window.addEventListener('touchmove',e=>{
+  if(!dhDrag)return;e.preventDefault();
+  const ar=document.querySelector('.app').getBoundingClientRect();
+  rp.style.flex='none';rp.style.width=clamp(ar.right-e.touches[0].clientX,220,520)+'px';
+  racingLinePts=null;resizeTrack();
+},{passive:false});
+window.addEventListener('mouseup',()=>{dhDrag=false;dh.classList.remove('active');});
+window.addEventListener('touchend',()=>{dhDrag=false;dh.classList.remove('active');});
+
+// ════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════
+resizeTrack();
+syncAll(true);
+</script>
+</body>
+</html>
