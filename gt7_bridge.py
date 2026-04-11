@@ -206,6 +206,10 @@ class GT7Packet:
         self.rpm        = self._f(self.ENGINE_RPM)
         self.fuel       = self._f(self.FUEL_LEVEL)
         self.speed_ms   = self._f(self.SPEED_MS)
+        self.boost      = self._f(self.BOOST)
+        self.oil_press  = self._f(self.OIL_PRESS)
+        self.water_temp = self._f(self.WATER_TEMP)
+        self.oil_temp   = self._f(self.OIL_TEMP)
         self.speed_kmh  = self.speed_ms * 3.6
         self.tyre_fl_temp = self._f(self.TYRE_FL_TEMP)
         self.tyre_fr_temp = self._f(self.TYRE_FR_TEMP)
@@ -278,6 +282,14 @@ class GT7Packet:
             "rpmMax":       int(self.max_alert) if self.max_alert > 1000 else 9000,
             "fuelCap":      round(self.fuel_cap, 2),
             "rotYaw":       round(self.rot_yaw, 4),
+            "waterTemp":    round(self.water_temp, 1),
+            "oilTemp":      round(self.oil_temp, 1),
+            "oilPress":     round(self.oil_press, 2),
+            "boost":        round(self.boost, 3),
+            "tyreRpsFL":    round(self.tyre_fl_rps, 2),
+            "tyreRpsFR":    round(self.tyre_fr_rps, 2),
+            "tyreRpsRL":    round(self.tyre_rl_rps, 2),
+            "tyreRpsRR":    round(self.tyre_rr_rps, 2),
         }
 
 
