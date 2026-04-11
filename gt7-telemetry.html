@@ -170,6 +170,7 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
       <span class="dot"></span>
       <span id="statusTxt">DISCONNECTED</span>
     </div>
+    <button id="previewClose" onclick="stopPreview()" style="display:none;font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;padding:.28rem .65rem;border-radius:20px;border:1px solid rgba(255,195,26,.4);background:rgba(255,195,26,.08);color:var(--gold);cursor:pointer;">EXIT PREVIEW</button>
     <a href="index.html" class="back-link">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <polyline points="15 18 9 12 15 6"></polyline>
@@ -419,7 +420,7 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
 // ── WEBSOCKET ──
 const WS_URL = 'ws://localhost:8765';
 let ws = null, reconnectTimer = null;
-let hasLiveData = false;
+let hasLiveData = false, isPreview = false;
 
 function connect(){
   if(ws && ws.readyState === WebSocket.OPEN) return;
@@ -428,8 +429,8 @@ function connect(){
     ws = new WebSocket(WS_URL);
     ws.onopen = () => { setStatus('bridge','BRIDGE READY'); clearTimeout(reconnectTimer); };
     ws.onmessage = e => { try{ handleMsg(JSON.parse(e.data)); }catch(_){} };
-    ws.onclose = () => { setStatus('','DISCONNECTED'); showSetup(); reconnectTimer = setTimeout(connect, 3000); };
-    ws.onerror = () => { setStatus('','DISCONNECTED'); showSetup(); };
+    ws.onclose = () => { if(isPreview) return; setStatus('','DISCONNECTED'); showSetup(); reconnectTimer = setTimeout(connect, 3000); };
+    ws.onerror = () => { if(isPreview) return; setStatus('','DISCONNECTED'); showSetup(); };
   }catch(_){
     setStatus('','DISCONNECTED');
     reconnectTimer = setTimeout(connect, 3000);
@@ -452,7 +453,7 @@ function setStatus(cls, txt){
   document.getElementById('statusTxt').textContent = txt;
 }
 
-function showSetup(){ document.getElementById('setupScreen').style.display='flex'; document.getElementById('dashboard').classList.remove('vis'); }
+function showSetup(){ document.getElementById('setupScreen').style.display='flex'; document.getElementById('dashboard').classList.remove('vis'); document.getElementById('previewClose').style.display='none'; }
 function showDashboard(){ document.getElementById('setupScreen').style.display='none'; document.getElementById('dashboard').classList.add('vis'); }
 
 // ── DATA UPDATE ──
@@ -609,9 +610,20 @@ function update(d){
 
 // ── PREVIEW MODE ──
 let previewInterval = null;
+function stopPreview(){
+  isPreview = false;
+  clearInterval(previewInterval);
+  previewInterval = null;
+  document.getElementById('previewClose').style.display = 'none';
+  showSetup();
+  setStatus('', 'DISCONNECTED');
+  setTimeout(connect, 400);
+}
 function previewDashboard(){
+  isPreview = true;
   showDashboard();
   setStatus('live', 'PREVIEW MODE');
+  document.getElementById('previewClose').style.display = 'block';
 
   // Smooth lerp helper
   function lerp(a, b, t){ return a + (b - a) * t; }
