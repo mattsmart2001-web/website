@@ -63,15 +63,20 @@ def decrypt_packet(data: bytes) -> Optional[bytes]:
     iv = data[0x40:0x48]
     if HAS_SALSA:
         try:
-            return _S20.new(key=_KEY, nonce=iv).decrypt(data)
+            dec = _S20.new(key=_KEY, nonce=iv).decrypt(data)
+            if dec[0:4] == b'G7S0':
+                return dec
         except Exception:
             pass
     try:
         from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
         enc = Cipher(algorithms.ChaCha20(_KEY, bytes(4) + iv), mode=None).encryptor()
-        return enc.update(data)
+        dec = enc.update(data)
+        if dec[0:4] == b'G7S0':
+            return dec
     except Exception:
-        return data
+        pass
+    return None  # decryption failed — drop packet rather than send garbage
 
 # ═══════════════════════════════════════════════════════════════
 #  PACKET PARSER
@@ -98,7 +103,7 @@ class GT7Packet:
         self.packet_id   = self._i(0x70)
         self.speed_ms    = self._f(0x4C)
         self.speed_kmh   = self.speed_ms * 3.6
-        self.rpm         = self._f(0x3C)
+        self.rpm         = self._f(0x38)
         self.fuel        = self._f(0x44)
         self.fuel_cap    = self._f(0x48)
         self.boost       = self._f(0x50)
@@ -124,10 +129,10 @@ class GT7Packet:
         self.tfr_rps     = self._f(0xA8)
         self.trl_rps     = self._f(0xAC)
         self.trr_rps     = self._f(0xB0)
-        self.tfl_sus     = self._f(0xB4)
-        self.tfr_sus     = self._f(0xB8)
-        self.trl_sus     = self._f(0xBC)
-        self.trr_sus     = self._f(0xC0)
+        self.tfl_sus     = self._f(0xC4)
+        self.tfr_sus     = self._f(0xC8)
+        self.trl_sus     = self._f(0xCC)
+        self.trr_sus     = self._f(0xD0)
         self.max_alert   = self._h(0x8A)
         self.angvel_y    = self._f(0x2C)
         self.vel_x       = self._f(0x10)

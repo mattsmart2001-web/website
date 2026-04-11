@@ -92,29 +92,27 @@ def decrypt_packet(data: bytes) -> Optional[bytes]:
 
 
 def _salsa20_decrypt(data: bytes, key: bytes, iv: bytes) -> Optional[bytes]:
-    """Salsa20 decryption using the cryptography library workaround."""
-    # GT7 uses Salsa20/8 with this specific key schedule
-    # We XOR with the keystream
+    """Salsa20 decryption. Returns None if decryption fails magic check."""
     try:
-        # Generate keystream using ChaCha20 (close enough for packet decode)
-        # In practice, use pycryptodome for exact Salsa20
         from Crypto.Cipher import Salsa20 as S20
-        cipher = S20.new(key=key, nonce=iv)
-        return cipher.decrypt(data)
+        dec = S20.new(key=key, nonce=iv).decrypt(data)
+        if dec[0:4] == b'G7S0':
+            return dec
     except ImportError:
         pass
 
     try:
-        # Try with cryptography library ChaCha20 as approximation
         from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
-        # Pad iv to 16 bytes for ChaCha20
         nonce = bytes(4) + iv  # 12 byte nonce
         cipher = Cipher(algorithms.ChaCha20(key, nonce), mode=None)
-        enc = cipher.encryptor()
-        return enc.update(data)
+        dec = cipher.encryptor().update(data)
+        if dec[0:4] == b'G7S0':
+            return dec
     except Exception as e:
         log.warning(f"Decryption failed: {e}")
-        return data  # return raw — packet parsing will fail gracefully
+
+    log.warning("GT7 packet magic check failed — pycryptodome may not be installed. Run: pip install pycryptodome")
+    return None  # drop packet — do not forward garbage data
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -130,7 +128,7 @@ class GT7Packet:
     ROTATION     = 0x1C   # 3x float: pitch, yaw, roll
     ANGVEL       = 0x28   # 3x float: angular velocity
     BODY_HEIGHT  = 0x34   # float
-    ENGINE_RPM   = 0x3C   # float
+    ENGINE_RPM   = 0x38   # float
     FUEL_LEVEL   = 0x44   # float
     FUEL_CAP     = 0x48   # float
     SPEED_MS     = 0x4C   # float (m/s)
@@ -163,10 +161,10 @@ class GT7Packet:
     TYRE_FR_RPS  = 0xA8
     TYRE_RL_RPS  = 0xAC
     TYRE_RR_RPS  = 0xB0
-    TYRE_FL_SUS  = 0xB4   # 4x float: suspension height
-    TYRE_FR_SUS  = 0xB8
-    TYRE_RL_SUS  = 0xBC
-    TYRE_RR_SUS  = 0xC0
+    TYRE_FL_SUS  = 0xC4   # 4x float: suspension height
+    TYRE_FR_SUS  = 0xC8
+    TYRE_RL_SUS  = 0xCC
+    TYRE_RR_SUS  = 0xD0
     # 0xC4–0xD3 reserved
     GEAR_RATIOS  = 0xD4   # 8x float: gear ratios 1–8
     VEHICLE_ID   = 0xF4   # int32

@@ -17,6 +17,9 @@ pyinstaller ^
   --noconsole ^
   --name "GT7-Live-Connector" ^
   --icon NONE ^
+  --collect-all Crypto ^
+  --hidden-import=Crypto.Cipher.Salsa20 ^
+  --hidden-import=Crypto.Cipher._Salsa20 ^
   gt7_connector.py
 
 echo.
