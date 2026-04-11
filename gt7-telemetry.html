@@ -498,9 +498,9 @@ function drawG(lat, lon){
   c.beginPath(); c.moveTo(cx-r,cy); c.lineTo(cx+r,cy); c.stroke();
   c.beginPath(); c.moveTo(cx,cy-r); c.lineTo(cx,cy+r); c.stroke();
 
-  // Dot position (lat = X, lon = Y inverted)
-  const dx = (lat / G_MAX) * r;
-  const dy = -(lon / G_MAX) * r;
+  // Dot position: lateral flipped (right turn → dot left), longitudinal flipped (accel → dot down/back)
+  const dx = -(lat / G_MAX) * r;
+  const dy = (lon / G_MAX) * r;
   const px = cx + dx, py = cy + dy;
 
   // Trail glow
