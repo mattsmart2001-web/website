@@ -513,9 +513,9 @@ body {
 
 .sponsors-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 3rem;
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto;
 }
 
@@ -593,6 +593,18 @@ body {
     object-fit: contain;
 }
 
+.sponsor-logo-yfood img {
+    filter: invert(1);
+}
+
+.sponsor-card:hover .sponsor-logo-yfood {
+    filter: drop-shadow(0 0 20px rgba(14, 165, 233, 0.5));
+}
+
+.sponsor-card:hover .sponsor-logo-yfood img {
+    filter: invert(1) brightness(1.1);
+}
+
 /* ===== FLOATING SPONSOR BADGES ===== */
 .sponsor-badges {
     position: fixed;
@@ -660,6 +672,14 @@ body {
 
 .sponsor-badge:hover img {
     filter: brightness(1.2) drop-shadow(0 0 10px rgba(14, 165, 233, 0.5));
+}
+
+.sponsor-badge-yfood img {
+    filter: invert(1) brightness(0.9);
+}
+
+.sponsor-badge-yfood:hover img {
+    filter: invert(1) brightness(1.1) drop-shadow(0 0 10px rgba(14, 165, 233, 0.5));
 }
 
 /* ===== ABOUT SECTION ===== */
