@@ -222,6 +222,33 @@ body {
     flex-wrap: wrap;
 }
 
+.enable-motion-btn {
+    display: block;
+    margin: -2rem auto 3rem;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #e0f2fe;
+    background: rgba(14, 165, 233, 0.15);
+    border: 1px solid rgba(14, 165, 233, 0.5);
+    border-radius: 999px;
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.enable-motion-btn:hover,
+.enable-motion-btn:active {
+    background: rgba(14, 165, 233, 0.3);
+    transform: translateY(-1px);
+}
+
+.enable-motion-btn[hidden] {
+    display: none;
+}
+
 .hero-stats {
     display: flex;
     gap: 4rem;
