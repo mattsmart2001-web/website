@@ -173,7 +173,7 @@
             text-transform: uppercase;
             font-weight: 600;
         }
-        .signup-form input, .signup-form textarea {
+        .signup-form input, .signup-form textarea, .signup-form select {
             width: 100%;
             padding: 0.95rem 1rem;
             background: rgba(0,0,0,0.4);
@@ -184,10 +184,24 @@
             font-size: 1rem;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-        .signup-form input:focus, .signup-form textarea:focus {
+        .signup-form input:focus, .signup-form textarea:focus, .signup-form select:focus {
             outline: none;
             border-color: var(--color-primary);
             box-shadow: 0 0 0 3px rgba(14,165,233,0.2);
+        }
+        .signup-form select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%230ea5e9' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            padding-right: 2.5rem;
+            cursor: pointer;
+        }
+        .signup-form select option,
+        .signup-form select optgroup {
+            background: #0a0e12;
+            color: var(--color-text);
         }
         .signup-form textarea { resize: vertical; min-height: 90px; }
         .signup-form .field-hint {
@@ -600,6 +614,48 @@
                     <label for="discord">Discord Username</label>
                     <input type="text" id="discord" name="discord_username" placeholder="e.g. sparks_theory" required>
                     <small class="field-hint">Make sure you're in the SparksTheory Discord so we can reach you.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="preferred-car">Preferred Car</label>
+                    <select id="preferred-car" name="preferred_car" required>
+                        <option value="" disabled selected>Choose your Gr.3 car…</option>
+                        <option value="Undecided">Undecided — I'll pick later</option>
+                        <optgroup label="Gr.3 Race Cars">
+                            <option>Alpine A110 Gr.3</option>
+                            <option>Aston Martin V8 Vantage Gr.3</option>
+                            <option>Aston Martin V12 Vantage GT3 '12</option>
+                            <option>Audi R8 LMS Evo '19</option>
+                            <option>BMW M4 GT3 '22</option>
+                            <option>BMW M6 GT3 '17</option>
+                            <option>Chevrolet Corvette C7 Gr.3</option>
+                            <option>Chevrolet Corvette C8.R '20</option>
+                            <option>Dodge Viper Gr.3</option>
+                            <option>Dodge Viper SRT GT3-R '15</option>
+                            <option>Ferrari 296 GT3 '23</option>
+                            <option>Ferrari 458 Italia GT3 '13</option>
+                            <option>Ford GT LM Spec II Test Car</option>
+                            <option>Ford Mustang Gr.3</option>
+                            <option>Genesis X Gran Berlinetta Gr.3</option>
+                            <option>Honda NSX Gr.3</option>
+                            <option>Jaguar F-Type Gr.3</option>
+                            <option>Lamborghini Huracán GT3 EVO '19</option>
+                            <option>Lexus RC F GT3 prototype</option>
+                            <option>Mazda Atenza Gr.3</option>
+                            <option>Mazda RX-Vision GT3 Concept</option>
+                            <option>McLaren 650S GT3 '15</option>
+                            <option>Mercedes-AMG GT3 '20</option>
+                            <option>Mitsubishi Lancer Evolution Final Edition Gr.3</option>
+                            <option>Nissan GT-R Nismo GT3 '18</option>
+                            <option>Peugeot RCZ Gr.3</option>
+                            <option>Porsche 911 RSR (991) '17</option>
+                            <option>Renault Sport R.S.01 GT3 '16</option>
+                            <option>Subaru WRX Gr.3</option>
+                            <option>Toyota FT-1 VGT Gr.3</option>
+                            <option>Toyota GR Supra Racing Concept '18</option>
+                        </optgroup>
+                    </select>
+                    <small class="field-hint">Not locked in — you can change your mind before lights out.</small>
                 </div>
 
                 <button type="submit" class="btn btn-primary signup-submit">Sign Up</button>
