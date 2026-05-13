@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Sign up for the SparksTheory Nordschleife 24 Hours — a solo GT7 endurance event on Friday 26 June 2026. Drivers selected at random from all entries.">
+    <meta name="keywords" content="GT7, Gran Turismo 7, Nordschleife 24 hours, GT7 endurance, GT7 event, sim racing event, SparksTheory event">
+    <meta name="author" content="SparksTheory">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0ea5e9">
+    <link rel="canonical" href="https://sparkstheory.co.uk/signup.html">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sparkstheory.co.uk/signup.html">
+    <meta property="og:title" content="Nordschleife 24 Hours — Driver Sign-Up | SparksTheory">
+    <meta property="og:description" content="Solo GT7 endurance event on Friday 26 June 2026, 12:00 BST. Sign up to be entered into the driver draw.">
+    <meta property="og:image" content="https://sparkstheory.co.uk/sparks_logo.jpg">
+    <meta property="og:site_name" content="SparksTheory">
+
+    <title>Nordschleife 24 Hours — Driver Sign-Up | SparksTheory</title>
+    <link rel="icon" type="image/jpeg" href="sparks_logo.jpg">
+    <link rel="apple-touch-icon" href="sparks_logo.jpg">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        .signup-hero {
+            min-height: 55vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8rem 1.5rem 4rem;
+            background:
+                radial-gradient(ellipse at top, rgba(14,165,233,0.18), transparent 60%),
+                linear-gradient(180deg, #000 0%, #0a0e12 100%);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .signup-hero-inner { max-width: 900px; }
+        .signup-eyebrow {
+            display: inline-block;
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            letter-spacing: 0.35em;
+            font-size: 0.8rem;
+            color: var(--color-primary);
+            border: 1px solid rgba(14,165,233,0.35);
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            background: rgba(14,165,233,0.08);
+            margin-bottom: 1.5rem;
+        }
+        .signup-title {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-weight: 900;
+            font-size: clamp(2.2rem, 6vw, 4.5rem);
+            line-height: 1.05;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ffffff 0%, var(--color-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .signup-subtitle {
+            color: var(--color-text-muted);
+            font-size: 1.15rem;
+            max-width: 680px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .signup-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.1fr;
+            gap: 3rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 1.5rem 6rem;
+        }
+        @media (max-width: 900px) {
+            .signup-layout { grid-template-columns: 1fr; gap: 2rem; padding: 3rem 1.25rem; }
+        }
+
+        .event-card, .signup-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+        .event-card h2, .signup-card h2 {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+            color: var(--color-primary);
+            letter-spacing: 0.08em;
+        }
+
+        .event-details { list-style: none; padding: 0; margin: 0; }
+        .event-details li {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .event-details li:last-child { border-bottom: none; }
+        .event-icon {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(14,165,233,0.12);
+            border: 1px solid rgba(14,165,233,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-primary);
+        }
+        .event-icon svg { width: 20px; height: 20px; }
+        .event-text strong {
+            display: block;
+            color: var(--color-text);
+            font-weight: 700;
+            margin-bottom: 0.15rem;
+            font-size: 0.95rem;
+        }
+        .event-text span {
+            color: var(--color-text-muted);
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .signup-form .form-group { margin-bottom: 1.25rem; }
+        .signup-form label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--color-text-muted);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .signup-form input, .signup-form textarea {
+            width: 100%;
+            padding: 0.95rem 1rem;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: var(--color-text);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .signup-form input:focus, .signup-form textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(14,165,233,0.2);
+        }
+        .signup-form textarea { resize: vertical; min-height: 90px; }
+        .signup-form .field-hint {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--color-text-muted);
+            margin-top: 0.4rem;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .signup-submit {
+            width: 100%;
+            margin-top: 0.5rem;
+            padding: 1.1rem;
+            font-size: 1rem;
+            letter-spacing: 0.1em;
+        }
+        .signup-disclaimer {
+            font-size: 0.82rem;
+            color: var(--color-text-muted);
+            margin-top: 1.25rem;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .signup-success {
+            display: none;
+            text-align: center;
+            padding: 2.5rem 1rem;
+        }
+        .signup-success.show { display: block; }
+        .signup-success-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1.25rem;
+            border-radius: 50%;
+            background: rgba(14,165,233,0.12);
+            border: 2px solid var(--color-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-primary);
+        }
+        .signup-success h3 {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            color: var(--color-primary);
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .signup-success p {
+            color: var(--color-text-muted);
+            line-height: 1.6;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-top: 1.5rem;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--color-primary); }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">SPARKS<span class="highlight">THEORY</span></a>
+        <div class="nav-links">
+            <a href="/#about">About</a>
+            <a href="/#sponsors">Sponsors</a>
+            <a href="/#shop">Shop</a>
+            <a href="/#tools">Tools</a>
+            <a href="/signup.html">Sign Up</a>
+            <a href="/#contact">Contact</a>
+        </div>
+        <div class="nav-burger" id="navBurger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="signup-hero">
+        <div class="signup-hero-inner">
+            <div class="signup-eyebrow">SparksTheory Presents</div>
+            <h1 class="signup-title">Nordschleife 24 Hours</h1>
+            <p class="signup-subtitle">A solo GT7 endurance test around the Green Hell. One driver, one car, twenty-four hours. Sign up below to be entered into the driver draw — names pulled out of a hat after sign-ups close.</p>
+        </div>
+    </section>
+
+    <!-- Layout -->
+    <div class="signup-layout">
+
+        <!-- Event Details -->
+        <aside class="event-card">
+            <h2>Event Details</h2>
+            <ul class="event-details">
+                <li>
+                    <div class="event-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                    <div class="event-text">
+                        <strong>Race Day</strong>
+                        <span>Friday 26 June 2026 — 12:00 noon BST start, finishing Saturday 27 June at 12:00 BST.</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="event-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+                    </div>
+                    <div class="event-text">
+                        <strong>Track</strong>
+                        <span>Nürburgring Nordschleife — 24-hour layout, all conditions.</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="event-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+                    </div>
+                    <div class="event-text">
+                        <strong>Format</strong>
+                        <span>Solo only. One driver per car, full 24 hours behind the wheel.</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="event-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 7v6c0 5 3.5 8.5 8 9 4.5-.5 8-4 8-9V7l-8-5z"/></svg>
+                    </div>
+                    <div class="event-text">
+                        <strong>Selection</strong>
+                        <span>No entry cap. Drivers are picked at random from the hat once sign-ups close.</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="event-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div class="event-text">
+                        <strong>Sign-Up Deadline</strong>
+                        <span>Friday 12 June 2026, 23:59 BST — two weeks before lights out.</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="event-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    </div>
+                    <div class="event-text">
+                        <strong>Comms</strong>
+                        <span>Selected drivers will be contacted by email and on Discord with full briefing details.</span>
+                    </div>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Sign-Up Form -->
+        <div class="signup-card">
+            <h2>Driver Sign-Up</h2>
+
+            <form
+                class="signup-form"
+                id="signupForm"
+                name="nordschleife-24h-signup"
+                method="POST"
+                data-netlify="true"
+                netlify-honeypot="bot-field"
+                action="/signup.html?success=1"
+            >
+                <input type="hidden" name="form-name" value="nordschleife-24h-signup">
+                <p style="display: none;">
+                    <label>Don't fill this out if you're human: <input name="bot-field"></label>
+                </p>
+
+                <div class="form-group">
+                    <label for="driver-name">Driver Name</label>
+                    <input type="text" id="driver-name" name="driver_name" placeholder="Your name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="psn-id">PSN ID</label>
+                    <input type="text" id="psn-id" name="psn_id" placeholder="e.g. SparksTheory" required>
+                    <small class="field-hint">Used to identify you in the lobby and on the entry list.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required>
+                    <small class="field-hint">Where the confirmation and briefing pack will land.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="discord">Discord Username</label>
+                    <input type="text" id="discord" name="discord_username" placeholder="e.g. sparks_theory" required>
+                    <small class="field-hint">Make sure you're in the SparksTheory Discord so we can reach you.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary signup-submit">Enter the Draw</button>
+
+                <p class="signup-disclaimer">By signing up you agree to be contacted about this event. Your details won't be shared outside of race admin.</p>
+            </form>
+
+            <div class="signup-success" id="signupSuccess">
+                <div class="signup-success-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                </div>
+                <h3>You're in the hat!</h3>
+                <p>Thanks for signing up to the Nordschleife 24 Hours. Selected drivers will be contacted by email and Discord after the deadline on 12 June 2026.</p>
+                <a href="/" class="back-link">← Back to the home page</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">SPARKS<span class="highlight">THEORY</span></div>
+                <div class="footer-links">
+                    <a href="/#about">About</a>
+                    <a href="/#sponsors">Sponsors</a>
+                    <a href="/#shop">Shop</a>
+                    <a href="/#tools">Tools</a>
+                    <a href="/signup.html">Sign Up</a>
+                    <a href="/#contact">Contact</a>
+                </div>
+                <div class="footer-social">
+                    <a href="https://www.youtube.com/@SparksTheory" target="_blank" title="YouTube">YT</a>
+                    <a href="https://twitter.com/SparksTheory" target="_blank" title="Twitter">X</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 sparkstheory. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Show success state when redirected back with ?success=1
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('success') === '1') {
+                const form = document.getElementById('signupForm');
+                const success = document.getElementById('signupSuccess');
+                if (form && success) {
+                    form.style.display = 'none';
+                    success.classList.add('show');
+                    success.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        })();
+
+        // Mobile nav toggle (matches index.html behavior)
+        (function () {
+            const burger = document.getElementById('navBurger');
+            const links = document.querySelector('.nav-links');
+            if (burger && links) {
+                burger.addEventListener('click', () => {
+                    burger.classList.toggle('active');
+                    links.classList.toggle('active');
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
