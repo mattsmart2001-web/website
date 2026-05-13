@@ -29,6 +29,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
+        /* Starfield canvas must not eat clicks on form inputs */
+        #canvas-container { pointer-events: none; }
+
         .signup-hero {
             min-height: 70vh;
             display: flex;
@@ -517,6 +520,15 @@
                     <div class="event-text">
                         <strong>Format</strong>
                         <span>Solo only. One driver per car, full 24 hours behind the wheel.</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="event-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V15.5a.5.5 0 0 0 .5.5H4"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+                    </div>
+                    <div class="event-text">
+                        <strong>Car Class</strong>
+                        <span>Gr.3 only. Free choice of any Gr.3 car — pick your weapon for the long haul.</span>
                     </div>
                 </li>
                 <li>
