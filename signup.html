@@ -89,14 +89,18 @@
             font-weight: 900;
             line-height: 1.05;
             margin-bottom: 1rem;
-            background: linear-gradient(135deg, #ffffff 0%, var(--color-primary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 0.15em;
+        }
+        .signup-title-year,
+        .signup-title-main {
+            background: linear-gradient(135deg, #ffffff 0%, var(--color-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
         }
         .signup-title-year {
             font-size: clamp(1.4rem, 3.5vw, 2.4rem);
