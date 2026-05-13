@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Inter:wght@300;400;600;700;900&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
         /* Starfield canvas must not eat clicks on form inputs */
@@ -85,32 +85,87 @@
             margin-bottom: 1.5rem;
         }
         .signup-title {
-            font-family: var(--font-display, 'Orbitron', sans-serif);
-            font-weight: 900;
+            font-family: 'Audiowide', 'Orbitron', sans-serif;
             line-height: 1.05;
             margin-bottom: 1rem;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.15em;
+            gap: 0.6em;
+            text-transform: uppercase;
         }
-        .signup-title-year,
+
+        /* Retro "kicker" line with decorative bars */
+        .signup-title-year {
+            font-size: clamp(0.95rem, 2.2vw, 1.5rem);
+            letter-spacing: 0.55em;
+            color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.25rem;
+            width: 100%;
+            max-width: 540px;
+            text-indent: 0.55em;
+        }
+        .signup-title-year::before,
+        .signup-title-year::after {
+            content: "";
+            flex: 1;
+            height: 2px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, transparent, #ff2d92 50%, #0ea5e9);
+            box-shadow: 0 0 12px rgba(255, 45, 146, 0.5);
+        }
+        .signup-title-year::after {
+            background: linear-gradient(90deg, #0ea5e9, #ff2d92 50%, transparent);
+            box-shadow: 0 0 12px rgba(14, 165, 233, 0.5);
+        }
+
+        /* Retro neon main title */
         .signup-title-main {
-            background: linear-gradient(135deg, #ffffff 0%, var(--color-primary) 100%);
+            font-size: clamp(2.3rem, 6.5vw, 5rem);
+            letter-spacing: 0.04em;
+            background: linear-gradient(
+                90deg,
+                #ff2d92 0%,
+                #fb5607 18%,
+                #ffbe0b 36%,
+                #06b6d4 56%,
+                #8338ec 78%,
+                #ff2d92 100%
+            );
+            background-size: 220% 100%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             color: transparent;
+            animation:
+                retro-title-shift 9s ease-in-out infinite,
+                retro-title-glow 4.5s ease-in-out infinite;
+            filter: drop-shadow(0 0 10px rgba(255, 45, 146, 0.35));
         }
-        .signup-title-year {
-            font-size: clamp(1.4rem, 3.5vw, 2.4rem);
-            font-weight: 700;
-            letter-spacing: 0.25em;
-            opacity: 0.85;
-            text-indent: 0.25em;
+        @keyframes retro-title-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50%      { background-position: 100% 50%; }
         }
-        .signup-title-main {
-            font-size: clamp(2.2rem, 6vw, 4.5rem);
+        @keyframes retro-title-glow {
+            0%, 100% {
+                filter:
+                    drop-shadow(0 0 8px rgba(255, 45, 146, 0.35))
+                    drop-shadow(0 0 22px rgba(6, 182, 212, 0.18));
+            }
+            50% {
+                filter:
+                    drop-shadow(0 0 16px rgba(255, 45, 146, 0.55))
+                    drop-shadow(0 0 34px rgba(6, 182, 212, 0.35));
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .signup-title-main {
+                animation: none !important;
+                background-position: 25% 50%;
+            }
         }
         .signup-subtitle {
             color: var(--color-text-muted);
