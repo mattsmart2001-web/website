@@ -41,4 +41,12 @@
         <priority>0.7</priority>
     </url>
 
+    <!-- Nordschleife 24h Sign-Up -->
+    <url>
+        <loc>https://sparkstheory.co.uk/signup.html</loc>
+        <lastmod>2026-05-13</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+    </url>
+
 </urlset>
