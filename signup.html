@@ -87,13 +87,26 @@
         .signup-title {
             font-family: var(--font-display, 'Orbitron', sans-serif);
             font-weight: 900;
-            font-size: clamp(2.2rem, 6vw, 4.5rem);
             line-height: 1.05;
             margin-bottom: 1rem;
             background: linear-gradient(135deg, #ffffff 0%, var(--color-primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.15em;
+        }
+        .signup-title-year {
+            font-size: clamp(1.4rem, 3.5vw, 2.4rem);
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            opacity: 0.85;
+            text-indent: 0.25em;
+        }
+        .signup-title-main {
+            font-size: clamp(2.2rem, 6vw, 4.5rem);
         }
         .signup-subtitle {
             color: var(--color-text-muted);
@@ -461,7 +474,10 @@
                     <img src="simlab.png" alt="Sim-Lab" class="presenter-logo">
                 </a>
             </div>
-            <h1 class="signup-title">The 2026 Nordschleife 24 Hours</h1>
+            <h1 class="signup-title">
+                <span class="signup-title-year">The 2026</span>
+                <span class="signup-title-main">Nordschleife 24 Hours</span>
+            </h1>
             <p class="signup-subtitle">A solo GT7 endurance test around the Green Hell. One driver, one car, twenty-four hours. Sign up below — selected drivers will be announced on 12th June 2026.</p>
         </div>
     </section>
