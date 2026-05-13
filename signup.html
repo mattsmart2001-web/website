@@ -411,6 +411,9 @@
     </style>
 </head>
 <body>
+    <!-- Three.js Background (starfield) -->
+    <div id="canvas-container"></div>
+
     <!-- Navigation -->
     <nav class="navbar">
         <a href="/" class="nav-logo">SPARKS<span class="highlight">THEORY</span></a>
@@ -711,6 +714,128 @@
                 headline.addEventListener('mousemove', onMove);
                 headline.addEventListener('mouseleave', reset);
             }
+        })();
+    </script>
+
+    <!-- Starfield (ported from index.html) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        (function () {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            if (typeof THREE === 'undefined') return;
+
+            const container = document.getElementById('canvas-container');
+            if (!container) return;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(
+                60, window.innerWidth / window.innerHeight, 0.1, 1000
+            );
+            camera.position.z = 10;
+
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            container.appendChild(renderer.domElement);
+
+            // Particle network
+            const particleCount = 400;
+            const particlePositions = [];
+            const positions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                const x = (Math.random() - 0.5) * 100;
+                const y = (Math.random() - 0.5) * 100;
+                const z = (Math.random() - 0.5) * 60 - 30;
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+                particlePositions.push(new THREE.Vector3(x, y, z));
+            }
+            const particleGeometry = new THREE.BufferGeometry();
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0x0ea5e9,
+                size: 0.4,
+                transparent: true,
+                opacity: 0.75,
+                blending: THREE.AdditiveBlending,
+                sizeAttenuation: true
+            });
+            const particles = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(particles);
+
+            // Connecting lines
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x0ea5e9,
+                transparent: true,
+                opacity: 0.5,
+                blending: THREE.AdditiveBlending
+            });
+            const lineGeometry = new THREE.BufferGeometry();
+            const maxDistance = 12;
+            const linePositions = [];
+
+            function updateParticleLines() {
+                linePositions.length = 0;
+                for (let i = 0; i < particlePositions.length; i++) {
+                    for (let j = i + 1; j < particlePositions.length; j++) {
+                        const distance = particlePositions[i].distanceTo(particlePositions[j]);
+                        if (distance < maxDistance) {
+                            linePositions.push(
+                                particlePositions[i].x, particlePositions[i].y, particlePositions[i].z,
+                                particlePositions[j].x, particlePositions[j].y, particlePositions[j].z
+                            );
+                        }
+                    }
+                }
+                lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+            }
+            updateParticleLines();
+            const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+            scene.add(lines);
+
+            // Mouse tracking
+            let mouseX = 0, mouseY = 0;
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+                mouseY = -((e.clientY / window.innerHeight) * 2 - 1);
+            });
+
+            // Resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+
+                particles.rotation.y += (mouseX * 0.1 - particles.rotation.y) * 0.02;
+                particles.rotation.x += (mouseY * 0.05 - particles.rotation.x) * 0.02;
+                lines.rotation.y = particles.rotation.y;
+                lines.rotation.x = particles.rotation.x;
+
+                const arr = particleGeometry.attributes.position.array;
+                let needsLineUpdate = false;
+                for (let i = 0; i < particleCount; i++) {
+                    const i3 = i * 3;
+                    arr[i3 + 2] += 0.05;
+                    particlePositions[i].z += 0.05;
+                    if (arr[i3 + 2] > 15) {
+                        arr[i3 + 2] = -45;
+                        particlePositions[i].z = -45;
+                        needsLineUpdate = true;
+                    }
+                }
+                particleGeometry.attributes.position.needsUpdate = true;
+                if (needsLineUpdate) updateParticleLines();
+
+                renderer.render(scene, camera);
+            }
+            animate();
         })();
     </script>
 </body>
