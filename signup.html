@@ -532,6 +532,62 @@
             margin-top: 2rem;
             font-style: italic;
         }
+
+        .viewer-prize {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            max-width: 760px;
+            margin: 2.25rem auto 0;
+            padding: 1.25rem 1.5rem;
+            background:
+                radial-gradient(ellipse at left, rgba(124, 58, 237, 0.18), transparent 60%),
+                linear-gradient(180deg, #11161f, #0a0e15);
+            border: 1px solid rgba(124, 58, 237, 0.4);
+            border-radius: 14px;
+            box-shadow: 0 14px 38px -22px rgba(124, 58, 237, 0.5);
+        }
+        .viewer-prize-icon {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(124, 58, 237, 0.15);
+            border: 1px solid rgba(124, 58, 237, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #c4b5fd;
+        }
+        .viewer-prize-icon svg { width: 24px; height: 24px; }
+        .viewer-prize-body { flex: 1; min-width: 0; }
+        .viewer-prize-tag {
+            display: inline-block;
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.7rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: #c4b5fd;
+            background: rgba(124, 58, 237, 0.18);
+            border: 1px solid rgba(124, 58, 237, 0.35);
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            margin-bottom: 0.4rem;
+        }
+        .viewer-prize-title {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 1.1rem;
+            color: var(--color-text);
+            margin-bottom: 0.25rem;
+        }
+        .viewer-prize-desc {
+            color: var(--color-text-muted);
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+        @media (max-width: 600px) {
+            .viewer-prize { flex-direction: column; text-align: center; gap: 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -597,8 +653,8 @@
             <div class="prize-card">
                 <div class="prize-position">2nd Place</div>
                 <div class="prize-medal">🥈</div>
-                <div class="prize-name">TBC</div>
-                <p class="prize-desc">Sim-Lab prize to be confirmed.</p>
+                <div class="prize-name">30% Sim-Lab Voucher</div>
+                <p class="prize-desc">A 30% discount voucher valid on all Sim-Lab products.</p>
             </div>
 
             <div class="prize-card is-headline" id="headlinePrize">
@@ -613,10 +669,24 @@
             <div class="prize-card">
                 <div class="prize-position">3rd Place</div>
                 <div class="prize-medal">🥉</div>
-                <div class="prize-name">TBC</div>
-                <p class="prize-desc">Sim-Lab prize to be confirmed.</p>
+                <div class="prize-name">20% Sim-Lab Voucher</div>
+                <p class="prize-desc">A 20% discount voucher valid on all Sim-Lab products.</p>
             </div>
         </div>
+
+        <aside class="viewer-prize">
+            <div class="viewer-prize-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+            </div>
+            <div class="viewer-prize-body">
+                <span class="viewer-prize-tag">Bonus · Live Viewers</span>
+                <div class="viewer-prize-title">10% Sim-Lab Voucher</div>
+                <p class="viewer-prize-desc">One lucky viewer tuned in to the live stream will be drawn at random and announced at the end of the race.</p>
+            </div>
+        </aside>
 
         <p class="prize-note">All prizes supplied by Sim-Lab. Shipping arranged with the winners after the event.</p>
     </section>
