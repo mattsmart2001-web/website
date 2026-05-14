@@ -56,6 +56,13 @@
             <a href="signup.html">2026 Nords 24 Sign Up</a>
             <a href="#contact">Contact</a>
         </div>
+        <a class="live-button" id="liveButton"
+           href="https://www.youtube.com/@SparksTheory/live"
+           target="_blank" rel="noopener"
+           aria-label="Watch SparksTheory on YouTube">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span class="live-label">YouTube</span>
+        </a>
         <div class="nav-burger" id="navBurger">
             <span></span>
             <span></span>
@@ -458,5 +465,44 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fflate@0.6.9/umd/index.js"></script>
     <script src="script.js"></script>
+    <script>
+        /* YouTube live-status check.
+         * Populate CHANNEL_ID and API_KEY to enable detection. Without them
+         * the button stays as a static "YouTube" link to /@SparksTheory/live
+         * (which auto-redirects to the live stream when streaming).
+         */
+        (function () {
+            const CHANNEL_ID = '';   // e.g. 'UCxxxxxxxxxxxxxxxxxxxxxx'
+            const API_KEY    = '';   // YouTube Data API v3 key
+            const POLL_MS    = 60000; // re-check every 60s
+
+            const btn   = document.getElementById('liveButton');
+            if (!btn || !CHANNEL_ID || !API_KEY) return;
+            const label = btn.querySelector('.live-label');
+
+            async function check() {
+                try {
+                    const url = `https://www.googleapis.com/youtube/v3/search`
+                        + `?part=snippet&channelId=${CHANNEL_ID}`
+                        + `&eventType=live&type=video&key=${API_KEY}`;
+                    const r = await fetch(url);
+                    if (!r.ok) return;
+                    const data = await r.json();
+                    const live = data.items && data.items.length > 0;
+                    if (live) {
+                        btn.classList.add('is-live');
+                        label.textContent = 'Live Now';
+                        btn.href = `https://www.youtube.com/watch?v=${data.items[0].id.videoId}`;
+                    } else {
+                        btn.classList.remove('is-live');
+                        label.textContent = 'YouTube';
+                        btn.href = 'https://www.youtube.com/@SparksTheory/live';
+                    }
+                } catch (_) { /* network error — keep current state */ }
+            }
+            check();
+            setInterval(check, POLL_MS);
+        })();
+    </script>
 </body>
 </html>

@@ -498,6 +498,19 @@
             margin-bottom: 0.75rem;
             line-height: 1;
         }
+        .prize-medal-img {
+            font-size: 0;
+            margin-bottom: 1rem;
+        }
+        .prize-medal-img img {
+            display: block;
+            margin: 0 auto;
+            width: auto;
+            max-width: 85%;
+            max-height: 160px;
+            object-fit: contain;
+            filter: drop-shadow(0 12px 28px rgba(14, 165, 233, 0.35));
+        }
         .prize-name {
             font-family: var(--font-display, 'Orbitron', sans-serif);
             font-size: 1.15rem;
@@ -536,6 +549,13 @@
             <a href="/signup.html">2026 Nords 24 Sign Up</a>
             <a href="/#contact">Contact</a>
         </div>
+        <a class="live-button" id="liveButton"
+           href="https://www.youtube.com/@SparksTheory/live"
+           target="_blank" rel="noopener"
+           aria-label="Watch SparksTheory on YouTube">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span class="live-label">YouTube</span>
+        </a>
         <div class="nav-burger" id="navBurger">
             <span></span>
             <span></span>
@@ -583,7 +603,9 @@
 
             <div class="prize-card is-headline" id="headlinePrize">
                 <div class="prize-position">1st Place</div>
-                <div class="prize-medal">🏆</div>
+                <div class="prize-medal prize-medal-img">
+                    <img src="s1-enduro-seat.png" alt="Sim-Lab S1 Enduro GT Seat" loading="lazy">
+                </div>
                 <div class="prize-name">Sim-Lab S1 Enduro GT Seat</div>
                 <p class="prize-desc">The flagship Sim-Lab S1 Enduro GT Seat — built for long-haul endurance racing. Goes to the overall winner of the 24 hours.</p>
             </div>
@@ -844,6 +866,40 @@
                     links.classList.toggle('active');
                 });
             }
+        })();
+
+        // YouTube live-status check — see index.html for full notes.
+        (function () {
+            const CHANNEL_ID = '';
+            const API_KEY    = '';
+            const POLL_MS    = 60000;
+
+            const btn = document.getElementById('liveButton');
+            if (!btn || !CHANNEL_ID || !API_KEY) return;
+            const label = btn.querySelector('.live-label');
+
+            async function check() {
+                try {
+                    const url = `https://www.googleapis.com/youtube/v3/search`
+                        + `?part=snippet&channelId=${CHANNEL_ID}`
+                        + `&eventType=live&type=video&key=${API_KEY}`;
+                    const r = await fetch(url);
+                    if (!r.ok) return;
+                    const data = await r.json();
+                    const live = data.items && data.items.length > 0;
+                    if (live) {
+                        btn.classList.add('is-live');
+                        label.textContent = 'Live Now';
+                        btn.href = `https://www.youtube.com/watch?v=${data.items[0].id.videoId}`;
+                    } else {
+                        btn.classList.remove('is-live');
+                        label.textContent = 'YouTube';
+                        btn.href = 'https://www.youtube.com/@SparksTheory/live';
+                    }
+                } catch (_) {}
+            }
+            check();
+            setInterval(check, POLL_MS);
         })();
 
         // Parallax + 3D tilt (skipped if user prefers reduced motion)

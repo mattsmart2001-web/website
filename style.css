@@ -133,6 +133,68 @@ body {
     position: relative;
 }
 
+/* ===== LIVE STATUS BUTTON ===== */
+.live-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 0.95rem;
+    margin-left: 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-family: var(--font-display, 'Orbitron', sans-serif);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+    white-space: nowrap;
+    z-index: 1001;
+}
+.live-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-text);
+    transform: translateY(-1px);
+}
+.live-button .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #6b7280;
+    flex-shrink: 0;
+}
+.live-button.is-live {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.55);
+    color: #ef4444;
+}
+.live-button.is-live:hover {
+    background: rgba(239, 68, 68, 0.22);
+    color: #fca5a5;
+}
+.live-button.is-live .live-dot {
+    background: #ef4444;
+    animation: live-button-pulse 1.6s ease-out infinite;
+}
+@keyframes live-button-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    100% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+@media (max-width: 640px) {
+    .live-button {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.65rem;
+        letter-spacing: 0.14em;
+        margin-left: 0.5rem;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .live-button.is-live .live-dot { animation: none; }
+}
+
 .nav-burger span {
     width: 25px;
     height: 2px;
