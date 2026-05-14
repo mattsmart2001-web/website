@@ -145,30 +145,38 @@
         /* Presenter strip */
         .poster-presenter {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 22px;
+            gap: 16px;
             font-family: 'Anton', sans-serif;
             text-transform: uppercase;
         }
         .poster-presenter .label {
-            font-size: 16px;
-            letter-spacing: 0.4em;
+            font-size: 18px;
+            letter-spacing: 0.5em;
             color: rgba(255,255,255,0.55);
-            margin-right: 8px;
+            text-indent: 0.5em;
+        }
+        .poster-presenter .brands {
+            display: flex;
+            align-items: center;
+            gap: 32px;
         }
         .poster-presenter .brand {
-            font-size: 28px;
-            letter-spacing: 0.06em;
+            font-size: 54px;
+            letter-spacing: 0.04em;
+            line-height: 1;
             color: #fff;
+            white-space: nowrap;
         }
         .poster-presenter .brand .accent { color: #0ea5e9; }
         .poster-presenter .x {
-            color: rgba(255,255,255,0.45);
-            font-size: 22px;
+            color: rgba(255,255,255,0.5);
+            font-size: 40px;
+            line-height: 1;
         }
         .poster-presenter img {
-            height: 28px;
+            height: 54px;
             width: auto;
             display: block;
         }
@@ -405,9 +413,11 @@
             <div class="poster-inner">
                 <div class="poster-presenter">
                     <span class="label">Presented by</span>
-                    <span class="brand">SPARKS<span class="accent">THEORY</span></span>
-                    <span class="x">×</span>
-                    <img src="simlab.png" alt="Sim-Lab">
+                    <div class="brands">
+                        <span class="brand">SPARKS<span class="accent">THEORY</span></span>
+                        <span class="x">&amp;</span>
+                        <img src="simlab.png" alt="Sim-Lab">
+                    </div>
                 </div>
 
                 <div class="poster-title">
@@ -446,9 +456,11 @@
             <div class="poster-inner">
                 <div class="poster-presenter">
                     <span class="label">Presented by</span>
-                    <span class="brand">SPARKS<span class="accent">THEORY</span></span>
-                    <span class="x">×</span>
-                    <img src="simlab.png" alt="Sim-Lab">
+                    <div class="brands">
+                        <span class="brand">SPARKS<span class="accent">THEORY</span></span>
+                        <span class="x">&amp;</span>
+                        <img src="simlab.png" alt="Sim-Lab">
+                    </div>
                 </div>
 
                 <div class="poster-title">
