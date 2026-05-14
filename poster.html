@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Posters — The 2026 Gran Turismo Nordschleife 24 Hours</title>
+    <link rel="icon" type="image/jpeg" href="sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #060910;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+        }
+        .page {
+            padding: 3rem 1.5rem 6rem;
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+        .page h1 {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(1.6rem, 3vw, 2.2rem);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin: 0 0 1rem;
+        }
+        .page .intro {
+            color: #94a3b8;
+            line-height: 1.6;
+            max-width: 720px;
+            margin-bottom: 2.5rem;
+        }
+        .page .intro code {
+            background: rgba(255,255,255,0.08);
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .poster-card {
+            margin-bottom: 4rem;
+        }
+        .poster-card h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.4rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #0ea5e9;
+            margin: 0 0 1rem;
+        }
+        .poster-actions {
+            margin: 1.25rem 0 0;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .poster-actions button {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.04);
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .poster-actions button:hover {
+            background: rgba(14,165,233,0.18);
+            border-color: rgba(14,165,233,0.5);
+        }
+        .poster-actions button.primary {
+            background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+            border-color: transparent;
+            color: #060910;
+        }
+        .poster-actions button.primary:hover { filter: brightness(1.1); }
+        .poster-frame {
+            width: 1080px;
+            max-width: 100%;
+            aspect-ratio: 1;
+            overflow: hidden;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.12);
+            position: relative;
+        }
+        .poster-frame > .poster {
+            transform-origin: top left;
+        }
+
+        /* ===== The poster itself (1080×1080) ===== */
+        .poster {
+            width: 1080px;
+            height: 1080px;
+            position: relative;
+            overflow: hidden;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            isolation: isolate;
+        }
+        .poster-bg {
+            position: absolute;
+            inset: -40px;
+            background: url('nordschleife-bg.jpg') center 35% / cover no-repeat,
+                        linear-gradient(180deg, #000 0%, #0a0e15 100%);
+            filter: blur(16px) brightness(0.32) saturate(1.1);
+            transform: scale(1.08);
+            z-index: -2;
+        }
+        .poster-vignette {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at top, rgba(255,154,60,0.18), transparent 60%),
+                radial-gradient(ellipse at bottom, rgba(124,58,237,0.22), transparent 60%),
+                linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(10,14,21,0.7) 100%);
+            z-index: -1;
+        }
+        .poster-grid-lines {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+            z-index: -1;
+        }
+        .poster-inner {
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 70px 80px;
+        }
+
+        /* Presenter strip */
+        .poster-presenter {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+            font-family: 'Anton', sans-serif;
+            text-transform: uppercase;
+        }
+        .poster-presenter .label {
+            font-size: 16px;
+            letter-spacing: 0.4em;
+            color: rgba(255,255,255,0.55);
+            margin-right: 8px;
+        }
+        .poster-presenter .brand {
+            font-size: 28px;
+            letter-spacing: 0.06em;
+            color: #fff;
+        }
+        .poster-presenter .brand .accent { color: #0ea5e9; }
+        .poster-presenter .x {
+            color: rgba(255,255,255,0.45);
+            font-size: 22px;
+        }
+        .poster-presenter img {
+            height: 28px;
+            width: auto;
+            display: block;
+        }
+
+        /* Title block */
+        .poster-title {
+            margin-top: auto;
+            margin-bottom: auto;
+            text-align: center;
+            font-family: 'Anton', sans-serif;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+        .poster-title .kicker {
+            font-size: 26px;
+            letter-spacing: 0.32em;
+            color: rgba(255,210,180,0.75);
+            margin-bottom: 24px;
+            display: inline-flex;
+            align-items: center;
+            gap: 18px;
+            text-indent: 0.32em;
+            white-space: nowrap;
+        }
+        .poster-title .kicker::before,
+        .poster-title .kicker::after {
+            content: "";
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #ff8a3d, #6a1b9a);
+            border-radius: 2px;
+            box-shadow: 0 0 12px rgba(255,138,61,0.4);
+        }
+        .poster-title .kicker::after {
+            background: linear-gradient(90deg, #6a1b9a, #ff8a3d, transparent);
+        }
+        .poster-title .main {
+            font-size: 138px;
+            letter-spacing: 0.01em;
+            background: linear-gradient(
+                180deg,
+                #fff1a8  0%,
+                #ffd166 12%,
+                #ff9a3c 24%,
+                #ff6b6b 38%,
+                #b83280 52%,
+                #7c3aed 66%,
+                #4338ca 80%,
+                #1e1b4b 100%
+            );
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            display: block;
+            filter: drop-shadow(0 6px 12px rgba(255,154,60,0.18));
+        }
+
+        /* Date strip */
+        .poster-date {
+            text-align: center;
+            font-family: 'Anton', sans-serif;
+            font-size: 30px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #ffd166;
+            margin-top: 28px;
+        }
+        .poster-date span { color: rgba(255,255,255,0.5); margin: 0 12px; }
+
+        /* Rules strip (detailed only) */
+        .poster-rules {
+            text-align: center;
+            font-family: 'Anton', sans-serif;
+            font-size: 22px;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.75);
+            margin-top: 24px;
+            padding: 14px 0;
+            border-top: 1px solid rgba(255,255,255,0.12);
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+        }
+        .poster-rules .dot { color: #0ea5e9; margin: 0 14px; }
+
+        /* Prize block (detailed only) */
+        .poster-prizes {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 30px;
+        }
+        .poster-prize {
+            text-align: center;
+            background: linear-gradient(180deg, rgba(20,25,34,0.85), rgba(10,14,21,0.85));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 20px 14px;
+        }
+        .poster-prize.is-headline {
+            border-color: rgba(14,165,233,0.5);
+            background:
+                radial-gradient(ellipse at top, rgba(14,165,233,0.18), transparent 70%),
+                linear-gradient(180deg, rgba(20,25,34,0.9), rgba(10,14,21,0.9));
+        }
+        .poster-prize .pos {
+            font-family: 'Anton', sans-serif;
+            font-size: 16px;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 4px;
+        }
+        .poster-prize.is-headline .pos { color: #38bdf8; }
+        .poster-prize .medal { font-size: 32px; margin-bottom: 6px; line-height: 1; }
+        .poster-prize .name {
+            font-family: 'Anton', sans-serif;
+            font-size: 20px;
+            letter-spacing: 0.04em;
+            line-height: 1.15;
+            text-transform: uppercase;
+            color: #fff;
+        }
+        .poster-prize.is-headline .name { color: #38bdf8; }
+
+        .poster-viewer-prize {
+            margin-top: 14px;
+            background:
+                radial-gradient(ellipse at left, rgba(124,58,237,0.22), transparent 60%),
+                linear-gradient(180deg, rgba(20,25,34,0.85), rgba(10,14,21,0.85));
+            border: 1px solid rgba(124,58,237,0.45);
+            border-radius: 12px;
+            padding: 14px 22px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            text-align: left;
+        }
+        .poster-viewer-prize .tag {
+            font-family: 'Anton', sans-serif;
+            font-size: 14px;
+            letter-spacing: 0.25em;
+            color: #c4b5fd;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            background: rgba(124,58,237,0.18);
+            border: 1px solid rgba(124,58,237,0.4);
+            border-radius: 999px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .poster-viewer-prize .text {
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            line-height: 1.4;
+            color: rgba(255,255,255,0.85);
+        }
+        .poster-viewer-prize .text strong { color: #fff; }
+
+        /* CTA at bottom */
+        .poster-cta {
+            margin-top: auto;
+            text-align: center;
+        }
+        .poster-cta .label {
+            font-family: 'Anton', sans-serif;
+            font-size: 22px;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 12px;
+        }
+        .poster-cta .url {
+            font-family: 'Anton', sans-serif;
+            font-size: 56px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 50%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* Detailed-specific tweaks (smaller title to make room) */
+        .poster.is-detailed .poster-title .main { font-size: 116px; }
+        .poster.is-detailed .poster-inner { padding: 60px 70px; }
+        .poster.is-detailed .poster-title { margin: 0; }
+
+        /* Teaser-specific (more breathing room) */
+        .poster.is-teaser .poster-title { margin: auto 0; }
+
+        /* Single-poster mode (no chrome, just the poster) */
+        body.fullsize { background: #060910; padding: 0; margin: 0; }
+        body.fullsize .page-chrome { display: none; }
+        body.fullsize .poster-card { margin: 0; }
+        body.fullsize .poster-card h2 { display: none; }
+        body.fullsize .poster-actions { display: none; }
+        body.fullsize .poster-frame {
+            width: 1080px;
+            max-width: none;
+            border: none;
+            border-radius: 0;
+        }
+        body.fullsize[data-poster="teaser"] .poster-card.detailed,
+        body.fullsize[data-poster="detailed"] .poster-card.teaser {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-chrome">
+<div class="page">
+    <h1>Event Posters</h1>
+    <p class="intro">
+        Both posters are rendered at <strong>1080×1080</strong>. Click
+        <strong>Download PNG</strong> to save a pixel-perfect image, or use
+        <code>Open at full size</code> if you'd rather screenshot manually
+        (browser DevTools → "Capture full size screenshot" on the frame).
+    </p>
+</div>
+</div>
+
+<div class="poster-card teaser" data-poster="teaser">
+    <div class="page page-card">
+        <h2>Teaser version</h2>
+    </div>
+    <div class="poster-frame">
+        <article class="poster is-teaser" id="teaserPoster">
+            <div class="poster-bg"></div>
+            <div class="poster-vignette"></div>
+            <div class="poster-grid-lines"></div>
+            <div class="poster-inner">
+                <div class="poster-presenter">
+                    <span class="label">Presented by</span>
+                    <span class="brand">SPARKS<span class="accent">THEORY</span></span>
+                    <span class="x">×</span>
+                    <img src="simlab.png" alt="Sim-Lab">
+                </div>
+
+                <div class="poster-title">
+                    <div class="kicker">The 2026 Gran Turismo</div>
+                    <span class="main">Nordschleife<br>24 Hours</span>
+                </div>
+
+                <div class="poster-date">
+                    Fri 26 June 2026<span>·</span>12:00 BST
+                </div>
+
+                <div class="poster-cta">
+                    <div class="label">Sign Up Now</div>
+                    <div class="url">sparkstheory.co.uk/signup</div>
+                </div>
+            </div>
+        </article>
+    </div>
+    <div class="page page-card">
+        <div class="poster-actions">
+            <button class="primary" onclick="downloadPoster('teaser')">Download PNG</button>
+            <button onclick="openFullSize('teaser')">Open at full size</button>
+        </div>
+    </div>
+</div>
+
+<div class="poster-card detailed" data-poster="detailed">
+    <div class="page page-card">
+        <h2>Detailed version</h2>
+    </div>
+    <div class="poster-frame">
+        <article class="poster is-detailed" id="detailedPoster">
+            <div class="poster-bg"></div>
+            <div class="poster-vignette"></div>
+            <div class="poster-grid-lines"></div>
+            <div class="poster-inner">
+                <div class="poster-presenter">
+                    <span class="label">Presented by</span>
+                    <span class="brand">SPARKS<span class="accent">THEORY</span></span>
+                    <span class="x">×</span>
+                    <img src="simlab.png" alt="Sim-Lab">
+                </div>
+
+                <div class="poster-title">
+                    <div class="kicker">The 2026 Gran Turismo</div>
+                    <span class="main">Nordschleife<br>24 Hours</span>
+                </div>
+
+                <div class="poster-date">
+                    Fri 26 June 2026<span>·</span>12:00 BST
+                </div>
+
+                <div class="poster-rules">
+                    Gr.3 Only<span class="dot">·</span>Solo<span class="dot">·</span>Nürburgring Nordschleife
+                </div>
+
+                <div class="poster-prizes">
+                    <div class="poster-prize">
+                        <div class="pos">2nd Place</div>
+                        <div class="medal">🥈</div>
+                        <div class="name">30% Sim-Lab Voucher</div>
+                    </div>
+                    <div class="poster-prize is-headline">
+                        <div class="pos">1st Place</div>
+                        <div class="medal">🏆</div>
+                        <div class="name">Sim-Lab S1<br>Enduro GT Seat</div>
+                    </div>
+                    <div class="poster-prize">
+                        <div class="pos">3rd Place</div>
+                        <div class="medal">🥉</div>
+                        <div class="name">20% Sim-Lab Voucher</div>
+                    </div>
+                </div>
+
+                <div class="poster-viewer-prize">
+                    <span class="tag">Bonus · Live Viewers</span>
+                    <span class="text"><strong>10% Sim-Lab Voucher</strong> for one randomly drawn live viewer, announced at the end of the race.</span>
+                </div>
+
+                <div class="poster-cta">
+                    <div class="label">Sign Up Now</div>
+                    <div class="url">sparkstheory.co.uk/signup</div>
+                </div>
+            </div>
+        </article>
+    </div>
+    <div class="page page-card">
+        <div class="poster-actions">
+            <button class="primary" onclick="downloadPoster('detailed')">Download PNG</button>
+            <button onclick="openFullSize('detailed')">Open at full size</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+    // Scale poster frames down to viewport width on smaller screens
+    (function () {
+        function applyScale() {
+            document.querySelectorAll('.poster-frame').forEach(frame => {
+                const poster = frame.querySelector('.poster');
+                if (!poster) return;
+                const frameWidth = frame.clientWidth;
+                const scale = frameWidth / 1080;
+                poster.style.transform = `scale(${scale})`;
+            });
+        }
+        window.addEventListener('resize', applyScale);
+        // Run after fonts load too, to handle font-driven layout shifts
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(applyScale);
+        }
+        applyScale();
+    })();
+
+    // Full-size view via ?p= URL param
+    (function () {
+        const p = new URLSearchParams(location.search).get('p');
+        if (p === 'teaser' || p === 'detailed') {
+            document.body.classList.add('fullsize');
+            document.body.dataset.poster = p;
+        }
+    })();
+
+    function openFullSize(name) {
+        window.open(`?p=${name}`, '_blank');
+    }
+
+    async function downloadPoster(name) {
+        const el = document.getElementById(name + 'Poster');
+        if (!el) return;
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = 'Rendering…';
+        btn.disabled = true;
+        try {
+            // Reset transform on the poster (it may be scaled) so capture is 1:1
+            const prevTransform = el.style.transform;
+            el.style.transform = 'none';
+
+            // Wait for fonts to be available
+            if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
+            const canvas = await html2canvas(el, {
+                width: 1080,
+                height: 1080,
+                scale: 1,
+                useCORS: true,
+                backgroundColor: '#060910',
+                logging: false
+            });
+
+            el.style.transform = prevTransform;
+
+            const link = document.createElement('a');
+            link.download = `nordschleife-24h-2026-${name}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (err) {
+            console.error(err);
+            alert('Download failed — try the "Open at full size" option and screenshot manually.');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
