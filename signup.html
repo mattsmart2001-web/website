@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Inter:wght@300;400;600;700;900&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Audiowide&family=Inter:wght@300;400;600;700;900&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
         /* Starfield canvas must not eat clicks on form inputs */
@@ -85,21 +85,21 @@
             margin-bottom: 1.5rem;
         }
         .signup-title {
-            font-family: 'Audiowide', 'Orbitron', sans-serif;
-            line-height: 1.05;
+            font-family: 'Anton', 'Oswald', sans-serif;
+            line-height: 1;
             margin-bottom: 1rem;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.6em;
+            gap: 0.7em;
             text-transform: uppercase;
         }
 
-        /* Retro "kicker" line with decorative bars */
+        /* Retro "kicker" line with decorative sunset bars */
         .signup-title-year {
             font-size: clamp(0.95rem, 2.2vw, 1.5rem);
             letter-spacing: 0.55em;
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 220, 200, 0.75);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -114,57 +114,74 @@
             flex: 1;
             height: 2px;
             border-radius: 2px;
-            background: linear-gradient(90deg, transparent, #ff2d92 50%, #0ea5e9);
-            box-shadow: 0 0 12px rgba(255, 45, 146, 0.5);
+            background: linear-gradient(90deg, transparent, #ff8a3d 50%, #6a1b9a);
+            box-shadow: 0 0 12px rgba(255, 138, 61, 0.5);
         }
         .signup-title-year::after {
-            background: linear-gradient(90deg, #0ea5e9, #ff2d92 50%, transparent);
-            box-shadow: 0 0 12px rgba(14, 165, 233, 0.5);
+            background: linear-gradient(90deg, #6a1b9a, #ff8a3d 50%, transparent);
+            box-shadow: 0 0 12px rgba(106, 27, 154, 0.5);
         }
 
-        /* Retro neon main title */
+        /* Sunset → night → dawn main title */
         .signup-title-main {
-            font-size: clamp(2.3rem, 6.5vw, 5rem);
-            letter-spacing: 0.04em;
-            background: linear-gradient(
-                90deg,
-                #ff2d92 0%,
-                #fb5607 18%,
-                #ffbe0b 36%,
-                #06b6d4 56%,
-                #8338ec 78%,
-                #ff2d92 100%
-            );
-            background-size: 220% 100%;
+            font-size: clamp(2.6rem, 8vw, 6rem);
+            letter-spacing: 0.02em;
+            font-weight: 400;
+            background:
+                linear-gradient(
+                    180deg,
+                    /* Day */
+                    #fff1a8  0%,
+                    #ffd166  6%,
+                    #ff9a3c 12%,
+                    #ff6b6b 18%,
+                    #e94e7b 23%,
+                    /* Dusk */
+                    #b83280 30%,
+                    #7c3aed 38%,
+                    #4338ca 45%,
+                    /* Night */
+                    #1e1b4b 52%,
+                    #0b1020 60%,
+                    #1e1b4b 68%,
+                    /* Dawn */
+                    #4338ca 75%,
+                    #7c3aed 82%,
+                    #ff6b6b 88%,
+                    #ff9a3c 93%,
+                    #ffd166 97%,
+                    #fff1a8 100%
+                );
+            background-size: 100% 400%;
+            background-position: 0 0%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             color: transparent;
             animation:
-                retro-title-shift 9s ease-in-out infinite,
-                retro-title-glow 4.5s ease-in-out infinite;
-            filter: drop-shadow(0 0 10px rgba(255, 45, 146, 0.35));
+                sunset-cycle 25s linear infinite,
+                sunset-glow  6s ease-in-out infinite;
         }
-        @keyframes retro-title-shift {
-            0%, 100% { background-position: 0% 50%; }
-            50%      { background-position: 100% 50%; }
+        @keyframes sunset-cycle {
+            0%   { background-position: 0 0%; }
+            100% { background-position: 0 100%; }
         }
-        @keyframes retro-title-glow {
+        @keyframes sunset-glow {
             0%, 100% {
                 filter:
-                    drop-shadow(0 0 8px rgba(255, 45, 146, 0.35))
-                    drop-shadow(0 0 22px rgba(6, 182, 212, 0.18));
+                    drop-shadow(0 0 10px rgba(255, 154, 60, 0.35))
+                    drop-shadow(0 0 28px rgba(124, 58, 237, 0.18));
             }
             50% {
                 filter:
-                    drop-shadow(0 0 16px rgba(255, 45, 146, 0.55))
-                    drop-shadow(0 0 34px rgba(6, 182, 212, 0.35));
+                    drop-shadow(0 0 18px rgba(255, 154, 60, 0.55))
+                    drop-shadow(0 0 40px rgba(124, 58, 237, 0.32));
             }
         }
         @media (prefers-reduced-motion: reduce) {
             .signup-title-main {
                 animation: none !important;
-                background-position: 25% 50%;
+                background-position: 0 25%;
             }
         }
         .signup-subtitle {
