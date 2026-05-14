@@ -472,10 +472,10 @@
             transform: translateY(-12px);
             box-shadow: 0 20px 60px -20px rgba(14,165,233,0.25);
         }
-        .prize-card.is-headline .prize-medal,
-        .prize-card.is-headline .prize-name { transform: translateZ(40px); }
-        .prize-card.is-headline .prize-position { transform: translateZ(24px); }
-        .prize-card.is-headline .prize-desc { transform: translateZ(16px); }
+        .prize-card .prize-medal,
+        .prize-card .prize-name { transform: translateZ(40px); }
+        .prize-card .prize-position { transform: translateZ(24px); }
+        .prize-card .prize-desc { transform: translateZ(16px); }
         @media (max-width: 900px) {
             .prize-card.is-headline { transform: none; }
         }
@@ -1006,26 +1006,29 @@
             window.addEventListener('scroll', onScroll, { passive: true });
             onScroll();
 
-            // Mouse-tracked 3D tilt on the headline prize card
-            if (headline && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-                let raf = 0;
-                const maxTilt = 7;
-                const onMove = (e) => {
-                    const rect = headline.getBoundingClientRect();
-                    const x = (e.clientX - rect.left) / rect.width - 0.5;
-                    const y = (e.clientY - rect.top) / rect.height - 0.5;
-                    cancelAnimationFrame(raf);
-                    raf = requestAnimationFrame(() => {
-                        headline.style.transform =
-                            `translateY(-12px) rotateY(${x * maxTilt}deg) rotateX(${-y * maxTilt}deg)`;
+            // Mouse-tracked 3D tilt on all prize cards
+            if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+                const cards = document.querySelectorAll('.prize-card');
+                cards.forEach((card) => {
+                    const isHeadline = card.classList.contains('is-headline');
+                    const baseLift = isHeadline ? 'translateY(-12px) ' : '';
+                    const maxTilt = isHeadline ? 7 : 6;
+                    let raf = 0;
+                    card.addEventListener('mousemove', (e) => {
+                        const rect = card.getBoundingClientRect();
+                        const x = (e.clientX - rect.left) / rect.width - 0.5;
+                        const y = (e.clientY - rect.top) / rect.height - 0.5;
+                        cancelAnimationFrame(raf);
+                        raf = requestAnimationFrame(() => {
+                            card.style.transform =
+                                `${baseLift}rotateY(${x * maxTilt}deg) rotateX(${-y * maxTilt}deg)`;
+                        });
                     });
-                };
-                const reset = () => {
-                    cancelAnimationFrame(raf);
-                    headline.style.transform = '';
-                };
-                headline.addEventListener('mousemove', onMove);
-                headline.addEventListener('mouseleave', reset);
+                    card.addEventListener('mouseleave', () => {
+                        cancelAnimationFrame(raf);
+                        card.style.transform = '';
+                    });
+                });
             }
         })();
     </script>
