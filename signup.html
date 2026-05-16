@@ -16,7 +16,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://sparkstheory.co.uk/signup.html">
     <meta property="og:title" content="The 2026 Gran Turismo Nordschleife 24 Hours — Driver Sign-Up | SparksTheory">
-    <meta property="og:description" content="Solo GT7 endurance event on Friday 26 June 2026, 12:00 BST. Sign up to be entered into the driver draw.">
+    <meta property="og:description" content="Solo GT7 endurance event on Friday 26 June 2026, 09:00 BST. Sign up to be entered into the driver draw.">
     <meta property="og:image" content="https://sparkstheory.co.uk/sparks_logo.jpg">
     <meta property="og:site_name" content="SparksTheory">
 
@@ -1246,7 +1246,7 @@
                     </div>
                     <div class="event-text">
                         <strong>Race Day</strong>
-                        <span>Friday 26 June 2026 — 12:00 noon BST start, finishing Saturday 27 June at 12:00 BST.</span>
+                        <span>Friday 26 June 2026 — 09:00 BST start, finishing Saturday 27 June at 09:00 BST.</span>
                     </div>
                 </li>
                 <li>
@@ -1599,8 +1599,8 @@
             }
 
             btn.addEventListener('click', () => {
-                const start = new Date(Date.UTC(2026, 5, 26, 11, 0, 0));
-                const end   = new Date(Date.UTC(2026, 5, 27, 11, 0, 0));
+                const start = new Date(Date.UTC(2026, 5, 26, 8, 0, 0));
+                const end   = new Date(Date.UTC(2026, 5, 27, 8, 0, 0));
                 const ics = [
                     'BEGIN:VCALENDAR',
                     'VERSION:2.0',
@@ -1672,14 +1672,14 @@
         // Two-stage event countdown:
         //   - Before 12 Jun 2026 22:59 UTC (sign-up deadline at 23:59 BST):
         //       "Sign-up closes in"
-        //   - Then until 26 Jun 2026 11:00 UTC (race start at 12:00 BST):
+        //   - Then until 26 Jun 2026 08:00 UTC (race start at 09:00 BST):
         //       "Race starts in"
         //   - During the race: "Race in progress"
         //   - After: "Race finished"
         (function () {
             const DEADLINE   = Date.UTC(2026, 5, 12, 22, 59, 0); // June = 5
-            const RACE_START = Date.UTC(2026, 5, 26, 11, 0, 0);
-            const RACE_END   = Date.UTC(2026, 5, 27, 11, 0, 0);
+            const RACE_START = Date.UTC(2026, 5, 26, 8, 0, 0);
+            const RACE_END   = Date.UTC(2026, 5, 27, 8, 0, 0);
 
             const section = document.querySelector('.countdown-section');
             const label   = document.getElementById('countdownLabel');
