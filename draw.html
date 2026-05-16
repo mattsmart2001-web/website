@@ -776,6 +776,11 @@
     // dashes, with substring fallback, so "TCR_Rapid" matches "TCR_Rapid_GT".
     const PRIORITY_DRIVERS = ['YT-GCR-SixxdogUK', 'Hogston GT', 'TCR_Rapid_GT'];
 
+    // Drivers to silently exclude from the draw entirely. Filtered out
+    // before the pool is built, so they never appear in the hat, on the
+    // reel, or in the priority slots.
+    const BLOCKED_DRIVERS = ['RacingRichey'];
+
     // ===== Manufacturer table =====
     const MAKES = {
         'Alfa Romeo':   { short: 'ALFA',  color: '#c8102e' },
@@ -848,6 +853,14 @@
     // ===== Priority slot helpers =====
     function normalizeName(s) {
         return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+    function isBlockedDriver(driver) {
+        const target = normalizeName(driver && driver.psn_id);
+        if (!target) return false;
+        return BLOCKED_DRIVERS.some((blocked) => {
+            const b = normalizeName(blocked);
+            return b && (target === b || target.includes(b) || b.includes(target));
+        });
     }
     function findPriorityDrivers(pool) {
         const out = [];
@@ -1121,8 +1134,22 @@
                 renderSelected();
                 return;
             }
-            allDrivers = drivers;
-            activePool = drivers.slice();
+            // Silently drop blocked drivers before anything sees the pool.
+            const filtered = drivers.filter((d) => {
+                if (isBlockedDriver(d)) {
+                    console.log(`Blocked from draw: ${d.psn_id}`);
+                    return false;
+                }
+                return true;
+            });
+            if (!filtered.length) {
+                cylinder.innerHTML = '<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">No eligible drivers.</div>';
+                renderHat();
+                renderSelected();
+                return;
+            }
+            allDrivers = filtered;
+            activePool = filtered.slice();
             setupPrioritySlots(activePool);
             spinBtn.disabled = false;
             buildCylinder(activePool);
