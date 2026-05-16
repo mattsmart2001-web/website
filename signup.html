@@ -360,9 +360,9 @@
         }
         .driver-row {
             display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            padding: 1rem 1.1rem;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.85rem 1rem;
             background: linear-gradient(180deg, #11161f, #0a0e15);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px;
@@ -371,6 +371,35 @@
         .driver-row:hover {
             border-color: rgba(14,165,233,0.4);
             transform: translateY(-1px);
+        }
+        .driver-make {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        }
+        .driver-make.is-undecided {
+            background: rgba(255,255,255,0.05);
+            border: 1px dashed rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.4);
+            font-size: 0.6rem;
+            letter-spacing: 0.15em;
+            text-shadow: none;
+        }
+        .driver-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            min-width: 0;
+            flex: 1;
         }
         .driver-psn {
             font-family: var(--font-display, 'Orbitron', sans-serif);
@@ -1199,6 +1228,69 @@
                 return !car || car.toLowerCase() === 'undecided';
             }
 
+            // Manufacturer mapping: short code shown on the coloured badge,
+            // plus an approximate brand colour.
+            const MAKES = {
+                'Alfa Romeo':   { short: 'ALFA',  color: '#c8102e' },
+                'Aston Martin': { short: 'AST',   color: '#00665e' },
+                'Audi':         { short: 'AUDI',  color: '#bb0a30' },
+                'BMW':          { short: 'BMW',   color: '#0066b1' },
+                'Chevrolet':    { short: 'CHEV',  color: '#c79a3a' },
+                'Citroën':      { short: 'CITR',  color: '#c8102e' },
+                'Dodge':        { short: 'DODG',  color: '#c40000' },
+                'Ferrari':      { short: 'FER',   color: '#d40000' },
+                'Ford':         { short: 'FORD',  color: '#003478' },
+                'Genesis':      { short: 'GEN',   color: '#1a1a1a' },
+                'Honda':        { short: 'HOND',  color: '#c40000' },
+                'Hyundai':      { short: 'HYU',   color: '#002c5f' },
+                'Jaguar':       { short: 'JAG',   color: '#9e1b32' },
+                'Lamborghini':  { short: 'LAMB',  color: '#a37d2b' },
+                'Lexus':        { short: 'LEX',   color: '#1a1a1a' },
+                'Mazda':        { short: 'MAZ',   color: '#202830' },
+                'McLaren':      { short: 'MCL',   color: '#ff8000' },
+                'Mercedes':     { short: 'MERC',  color: '#5a5a5a' },
+                'Mitsubishi':   { short: 'MITS',  color: '#c40000' },
+                'Nissan':       { short: 'NIS',   color: '#c3002f' },
+                'Peugeot':      { short: 'PEU',   color: '#1c1c1c' },
+                'Porsche':      { short: 'POR',   color: '#b0001a' },
+                'Renault':      { short: 'REN',   color: '#1a1a1a' },
+                'Subaru':       { short: 'SUB',   color: '#0041aa' },
+                'Suzuki':       { short: 'SUZ',   color: '#c40000' },
+                'Toyota':       { short: 'TOY',   color: '#c40000' },
+                'Volkswagen':   { short: 'VW',    color: '#001e50' },
+            };
+
+            function getMake(carName) {
+                if (!carName) return null;
+                const n = carName.toLowerCase();
+                if (n.startsWith('alfa romeo'))   return MAKES['Alfa Romeo'];
+                if (n.startsWith('aston martin')) return MAKES['Aston Martin'];
+                if (n.startsWith('mercedes'))     return MAKES['Mercedes'];
+                if (n.includes('citroën') || n.includes('citroen')) return MAKES['Citroën'];
+                const first = n.split(/\s+/)[0];
+                const single = {
+                    'audi': 'Audi', 'bmw': 'BMW', 'chevrolet': 'Chevrolet',
+                    'dodge': 'Dodge', 'ferrari': 'Ferrari', 'ford': 'Ford',
+                    'genesis': 'Genesis', 'honda': 'Honda', 'hyundai': 'Hyundai',
+                    'jaguar': 'Jaguar', 'lamborghini': 'Lamborghini', 'lexus': 'Lexus',
+                    'mazda': 'Mazda', 'mclaren': 'McLaren', 'mitsubishi': 'Mitsubishi',
+                    'nissan': 'Nissan', 'peugeot': 'Peugeot', 'porsche': 'Porsche',
+                    'renault': 'Renault', 'subaru': 'Subaru', 'suzuki': 'Suzuki',
+                    'toyota': 'Toyota', 'volkswagen': 'Volkswagen',
+                };
+                return MAKES[single[first]] || null;
+            }
+
+            // Pick black or white text for a hex bg based on luminance.
+            function textOn(hex) {
+                const h = hex.replace('#', '');
+                const r = parseInt(h.substr(0, 2), 16);
+                const g = parseInt(h.substr(2, 2), 16);
+                const b = parseInt(h.substr(4, 2), 16);
+                const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                return lum > 0.6 ? '#0a0e15' : '#ffffff';
+            }
+
             function renderTopPicks(drivers) {
                 const tally = new Map();
                 drivers.forEach((d) => {
@@ -1263,10 +1355,24 @@
                     const undecided = isUndecidedCar(car);
                     const carClass  = undecided ? 'driver-car is-undecided' : 'driver-car';
                     const carText   = undecided ? 'Car undecided' : car;
+                    const make      = undecided ? null : getMake(car);
+
+                    let badge;
+                    if (make) {
+                        badge = `<div class="driver-make" style="background:${make.color};color:${textOn(make.color)}">${escapeHtml(make.short)}</div>`;
+                    } else if (undecided) {
+                        badge = `<div class="driver-make is-undecided">?</div>`;
+                    } else {
+                        badge = `<div class="driver-make is-undecided">—</div>`;
+                    }
+
                     return `
                         <div class="driver-row">
-                            <span class="driver-psn">${escapeHtml(d.psn_id)}</span>
-                            <span class="${carClass}">${escapeHtml(carText)}</span>
+                            ${badge}
+                            <div class="driver-info">
+                                <span class="driver-psn">${escapeHtml(d.psn_id)}</span>
+                                <span class="${carClass}">${escapeHtml(carText)}</span>
+                            </div>
                         </div>
                     `;
                 }).join('');
