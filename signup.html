@@ -198,6 +198,82 @@
             position: relative;
             z-index: 1;
         }
+
+        /* Drivers Entered */
+        .drivers-section {
+            background: linear-gradient(180deg, #060910 0%, #0a0e15 100%);
+            position: relative;
+            z-index: 1;
+            padding: 4rem 1.5rem 6rem;
+        }
+        .drivers-wrap {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .drivers-header { text-align: center; margin-bottom: 2.5rem; }
+        .drivers-header h2 {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+            letter-spacing: 0.08em;
+            background: linear-gradient(135deg, #ffffff 0%, var(--color-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.6rem;
+        }
+        .drivers-header .drivers-count {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            color: var(--color-text-muted);
+            -webkit-text-fill-color: var(--color-text-muted);
+            font-size: 0.7em;
+            margin-left: 0.4em;
+        }
+        .drivers-header p {
+            color: var(--color-text-muted);
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.55;
+        }
+        .drivers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 0.85rem;
+        }
+        .driver-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            padding: 1rem 1.1rem;
+            background: linear-gradient(180deg, #11161f, #0a0e15);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .driver-row:hover {
+            border-color: rgba(14,165,233,0.4);
+            transform: translateY(-1px);
+        }
+        .driver-psn {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 1rem;
+            color: var(--color-text);
+            letter-spacing: 0.04em;
+            word-break: break-word;
+        }
+        .driver-car {
+            font-size: 0.85rem;
+            color: var(--color-text-muted);
+            line-height: 1.35;
+            word-break: break-word;
+        }
+        .driver-car.is-undecided { font-style: italic; opacity: 0.7; }
+        .drivers-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
         .signup-layout {
             display: grid;
             grid-template-columns: 1fr 1.1fr;
@@ -898,6 +974,19 @@
     </div>
     </section>
 
+    <!-- Drivers entered -->
+    <section class="drivers-section">
+        <div class="drivers-wrap">
+            <div class="drivers-header">
+                <h2>Drivers Entered <span class="drivers-count" id="driversCount">—</span></h2>
+                <p class="drivers-help">Real-time list of who's in the hat. Selected drivers announced on 12 June 2026.</p>
+            </div>
+            <div class="drivers-grid" id="driversGrid">
+                <div class="drivers-empty">Loading entries…</div>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
@@ -947,6 +1036,44 @@
                     links.classList.toggle('active');
                 });
             }
+        })();
+
+        // Fetch and render the list of drivers entered so far.
+        (function () {
+            const grid  = document.getElementById('driversGrid');
+            const count = document.getElementById('driversCount');
+            if (!grid || !count) return;
+
+            function escapeHtml(s) {
+                return String(s).replace(/[&<>"']/g, (c) => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                }[c]));
+            }
+
+            fetch('/.netlify/functions/signups')
+                .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+                .then(({ count: n, drivers }) => {
+                    count.textContent = `(${n || 0})`;
+                    if (!drivers || !drivers.length) {
+                        grid.innerHTML = '<div class="drivers-empty">No drivers entered yet — be the first to sign up.</div>';
+                        return;
+                    }
+                    grid.innerHTML = drivers.map((d) => {
+                        const car = (d.preferred_car || '').trim();
+                        const carClass = (!car || car === 'Undecided') ? 'driver-car is-undecided' : 'driver-car';
+                        const carText  = car || 'Car undecided';
+                        return `
+                            <div class="driver-row">
+                                <span class="driver-psn">${escapeHtml(d.psn_id)}</span>
+                                <span class="${carClass}">${escapeHtml(carText)}</span>
+                            </div>
+                        `;
+                    }).join('');
+                })
+                .catch(() => {
+                    count.textContent = '';
+                    grid.innerHTML = '<div class="drivers-empty">Couldn’t load the entry list right now. Try refreshing.</div>';
+                });
         })();
 
         // YouTube live-status check — see index.html for full notes.
