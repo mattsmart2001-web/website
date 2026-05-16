@@ -57,7 +57,7 @@ exports.handler = async (event) => {
     const subs = await subsResp.json();
 
     // 3. Strip to public-safe fields only: PSN ID + chosen car.
-    const drivers = subs
+    const all = subs
       .map((s) => ({
         psn_id: ((s.data && s.data.psn_id) || '').toString().trim(),
         preferred_car: ((s.data && s.data.preferred_car) || '').toString().trim(),
@@ -66,6 +66,18 @@ exports.handler = async (event) => {
       .filter((d) => d.psn_id)
       // Newest first
       .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+
+    // 4. De-duplicate by PSN ID (case-insensitive), keeping the most recent
+    //    entry per driver. Lets drivers re-submit the form to change their
+    //    car or correct a typo without admin intervention.
+    const seen = new Set();
+    const drivers = [];
+    for (const d of all) {
+      const key = d.psn_id.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      drivers.push(d);
+    }
 
     return {
       statusCode: 200,
