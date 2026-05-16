@@ -332,6 +332,68 @@
             box-shadow: 0 0 12px rgba(255, 209, 102, 0.45);
         }
 
+        /* Reserves — appears after the 15-driver grid is filled */
+        .reserves-section {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 2px dashed rgba(255, 255, 255, 0.12);
+            position: relative;
+        }
+        .reserves-section::before {
+            content: "Standby";
+            position: absolute;
+            top: -0.55rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, rgba(20,25,34,1) 0%, rgba(15,19,27,1) 100%);
+            padding: 0 0.5rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 800;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.5);
+            text-indent: 0.32em;
+        }
+        .reserves-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.65rem;
+            font-family: 'Anton', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-indent: 0.22em;
+        }
+        .reserves-header .pcount {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: rgba(255, 255, 255, 0.55);
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.25rem 0.55rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-indent: 0;
+        }
+        .reserves-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .reserves-list .panel-row .seq {
+            width: 2.4em;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
         /* Reel area */
         .reel-area {
             display: flex;
@@ -710,7 +772,7 @@
             </div>
 
             <div class="winner-banner" id="winnerBanner">
-                <div class="winner-label">Selected</div>
+                <div class="winner-label" id="winnerLabel">Selected</div>
                 <div class="winner-name" id="winnerName"></div>
             </div>
 
@@ -730,6 +792,14 @@
                 <span class="pcount" id="selCount">0 / 15</span>
             </h2>
             <ol class="panel-list grid-lineup" id="selList"></ol>
+
+            <div class="reserves-section" id="reservesSection" hidden>
+                <div class="reserves-header">
+                    <span>Reserves</span>
+                    <span class="pcount" id="reservesCount">0 / 10</span>
+                </div>
+                <ol class="panel-list reserves-list" id="reservesList"></ol>
+            </div>
         </aside>
 
     </div>
@@ -770,6 +840,9 @@
 
     // How many drivers we draw in total for the event.
     const MAX_DRAWS = 15;
+    // Reserves drawn after the grid is full.
+    const MAX_RESERVES = 10;
+    const TOTAL_PICKS = MAX_DRAWS + MAX_RESERVES;
 
     // Pre-committed drivers — guaranteed to land within the MAX_DRAWS picks.
     // Matching is fuzzy: case-insensitive and ignores spaces / underscores /
@@ -925,16 +998,35 @@
         hatList.innerHTML = sorted.map((d) => panelRowHtml(d)).join('');
     }
     function renderSelected(highlightIdx) {
-        selCount.textContent = `${winners.length} / ${MAX_DRAWS}`;
-        if (!winners.length) {
+        const inGrid     = winners.slice(0, MAX_DRAWS);
+        const inReserves = winners.slice(MAX_DRAWS);
+
+        selCount.textContent = `${inGrid.length} / ${MAX_DRAWS}`;
+        if (!inGrid.length) {
             selList.innerHTML = '<div class="panel-empty">No drivers drawn yet.</div>';
-            return;
+        } else {
+            selList.innerHTML = inGrid
+                .map((d, i) => panelRowHtml(d, { seq: i + 1 }))
+                .join('');
         }
-        selList.innerHTML = winners
-            .map((d, i) => panelRowHtml(d, { seq: i + 1 }))
-            .join('');
+
+        const reservesSection = document.getElementById('reservesSection');
+        const reservesList    = document.getElementById('reservesList');
+        const reservesCount   = document.getElementById('reservesCount');
+        if (inReserves.length) {
+            reservesSection.hidden = false;
+            reservesCount.textContent = `${inReserves.length} / ${MAX_RESERVES}`;
+            reservesList.innerHTML = inReserves
+                .map((d, i) => panelRowHtml(d, { seq: `R${i + 1}` }))
+                .join('');
+        } else if (reservesSection) {
+            reservesSection.hidden = true;
+        }
+
         if (typeof highlightIdx === 'number') {
-            const row = selList.children[highlightIdx];
+            const row = highlightIdx < MAX_DRAWS
+                ? selList.children[highlightIdx]
+                : (reservesList ? reservesList.children[highlightIdx - MAX_DRAWS] : null);
             if (row && row.classList) {
                 row.classList.add('is-just-arrived');
                 row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -993,7 +1085,7 @@
     function spin() {
         if (spinning) return;
         if (!activePool.length) return;
-        if (winners.length >= MAX_DRAWS) return;
+        if (winners.length >= TOTAL_PICKS) return;
         const N = activePool.length;
 
         spinning = true;
@@ -1073,6 +1165,11 @@
         setTimeout(() => {
             // The visible face now is the winner — confirm by setting the banner text.
             winnerName.textContent = winner.psn_id;
+            // Banner label depends on phase: grid (P1..P15) vs reserves (R1..R10).
+            const winnerLabel = document.getElementById('winnerLabel');
+            if (winnerLabel) {
+                winnerLabel.textContent = winners.length >= MAX_DRAWS ? 'Reserve' : 'Selected';
+            }
             winnerBanner.classList.add('is-shown');
             reelStage.classList.add('is-winning');
 
@@ -1080,7 +1177,8 @@
             winners.push(winner);
             renderSelected(winners.length - 1);
 
-            const cap = winners.length >= MAX_DRAWS;
+            const cap = winners.length >= TOTAL_PICKS;
+            const drawableLeft = activePool.filter((d, i) => i !== winnerIdx && !isBlockedDriver(d));
 
             // Hold the winner for a beat, then sweep the curtains shut.
             setTimeout(() => {
@@ -1094,8 +1192,10 @@
                         activePool = activePool.filter((_, i) => i !== winnerIdx);
                         renderHat();
                     }
-                    if (cap || activePool.length === 0) {
-                        const msg = cap ? `Full grid — ${MAX_DRAWS} drivers drawn.` : 'All drivers drawn.';
+                    if (cap || drawableLeft.length === 0) {
+                        const msg = cap
+                            ? `Full grid + ${MAX_RESERVES} reserves drawn.`
+                            : 'No drivers left to draw.';
                         cylinder.innerHTML = `<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">${msg}</div>`;
                         spinBtn.disabled = true;
                     } else {
@@ -1116,6 +1216,8 @@
         reelStage.classList.remove('is-winning');
         reelStage.classList.remove('curtains-open');
         winnerBanner.classList.remove('is-shown');
+        const winnerLabel = document.getElementById('winnerLabel');
+        if (winnerLabel) winnerLabel.textContent = 'Selected';
         renderHat();
         renderSelected();
         if (activePool.length) {
