@@ -1006,7 +1006,9 @@
         reelStage.classList.add('curtains-open');
 
         // Pick the winner. If this draw slot has a pre-committed driver still
-        // in the pool, use them; otherwise pick randomly.
+        // in the pool, use them; otherwise pick randomly from the eligible
+        // drivers (excluding both reserved priority drivers and blocked
+        // drivers — blocked stay in the hat but never get drawn).
         const currentSlot = winners.length;
         const priorityDriver = priorityMap[currentSlot];
         let winnerIdx;
@@ -1015,20 +1017,32 @@
             if (idx !== -1) {
                 winnerIdx = idx;
             } else {
-                // Priority driver already drawn somehow — fall back to random
-                winnerIdx = Math.floor(Math.random() * N);
+                // Priority driver missing — fall back to a random non-blocked pick
+                const fallback = activePool
+                    .map((d, i) => ({ d, i }))
+                    .filter(({ d }) => !isBlockedDriver(d));
+                winnerIdx = fallback[Math.floor(Math.random() * fallback.length)].i;
             }
         } else {
-            // Standard random pick, but skip over priority drivers if they
-            // still have slots reserved later — keeps the rigged slots usable.
             const remainingPrioritySlots = Object.keys(priorityMap)
                 .map(Number)
                 .filter((s) => s > currentSlot);
             const reservedDrivers = remainingPrioritySlots.map((s) => priorityMap[s]);
             const eligible = activePool
                 .map((d, i) => ({ d, i }))
-                .filter(({ d }) => !reservedDrivers.includes(d));
-            const pickFrom = eligible.length ? eligible : activePool.map((d, i) => ({ d, i }));
+                .filter(({ d }) => !reservedDrivers.includes(d) && !isBlockedDriver(d));
+            // If reserving the priority slots leaves no one eligible, drop
+            // that constraint but still exclude blocked drivers.
+            const pickFrom = eligible.length
+                ? eligible
+                : activePool.map((d, i) => ({ d, i })).filter(({ d }) => !isBlockedDriver(d));
+            if (!pickFrom.length) {
+                // No drawable drivers left at all — bail.
+                spinning = false;
+                spinBtn.disabled = true;
+                reelStage.classList.remove('curtains-open');
+                return;
+            }
             winnerIdx = pickFrom[Math.floor(Math.random() * pickFrom.length)].i;
         }
         const winner = activePool[winnerIdx];
@@ -1134,22 +1148,16 @@
                 renderSelected();
                 return;
             }
-            // Silently drop blocked drivers before anything sees the pool.
-            const filtered = drivers.filter((d) => {
+            // Blocked drivers stay in the hat and on the reel for show, but
+            // the spin logic excludes them so the reel can never stop on
+            // them. Log for visibility.
+            drivers.forEach((d) => {
                 if (isBlockedDriver(d)) {
-                    console.log(`Blocked from draw: ${d.psn_id}`);
-                    return false;
+                    console.log(`Cannot be drawn (kept in hat for show): ${d.psn_id}`);
                 }
-                return true;
             });
-            if (!filtered.length) {
-                cylinder.innerHTML = '<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">No eligible drivers.</div>';
-                renderHat();
-                renderSelected();
-                return;
-            }
-            allDrivers = filtered;
-            activePool = filtered.slice();
+            allDrivers = drivers;
+            activePool = drivers.slice();
             setupPrioritySlots(activePool);
             spinBtn.disabled = false;
             buildCylinder(activePool);
