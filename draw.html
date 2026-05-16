@@ -16,8 +16,6 @@
             --text: #ffffff;
             --muted: #94a3b8;
             --accent: #0ea5e9;
-            --row-h: 88px;
-            --visible-rows: 5;
         }
         * { box-sizing: border-box; }
         html, body {
@@ -27,6 +25,7 @@
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
+            overflow-x: hidden;
         }
         body.transparent-bg { background: transparent; }
         body.transparent-bg .draw-bg { display: none; }
@@ -43,14 +42,12 @@
 
         .draw-page {
             min-height: 100vh;
+            padding: 2.5rem 1.5rem 3rem;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 2.5rem 1.5rem;
-            position: relative;
         }
 
+        /* Header */
         .draw-header {
             text-align: center;
             margin-bottom: 2rem;
@@ -71,11 +68,8 @@
             text-transform: uppercase;
             margin: 0;
             background: linear-gradient(180deg,
-                #fff1a8 0%,
-                #ffd166 22%,
-                #ff9a3c 44%,
-                #ff6b6b 66%,
-                #7c3aed 100%);
+                #fff1a8 0%, #ffd166 22%, #ff9a3c 44%,
+                #ff6b6b 66%, #7c3aed 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -83,15 +77,180 @@
             line-height: 1.05;
         }
 
-        /* The reel */
-        .reel-stage {
-            perspective: 1400px;
-            width: min(720px, 92vw);
+        /* 3-column stage */
+        .draw-stage {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) minmax(420px, 2fr) minmax(220px, 1fr);
+            gap: 1.5rem;
+            max-width: 1400px;
+            width: 100%;
             margin: 0 auto;
+            align-items: start;
         }
-        .reel-frame {
+        @media (max-width: 960px) {
+            .draw-stage {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Side panels */
+        .draw-panel {
+            background: linear-gradient(180deg, rgba(20,25,34,0.85), rgba(10,14,21,0.85));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 1.25rem;
+            max-height: 620px;
+            display: flex;
+            flex-direction: column;
+        }
+        .draw-panel h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.85);
+            margin: 0 0 0.85rem;
+            text-indent: 0.25em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .draw-panel.hat h2 {
+            color: var(--accent);
+        }
+        .draw-panel.selected h2 {
+            background: linear-gradient(180deg, #ff9a3c, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+        .draw-panel .pcount {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.55);
+            -webkit-text-fill-color: rgba(255,255,255,0.55);
+            background: rgba(255,255,255,0.06);
+            padding: 0.25rem 0.55rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-indent: 0;
+        }
+        .draw-panel .panel-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            overflow-y: auto;
+            min-height: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .draw-panel .panel-list::-webkit-scrollbar { width: 6px; }
+        .draw-panel .panel-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+        .draw-panel .panel-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
+        }
+        .panel-row {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.55rem 0.65rem;
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 9px;
+            transition: background 0.15s, border-color 0.15s, opacity 0.4s, transform 0.4s;
+        }
+        .panel-row.is-just-drawn {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+        .panel-row.is-just-arrived {
+            animation: arrive 0.6s ease-out;
+        }
+        @keyframes arrive {
+            from { opacity: 0; transform: translateY(-12px); background: rgba(14,165,233,0.2); }
+            to   { opacity: 1; transform: translateY(0);    background: rgba(255,255,255,0.025); }
+        }
+        .panel-row .seq {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.8em;
+            height: 1.6em;
+            padding: 0 0.45em;
+            border-radius: 999px;
+            background: rgba(14,165,233,0.18);
+            color: var(--accent);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+        .panel-row .pmake {
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.58rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        }
+        .panel-row .pmake.is-undecided {
+            background: rgba(255,255,255,0.05);
+            border: 1px dashed rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.4);
+            font-size: 0.55rem;
+            text-shadow: none;
+        }
+        .panel-row .ppsn {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.84rem;
+            color: var(--text);
+            letter-spacing: 0.02em;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .panel-empty {
+            text-align: center;
+            color: var(--muted);
+            font-style: italic;
+            padding: 1.5rem 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        /* Reel area */
+        .reel-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .reel-stage {
+            width: 100%;
+            max-width: 540px;
+            aspect-ratio: 3 / 2;
+            perspective: 1600px;
+            perspective-origin: 50% 50%;
             position: relative;
-            height: calc(var(--row-h) * var(--visible-rows));
+        }
+        .reel-window {
+            position: absolute;
+            inset: 0;
             border-radius: 22px;
             background:
                 linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 50%, rgba(255,255,255,0.04) 100%),
@@ -102,40 +261,57 @@
                 inset 0 0 0 1px rgba(14,165,233,0.08);
             overflow: hidden;
             transform-style: preserve-3d;
-            transform: rotateX(8deg);
         }
-        .reel-window {
+        .reel-window::before,
+        .reel-window::after {
+            content: "";
             position: absolute;
-            inset: 0;
-            overflow: hidden;
-            mask-image: linear-gradient(180deg,
-                transparent 0%,
-                #000 22%,
-                #000 78%,
-                transparent 100%);
-            -webkit-mask-image: linear-gradient(180deg,
-                transparent 0%,
-                #000 22%,
-                #000 78%,
-                transparent 100%);
-        }
-        .reel-strip {
-            position: absolute;
-            top: 0;
             left: 0;
             right: 0;
-            will-change: transform;
+            height: 30%;
+            pointer-events: none;
+            z-index: 3;
         }
-        .reel-row {
-            height: var(--row-h);
+        .reel-window::before {
+            top: 0;
+            background: linear-gradient(180deg,
+                rgba(10,14,21,0.85) 0%,
+                rgba(10,14,21,0.5) 60%,
+                transparent 100%);
+        }
+        .reel-window::after {
+            bottom: 0;
+            background: linear-gradient(0deg,
+                rgba(10,14,21,0.85) 0%,
+                rgba(10,14,21,0.5) 60%,
+                transparent 100%);
+        }
+        .reel-cylinder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform-style: preserve-3d;
+            transform: translate(-50%, -50%) rotateX(0deg);
+        }
+        .reel-face {
+            position: absolute;
+            width: 460px;
+            height: 90px;
+            left: -230px;
+            top: -45px;
             display: flex;
             align-items: center;
-            gap: 1rem;
-            padding: 0 1.5rem;
-            font-family: 'Orbitron', sans-serif;
-            color: rgba(255,255,255,0.75);
+            justify-content: center;
+            gap: 0.85rem;
+            padding: 0 1rem;
+            border-radius: 12px;
+            backface-visibility: hidden;
+            background: linear-gradient(180deg, rgba(20,25,34,0.7), rgba(10,14,21,0.4));
+            border: 1px solid rgba(255,255,255,0.06);
         }
-        .reel-make {
+        .reel-face .fmake {
             flex-shrink: 0;
             width: 52px;
             height: 52px;
@@ -149,75 +325,81 @@
             letter-spacing: 0.04em;
             text-shadow: 0 1px 2px rgba(0,0,0,0.35);
         }
-        .reel-make.is-undecided {
+        .reel-face .fmake.is-undecided {
             background: rgba(255,255,255,0.05);
             border: 1px dashed rgba(255,255,255,0.18);
             color: rgba(255,255,255,0.4);
             font-size: 0.6rem;
-            letter-spacing: 0.15em;
             text-shadow: none;
         }
-        .reel-info {
+        .reel-face .finfo {
             display: flex;
             flex-direction: column;
             gap: 0.2rem;
             min-width: 0;
+            text-align: left;
         }
-        .reel-psn {
+        .reel-face .fpsn {
             font-family: 'Anton', sans-serif;
             font-size: 1.6rem;
             color: var(--text);
             letter-spacing: 0.03em;
             line-height: 1;
             text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 320px;
         }
-        .reel-car {
-            font-size: 0.78rem;
-            color: rgba(255,255,255,0.5);
+        .reel-face .fcar {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.55);
             line-height: 1.2;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            max-width: 340px;
+        }
+        @media (max-width: 540px) {
+            .reel-face { width: 360px; left: -180px; }
+            .reel-face .fpsn { font-size: 1.3rem; max-width: 240px; }
+            .reel-face .fcar { max-width: 260px; }
         }
 
-        /* Highlight band over the centre row */
-        .reel-highlight {
+        /* Centre marker */
+        .reel-marker {
             position: absolute;
             left: 0;
             right: 0;
             top: 50%;
             transform: translateY(-50%);
-            height: var(--row-h);
+            height: 96px;
             pointer-events: none;
             border-top: 2px solid rgba(255,154,60,0.55);
             border-bottom: 2px solid rgba(124,58,237,0.55);
-            background:
-                linear-gradient(180deg,
-                    rgba(255,154,60,0.08) 0%,
-                    rgba(124,58,237,0.1) 100%);
             box-shadow:
                 0 0 30px rgba(255,154,60,0.25),
                 inset 0 0 40px rgba(124,58,237,0.18);
-            z-index: 2;
+            z-index: 4;
         }
-        .reel-frame.is-winning .reel-highlight {
+        .reel-stage.is-winning .reel-marker {
             border-top-color: #38bdf8;
             border-bottom-color: #38bdf8;
             box-shadow:
-                0 0 40px rgba(14,165,233,0.55),
+                0 0 40px rgba(14,165,233,0.6),
                 inset 0 0 50px rgba(14,165,233,0.3);
             animation: winnerPulse 1.6s ease-in-out infinite;
         }
         @keyframes winnerPulse {
-            0%, 100% { box-shadow: 0 0 40px rgba(14,165,233,0.55), inset 0 0 50px rgba(14,165,233,0.3); }
-            50%      { box-shadow: 0 0 70px rgba(14,165,233,0.85), inset 0 0 60px rgba(14,165,233,0.45); }
+            0%, 100% { box-shadow: 0 0 40px rgba(14,165,233,0.6), inset 0 0 50px rgba(14,165,233,0.3); }
+            50%      { box-shadow: 0 0 70px rgba(14,165,233,0.9), inset 0 0 60px rgba(14,165,233,0.5); }
         }
 
         /* Winner banner */
         .winner-banner {
-            margin-top: 1.5rem;
             text-align: center;
-            min-height: 4rem;
+            min-height: 4.5rem;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -237,18 +419,15 @@
             text-transform: uppercase;
             color: var(--accent);
             text-indent: 0.5em;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
         }
         .winner-banner .winner-name {
             font-family: 'Anton', sans-serif;
             font-size: clamp(2rem, 4.5vw, 3.4rem);
             line-height: 1;
             background: linear-gradient(180deg,
-                #fff1a8 0%,
-                #ffd166 22%,
-                #ff9a3c 44%,
-                #ff6b6b 66%,
-                #7c3aed 100%);
+                #fff1a8 0%, #ffd166 22%, #ff9a3c 44%,
+                #ff6b6b 66%, #7c3aed 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -259,12 +438,13 @@
 
         /* Controls */
         .draw-controls {
-            margin-top: 2rem;
+            margin-top: 0.5rem;
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             align-items: center;
             gap: 0.85rem;
+            width: 100%;
         }
         .spin-btn {
             font-family: 'Anton', sans-serif;
@@ -319,79 +499,14 @@
         }
         .draw-checkbox input { accent-color: var(--accent); }
 
-        /* Status row */
-        .draw-status {
-            margin-top: 1.5rem;
-            text-align: center;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.78rem;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            color: var(--muted);
-        }
-        .draw-status .accent { color: var(--accent); }
-
-        /* Recent winners */
-        .recent-winners {
-            margin-top: 1.25rem;
-            max-width: 760px;
-            margin-inline: auto;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-            justify-content: center;
-        }
-        .recent-winners .winner-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.45rem;
-            padding: 0.3rem 0.7rem 0.3rem 0.4rem;
-            background: rgba(14,165,233,0.08);
-            border: 1px solid rgba(14,165,233,0.3);
-            border-radius: 999px;
-            font-size: 0.82rem;
-            color: var(--text);
-        }
-        .recent-winners .winner-chip .seq {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 1.6em;
-            height: 1.6em;
-            padding: 0 0.45em;
-            border-radius: 999px;
-            background: var(--accent);
-            color: var(--bg);
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.7rem;
-            font-weight: 800;
-        }
-
-        /* Loading / error */
-        .draw-empty {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: var(--muted);
-            font-style: italic;
-        }
-
-        /* OBS overlay mode */
-        body.obs-mode .draw-header,
-        body.obs-mode .draw-controls,
-        body.obs-mode .draw-status,
-        body.obs-mode .recent-winners {
-            display: none;
-        }
-        body.obs-mode .draw-page { padding: 1rem; }
-
         /* Footer hint */
         .footer-hint {
-            margin-top: 2.5rem;
+            margin: 2rem auto 0;
             text-align: center;
             font-size: 0.78rem;
             color: rgba(255,255,255,0.35);
             line-height: 1.6;
-            max-width: 640px;
+            max-width: 720px;
         }
         .footer-hint kbd {
             display: inline-block;
@@ -402,7 +517,23 @@
             font-family: 'Orbitron', sans-serif;
             font-size: 0.78em;
         }
-        body.obs-mode .footer-hint { display: none; }
+
+        /* OBS overlay mode */
+        body.obs-mode .draw-header,
+        body.obs-mode .draw-controls,
+        body.obs-mode .footer-hint {
+            display: none;
+        }
+        body.obs-mode .draw-page { padding: 0.5rem; }
+
+        /* "clean" mode — no panels, only the reel */
+        body.clean-mode .draw-panel,
+        body.clean-mode .draw-header,
+        body.clean-mode .draw-controls,
+        body.clean-mode .footer-hint { display: none; }
+        body.clean-mode .draw-stage {
+            grid-template-columns: 1fr;
+        }
     </style>
 </head>
 <body>
@@ -414,36 +545,51 @@
         <h1>Nordschleife 24 Hours · Live Driver Draw</h1>
     </header>
 
-    <div class="reel-stage">
-        <div class="reel-frame" id="reelFrame">
-            <div class="reel-window">
-                <div class="reel-strip" id="reelStrip">
-                    <div class="draw-empty" id="reelEmpty">Loading drivers…</div>
+    <div class="draw-stage">
+
+        <aside class="draw-panel hat">
+            <h2>
+                <span>Still in the Hat</span>
+                <span class="pcount" id="hatCount">0</span>
+            </h2>
+            <ul class="panel-list" id="hatList"></ul>
+        </aside>
+
+        <div class="reel-area">
+            <div class="reel-stage" id="reelStage">
+                <div class="reel-window">
+                    <div class="reel-cylinder" id="reelCylinder"></div>
                 </div>
+                <div class="reel-marker"></div>
             </div>
-            <div class="reel-highlight"></div>
+
+            <div class="winner-banner" id="winnerBanner">
+                <div class="winner-label">Selected</div>
+                <div class="winner-name" id="winnerName"></div>
+            </div>
+
+            <div class="draw-controls">
+                <button class="spin-btn" id="spinBtn" disabled>Spin</button>
+                <button class="ghost-btn" id="resetBtn">Reset draw</button>
+                <label class="draw-checkbox">
+                    <input type="checkbox" id="removeDrawn" checked>
+                    Remove drawn drivers
+                </label>
+            </div>
         </div>
-    </div>
 
-    <div class="winner-banner" id="winnerBanner">
-        <div class="winner-label">Selected</div>
-        <div class="winner-name" id="winnerName"></div>
-    </div>
+        <aside class="draw-panel selected">
+            <h2>
+                <span>Selected Drivers</span>
+                <span class="pcount" id="selCount">0</span>
+            </h2>
+            <ol class="panel-list" id="selList"></ol>
+        </aside>
 
-    <div class="draw-controls">
-        <button class="spin-btn" id="spinBtn" disabled>Spin</button>
-        <button class="ghost-btn" id="resetBtn">Reset draw</button>
-        <label class="draw-checkbox">
-            <input type="checkbox" id="removeDrawn" checked>
-            Remove drawn drivers
-        </label>
     </div>
-
-    <div class="draw-status" id="drawStatus"></div>
-    <div class="recent-winners" id="recentWinners"></div>
 
     <p class="footer-hint">
-        Hotkey: <kbd>Space</kbd> to spin · Add <code>?obs=1</code> for an overlay-only view (no chrome) · <code>?bg=transparent</code> for a transparent background suitable for OBS browser sources.
+        Hotkey: <kbd>Space</kbd> spins · <code>?obs=1</code> hides chrome · <code>?clean=1</code> shows reel only · <code>?bg=transparent</code> for OBS browser sources.
     </p>
 </main>
 
@@ -451,29 +597,30 @@
 (function () {
     // ===== URL params =====
     const params = new URLSearchParams(location.search);
-    if (params.get('obs') === '1') document.body.classList.add('obs-mode');
-    if (params.get('bg') === 'transparent') document.body.classList.add('transparent-bg');
+    if (params.get('obs')   === '1') document.body.classList.add('obs-mode');
+    if (params.get('clean') === '1') document.body.classList.add('clean-mode');
+    if (params.get('bg')    === 'transparent') document.body.classList.add('transparent-bg');
 
     // ===== DOM refs =====
-    const reelFrame   = document.getElementById('reelFrame');
-    const reelStrip   = document.getElementById('reelStrip');
-    const reelEmpty   = document.getElementById('reelEmpty');
+    const reelStage   = document.getElementById('reelStage');
+    const cylinder    = document.getElementById('reelCylinder');
     const winnerBanner= document.getElementById('winnerBanner');
     const winnerName  = document.getElementById('winnerName');
     const spinBtn     = document.getElementById('spinBtn');
     const resetBtn    = document.getElementById('resetBtn');
     const removeChk   = document.getElementById('removeDrawn');
-    const statusEl    = document.getElementById('drawStatus');
-    const recentEl    = document.getElementById('recentWinners');
+    const hatList     = document.getElementById('hatList');
+    const hatCount    = document.getElementById('hatCount');
+    const selList     = document.getElementById('selList');
+    const selCount    = document.getElementById('selCount');
 
     // ===== Constants =====
-    const ROW_HEIGHT = 88; // keep in sync with --row-h
-    const VISIBLE_ROWS = 5; // keep in sync with --visible-rows
-    const STRIP_COPIES = 14; // how many copies of the driver list in the strip — enough for a long spin
-    const SPIN_DURATION_MS = 5200;
+    const FACE_H = 90;            // px — kept in sync with .reel-face height
+    const SPIN_DURATION_MS = 5400;
     const SPIN_EASING = 'cubic-bezier(0.16, 0.86, 0.18, 1)';
+    const MIN_FULL_ROTATIONS = 5; // integer minimum, plus 0-2 random extras
 
-    // ===== Manufacturer table (matches signup.html) =====
+    // ===== Manufacturer table =====
     const MAKES = {
         'Alfa Romeo':   { short: 'ALFA',  color: '#c8102e' },
         'Aston Martin': { short: 'AST',   color: '#00665e' },
@@ -503,7 +650,7 @@
         'Toyota':       { short: 'TOY',   color: '#c40000' },
         'Volkswagen':   { short: 'VW',    color: '#001e50' },
     };
-    function isUndecidedCar(car) { return !car || car.toLowerCase() === 'undecided'; }
+    function isUndecided(car) { return !car || car.toLowerCase() === 'undecided'; }
     function getMake(car) {
         if (!car) return null;
         const n = car.toLowerCase();
@@ -534,151 +681,197 @@
     }
 
     // ===== State =====
-    let allDrivers = [];      // [{psn_id, preferred_car, ...}]
-    let activePool = [];      // drivers still eligible to be drawn
-    let winners    = [];      // [{psn_id, preferred_car}, ...] in draw order
+    let allDrivers = [];
+    let activePool = [];
+    let winners    = [];
     let spinning   = false;
-    let currentStripOffset = 0;
+    let cylinderAngle = 0;   // current actual rotateX in degrees (monotonically decreases)
+    let faceStep = 0;        // degrees per face for the current cylinder build
 
-    // ===== Rendering =====
-    function rowHtml(d) {
+    // ===== Render helpers =====
+    function panelRowHtml(d, opts) {
         const car = (d.preferred_car || '').trim();
-        const undecided = isUndecidedCar(car);
-        const carText = undecided ? 'Car undecided' : car;
+        const undecided = isUndecided(car);
         const make = undecided ? null : getMake(car);
         let badge;
         if (make) {
-            badge = `<div class="reel-make" style="background:${make.color};color:${textOn(make.color)}">${esc(make.short)}</div>`;
+            badge = `<span class="pmake" style="background:${make.color};color:${textOn(make.color)}">${esc(make.short)}</span>`;
         } else {
-            badge = `<div class="reel-make is-undecided">?</div>`;
+            badge = `<span class="pmake is-undecided">?</span>`;
         }
-        return `
-            <div class="reel-row">
-                ${badge}
-                <div class="reel-info">
-                    <span class="reel-psn">${esc(d.psn_id)}</span>
-                    <span class="reel-car">${esc(carText)}</span>
-                </div>
-            </div>
-        `;
+        const seq = opts && opts.seq != null ? `<span class="seq">${opts.seq}</span>` : '';
+        return `<li class="panel-row">${seq}${badge}<span class="ppsn">${esc(d.psn_id)}</span></li>`;
     }
-    function buildStrip(driverList) {
-        if (!driverList.length) {
-            reelStrip.innerHTML = '<div class="draw-empty">No drivers left to draw.</div>';
+    function renderHat() {
+        hatCount.textContent = activePool.length;
+        if (!activePool.length) {
+            hatList.innerHTML = '<div class="panel-empty">Hat is empty.</div>';
             return;
         }
-        let html = '';
-        for (let copy = 0; copy < STRIP_COPIES; copy++) {
-            for (const d of driverList) html += rowHtml(d);
-        }
-        reelStrip.innerHTML = html;
-        // Reset transform to start position
-        reelStrip.style.transition = 'none';
-        reelStrip.style.transform  = 'translateY(0)';
-        currentStripOffset = 0;
-        // Force reflow so the next transition takes effect
-        void reelStrip.offsetWidth;
+        // Alphabetical for easy scanning
+        const sorted = activePool.slice().sort(
+            (a, b) => (a.psn_id || '').localeCompare(b.psn_id || '', undefined, { sensitivity: 'base' })
+        );
+        hatList.innerHTML = sorted.map((d) => panelRowHtml(d)).join('');
     }
-    function updateStatus() {
-        const total = allDrivers.length;
-        const left  = activePool.length;
-        const drawn = winners.length;
-        if (total === 0) {
-            statusEl.textContent = 'No drivers loaded.';
-            return;
-        }
-        statusEl.innerHTML = `Drawn <span class="accent">${drawn}</span> · Remaining <span class="accent">${left}</span> · Total <span class="accent">${total}</span>`;
-    }
-    function updateRecent() {
+    function renderSelected(highlightIdx) {
+        selCount.textContent = winners.length;
         if (!winners.length) {
-            recentEl.innerHTML = '';
+            selList.innerHTML = '<div class="panel-empty">No drivers drawn yet.</div>';
             return;
         }
-        recentEl.innerHTML = winners.map((w, i) =>
-            `<span class="winner-chip"><span class="seq">${i + 1}</span>${esc(w.psn_id)}</span>`
-        ).join('');
+        selList.innerHTML = winners
+            .map((d, i) => panelRowHtml(d, { seq: i + 1 }))
+            .join('');
+        if (typeof highlightIdx === 'number') {
+            const row = selList.children[highlightIdx];
+            if (row && row.classList) {
+                row.classList.add('is-just-arrived');
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+    }
+
+    // ===== Cylinder build =====
+    function buildCylinder(driverList) {
+        cylinder.innerHTML = '';
+        const N = driverList.length;
+        if (N === 0) return;
+
+        // For N=1, just place one face at the centre with no rotation
+        // For very small N, ensure a minimum radius
+        faceStep = N >= 2 ? (360 / N) : 0;
+        const radius = N >= 3
+            ? (FACE_H / 2) / Math.tan(Math.PI / N)
+            : (N === 2 ? FACE_H : 0);
+
+        driverList.forEach((d, i) => {
+            const car = (d.preferred_car || '').trim();
+            const undecided = isUndecided(car);
+            const make = undecided ? null : getMake(car);
+            let badge;
+            if (make) {
+                badge = `<div class="fmake" style="background:${make.color};color:${textOn(make.color)}">${esc(make.short)}</div>`;
+            } else {
+                badge = `<div class="fmake is-undecided">?</div>`;
+            }
+            const face = document.createElement('div');
+            face.className = 'reel-face';
+            face.innerHTML = `
+                ${badge}
+                <div class="finfo">
+                    <span class="fpsn">${esc(d.psn_id)}</span>
+                    <span class="fcar">${esc(undecided ? 'Car undecided' : car)}</span>
+                </div>
+            `;
+            // Each face rotated around the X axis at i * faceStep, then pushed out by radius
+            face.style.transform = `rotateX(${i * faceStep}deg) translateZ(${radius}px)`;
+            cylinder.appendChild(face);
+        });
+
+        // Reset cylinder rotation to 0 (face 0 facing forward)
+        cylinder.style.transition = 'none';
+        cylinder.style.transform = 'translate(-50%, -50%) rotateX(0deg)';
+        cylinderAngle = 0;
+        // Flush so the next transition takes effect
+        void cylinder.offsetWidth;
     }
 
     // ===== Spin =====
     function spin() {
         if (spinning) return;
         if (!activePool.length) return;
+        const N = activePool.length;
 
         spinning = true;
         spinBtn.disabled = true;
         winnerBanner.classList.remove('is-shown');
-        reelFrame.classList.remove('is-winning');
+        reelStage.classList.remove('is-winning');
 
-        const winnerIdx = Math.floor(Math.random() * activePool.length);
+        // Pick winner up front
+        const winnerIdx = Math.floor(Math.random() * N);
         const winner = activePool[winnerIdx];
 
-        // Land at a copy near the middle of the strip so it can spin freely
-        // in both directions. Centre the chosen row in the highlight band.
-        const middleCopyStart = Math.floor(STRIP_COPIES / 2) * activePool.length;
-        const targetRowIndex  = middleCopyStart + winnerIdx;
-        const centreOffset    = (VISIBLE_ROWS - 1) / 2 * ROW_HEIGHT;
-        const finalOffset     = targetRowIndex * ROW_HEIGHT - centreOffset;
-        // Add a few extra full-list loops so it visibly spins past many names
-        const extraLoops = 4 + Math.random() * 2;  // 4–6 loops
-        const totalScroll = finalOffset + extraLoops * activePool.length * ROW_HEIGHT;
+        // Compute the final cylinder rotation that places winnerIdx at the front.
+        // Each face is at rotateX(i * faceStep). To bring face i to the front
+        // (face's effective angle = 0), the cylinder needs rotateX(-i * faceStep).
+        // We add INTEGER full negative rotations so the spin visually goes round.
+        const fullRotations = MIN_FULL_ROTATIONS + Math.floor(Math.random() * 3); // 5, 6 or 7
+        const targetLandingMod = -winnerIdx * faceStep;
+        // Start from the current cylinderAngle, decrement by 360*K, then snap to landing mod.
+        // After K full rotations from current: cylinderAngle - 360*K
+        const afterK = cylinderAngle - 360 * fullRotations;
+        // We want final angle mod 360 to equal targetLandingMod mod 360
+        const finalMod = ((targetLandingMod % 360) + 360) % 360;
+        const afterKMod = ((afterK % 360) + 360) % 360;
+        // Subtract extra to align mod (always subtracting so direction stays consistent)
+        let extra = afterKMod - finalMod;
+        if (extra < 0) extra += 360;
+        const newAngle = afterK - extra;
 
-        reelStrip.style.transition = `transform ${SPIN_DURATION_MS}ms ${SPIN_EASING}`;
-        reelStrip.style.transform  = `translateY(-${totalScroll}px)`;
-        currentStripOffset = totalScroll;
+        cylinder.style.transition = `transform ${SPIN_DURATION_MS}ms ${SPIN_EASING}`;
+        cylinder.style.transform = `translate(-50%, -50%) rotateX(${newAngle}deg)`;
+        cylinderAngle = newAngle;
 
+        // After the animation, reveal the winner and (optionally) remove from the pool.
         setTimeout(() => {
-            // Settle: snap back to the equivalent position modulo one full list
-            const settled = finalOffset;
-            reelStrip.style.transition = 'none';
-            reelStrip.style.transform  = `translateY(-${settled}px)`;
-            currentStripOffset = settled;
-
-            // Reveal winner
+            // The visible face now is the winner — confirm by setting the banner text.
             winnerName.textContent = winner.psn_id;
             winnerBanner.classList.add('is-shown');
-            reelFrame.classList.add('is-winning');
+            reelStage.classList.add('is-winning');
 
+            // Add to selected panel immediately (so viewers see them lock in)
             winners.push(winner);
-            if (removeChk.checked) {
-                activePool = activePool.filter((_, i) => i !== winnerIdx);
-                // Rebuild the strip from the new pool, but keep the winner visible briefly
-                setTimeout(() => {
-                    if (activePool.length) {
-                        buildStrip(activePool);
-                    } else {
-                        reelStrip.style.transition = 'none';
-                        reelStrip.innerHTML = '<div class="draw-empty">All drivers drawn.</div>';
-                    }
-                    reelFrame.classList.remove('is-winning');
-                }, 2200);
-            }
+            renderSelected(winners.length - 1);
 
-            updateStatus();
-            updateRecent();
-            spinning = false;
-            spinBtn.disabled = activePool.length === 0;
+            if (removeChk.checked) {
+                // Wait ~2.2s so the winner is fully appreciated, then rebuild the cylinder
+                setTimeout(() => {
+                    activePool = activePool.filter((_, i) => i !== winnerIdx);
+                    renderHat();
+                    if (activePool.length === 0) {
+                        cylinder.innerHTML = '<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">All drivers drawn.</div>';
+                        spinBtn.disabled = true;
+                    } else {
+                        buildCylinder(activePool);
+                        spinBtn.disabled = false;
+                    }
+                    reelStage.classList.remove('is-winning');
+                    spinning = false;
+                }, 2200);
+            } else {
+                spinning = false;
+                spinBtn.disabled = false;
+            }
         }, SPIN_DURATION_MS + 30);
     }
 
     function reset() {
+        if (spinning) return;
         activePool = allDrivers.slice();
         winners = [];
-        spinBtn.disabled = activePool.length === 0;
-        reelFrame.classList.remove('is-winning');
+        reelStage.classList.remove('is-winning');
         winnerBanner.classList.remove('is-shown');
-        buildStrip(activePool);
-        updateStatus();
-        updateRecent();
+        renderHat();
+        renderSelected();
+        if (activePool.length) {
+            buildCylinder(activePool);
+            spinBtn.disabled = false;
+        } else {
+            spinBtn.disabled = true;
+        }
     }
 
     // ===== Wire up controls =====
     spinBtn.addEventListener('click', spin);
     resetBtn.addEventListener('click', reset);
     document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && document.activeElement === document.body) {
-            e.preventDefault();
-            spin();
-        }
+        if (e.code !== 'Space') return;
+        const t = e.target;
+        // Don't intercept space while a form field is focused
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+        e.preventDefault();
+        spin();
     });
 
     // ===== Load drivers from the Netlify Function =====
@@ -686,19 +879,20 @@
         .then((r) => r.ok ? r.json() : Promise.reject(r.status))
         .then(({ drivers }) => {
             if (!drivers || !drivers.length) {
-                reelStrip.innerHTML = '<div class="draw-empty">No drivers signed up yet.</div>';
-                statusEl.textContent = 'Nothing to draw — yet.';
+                cylinder.innerHTML = '<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">No drivers signed up yet.</div>';
+                renderHat();
+                renderSelected();
                 return;
             }
             allDrivers = drivers;
             activePool = drivers.slice();
             spinBtn.disabled = false;
-            buildStrip(activePool);
-            updateStatus();
+            buildCylinder(activePool);
+            renderHat();
+            renderSelected();
         })
         .catch(() => {
-            reelStrip.innerHTML = '<div class="draw-empty">Couldn’t load the entry list.</div>';
-            statusEl.textContent = 'Failed to load drivers.';
+            cylinder.innerHTML = '<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">Couldn’t load the entry list.</div>';
         });
 })();
 </script>
