@@ -642,6 +642,68 @@
             .presenter-x { font-size: 1.25rem; }
         }
 
+        /* Countdown */
+        .countdown-section {
+            background: linear-gradient(180deg, #0a0e15 0%, #060910 100%);
+            position: relative;
+            z-index: 1;
+            padding: 3.5rem 1.5rem 4rem;
+        }
+        .countdown-wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .countdown-label {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(0.85rem, 1.8vw, 1.2rem);
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: rgba(255, 220, 200, 0.7);
+            margin-bottom: 1.5rem;
+            text-indent: 0.4em;
+        }
+        .countdown-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.85rem;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+        .countdown-cell {
+            background: linear-gradient(180deg, #11161f, #0a0e15);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 1.5rem 0.4rem 1.2rem;
+        }
+        .countdown-num {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2.2rem, 7vw, 4.5rem);
+            line-height: 1;
+            background: linear-gradient(180deg,
+                #fff1a8 0%,
+                #ffd166 22%,
+                #ff9a3c 44%,
+                #ff6b6b 66%,
+                #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.02em;
+        }
+        .countdown-unit {
+            font-family: 'Anton', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.45);
+            margin-top: 0.6rem;
+            text-indent: 0.3em;
+        }
+        .countdown-section.is-finished .countdown-grid { display: none; }
+
         /* Prizes section */
         .prizes-section {
             max-width: 1200px;
@@ -871,6 +933,19 @@
                 <span class="signup-title-main">Nordschleife 24 Hours</span>
             </h1>
             <p class="signup-subtitle">A solo GT7 endurance test around the Green Hell. One driver, one car, twenty-four hours. Sign up below — selected drivers will be announced on 12th June 2026.</p>
+        </div>
+    </section>
+
+    <!-- Countdown -->
+    <section class="countdown-section">
+        <div class="countdown-wrap">
+            <div class="countdown-label" id="countdownLabel">Loading…</div>
+            <div class="countdown-grid" id="countdownGrid">
+                <div class="countdown-cell"><div class="countdown-num" id="cdDays">--</div><div class="countdown-unit">Days</div></div>
+                <div class="countdown-cell"><div class="countdown-num" id="cdHours">--</div><div class="countdown-unit">Hours</div></div>
+                <div class="countdown-cell"><div class="countdown-num" id="cdMins">--</div><div class="countdown-unit">Min</div></div>
+                <div class="countdown-cell"><div class="countdown-num" id="cdSecs">--</div><div class="countdown-unit">Sec</div></div>
+            </div>
         </div>
     </section>
 
@@ -1194,6 +1269,59 @@
                     success.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }
+        })();
+
+        // Two-stage event countdown:
+        //   - Before 12 Jun 2026 22:59 UTC (sign-up deadline at 23:59 BST):
+        //       "Sign-up closes in"
+        //   - Then until 26 Jun 2026 11:00 UTC (race start at 12:00 BST):
+        //       "Race starts in"
+        //   - During the race: "Race in progress"
+        //   - After: "Race finished"
+        (function () {
+            const DEADLINE   = Date.UTC(2026, 5, 12, 22, 59, 0); // June = 5
+            const RACE_START = Date.UTC(2026, 5, 26, 11, 0, 0);
+            const RACE_END   = Date.UTC(2026, 5, 27, 11, 0, 0);
+
+            const section = document.querySelector('.countdown-section');
+            const label   = document.getElementById('countdownLabel');
+            const dEl     = document.getElementById('cdDays');
+            const hEl     = document.getElementById('cdHours');
+            const mEl     = document.getElementById('cdMins');
+            const sEl     = document.getElementById('cdSecs');
+            if (!section || !label || !dEl) return;
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+
+            function tick() {
+                const now = Date.now();
+                let target = null, text = '';
+
+                if (now < DEADLINE) {
+                    target = DEADLINE; text = 'Sign-up closes in';
+                } else if (now < RACE_START) {
+                    target = RACE_START; text = 'Lights out in';
+                } else if (now < RACE_END) {
+                    target = RACE_END; text = 'Race in progress · finishes in';
+                } else {
+                    label.textContent = 'Race complete — thanks to everyone who raced.';
+                    section.classList.add('is-finished');
+                    return false;
+                }
+
+                label.textContent = text;
+                const diff = Math.max(0, target - now);
+                dEl.textContent = pad(Math.floor(diff / 86400000));
+                hEl.textContent = pad(Math.floor((diff % 86400000) / 3600000));
+                mEl.textContent = pad(Math.floor((diff % 3600000) / 60000));
+                sEl.textContent = pad(Math.floor((diff % 60000) / 1000));
+                return true;
+            }
+
+            tick();
+            const iv = setInterval(() => {
+                if (tick() === false) clearInterval(iv);
+            }, 1000);
         })();
 
         // Mobile nav toggle (matches index.html behavior)
