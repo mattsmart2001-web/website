@@ -234,6 +234,67 @@
             margin: 0 auto;
             line-height: 1.55;
         }
+        .drivers-stats {
+            margin-top: 0.85rem;
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.78rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
+        }
+        .drivers-stats .sep { opacity: 0.4; margin: 0 0.6em; }
+        .drivers-stats .fresh {
+            color: var(--color-primary);
+            font-weight: 700;
+        }
+
+        /* Filter chip when a make filter is active */
+        .drivers-filter-chip {
+            max-width: 920px;
+            margin: 0 auto 1.25rem;
+            padding: 0.55rem 0.85rem;
+            background: linear-gradient(180deg, rgba(255,154,60,0.1), rgba(124,58,237,0.05));
+            border: 1px solid rgba(255,154,60,0.35);
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.7rem;
+            font-size: 0.85rem;
+            flex-wrap: wrap;
+        }
+        .drivers-filter-chip .chip-label {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.7rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
+        }
+        .drivers-filter-chip .chip-make {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.7rem;
+            border-radius: 6px;
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-weight: 800;
+            font-size: 0.75rem;
+            letter-spacing: 0.04em;
+        }
+        .drivers-filter-chip button {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: var(--color-text);
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .drivers-filter-chip button:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.25);
+        }
 
         /* Top picks summary */
         .drivers-toppicks {
@@ -385,6 +446,21 @@
             font-weight: 800;
             letter-spacing: 0.04em;
             text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+            border: none;
+            padding: 0;
+        }
+        button.driver-make {
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+        }
+        button.driver-make:hover {
+            transform: scale(1.06);
+            filter: brightness(1.1);
+            box-shadow: 0 6px 18px -6px rgba(0,0,0,0.6);
+        }
+        button.driver-make:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
         }
         .driver-make.is-undecided {
             background: rgba(255,255,255,0.05);
@@ -1203,9 +1279,16 @@
             <div class="drivers-header">
                 <h2>Drivers Entered <span class="drivers-count" id="driversCount">—</span></h2>
                 <p class="drivers-help">Real-time list of who's in the hat. Selected drivers announced on 12 June 2026.</p>
+                <div class="drivers-stats" id="driversStats" hidden></div>
             </div>
 
             <div class="drivers-toppicks" id="driversTopPicks" hidden></div>
+
+            <div class="drivers-filter-chip" id="driversFilterChip" hidden>
+                <span class="chip-label">Filter</span>
+                <span class="chip-make" id="chipMake"></span>
+                <button type="button" id="clearFilterBtn">Show all ×</button>
+            </div>
 
             <div class="drivers-controls" id="driversControls" hidden>
                 <div class="drivers-search">
@@ -1340,10 +1423,14 @@
         (function () {
             const grid       = document.getElementById('driversGrid');
             const count      = document.getElementById('driversCount');
+            const stats      = document.getElementById('driversStats');
             const topPicks   = document.getElementById('driversTopPicks');
             const controls   = document.getElementById('driversControls');
             const searchEl   = document.getElementById('driversSearch');
             const sortEl     = document.getElementById('driversSort');
+            const chip       = document.getElementById('driversFilterChip');
+            const chipMakeEl = document.getElementById('chipMake');
+            const clearBtn   = document.getElementById('clearFilterBtn');
             if (!grid || !count) return;
 
             function escapeHtml(s) {
@@ -1475,7 +1562,7 @@
 
             function renderGrid(drivers) {
                 if (!drivers.length) {
-                    grid.innerHTML = '<div class="drivers-empty">No drivers match that search.</div>';
+                    grid.innerHTML = '<div class="drivers-empty">No drivers match those filters.</div>';
                     return;
                 }
                 grid.innerHTML = drivers.map((d) => {
@@ -1487,7 +1574,7 @@
 
                     let badge;
                     if (make) {
-                        badge = `<div class="driver-make" style="background:${make.color};color:${textOn(make.color)}">${escapeHtml(make.short)}</div>`;
+                        badge = `<button type="button" class="driver-make" data-make="${escapeHtml(make.short)}" data-make-color="${make.color}" title="Filter by ${escapeHtml(make.short)}" style="background:${make.color};color:${textOn(make.color)}">${escapeHtml(make.short)}</button>`;
                     } else if (undecided) {
                         badge = `<div class="driver-make is-undecided">?</div>`;
                     } else {
@@ -1506,28 +1593,113 @@
                 }).join('');
             }
 
-            let allDrivers = [];
-            function rerender() { renderGrid(applyFilterAndSort(allDrivers)); }
-
-            fetch('/.netlify/functions/signups')
-                .then((r) => r.ok ? r.json() : Promise.reject(r.status))
-                .then(({ count: n, drivers }) => {
-                    count.textContent = `(${n || 0})`;
-                    if (!drivers || !drivers.length) {
-                        grid.innerHTML = '<div class="drivers-empty">No drivers entered yet — be the first to sign up.</div>';
-                        return;
+            function renderStats(drivers, filteredCount) {
+                const uniqueCars  = new Set();
+                const uniqueMakes = new Set();
+                drivers.forEach((d) => {
+                    const car = (d.preferred_car || '').trim();
+                    if (!isUndecidedCar(car)) {
+                        uniqueCars.add(car);
+                        const m = getMake(car);
+                        if (m) uniqueMakes.add(m.short);
                     }
-                    allDrivers = drivers;
-                    controls.hidden = false;
-                    renderTopPicks(drivers);
-                    rerender();
-                    searchEl.addEventListener('input', rerender);
-                    sortEl.addEventListener('change', rerender);
-                })
-                .catch(() => {
-                    count.textContent = '';
-                    grid.innerHTML = '<div class="drivers-empty">Couldn’t load the entry list right now. Try refreshing.</div>';
                 });
+                const parts = [
+                    `${drivers.length} ${drivers.length === 1 ? 'entry' : 'entries'}`,
+                    `${uniqueCars.size} ${uniqueCars.size === 1 ? 'car' : 'cars'}`,
+                    `${uniqueMakes.size} ${uniqueMakes.size === 1 ? 'manufacturer' : 'manufacturers'}`,
+                ];
+                let html = parts.join('<span class="sep">·</span>');
+                if (typeof filteredCount === 'number' && filteredCount !== drivers.length) {
+                    html += `<span class="sep">·</span><span class="fresh">Showing ${filteredCount}</span>`;
+                }
+                stats.innerHTML = html;
+                stats.hidden = drivers.length === 0;
+            }
+
+            function renderFilterChip() {
+                if (!activeMake) {
+                    chip.hidden = true;
+                    return;
+                }
+                chip.hidden = false;
+                chipMakeEl.textContent = activeMake.short;
+                chipMakeEl.style.background = activeMake.color;
+                chipMakeEl.style.color = textOn(activeMake.color);
+            }
+
+            let allDrivers = [];
+            let activeMake = null;
+
+            function rerender() {
+                const filtered = applyFilterAndSort(allDrivers);
+                renderGrid(filtered);
+                renderStats(allDrivers, filtered.length);
+                renderFilterChip();
+            }
+
+            // Click a coloured badge to filter by that manufacturer.
+            grid.addEventListener('click', (e) => {
+                const btn = e.target.closest('button.driver-make');
+                if (!btn) return;
+                const short = btn.dataset.make;
+                const color = btn.dataset.makeColor;
+                if (!short) return;
+                // Toggle off if same make clicked again
+                if (activeMake && activeMake.short === short) {
+                    activeMake = null;
+                } else {
+                    activeMake = { short, color };
+                }
+                rerender();
+            });
+
+            clearBtn.addEventListener('click', () => {
+                activeMake = null;
+                rerender();
+            });
+
+            function loadDrivers(isAutoRefresh) {
+                return fetch('/.netlify/functions/signups')
+                    .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+                    .then(({ count: n, drivers }) => {
+                        count.textContent = `(${n || 0})`;
+                        if (!drivers || !drivers.length) {
+                            grid.innerHTML = '<div class="drivers-empty">No drivers entered yet — be the first to sign up.</div>';
+                            stats.hidden = true;
+                            topPicks.hidden = true;
+                            controls.hidden = true;
+                            return;
+                        }
+                        allDrivers = drivers;
+                        // Drop the active make filter if no rows match it after refresh.
+                        if (activeMake) {
+                            const stillMatches = drivers.some((d) => {
+                                const m = getMake(d.preferred_car);
+                                return m && m.short === activeMake.short;
+                            });
+                            if (!stillMatches) activeMake = null;
+                        }
+                        if (!isAutoRefresh) {
+                            controls.hidden = false;
+                            searchEl.addEventListener('input', rerender);
+                            sortEl.addEventListener('change', rerender);
+                        }
+                        renderTopPicks(drivers);
+                        rerender();
+                    });
+            }
+
+            loadDrivers(false).catch(() => {
+                count.textContent = '';
+                grid.innerHTML = '<div class="drivers-empty">Couldn’t load the entry list right now. Try refreshing.</div>';
+            });
+
+            // Silent auto-refresh every 30s, paused while tab is hidden.
+            setInterval(() => {
+                if (document.hidden) return;
+                loadDrivers(true).catch(() => { /* silent */ });
+            }, 30000);
         })();
 
 
