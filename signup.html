@@ -1078,27 +1078,21 @@
 
         // YouTube live-status check — see index.html for full notes.
         (function () {
-            const CHANNEL_ID = '';
-            const API_KEY    = '';
-            const POLL_MS    = 60000;
+            const POLL_MS = 60000;
 
             const btn = document.getElementById('liveButton');
-            if (!btn || !CHANNEL_ID || !API_KEY) return;
+            if (!btn) return;
             const label = btn.querySelector('.live-label');
 
             async function check() {
                 try {
-                    const url = `https://www.googleapis.com/youtube/v3/search`
-                        + `?part=snippet&channelId=${CHANNEL_ID}`
-                        + `&eventType=live&type=video&key=${API_KEY}`;
-                    const r = await fetch(url);
+                    const r = await fetch('/.netlify/functions/youtube-live');
                     if (!r.ok) return;
                     const data = await r.json();
-                    const live = data.items && data.items.length > 0;
-                    if (live) {
+                    if (data.live && data.videoId) {
                         btn.classList.add('is-live');
                         label.textContent = 'Live Now';
-                        btn.href = `https://www.youtube.com/watch?v=${data.items[0].id.videoId}`;
+                        btn.href = `https://www.youtube.com/watch?v=${data.videoId}`;
                     } else {
                         btn.classList.remove('is-live');
                         label.textContent = 'YouTube';

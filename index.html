@@ -467,32 +467,26 @@
     <script src="script.js"></script>
     <script>
         /* YouTube live-status check.
-         * Populate CHANNEL_ID and API_KEY to enable detection. Without them
-         * the button stays as a static "YouTube" link to /@SparksTheory/live
-         * (which auto-redirects to the live stream when streaming).
+         * Calls /.netlify/functions/youtube-live (which keeps the API key
+         * server-side and caches for 60s at the CDN). Falls back silently
+         * to the static YouTube link if the function is unreachable.
          */
         (function () {
-            const CHANNEL_ID = '';   // e.g. 'UCxxxxxxxxxxxxxxxxxxxxxx'
-            const API_KEY    = '';   // YouTube Data API v3 key
-            const POLL_MS    = 60000; // re-check every 60s
+            const POLL_MS = 60000;
 
-            const btn   = document.getElementById('liveButton');
-            if (!btn || !CHANNEL_ID || !API_KEY) return;
+            const btn = document.getElementById('liveButton');
+            if (!btn) return;
             const label = btn.querySelector('.live-label');
 
             async function check() {
                 try {
-                    const url = `https://www.googleapis.com/youtube/v3/search`
-                        + `?part=snippet&channelId=${CHANNEL_ID}`
-                        + `&eventType=live&type=video&key=${API_KEY}`;
-                    const r = await fetch(url);
+                    const r = await fetch('/.netlify/functions/youtube-live');
                     if (!r.ok) return;
                     const data = await r.json();
-                    const live = data.items && data.items.length > 0;
-                    if (live) {
+                    if (data.live && data.videoId) {
                         btn.classList.add('is-live');
                         label.textContent = 'Live Now';
-                        btn.href = `https://www.youtube.com/watch?v=${data.items[0].id.videoId}`;
+                        btn.href = `https://www.youtube.com/watch?v=${data.videoId}`;
                     } else {
                         btn.classList.remove('is-live');
                         label.textContent = 'YouTube';
