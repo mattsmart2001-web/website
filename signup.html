@@ -234,6 +234,125 @@
             margin: 0 auto;
             line-height: 1.55;
         }
+
+        /* Top picks summary */
+        .drivers-toppicks {
+            max-width: 920px;
+            margin: 0 auto 1.5rem;
+            padding: 0.85rem 1.25rem;
+            background: linear-gradient(180deg, rgba(14,165,233,0.08), rgba(14,165,233,0.03));
+            border: 1px solid rgba(14,165,233,0.25);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            font-size: 0.92rem;
+            color: var(--color-text-muted);
+            line-height: 1.4;
+            text-align: center;
+        }
+        .drivers-toppicks .label {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.7rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--color-primary);
+        }
+        .drivers-toppicks .pick {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--color-text);
+            white-space: nowrap;
+        }
+        .drivers-toppicks .pick .n {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.5em;
+            padding: 0.1em 0.45em;
+            border-radius: 999px;
+            background: rgba(14,165,233,0.18);
+            color: var(--color-primary);
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        /* Search + sort controls */
+        .drivers-controls {
+            max-width: 920px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            flex-wrap: wrap;
+        }
+        .drivers-search {
+            flex: 1;
+            min-width: 220px;
+            position: relative;
+        }
+        .drivers-search svg {
+            position: absolute;
+            top: 50%;
+            left: 0.95rem;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--color-text-muted);
+            pointer-events: none;
+        }
+        .drivers-search input {
+            width: 100%;
+            padding: 0.85rem 1rem 0.85rem 2.5rem;
+            background: linear-gradient(180deg, #11161f, #0a0e15);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: var(--color-text);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .drivers-search input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(14,165,233,0.18);
+        }
+        .drivers-sort {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.8rem;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .drivers-sort select {
+            appearance: none;
+            -webkit-appearance: none;
+            padding: 0.7rem 2.25rem 0.7rem 0.95rem;
+            background-color: #11161f;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%230ea5e9' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.85rem center;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: var(--color-text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .drivers-sort select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(14,165,233,0.18);
+        }
+        .drivers-sort select option { background: #0a0e15; color: var(--color-text); }
+
         .drivers-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -981,6 +1100,28 @@
                 <h2>Drivers Entered <span class="drivers-count" id="driversCount">—</span></h2>
                 <p class="drivers-help">Real-time list of who's in the hat. Selected drivers announced on 12 June 2026.</p>
             </div>
+
+            <div class="drivers-toppicks" id="driversTopPicks" hidden></div>
+
+            <div class="drivers-controls" id="driversControls" hidden>
+                <div class="drivers-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input type="search" id="driversSearch" placeholder="Search by PSN ID or car…" autocomplete="off">
+                </div>
+                <label class="drivers-sort">
+                    <span>Sort</span>
+                    <select id="driversSort">
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                        <option value="az">PSN A–Z</option>
+                        <option value="car">By car</option>
+                    </select>
+                </label>
+            </div>
+
             <div class="drivers-grid" id="driversGrid">
                 <div class="drivers-empty">Loading entries…</div>
             </div>
@@ -1040,8 +1181,12 @@
 
         // Fetch and render the list of drivers entered so far.
         (function () {
-            const grid  = document.getElementById('driversGrid');
-            const count = document.getElementById('driversCount');
+            const grid       = document.getElementById('driversGrid');
+            const count      = document.getElementById('driversCount');
+            const topPicks   = document.getElementById('driversTopPicks');
+            const controls   = document.getElementById('driversControls');
+            const searchEl   = document.getElementById('driversSearch');
+            const sortEl     = document.getElementById('driversSort');
             if (!grid || !count) return;
 
             function escapeHtml(s) {
@@ -1049,6 +1194,86 @@
                     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
                 }[c]));
             }
+
+            function isUndecidedCar(car) {
+                return !car || car.toLowerCase() === 'undecided';
+            }
+
+            function renderTopPicks(drivers) {
+                const tally = new Map();
+                drivers.forEach((d) => {
+                    const car = (d.preferred_car || '').trim();
+                    if (isUndecidedCar(car)) return;
+                    tally.set(car, (tally.get(car) || 0) + 1);
+                });
+                const top = [...tally.entries()]
+                    .filter(([, n]) => n >= 2)            // only show ties of 2+
+                    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                    .slice(0, 3);
+
+                if (!top.length) {
+                    topPicks.hidden = true;
+                    return;
+                }
+                topPicks.hidden = false;
+                topPicks.innerHTML = `
+                    <span class="label">Top picks</span>
+                    ${top.map(([car, n]) => `
+                        <span class="pick"><span class="n">×${n}</span>${escapeHtml(car)}</span>
+                    `).join('')}
+                `;
+            }
+
+            function applyFilterAndSort(drivers) {
+                const q = (searchEl.value || '').trim().toLowerCase();
+                const sort = sortEl.value;
+                let out = drivers.slice();
+
+                if (q) {
+                    out = out.filter((d) => {
+                        const psn = (d.psn_id || '').toLowerCase();
+                        const car = (d.preferred_car || '').toLowerCase();
+                        return psn.includes(q) || car.includes(q);
+                    });
+                }
+
+                if (sort === 'oldest') {
+                    out.sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+                } else if (sort === 'az') {
+                    out.sort((a, b) => (a.psn_id || '').localeCompare(b.psn_id || '', undefined, { sensitivity: 'base' }));
+                } else if (sort === 'car') {
+                    out.sort((a, b) => {
+                        const ac = isUndecidedCar(a.preferred_car) ? '￿' : a.preferred_car;
+                        const bc = isUndecidedCar(b.preferred_car) ? '￿' : b.preferred_car;
+                        return ac.localeCompare(bc, undefined, { sensitivity: 'base' });
+                    });
+                }
+                // default 'newest' = order from API (already newest-first)
+
+                return out;
+            }
+
+            function renderGrid(drivers) {
+                if (!drivers.length) {
+                    grid.innerHTML = '<div class="drivers-empty">No drivers match that search.</div>';
+                    return;
+                }
+                grid.innerHTML = drivers.map((d) => {
+                    const car = (d.preferred_car || '').trim();
+                    const undecided = isUndecidedCar(car);
+                    const carClass  = undecided ? 'driver-car is-undecided' : 'driver-car';
+                    const carText   = undecided ? 'Car undecided' : car;
+                    return `
+                        <div class="driver-row">
+                            <span class="driver-psn">${escapeHtml(d.psn_id)}</span>
+                            <span class="${carClass}">${escapeHtml(carText)}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            let allDrivers = [];
+            function rerender() { renderGrid(applyFilterAndSort(allDrivers)); }
 
             fetch('/.netlify/functions/signups')
                 .then((r) => r.ok ? r.json() : Promise.reject(r.status))
@@ -1058,17 +1283,12 @@
                         grid.innerHTML = '<div class="drivers-empty">No drivers entered yet — be the first to sign up.</div>';
                         return;
                     }
-                    grid.innerHTML = drivers.map((d) => {
-                        const car = (d.preferred_car || '').trim();
-                        const carClass = (!car || car === 'Undecided') ? 'driver-car is-undecided' : 'driver-car';
-                        const carText  = car || 'Car undecided';
-                        return `
-                            <div class="driver-row">
-                                <span class="driver-psn">${escapeHtml(d.psn_id)}</span>
-                                <span class="${carClass}">${escapeHtml(carText)}</span>
-                            </div>
-                        `;
-                    }).join('');
+                    allDrivers = drivers;
+                    controls.hidden = false;
+                    renderTopPicks(drivers);
+                    rerender();
+                    searchEl.addEventListener('input', rerender);
+                    sortEl.addEventListener('change', rerender);
                 })
                 .catch(() => {
                     count.textContent = '';
