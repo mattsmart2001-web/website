@@ -718,6 +718,95 @@
             .presenter-x { font-size: 1.25rem; }
         }
 
+        /* Add to calendar button inside the event card */
+        .event-ics-btn {
+            width: 100%;
+            margin-top: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.85rem 1rem;
+            background: linear-gradient(180deg, rgba(14,165,233,0.12), rgba(14,165,233,0.04));
+            border: 1px solid rgba(14,165,233,0.4);
+            color: var(--color-text);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, transform 0.15s;
+        }
+        .event-ics-btn:hover {
+            background: rgba(14,165,233,0.2);
+            border-color: rgba(14,165,233,0.7);
+            transform: translateY(-1px);
+        }
+
+        /* Share */
+        .share-section {
+            background: linear-gradient(180deg, #060910 0%, #0a0e15 100%);
+            position: relative;
+            z-index: 1;
+            padding: 4rem 1.5rem 5rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .share-wrap {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .share-section h3 {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: clamp(1.4rem, 3vw, 2rem);
+            background: linear-gradient(135deg, #ffffff 0%, var(--color-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.7rem;
+        }
+        .share-section p {
+            color: var(--color-text-muted);
+            margin-bottom: 1.8rem;
+            line-height: 1.55;
+        }
+        .share-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+            justify-content: center;
+        }
+        .share-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.75rem 1.15rem;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #11161f, #0a0e15);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--color-text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, transform 0.15s;
+        }
+        .share-btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255,255,255,0.25);
+        }
+        .share-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .share-btn.is-x:hover    { border-color: #ffffff; color: #fff; }
+        .share-btn.is-fb:hover   { border-color: #1877f2; color: #1877f2; }
+        .share-btn.is-wa:hover   { border-color: #25d366; color: #25d366; }
+        .share-btn.is-rd:hover   { border-color: #ff4500; color: #ff4500; }
+        .share-btn.is-copy:hover { border-color: var(--color-primary); color: var(--color-primary); }
+        .share-btn.is-copy.is-copied {
+            border-color: #22c55e;
+            color: #22c55e;
+        }
+
         /* Countdown */
         .countdown-section {
             background: linear-gradient(180deg, #0a0e15 0%, #060910 100%);
@@ -1149,6 +1238,15 @@
                     </div>
                 </li>
             </ul>
+            <button type="button" class="btn btn-secondary event-ics-btn" id="addToCalendarBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:8px">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Add to calendar
+            </button>
         </aside>
 
         <!-- Sign-Up Form -->
@@ -1315,6 +1413,39 @@
         </div>
     </section>
 
+    <!-- Share -->
+    <section class="share-section">
+        <div class="share-wrap">
+            <h3>Spread the word</h3>
+            <p>Help fill the grid — share the event with your sim racing friends.</p>
+            <div class="share-buttons">
+                <a class="share-btn is-x" id="shareX" href="#" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    X / Twitter
+                </a>
+                <a class="share-btn is-fb" id="shareFb" href="#" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12S0 5.446 0 12.073C0 18.063 4.388 23.027 10.125 23.927v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.234 2.686.234v2.953H15.83c-1.491 0-1.956.925-1.956 1.875v2.252h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.063 24 12.073z"/></svg>
+                    Facebook
+                </a>
+                <a class="share-btn is-wa" id="shareWa" href="#" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 0 0 1.512 5.26l.36.572-1.001 3.65 3.731-.978.987.591zm10.041-7.474c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.695.626.712.226 1.36.194 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>
+                    WhatsApp
+                </a>
+                <a class="share-btn is-rd" id="shareRd" href="#" target="_blank" rel="noopener">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.073 3.48.582 4.674 1.343.327-.317.777-.514 1.276-.514 1.013 0 1.84.827 1.84 1.841 0 .73-.43 1.345-1.04 1.643-.075 3.736-3.999 6.755-8.823 6.755-4.821 0-8.747-3.02-8.823-6.755-.61-.298-1.04-.913-1.04-1.643 0-1.014.828-1.841 1.84-1.841.499 0 .948.197 1.276.514 1.211-.78 2.892-1.288 4.749-1.346l.91-4.259a.272.272 0 0 1 .314-.211l2.962.634a1.247 1.247 0 0 1 1.118-.701zM9.444 11.5c-.687 0-1.25.563-1.25 1.249s.563 1.249 1.25 1.249 1.25-.563 1.25-1.249-.563-1.249-1.25-1.249zm5.117 0c-.688 0-1.25.563-1.25 1.249s.562 1.249 1.25 1.249c.687 0 1.249-.563 1.249-1.249s-.562-1.249-1.249-1.249zm-5.071 3.589a.279.279 0 0 0-.198.477c.585.587 1.546.876 2.708.876.073 0 .147 0 .22-.005 1.166 0 2.127-.288 2.712-.871a.282.282 0 0 0 0-.396.28.28 0 0 0-.398 0c-.464.46-1.286.696-2.314.696-1.028 0-1.85-.236-2.314-.696a.279.279 0 0 0-.198-.082z"/></svg>
+                    Reddit
+                </a>
+                <button class="share-btn is-copy" id="shareCopy" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    <span id="shareCopyText">Copy link</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
@@ -1351,6 +1482,87 @@
                     success.classList.add('show');
                     success.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
+            }
+        })();
+
+        // Add to calendar — generates an .ics file on click.
+        (function () {
+            const btn = document.getElementById('addToCalendarBtn');
+            if (!btn) return;
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+            function utcStamp(d) {
+                return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+            }
+
+            btn.addEventListener('click', () => {
+                const start = new Date(Date.UTC(2026, 5, 26, 11, 0, 0));
+                const end   = new Date(Date.UTC(2026, 5, 27, 11, 0, 0));
+                const ics = [
+                    'BEGIN:VCALENDAR',
+                    'VERSION:2.0',
+                    'PRODID:-//SparksTheory//Nordschleife 24h 2026//EN',
+                    'CALSCALE:GREGORIAN',
+                    'METHOD:PUBLISH',
+                    'BEGIN:VEVENT',
+                    'UID:nordschleife-24h-2026@sparkstheory.co.uk',
+                    `DTSTAMP:${utcStamp(new Date())}`,
+                    `DTSTART:${utcStamp(start)}`,
+                    `DTEND:${utcStamp(end)}`,
+                    'SUMMARY:The 2026 Gran Turismo Nordschleife 24 Hours',
+                    'DESCRIPTION:Solo GT7 endurance event presented by SparksTheory and Sim-Lab.\\n\\nSign up: https://sparkstheory.co.uk/signup.html',
+                    'LOCATION:Nürburgring Nordschleife (Gran Turismo 7)',
+                    'URL:https://sparkstheory.co.uk/signup.html',
+                    'STATUS:CONFIRMED',
+                    'END:VEVENT',
+                    'END:VCALENDAR',
+                ].join('\r\n');
+
+                const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                a.href = url;
+                a.download = 'nordschleife-24h-2026.ics';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            });
+        })();
+
+        // Share buttons — set hrefs once page loads.
+        (function () {
+            const url   = 'https://sparkstheory.co.uk/signup.html';
+            const text  = 'Sign up for The 2026 Gran Turismo Nordschleife 24 Hours — a solo GT7 endurance event, free to enter, real Sim-Lab prizes for the top three.';
+            const u = encodeURIComponent(url);
+            const t = encodeURIComponent(text);
+
+            const x  = document.getElementById('shareX');
+            const fb = document.getElementById('shareFb');
+            const wa = document.getElementById('shareWa');
+            const rd = document.getElementById('shareRd');
+            const cp = document.getElementById('shareCopy');
+            if (x)  x.href  = `https://twitter.com/intent/tweet?text=${t}&url=${u}`;
+            if (fb) fb.href = `https://www.facebook.com/sharer/sharer.php?u=${u}`;
+            if (wa) wa.href = `https://wa.me/?text=${t}%20${u}`;
+            if (rd) rd.href = `https://www.reddit.com/submit?url=${u}&title=${encodeURIComponent('The 2026 Gran Turismo Nordschleife 24 Hours — sign-ups open')}`;
+
+            if (cp) {
+                const labelEl = document.getElementById('shareCopyText');
+                cp.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(url);
+                        if (labelEl) labelEl.textContent = 'Link copied!';
+                        cp.classList.add('is-copied');
+                        setTimeout(() => {
+                            if (labelEl) labelEl.textContent = 'Copy link';
+                            cp.classList.remove('is-copied');
+                        }, 2000);
+                    } catch (_) {
+                        // Fallback: prompt the user with the URL
+                        window.prompt('Copy this link:', url);
+                    }
+                });
             }
         })();
 
