@@ -818,10 +818,13 @@
             cylinder.appendChild(face);
         });
 
-        // Reset cylinder rotation to 0 (face 0 facing forward)
+        // Reset cylinder so the centre window sits BETWEEN two faces, not
+        // landed on one. Avoids the "resting on a random name" look between
+        // spins.
+        const restAngle = N >= 2 ? -faceStep / 2 : 0;
         cylinder.style.transition = 'none';
-        cylinder.style.transform = 'translate(-50%, -50%) rotateX(0deg)';
-        cylinderAngle = 0;
+        cylinder.style.transform = `translate(-50%, -50%) rotateX(${restAngle}deg)`;
+        cylinderAngle = restAngle;
         // Flush so the next transition takes effect
         void cylinder.offsetWidth;
     }
