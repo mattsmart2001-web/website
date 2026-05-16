@@ -263,12 +263,22 @@
             font-size: 0.85rem;
             flex-wrap: wrap;
         }
-        .drivers-filter-chip .chip-label {
+        .drivers-filter-chip .chip-label,
+        .drivers-filter-chip .chip-tail {
             font-family: var(--font-display, 'Orbitron', sans-serif);
             font-size: 0.7rem;
-            letter-spacing: 0.25em;
+            letter-spacing: 0.18em;
             text-transform: uppercase;
-            color: rgba(255,255,255,0.55);
+            color: rgba(255,255,255,0.6);
+        }
+
+        .drivers-tip {
+            max-width: 760px;
+            margin: -0.5rem auto 1.25rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--color-text-muted);
+            opacity: 0.7;
         }
         .drivers-filter-chip .chip-make {
             display: inline-flex;
@@ -1522,10 +1532,13 @@
             <div class="drivers-toppicks" id="driversTopPicks" hidden></div>
 
             <div class="drivers-filter-chip" id="driversFilterChip" hidden>
-                <span class="chip-label">Filter</span>
+                <span class="chip-label">Showing only</span>
                 <span class="chip-make" id="chipMake"></span>
+                <span class="chip-tail">entries</span>
                 <button type="button" id="clearFilterBtn">Show all ×</button>
             </div>
+
+            <p class="drivers-tip" id="driversTip" hidden>Tip: click a coloured manufacturer badge on any entry to filter the grid by that make.</p>
 
             <div class="drivers-controls" id="driversControls" hidden>
                 <div class="drivers-search">
@@ -2001,14 +2014,14 @@
             }
 
             function renderFilterChip() {
-                if (!activeMake) {
+                if (!activeMake || !activeMake.short) {
                     chip.hidden = true;
                     return;
                 }
                 chip.hidden = false;
                 chipMakeEl.textContent = activeMake.short;
-                chipMakeEl.style.background = activeMake.color;
-                chipMakeEl.style.color = textOn(activeMake.color);
+                chipMakeEl.style.background = activeMake.color || '#444';
+                chipMakeEl.style.color = textOn(activeMake.color || '#444');
             }
 
             let allDrivers = [];
@@ -2047,13 +2060,16 @@
                     .then((r) => r.ok ? r.json() : Promise.reject(r.status))
                     .then(({ count: n, drivers }) => {
                         count.textContent = `(${n || 0})`;
+                        const tip = document.getElementById('driversTip');
                         if (!drivers || !drivers.length) {
                             grid.innerHTML = '<div class="drivers-empty">No drivers entered yet — be the first to sign up.</div>';
                             stats.hidden = true;
                             topPicks.hidden = true;
                             controls.hidden = true;
+                            if (tip) tip.hidden = true;
                             return;
                         }
+                        if (tip) tip.hidden = false;
                         allDrivers = drivers;
                         // Drop the active make filter if no rows match it after refresh.
                         if (activeMake) {
