@@ -581,7 +581,7 @@
         <aside class="draw-panel selected">
             <h2>
                 <span>Selected Drivers</span>
-                <span class="pcount" id="selCount">0</span>
+                <span class="pcount" id="selCount">0 / 15</span>
             </h2>
             <ol class="panel-list" id="selList"></ol>
         </aside>
@@ -619,6 +619,14 @@
     const SPIN_DURATION_MS = 5400;
     const SPIN_EASING = 'cubic-bezier(0.16, 0.86, 0.18, 1)';
     const MIN_FULL_ROTATIONS = 5; // integer minimum, plus 0-2 random extras
+
+    // How many drivers we draw in total for the event.
+    const MAX_DRAWS = 15;
+
+    // Pre-committed drivers — guaranteed to land within the MAX_DRAWS picks.
+    // Matching is fuzzy: case-insensitive and ignores spaces / underscores /
+    // dashes, with substring fallback, so "TCR_Rapid" matches "TCR_Rapid_GT".
+    const PRIORITY_DRIVERS = ['Hogston GT', 'sixxdog', 'TCR_Rapid'];
 
     // ===== Manufacturer table =====
     const MAKES = {
@@ -687,6 +695,47 @@
     let spinning   = false;
     let cylinderAngle = 0;   // current actual rotateX in degrees (monotonically decreases)
     let faceStep = 0;        // degrees per face for the current cylinder build
+    let priorityMap = {};    // { slotIndex: driverObject } — pre-rigged slots
+
+    // ===== Priority slot helpers =====
+    function normalizeName(s) {
+        return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+    function findPriorityDrivers(pool) {
+        const out = [];
+        for (const name of PRIORITY_DRIVERS) {
+            const target = normalizeName(name);
+            if (!target) continue;
+            const driver = pool.find((d) => {
+                const p = normalizeName(d.psn_id);
+                return p && (p === target || p.includes(target) || target.includes(p));
+            });
+            if (driver && !out.includes(driver)) out.push(driver);
+            else if (!driver) console.warn(`Priority driver not found in pool: ${name}`);
+        }
+        return out;
+    }
+    function setupPrioritySlots(pool) {
+        priorityMap = {};
+        const priority = findPriorityDrivers(pool);
+        if (!priority.length) return;
+        // Pick distinct random slots within the first MAX_DRAWS picks
+        const totalSlots = Math.min(MAX_DRAWS, pool.length);
+        const slotsAvailable = Array.from({ length: totalSlots }, (_, i) => i);
+        // Fisher–Yates shuffle
+        for (let i = slotsAvailable.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [slotsAvailable[i], slotsAvailable[j]] = [slotsAvailable[j], slotsAvailable[i]];
+        }
+        // Also shuffle the priority drivers so the order varies between resets
+        const shuffledPriority = priority.slice();
+        for (let i = shuffledPriority.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledPriority[i], shuffledPriority[j]] = [shuffledPriority[j], shuffledPriority[i]];
+        }
+        const chosenSlots = slotsAvailable.slice(0, shuffledPriority.length);
+        chosenSlots.forEach((slot, i) => { priorityMap[slot] = shuffledPriority[i]; });
+    }
 
     // ===== Render helpers =====
     function panelRowHtml(d, opts) {
@@ -715,7 +764,7 @@
         hatList.innerHTML = sorted.map((d) => panelRowHtml(d)).join('');
     }
     function renderSelected(highlightIdx) {
-        selCount.textContent = winners.length;
+        selCount.textContent = `${winners.length} / ${MAX_DRAWS}`;
         if (!winners.length) {
             selList.innerHTML = '<div class="panel-empty">No drivers drawn yet.</div>';
             return;
@@ -781,6 +830,7 @@
     function spin() {
         if (spinning) return;
         if (!activePool.length) return;
+        if (winners.length >= MAX_DRAWS) return;
         const N = activePool.length;
 
         spinning = true;
@@ -788,8 +838,32 @@
         winnerBanner.classList.remove('is-shown');
         reelStage.classList.remove('is-winning');
 
-        // Pick winner up front
-        const winnerIdx = Math.floor(Math.random() * N);
+        // Pick the winner. If this draw slot has a pre-committed driver still
+        // in the pool, use them; otherwise pick randomly.
+        const currentSlot = winners.length;
+        const priorityDriver = priorityMap[currentSlot];
+        let winnerIdx;
+        if (priorityDriver) {
+            const idx = activePool.indexOf(priorityDriver);
+            if (idx !== -1) {
+                winnerIdx = idx;
+            } else {
+                // Priority driver already drawn somehow — fall back to random
+                winnerIdx = Math.floor(Math.random() * N);
+            }
+        } else {
+            // Standard random pick, but skip over priority drivers if they
+            // still have slots reserved later — keeps the rigged slots usable.
+            const remainingPrioritySlots = Object.keys(priorityMap)
+                .map(Number)
+                .filter((s) => s > currentSlot);
+            const reservedDrivers = remainingPrioritySlots.map((s) => priorityMap[s]);
+            const eligible = activePool
+                .map((d, i) => ({ d, i }))
+                .filter(({ d }) => !reservedDrivers.includes(d));
+            const pickFrom = eligible.length ? eligible : activePool.map((d, i) => ({ d, i }));
+            winnerIdx = pickFrom[Math.floor(Math.random() * pickFrom.length)].i;
+        }
         const winner = activePool[winnerIdx];
 
         // Compute the final cylinder rotation that places winnerIdx at the front.
@@ -824,13 +898,15 @@
             winners.push(winner);
             renderSelected(winners.length - 1);
 
+            const cap = winners.length >= MAX_DRAWS;
             if (removeChk.checked) {
                 // Wait ~2.2s so the winner is fully appreciated, then rebuild the cylinder
                 setTimeout(() => {
                     activePool = activePool.filter((_, i) => i !== winnerIdx);
                     renderHat();
-                    if (activePool.length === 0) {
-                        cylinder.innerHTML = '<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">All drivers drawn.</div>';
+                    if (cap || activePool.length === 0) {
+                        const msg = cap ? `Full grid — ${MAX_DRAWS} drivers drawn.` : 'All drivers drawn.';
+                        cylinder.innerHTML = `<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">${msg}</div>`;
                         spinBtn.disabled = true;
                     } else {
                         buildCylinder(activePool);
@@ -841,7 +917,7 @@
                 }, 2200);
             } else {
                 spinning = false;
-                spinBtn.disabled = false;
+                spinBtn.disabled = cap;
             }
         }, SPIN_DURATION_MS + 30);
     }
@@ -850,6 +926,7 @@
         if (spinning) return;
         activePool = allDrivers.slice();
         winners = [];
+        setupPrioritySlots(activePool);
         reelStage.classList.remove('is-winning');
         winnerBanner.classList.remove('is-shown');
         renderHat();
@@ -886,6 +963,7 @@
             }
             allDrivers = drivers;
             activePool = drivers.slice();
+            setupPrioritySlots(activePool);
             spinBtn.disabled = false;
             buildCylinder(activePool);
             renderHat();
