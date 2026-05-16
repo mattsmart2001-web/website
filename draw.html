@@ -238,6 +238,51 @@
             font-size: 0.85rem;
         }
 
+        /* "Starting Grid" — staggered alternating lineup for the selected
+           drivers panel, evoking a real-world grid layout. */
+        .grid-lineup {
+            position: relative;
+            margin-top: 0.55rem;
+            padding-top: 1rem;
+            border-top: 2px dashed rgba(255,255,255,0.12);
+            gap: 0.35rem;
+        }
+        .grid-lineup::before {
+            content: "START";
+            position: absolute;
+            top: -0.55rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, rgba(20,25,34,1) 0%, rgba(15,19,27,1) 100%);
+            padding: 0 0.5rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 800;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--accent);
+            text-indent: 0.32em;
+        }
+        .grid-lineup > .panel-row {
+            width: 82%;
+            margin-bottom: -0.5rem; /* slight vertical overlap to feel staggered */
+        }
+        .grid-lineup > .panel-row:last-child {
+            margin-bottom: 0;
+        }
+        .grid-lineup > .panel-row:nth-child(odd)  { align-self: flex-start; }
+        .grid-lineup > .panel-row:nth-child(even) { align-self: flex-end; }
+        .grid-lineup > .panel-row .seq {
+            background: linear-gradient(135deg, #ff9a3c 0%, #7c3aed 100%);
+            color: #fff;
+        }
+        .grid-lineup > .panel-row:first-child .seq {
+            /* Pole position — gold flourish */
+            background: linear-gradient(135deg, #ffd166 0%, #ff9a3c 100%);
+            color: #0a0e15;
+            box-shadow: 0 0 12px rgba(255,209,102,0.45);
+        }
+
         /* Reel area */
         .reel-area {
             display: flex;
@@ -632,10 +677,10 @@
 
         <aside class="draw-panel selected">
             <h2>
-                <span>Selected Drivers</span>
+                <span>Starting Grid</span>
                 <span class="pcount" id="selCount">0 / 15</span>
             </h2>
-            <ol class="panel-list" id="selList"></ol>
+            <ol class="panel-list grid-lineup" id="selList"></ol>
         </aside>
 
     </div>
