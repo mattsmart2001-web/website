@@ -265,10 +265,41 @@
         }
         .grid-lineup > .panel-row {
             width: 82%;
-            margin-bottom: -0.5rem; /* slight vertical overlap to feel staggered */
+            margin-bottom: 0.15rem;
+            /* Each entry styled as a real-world starting-grid box: dark
+               asphalt fill, white painted outline, with the three horizontal
+               start-line markings drawn at the top via ::before. */
+            background: linear-gradient(180deg, #262626 0%, #181818 100%);
+            border: 1.5px solid rgba(255, 255, 255, 0.38);
+            border-radius: 3px;
+            padding: 0.95rem 0.7rem 0.45rem;
+            position: relative;
         }
-        .grid-lineup > .panel-row:last-child {
-            margin-bottom: 0;
+        .grid-lineup > .panel-row::before {
+            content: "";
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            right: 10px;
+            height: 9px;
+            pointer-events: none;
+            background:
+                linear-gradient(180deg,
+                    rgba(255, 255, 255, 0.6) 0,
+                    rgba(255, 255, 255, 0.6) 1px,
+                    transparent 1px,
+                    transparent 4px,
+                    rgba(255, 255, 255, 0.6) 4px,
+                    rgba(255, 255, 255, 0.6) 5px,
+                    transparent 5px,
+                    transparent 8px,
+                    rgba(255, 255, 255, 0.6) 8px,
+                    rgba(255, 255, 255, 0.6) 9px);
+        }
+        .grid-lineup > .panel-row:hover {
+            background: linear-gradient(180deg, #2c2c2c 0%, #1d1d1d 100%);
+            border-color: rgba(255, 255, 255, 0.55);
+            transform: none; /* don't lift like the regular panel rows */
         }
         .grid-lineup > .panel-row:nth-child(odd)  { align-self: flex-start; }
         .grid-lineup > .panel-row:nth-child(even) { align-self: flex-end; }
@@ -276,11 +307,29 @@
             background: linear-gradient(135deg, #ff9a3c 0%, #7c3aed 100%);
             color: #fff;
         }
+        /* Pole position — gold paint flourish */
+        .grid-lineup > .panel-row:first-child {
+            border-color: rgba(255, 209, 102, 0.75);
+            box-shadow: 0 0 14px rgba(255, 209, 102, 0.28);
+        }
+        .grid-lineup > .panel-row:first-child::before {
+            background:
+                linear-gradient(180deg,
+                    rgba(255, 209, 102, 0.85) 0,
+                    rgba(255, 209, 102, 0.85) 1px,
+                    transparent 1px,
+                    transparent 4px,
+                    rgba(255, 209, 102, 0.85) 4px,
+                    rgba(255, 209, 102, 0.85) 5px,
+                    transparent 5px,
+                    transparent 8px,
+                    rgba(255, 209, 102, 0.85) 8px,
+                    rgba(255, 209, 102, 0.85) 9px);
+        }
         .grid-lineup > .panel-row:first-child .seq {
-            /* Pole position — gold flourish */
             background: linear-gradient(135deg, #ffd166 0%, #ff9a3c 100%);
             color: #0a0e15;
-            box-shadow: 0 0 12px rgba(255,209,102,0.45);
+            box-shadow: 0 0 12px rgba(255, 209, 102, 0.45);
         }
 
         /* Reel area */
