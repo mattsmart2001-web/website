@@ -465,38 +465,5 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fflate@0.6.9/umd/index.js"></script>
     <script src="script.js"></script>
-    <script>
-        /* YouTube live-status check.
-         * Calls /.netlify/functions/youtube-live (which keeps the API key
-         * server-side and caches for 60s at the CDN). Falls back silently
-         * to the static YouTube link if the function is unreachable.
-         */
-        (function () {
-            const POLL_MS = 60000;
-
-            const btn = document.getElementById('liveButton');
-            if (!btn) return;
-            const label = btn.querySelector('.live-label');
-
-            async function check() {
-                try {
-                    const r = await fetch('/.netlify/functions/youtube-live');
-                    if (!r.ok) return;
-                    const data = await r.json();
-                    if (data.live && data.videoId) {
-                        btn.classList.add('is-live');
-                        label.textContent = 'Live Now';
-                        btn.href = `https://www.youtube.com/watch?v=${data.videoId}`;
-                    } else {
-                        btn.classList.remove('is-live');
-                        label.textContent = 'YouTube';
-                        btn.href = 'https://www.youtube.com/@SparksTheory/live';
-                    }
-                } catch (_) { /* network error — keep current state */ }
-            }
-            check();
-            setInterval(check, POLL_MS);
-        })();
-    </script>
 </body>
 </html>

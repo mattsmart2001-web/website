@@ -1076,33 +1076,6 @@
                 });
         })();
 
-        // YouTube live-status check — see index.html for full notes.
-        (function () {
-            const POLL_MS = 60000;
-
-            const btn = document.getElementById('liveButton');
-            if (!btn) return;
-            const label = btn.querySelector('.live-label');
-
-            async function check() {
-                try {
-                    const r = await fetch('/.netlify/functions/youtube-live');
-                    if (!r.ok) return;
-                    const data = await r.json();
-                    if (data.live && data.videoId) {
-                        btn.classList.add('is-live');
-                        label.textContent = 'Live Now';
-                        btn.href = `https://www.youtube.com/watch?v=${data.videoId}`;
-                    } else {
-                        btn.classList.remove('is-live');
-                        label.textContent = 'YouTube';
-                        btn.href = 'https://www.youtube.com/@SparksTheory/live';
-                    }
-                } catch (_) {}
-            }
-            check();
-            setInterval(check, POLL_MS);
-        })();
 
         // Parallax + 3D tilt (skipped if user prefers reduced motion)
         (function () {
