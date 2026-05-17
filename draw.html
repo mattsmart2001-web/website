@@ -732,6 +732,245 @@
         }
         body.obs-mode .draw-page { padding: 0.5rem; }
 
+        /* Reveal Grid button — appears once the 15-driver grid is filled */
+        .reveal-btn {
+            background: linear-gradient(135deg, rgba(255,154,60,0.18), rgba(124,58,237,0.18));
+            border-color: rgba(255,154,60,0.5);
+            color: #ffd166;
+        }
+        .reveal-btn:hover {
+            background: linear-gradient(135deg, rgba(255,154,60,0.35), rgba(124,58,237,0.35));
+            border-color: rgba(255,209,102,0.7);
+        }
+
+        /* ===== Fullscreen Grid Reveal ===== */
+        .grid-reveal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .grid-reveal[hidden] { display: none; }
+        .reveal-bg {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at top, rgba(255,154,60,0.18), transparent 60%),
+                radial-gradient(ellipse at bottom, rgba(124,58,237,0.22), transparent 60%),
+                linear-gradient(180deg, #000 0%, #060910 50%, #0a0e15 100%);
+            z-index: -1;
+        }
+        .reveal-stage {
+            text-align: center;
+            width: 100%;
+            max-width: 1320px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5rem;
+        }
+        .reveal-row-label {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2.5rem, 7vw, 6rem);
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            line-height: 1;
+            background: linear-gradient(180deg,
+                #fff1a8 0%, #ffd166 22%, #ff9a3c 44%,
+                #ff6b6b 66%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            opacity: 0;
+            transform: translateY(-30px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+            text-indent: 0.16em;
+        }
+        .reveal-stage.is-shown .reveal-row-label {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-drivers {
+            display: flex;
+            justify-content: center;
+            gap: 1.75rem;
+            flex-wrap: wrap;
+            min-height: 260px;
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.7s 0.25s ease-out, transform 0.7s 0.25s ease-out;
+        }
+        .reveal-stage.is-shown .reveal-drivers {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-meta {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.45);
+            text-indent: 0.35em;
+            opacity: 0;
+            transition: opacity 0.7s 0.5s ease-out;
+        }
+        .reveal-stage.is-shown .reveal-meta { opacity: 1; }
+
+        /* Per-driver reveal cards (track-grid box style, scaled up) */
+        .reveal-driver-card {
+            width: clamp(280px, 30vw, 420px);
+            padding: 2.6rem 1.6rem 1.6rem;
+            background: linear-gradient(180deg, #262626 0%, #161616 100%);
+            border: 2px solid rgba(255,255,255,0.4);
+            border-radius: 6px;
+            text-align: center;
+            position: relative;
+        }
+        .reveal-driver-card::before {
+            content: "";
+            position: absolute;
+            top: 12px;
+            left: 18px;
+            right: 18px;
+            height: 16px;
+            pointer-events: none;
+            background:
+                linear-gradient(180deg,
+                    rgba(255,255,255,0.65) 0,
+                    rgba(255,255,255,0.65) 2px,
+                    transparent 2px,
+                    transparent 7px,
+                    rgba(255,255,255,0.65) 7px,
+                    rgba(255,255,255,0.65) 9px,
+                    transparent 9px,
+                    transparent 14px,
+                    rgba(255,255,255,0.65) 14px,
+                    rgba(255,255,255,0.65) 16px);
+        }
+        .reveal-driver-card.is-pole {
+            border-color: rgba(255,209,102,0.8);
+            box-shadow: 0 0 40px rgba(255,209,102,0.4);
+        }
+        .reveal-driver-card.is-pole::before {
+            background:
+                linear-gradient(180deg,
+                    rgba(255,209,102,0.85) 0,
+                    rgba(255,209,102,0.85) 2px,
+                    transparent 2px,
+                    transparent 7px,
+                    rgba(255,209,102,0.85) 7px,
+                    rgba(255,209,102,0.85) 9px,
+                    transparent 9px,
+                    transparent 14px,
+                    rgba(255,209,102,0.85) 14px,
+                    rgba(255,209,102,0.85) 16px);
+        }
+        .reveal-position {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(3rem, 7vw, 5rem);
+            line-height: 1;
+            color: #fff;
+            margin-bottom: 0.85rem;
+            letter-spacing: 0.04em;
+        }
+        .reveal-driver-card.is-pole .reveal-position {
+            background: linear-gradient(135deg, #ffd166 0%, #ff9a3c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+        .reveal-name {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(1.4rem, 2.4vw, 2.2rem);
+            line-height: 1.05;
+            color: #fff;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            word-break: break-word;
+            margin-bottom: 0.85rem;
+        }
+        .reveal-row {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+        }
+        .reveal-row .reveal-make {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 7px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        }
+        .reveal-row .reveal-make.is-undecided {
+            background: rgba(255,255,255,0.05);
+            border: 1px dashed rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.4);
+            font-size: 0.55rem;
+            text-shadow: none;
+        }
+        .reveal-row .reveal-car {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.65);
+            letter-spacing: 0.02em;
+            max-width: 280px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .reveal-close {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.5rem;
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.7);
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .reveal-close:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.3);
+            color: #fff;
+        }
+        .reveal-hint {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.04em;
+        }
+        .reveal-hint kbd {
+            display: inline-block;
+            padding: 0.1em 0.4em;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78em;
+        }
+
         /* "clean" mode — no panels, only the reel */
         body.clean-mode .draw-panel,
         body.clean-mode .draw-header,
@@ -779,6 +1018,7 @@
             <div class="draw-controls">
                 <button class="spin-btn" id="spinBtn" disabled>Spin</button>
                 <button class="ghost-btn" id="resetBtn">Reset draw</button>
+                <button class="ghost-btn reveal-btn" id="revealBtn" hidden>▶ Reveal Grid</button>
                 <label class="draw-checkbox">
                     <input type="checkbox" id="removeDrawn" checked>
                     Remove drawn drivers
@@ -808,6 +1048,18 @@
         Hotkey: <kbd>Space</kbd> spins · <code>?obs=1</code> hides chrome · <code>?clean=1</code> shows reel only · <code>?bg=transparent</code> for OBS browser sources.
     </p>
 </main>
+
+<!-- Fullscreen grid reveal sequence (F1 style) -->
+<div class="grid-reveal" id="gridReveal" hidden>
+    <div class="reveal-bg"></div>
+    <div class="reveal-stage">
+        <div class="reveal-row-label" id="revealRowLabel">Starting Grid</div>
+        <div class="reveal-drivers" id="revealDrivers"></div>
+        <div class="reveal-meta" id="revealMeta">Fri 26 June 2026 · 09:00 BST</div>
+    </div>
+    <button class="reveal-close" id="revealClose" aria-label="Close">✕</button>
+    <div class="reveal-hint" id="revealHint"><kbd>Space</kbd> next · <kbd>Esc</kbd> close</div>
+</div>
 
 <script>
 (function () {
@@ -1176,6 +1428,7 @@
             // Add to selected panel immediately (so viewers see them lock in)
             winners.push(winner);
             renderSelected(winners.length - 1);
+            maybeShowRevealBtn();
 
             const cap = winners.length >= TOTAL_PICKS;
             const drawableLeft = activePool.filter((d, i) => i !== winnerIdx && !isBlockedDriver(d));
@@ -1220,6 +1473,7 @@
         if (winnerLabel) winnerLabel.textContent = 'Selected';
         renderHat();
         renderSelected();
+        maybeShowRevealBtn();
         if (activePool.length) {
             buildCylinder(activePool);
             spinBtn.disabled = false;
@@ -1228,13 +1482,156 @@
         }
     }
 
+    // ===== Grid Reveal (F1-style row-by-row reveal) =====
+    const revealBtn   = document.getElementById('revealBtn');
+    const revealOverlay = document.getElementById('gridReveal');
+    const revealLabel = document.getElementById('revealRowLabel');
+    const revealDrvs  = document.getElementById('revealDrivers');
+    const revealMeta  = document.getElementById('revealMeta');
+    const revealClose = document.getElementById('revealClose');
+    const revealStage = revealOverlay ? revealOverlay.querySelector('.reveal-stage') : null;
+    const ROW_LABELS = [
+        'Front Row',  '2nd Row', '3rd Row', '4th Row',
+        '5th Row',    '6th Row', '7th Row', '8th Row',
+    ];
+    const REVEAL_ROW_MS = 5500;     // total time per row
+    const REVEAL_CROSS_MS = 600;    // fade-out duration between rows
+    let revealRowIdx = -1;
+    let revealTimer  = null;
+    let revealCancelled = false;
+
+    function maybeShowRevealBtn() {
+        if (winners.length >= MAX_DRAWS && revealBtn.hidden) {
+            revealBtn.hidden = false;
+        } else if (winners.length < MAX_DRAWS && !revealBtn.hidden) {
+            revealBtn.hidden = true;
+        }
+    }
+
+    function revealCardHtml(driver, position) {
+        const car = (driver.preferred_car || '').trim();
+        const undecided = isUndecided(car);
+        const make = undecided ? null : getMake(car);
+        let badge;
+        if (make) {
+            badge = `<span class="reveal-make" style="background:${make.color};color:${textOn(make.color)}">${esc(make.short)}</span>`;
+        } else {
+            badge = `<span class="reveal-make is-undecided">?</span>`;
+        }
+        const carText = undecided ? 'Car undecided' : car;
+        return `
+            <article class="reveal-driver-card${position === 1 ? ' is-pole' : ''}">
+                <div class="reveal-position">P${position}</div>
+                <div class="reveal-name">${esc(driver.psn_id)}</div>
+                <div class="reveal-row">
+                    ${badge}
+                    <span class="reveal-car">${esc(carText)}</span>
+                </div>
+            </article>
+        `;
+    }
+
+    function showRevealRow(idx) {
+        if (!revealStage) return;
+        // Fade out current
+        revealStage.classList.remove('is-shown');
+
+        setTimeout(() => {
+            if (revealCancelled) return;
+            const startPos = idx * 2;
+            const drivers  = winners.slice(startPos, Math.min(startPos + 2, MAX_DRAWS));
+            if (!drivers.length) {
+                endReveal();
+                return;
+            }
+            revealLabel.textContent = ROW_LABELS[idx] || `Row ${idx + 1}`;
+            revealDrvs.innerHTML = drivers
+                .map((d, i) => revealCardHtml(d, startPos + i + 1))
+                .join('');
+            revealMeta.textContent = `Fri 26 June 2026  ·  09:00 BST`;
+            // Force reflow then fade in
+            void revealStage.offsetWidth;
+            revealStage.classList.add('is-shown');
+        }, REVEAL_CROSS_MS);
+    }
+
+    function showRevealEnd() {
+        revealStage.classList.remove('is-shown');
+        setTimeout(() => {
+            if (revealCancelled) return;
+            revealLabel.textContent = 'Lights Out · 26 June';
+            revealDrvs.innerHTML = '';
+            revealMeta.textContent = 'The 2026 Gran Turismo Nordschleife 24 Hours';
+            void revealStage.offsetWidth;
+            revealStage.classList.add('is-shown');
+        }, REVEAL_CROSS_MS);
+    }
+
+    function nextRevealRow() {
+        revealRowIdx++;
+        const totalRows = Math.ceil(MAX_DRAWS / 2);
+        if (revealRowIdx >= totalRows) {
+            // End state
+            if (revealTimer) clearTimeout(revealTimer);
+            showRevealEnd();
+            revealTimer = null;
+            return;
+        }
+        showRevealRow(revealRowIdx);
+        if (revealTimer) clearTimeout(revealTimer);
+        revealTimer = setTimeout(nextRevealRow, REVEAL_ROW_MS);
+    }
+
+    function startReveal() {
+        if (!revealOverlay) return;
+        if (winners.length < MAX_DRAWS) return;
+        revealCancelled = false;
+        revealOverlay.hidden = false;
+        revealRowIdx = -1;
+        // Brief intro state
+        revealStage.classList.remove('is-shown');
+        revealLabel.textContent = 'Starting Grid';
+        revealDrvs.innerHTML = '';
+        revealMeta.textContent = 'The 2026 Gran Turismo Nordschleife 24 Hours';
+        setTimeout(() => {
+            if (revealCancelled) return;
+            revealStage.classList.add('is-shown');
+        }, 80);
+        // First row after a held intro
+        revealTimer = setTimeout(nextRevealRow, 2800);
+    }
+
+    function endReveal() {
+        revealCancelled = true;
+        if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
+        revealOverlay.hidden = true;
+        revealStage.classList.remove('is-shown');
+    }
+
+    if (revealBtn)   revealBtn.addEventListener('click', startReveal);
+    if (revealClose) revealClose.addEventListener('click', endReveal);
+
     // ===== Wire up controls =====
     spinBtn.addEventListener('click', spin);
     resetBtn.addEventListener('click', reset);
     document.addEventListener('keydown', (e) => {
+        // Reveal-mode keys
+        if (revealOverlay && !revealOverlay.hidden) {
+            if (e.code === 'Escape') {
+                e.preventDefault();
+                endReveal();
+                return;
+            }
+            if (e.code === 'Space' || e.code === 'ArrowRight') {
+                e.preventDefault();
+                nextRevealRow();
+                return;
+            }
+            return;
+        }
+        // Normal mode — space spins
         if (e.code !== 'Space') return;
         const t = e.target;
-        // Don't intercept space while a form field is focused
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
         e.preventDefault();
         spin();
