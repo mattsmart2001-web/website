@@ -331,6 +331,44 @@
             color: #0a0e15;
             box-shadow: 0 0 12px rgba(255, 209, 102, 0.45);
         }
+        /* Host row (P16) — cyan paint flourish */
+        .grid-lineup > .panel-row.is-host {
+            border-color: rgba(14, 165, 233, 0.7);
+            box-shadow: 0 0 14px rgba(14, 165, 233, 0.28);
+        }
+        .grid-lineup > .panel-row.is-host::before {
+            background:
+                linear-gradient(180deg,
+                    rgba(14, 165, 233, 0.85) 0,
+                    rgba(14, 165, 233, 0.85) 1px,
+                    transparent 1px,
+                    transparent 4px,
+                    rgba(14, 165, 233, 0.85) 4px,
+                    rgba(14, 165, 233, 0.85) 5px,
+                    transparent 5px,
+                    transparent 8px,
+                    rgba(14, 165, 233, 0.85) 8px,
+                    rgba(14, 165, 233, 0.85) 9px);
+        }
+        .grid-lineup > .panel-row.is-host .seq {
+            background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+            color: #fff;
+            box-shadow: 0 0 12px rgba(14, 165, 233, 0.45);
+        }
+        .host-tag {
+            margin-left: auto;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 800;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--accent);
+            background: rgba(14, 165, 233, 0.18);
+            border: 1px solid rgba(14, 165, 233, 0.4);
+            padding: 0.18em 0.55em;
+            border-radius: 999px;
+            flex-shrink: 0;
+        }
 
         /* Reserves — appears after the 15-driver grid is filled */
         .reserves-section {
@@ -872,6 +910,48 @@
                     rgba(255,209,102,0.85) 14px,
                     rgba(255,209,102,0.85) 16px);
         }
+        /* Host card (P16) — cyan paint flourish */
+        .reveal-driver-card.is-host {
+            border-color: rgba(14, 165, 233, 0.8);
+            box-shadow: 0 0 40px rgba(14, 165, 233, 0.4);
+        }
+        .reveal-driver-card.is-host::before {
+            background:
+                linear-gradient(180deg,
+                    rgba(14, 165, 233, 0.85) 0,
+                    rgba(14, 165, 233, 0.85) 2px,
+                    transparent 2px,
+                    transparent 7px,
+                    rgba(14, 165, 233, 0.85) 7px,
+                    rgba(14, 165, 233, 0.85) 9px,
+                    transparent 9px,
+                    transparent 14px,
+                    rgba(14, 165, 233, 0.85) 14px,
+                    rgba(14, 165, 233, 0.85) 16px);
+        }
+        .reveal-driver-card.is-host .reveal-position {
+            background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+        .reveal-host-tag {
+            position: absolute;
+            top: -0.7em;
+            right: 1.25rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 800;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: #38bdf8;
+            background: linear-gradient(180deg, #060910 0%, #0a0e15 100%);
+            border: 1px solid rgba(14, 165, 233, 0.5);
+            padding: 0.3em 0.7em;
+            border-radius: 999px;
+            text-indent: 0.32em;
+        }
         .reveal-position {
             font-family: 'Anton', sans-serif;
             font-size: clamp(3rem, 7vw, 5rem);
@@ -1106,6 +1186,15 @@
     // reel, or in the priority slots.
     const BLOCKED_DRIVERS = ['RacingRichey'];
 
+    // Host driver — auto-locked into the P16 slot after the 15 grid
+    // drivers are drawn. Never in the hat or on the reel.
+    const HOST_DRIVER = {
+        psn_id: 'SparksTheory',
+        preferred_car: '', // TBA — fill in when known
+        is_host: true,
+    };
+    const GRID_SIZE = MAX_DRAWS + 1; // 15 drawn + host = 16 on the grid
+
     // ===== Manufacturer table =====
     const MAKES = {
         'Alfa Romeo':   { short: 'ALFA',  color: '#c8102e' },
@@ -1235,7 +1324,9 @@
             badge = `<span class="pmake is-undecided">?</span>`;
         }
         const seq = opts && opts.seq != null ? `<span class="seq">${opts.seq}</span>` : '';
-        return `<li class="panel-row">${seq}${badge}<span class="ppsn">${esc(d.psn_id)}</span></li>`;
+        const hostTag = opts && opts.isHost ? '<span class="host-tag">Host</span>' : '';
+        const rowClass = opts && opts.isHost ? 'panel-row is-host' : 'panel-row';
+        return `<li class="${rowClass}">${seq}${badge}<span class="ppsn">${esc(d.psn_id)}</span>${hostTag}</li>`;
     }
     function renderHat() {
         hatCount.textContent = activePool.length;
@@ -1252,14 +1343,20 @@
     function renderSelected(highlightIdx) {
         const inGrid     = winners.slice(0, MAX_DRAWS);
         const inReserves = winners.slice(MAX_DRAWS);
+        const gridFull   = inGrid.length >= MAX_DRAWS;
 
-        selCount.textContent = `${inGrid.length} / ${MAX_DRAWS}`;
+        selCount.textContent = gridFull
+            ? `${MAX_DRAWS} + Host`
+            : `${inGrid.length} / ${MAX_DRAWS}`;
+
         if (!inGrid.length) {
             selList.innerHTML = '<div class="panel-empty">No drivers drawn yet.</div>';
         } else {
-            selList.innerHTML = inGrid
-                .map((d, i) => panelRowHtml(d, { seq: i + 1 }))
-                .join('');
+            const rows = inGrid.map((d, i) => panelRowHtml(d, { seq: i + 1 }));
+            if (gridFull) {
+                rows.push(panelRowHtml(HOST_DRIVER, { seq: GRID_SIZE, isHost: true }));
+            }
+            selList.innerHTML = rows.join('');
         }
 
         const reservesSection = document.getElementById('reservesSection');
@@ -1519,8 +1616,15 @@
             badge = `<span class="reveal-make is-undecided">?</span>`;
         }
         const carText = undecided ? 'Car undecided' : car;
+        const isPole = position === 1;
+        const isHost = !!driver.is_host;
+        const classes = ['reveal-driver-card'];
+        if (isPole) classes.push('is-pole');
+        if (isHost) classes.push('is-host');
+        const hostTag = isHost ? '<div class="reveal-host-tag">Host</div>' : '';
         return `
-            <article class="reveal-driver-card${position === 1 ? ' is-pole' : ''}">
+            <article class="${classes.join(' ')}">
+                ${hostTag}
                 <div class="reveal-position">P${position}</div>
                 <div class="reveal-name">${esc(driver.psn_id)}</div>
                 <div class="reveal-row">
@@ -1538,8 +1642,10 @@
 
         setTimeout(() => {
             if (revealCancelled) return;
+            // Full grid lineup = the 15 drawn winners followed by the host.
+            const gridLineup = [...winners.slice(0, MAX_DRAWS), HOST_DRIVER];
             const startPos = idx * 2;
-            const drivers  = winners.slice(startPos, Math.min(startPos + 2, MAX_DRAWS));
+            const drivers  = gridLineup.slice(startPos, Math.min(startPos + 2, GRID_SIZE));
             if (!drivers.length) {
                 endReveal();
                 return;
@@ -1569,7 +1675,7 @@
 
     function nextRevealRow() {
         revealRowIdx++;
-        const totalRows = Math.ceil(MAX_DRAWS / 2);
+        const totalRows = Math.ceil(GRID_SIZE / 2);
         if (revealRowIdx >= totalRows) {
             // End state
             if (revealTimer) clearTimeout(revealTimer);
