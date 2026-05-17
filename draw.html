@@ -1099,6 +1099,7 @@
                 <button class="spin-btn" id="spinBtn" disabled>Spin</button>
                 <button class="ghost-btn" id="resetBtn">Reset draw</button>
                 <button class="ghost-btn reveal-btn" id="revealBtn" hidden>▶ Reveal Grid</button>
+                <button class="ghost-btn" id="csvBtn" hidden>⇩ Save CSV</button>
                 <label class="draw-checkbox">
                     <input type="checkbox" id="removeDrawn" checked>
                     Remove drawn drivers
@@ -1598,11 +1599,9 @@
     let revealCancelled = false;
 
     function maybeShowRevealBtn() {
-        if (winners.length >= MAX_DRAWS && revealBtn.hidden) {
-            revealBtn.hidden = false;
-        } else if (winners.length < MAX_DRAWS && !revealBtn.hidden) {
-            revealBtn.hidden = true;
-        }
+        const gridFull = winners.length >= MAX_DRAWS;
+        revealBtn.hidden = !gridFull;
+        if (csvBtn) csvBtn.hidden = !gridFull;
     }
 
     function revealCardHtml(driver, position) {
@@ -1716,6 +1715,49 @@
 
     if (revealBtn)   revealBtn.addEventListener('click', startReveal);
     if (revealClose) revealClose.addEventListener('click', endReveal);
+
+    // ===== Save CSV =====
+    const csvBtn = document.getElementById('csvBtn');
+    function csvField(val) {
+        const s = String(val == null ? '' : val);
+        if (/[",\n\r]/.test(s)) {
+            return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+    }
+    function downloadCsv() {
+        const rows = [['Position', 'Role', 'PSN ID', 'Preferred Car']];
+        const grid = winners.slice(0, MAX_DRAWS);
+        grid.forEach((d, i) => {
+            rows.push([`P${i + 1}`, 'Grid', d.psn_id, (d.preferred_car || '').trim() || 'Undecided']);
+        });
+        if (grid.length >= MAX_DRAWS) {
+            rows.push([
+                `P${GRID_SIZE}`,
+                'Host',
+                HOST_DRIVER.psn_id,
+                (HOST_DRIVER.preferred_car || '').trim() || 'Undecided',
+            ]);
+        }
+        const reserves = winners.slice(MAX_DRAWS);
+        reserves.forEach((d, i) => {
+            rows.push([`R${i + 1}`, 'Reserve', d.psn_id, (d.preferred_car || '').trim() || 'Undecided']);
+        });
+
+        const csv = rows.map((r) => r.map(csvField).join(',')).join('\r\n');
+        // Prepend UTF-8 BOM so Excel opens special chars (e.g. ë in "Citroën")
+        // and emoji-free identifiers correctly.
+        const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `nordschleife-24h-2026-drivers.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    if (csvBtn) csvBtn.addEventListener('click', downloadCsv);
 
     // ===== Wire up controls =====
     spinBtn.addEventListener('click', spin);
