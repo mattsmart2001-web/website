@@ -701,6 +701,61 @@
             .track-specs-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
+        /* Race settings block inside the event card */
+        .race-settings {
+            margin-top: 1rem;
+            padding: 1.1rem 1rem;
+            background: linear-gradient(180deg, rgba(14,165,233,0.07), rgba(14,165,233,0.02));
+            border: 1px solid rgba(14,165,233,0.28);
+            border-radius: 12px;
+        }
+        .race-settings-label {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.68rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: rgba(165,210,240,0.9);
+            text-align: center;
+            margin-bottom: 0.9rem;
+            text-indent: 0.3em;
+        }
+        .race-settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.55rem 0.85rem;
+        }
+        .race-settings-grid > div {
+            display: flex;
+            flex-direction: column;
+            gap: 0.18rem;
+            padding: 0.45rem 0.55rem;
+            background: rgba(0,0,0,0.18);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            min-width: 0;
+        }
+        .race-settings-grid > div.race-settings-wide {
+            grid-column: 1 / -1;
+        }
+        .race-settings-grid span {
+            font-size: 0.62rem;
+            color: var(--color-text-muted);
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+        .race-settings-grid strong {
+            font-family: 'Anton', var(--font-display, 'Orbitron'), sans-serif;
+            font-size: clamp(0.95rem, 2.2vw, 1.2rem);
+            color: var(--color-text);
+            line-height: 1.15;
+            letter-spacing: 0.02em;
+            word-break: break-word;
+        }
+        @media (max-width: 420px) {
+            .race-settings-grid { grid-template-columns: 1fr; }
+            .race-settings-grid > div.race-settings-wide { grid-column: auto; }
+        }
+
         /* FAQ */
         .faq-section {
             background: linear-gradient(180deg, #0a0e15 0%, #060910 100%);
@@ -1312,6 +1367,20 @@
                     <div><strong>73</strong><span>Corners</span></div>
                     <div><strong>~300 m</strong><span>Elevation change</span></div>
                     <div><strong>1927</strong><span>First opened</span></div>
+                </div>
+            </div>
+
+            <div class="race-settings">
+                <div class="race-settings-label">Race Settings</div>
+                <div class="race-settings-grid">
+                    <div><span>BoP</span><strong>On</strong></div>
+                    <div><span>Damage</span><strong>Light</strong></div>
+                    <div><span>Tyre wear</span><strong>×1</strong></div>
+                    <div><span>Fuel use</span><strong>×1</strong></div>
+                    <div><span>Weather</span><strong>Random</strong></div>
+                    <div><span>Refuel speed</span><strong>1 L/s</strong></div>
+                    <div class="race-settings-wide"><span>Required tyre compounds</span><strong>Racing Soft + Medium + Hard</strong></div>
+                    <div class="race-settings-wide"><span>Penalties</span><strong>Track limits only</strong></div>
                 </div>
             </div>
 
