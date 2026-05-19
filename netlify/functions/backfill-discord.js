@@ -96,7 +96,43 @@ exports.handler = async (event) => {
       { headers: { Authorization: `Bearer ${NETLIFY_AUTH}` } }
     );
     if (!subsResp.ok) throw new Error(`Submissions fetch failed: ${subsResp.status}`);
-    const subs = await subsResp.json();
+    const subsRaw = await subsResp.json();
+
+    // 2b. Dedupe by PSN ID (case-insensitive), keeping the most recent
+    // submission per driver. Many drivers re-submit the form to change cars,
+    // so without this we'd process them multiple times and hit rate limits.
+    const subs = (() => {
+      const sorted = subsRaw
+        .filter((s) => s && s.data && (s.data.psn_id || '').trim())
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const seen = new Set();
+      const out = [];
+      for (const s of sorted) {
+        const key = s.data.psn_id.trim().toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(s);
+      }
+      return out;
+    })();
+
+    // Helper: a Discord-aware fetch that retries 429s once, respecting
+    // the Retry-After header, and proactively throttles when the bucket
+    // is almost empty.
+    async function discordFetch(url, options) {
+      let resp = await fetch(url, options);
+      if (resp.status === 429) {
+        const retryAfter = parseFloat(resp.headers.get('retry-after') || '2');
+        await new Promise((r) => setTimeout(r, Math.ceil(retryAfter * 1000) + 250));
+        resp = await fetch(url, options);
+      }
+      const remaining = parseInt(resp.headers.get('x-ratelimit-remaining') || '5', 10);
+      const resetAfter = parseFloat(resp.headers.get('x-ratelimit-reset-after') || '0');
+      if (remaining <= 1 && resetAfter > 0) {
+        await new Promise((r) => setTimeout(r, Math.ceil(resetAfter * 1000) + 200));
+      }
+      return resp;
+    }
 
     // 3. Walk through submissions and run role-assignment for each one.
     const results = [];
@@ -114,14 +150,14 @@ exports.handler = async (event) => {
         continue;
       }
 
-      // Tiny delay to be polite to the Discord rate limiter.
-      await new Promise((r) => setTimeout(r, 250));
+      // Base pacing — Discord's member-search bucket is tight, ~1 req/s.
+      await new Promise((r) => setTimeout(r, 1100));
 
       try {
         const searchUrl =
           `${DISCORD_API}/guilds/${GUILD_ID}/members/search` +
           `?query=${encodeURIComponent(wanted)}&limit=10`;
-        const searchResp = await fetch(searchUrl, {
+        const searchResp = await discordFetch(searchUrl, {
           headers: { Authorization: `Bot ${BOT_TOKEN}` },
         });
         if (!searchResp.ok) {
@@ -152,7 +188,7 @@ exports.handler = async (event) => {
           continue;
         }
 
-        const roleResp = await fetch(
+        const roleResp = await discordFetch(
           `${DISCORD_API}/guilds/${GUILD_ID}/members/${userId}/roles/${ROLE_ID}`,
           { method: 'PUT', headers: { Authorization: `Bot ${BOT_TOKEN}` } }
         );
