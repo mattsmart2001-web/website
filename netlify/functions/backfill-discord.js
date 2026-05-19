@@ -43,11 +43,19 @@ exports.handler = async (event) => {
     };
   }
   if (provided !== BACKFILL) {
+    const fp = (s) => s ? `${s[0]}…${s[s.length - 1]}` : '';
     return {
       statusCode: 401,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        error: 'Token mismatch — the ?token= value does not equal the BACKFILL_TOKEN env var exactly. Watch for spaces, capitalisation, or stale browser cache after redeploying.',
+        error: 'Token mismatch — the ?token= value does not equal the BACKFILL_TOKEN env var exactly.',
+        debug: {
+          provided_length: provided.length,
+          expected_length: BACKFILL.length,
+          provided_fingerprint: fp(provided),
+          expected_fingerprint: fp(BACKFILL),
+          note: 'Fingerprints show only the first…last character of each value. If lengths differ, something is mangling one of them (URL encoding, trailing newline, etc.). If lengths match but fingerprints differ, the two strings are literally different.',
+        },
       }),
     };
   }
