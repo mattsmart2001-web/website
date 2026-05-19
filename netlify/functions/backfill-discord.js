@@ -22,8 +22,8 @@ const FORM_NAME   = 'nordschleife-24h-signup';
  *   BACKFILL_TOKEN          shared secret protecting this endpoint
  */
 exports.handler = async (event) => {
-  const BACKFILL = process.env.BACKFILL_TOKEN;
-  const provided = (event.queryStringParameters || {}).token;
+  const BACKFILL = (process.env.BACKFILL_TOKEN || '').trim();
+  const provided = ((event.queryStringParameters || {}).token || '').trim();
   if (!BACKFILL) {
     return {
       statusCode: 500,
