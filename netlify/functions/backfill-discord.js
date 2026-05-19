@@ -24,11 +24,31 @@ const FORM_NAME   = 'nordschleife-24h-signup';
 exports.handler = async (event) => {
   const BACKFILL = process.env.BACKFILL_TOKEN;
   const provided = (event.queryStringParameters || {}).token;
-  if (!BACKFILL || provided !== BACKFILL) {
+  if (!BACKFILL) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        error: 'BACKFILL_TOKEN env var is not set on this Netlify site. Add it under Site configuration → Environment variables, then trigger a redeploy.',
+      }),
+    };
+  }
+  if (!provided) {
     return {
       statusCode: 401,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Missing or invalid token' }),
+      body: JSON.stringify({
+        error: 'No ?token= query parameter. Call this endpoint with ?token=<your BACKFILL_TOKEN value>.',
+      }),
+    };
+  }
+  if (provided !== BACKFILL) {
+    return {
+      statusCode: 401,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        error: 'Token mismatch — the ?token= value does not equal the BACKFILL_TOKEN env var exactly. Watch for spaces, capitalisation, or stale browser cache after redeploying.',
+      }),
     };
   }
 
