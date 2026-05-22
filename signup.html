@@ -408,6 +408,18 @@
             letter-spacing: 0.15em;
             text-shadow: none;
         }
+        .driver-make.has-image {
+            background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.6));
+            padding: 0;
+            overflow: hidden;
+        }
+        .driver-make.has-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            border-radius: inherit;
+        }
         .driver-info {
             display: flex;
             flex-direction: column;
@@ -1924,6 +1936,34 @@
                 const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
                 return lum > 0.6 ? '#0a0e15' : '#ffffff';
             }
+            // Slugify a car name for /car-images/{slug}.png lookups.
+            function carSlug(car) {
+                return (car || '')
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                    .replace(/['']/g, '')
+                    .replace(/[()]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            }
+            // After rendering, attempt to upgrade each badge with a car image.
+            function upgradeBadges() {
+                document.querySelectorAll('.driver-make[data-slug]').forEach((badge) => {
+                    if (badge.classList.contains('has-image')) return;
+                    const slug = badge.dataset.slug;
+                    if (!slug) return;
+                    const probe = new Image();
+                    probe.src = `/car-images/${slug}.png`;
+                    probe.onload = () => {
+                        badge.classList.add('has-image');
+                        const el = document.createElement('img');
+                        el.src = `/car-images/${slug}.png`;
+                        el.alt = '';
+                        badge.innerHTML = '';
+                        badge.appendChild(el);
+                    };
+                });
+            }
 
             function renderTopPicks(drivers) {
                 const tally = new Map();
@@ -1993,7 +2033,8 @@
 
                     let badge;
                     if (make) {
-                        badge = `<div class="driver-make" style="background:${make.color};color:${textOn(make.color)}">${escapeHtml(make.short)}</div>`;
+                        const slug = carSlug(car);
+                        badge = `<div class="driver-make" data-slug="${escapeHtml(slug)}" style="background:${make.color};color:${textOn(make.color)}">${escapeHtml(make.short)}</div>`;
                     } else if (undecided) {
                         badge = `<div class="driver-make is-undecided">?</div>`;
                     } else {
@@ -2038,6 +2079,7 @@
                 const filtered = applyFilterAndSort(allDrivers);
                 renderGrid(filtered);
                 renderStats(allDrivers);
+                upgradeBadges();
             }
 
             function loadDrivers(isAutoRefresh) {

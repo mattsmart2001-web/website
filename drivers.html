@@ -349,6 +349,18 @@
             letter-spacing: 0.15em;
             text-shadow: none;
         }
+        .driver-card .make-badge.has-image {
+            background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.6));
+            padding: 0;
+            overflow: hidden;
+        }
+        .driver-card .make-badge.has-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            border-radius: inherit;
+        }
         .driver-card .psn {
             font-family: 'Anton', sans-serif;
             font-size: clamp(1.1rem, 2.1vw, 1.4rem);
@@ -598,6 +610,36 @@
                     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
                 }[c]));
             }
+            // Convert a car name to a filename slug for /car-images/{slug}.png.
+            function carSlug(car) {
+                return (car || '')
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                    .replace(/['']/g, '')
+                    .replace(/[()]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            }
+            // After rendering badges, try to upgrade each one with a car
+            // image from /car-images/{slug}.png. Silent failure leaves the
+            // 3-letter badge in place.
+            function upgradeBadges() {
+                document.querySelectorAll('.make-badge[data-slug]').forEach((badge) => {
+                    if (badge.classList.contains('has-image')) return;
+                    const slug = badge.dataset.slug;
+                    if (!slug) return;
+                    const probe = new Image();
+                    probe.src = `/car-images/${slug}.png`;
+                    probe.onload = () => {
+                        badge.classList.add('has-image');
+                        const el = document.createElement('img');
+                        el.src = `/car-images/${slug}.png`;
+                        el.alt = '';
+                        badge.innerHTML = '';
+                        badge.appendChild(el);
+                    };
+                });
+            }
             function animateCount(el, to) {
                 const dur = 900;
                 const start = performance.now();
@@ -619,7 +661,8 @@
                 const make = undecided ? null : getMake(car);
                 let badge, accent = 'transparent';
                 if (make) {
-                    badge = `<div class="make-badge" style="background:${make.color};color:${textOn(make.color)}">${esc(make.short)}</div>`;
+                    const slug = carSlug(car);
+                    badge = `<div class="make-badge" data-slug="${esc(slug)}" style="background:${make.color};color:${textOn(make.color)}">${esc(make.short)}</div>`;
                     accent = make.color;
                 } else {
                     badge = `<div class="make-badge is-undecided">TBC</div>`;
@@ -721,7 +764,10 @@
                     .join('');
             }
 
-            function rerender() { renderGrid(applyFilterAndSort(allDrivers)); }
+            function rerender() {
+                renderGrid(applyFilterAndSort(allDrivers));
+                upgradeBadges();
+            }
 
             fetch('/.netlify/functions/signups')
                 .then((r) => r.ok ? r.json() : Promise.reject(r.status))
