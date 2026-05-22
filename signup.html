@@ -559,6 +559,39 @@
             text-align: center;
             line-height: 1.5;
         }
+        .see-drivers-link {
+            display: block;
+            margin-top: 1rem;
+            text-align: center;
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--color-primary);
+            text-decoration: none;
+            padding: 0.4rem 0;
+            transition: color 0.2s;
+        }
+        .see-drivers-link:hover {
+            color: var(--color-text);
+        }
+        .drivers-fullpage-link {
+            display: inline-block;
+            margin-top: 0.85rem;
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--color-primary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .drivers-fullpage-link:hover {
+            color: var(--color-text);
+            text-decoration: underline;
+        }
 
         .signup-success {
             display: none;
@@ -1184,6 +1217,7 @@
             <a href="/#shop">Shop</a>
             <a href="/#tools">Tools</a>
             <a href="/signup.html">2026 Nords 24 Sign Up</a>
+            <a href="/drivers.html">Drivers</a>
             <a href="/#contact">Contact</a>
         </div>
         <a class="live-button" id="liveButton"
@@ -1500,6 +1534,8 @@
 
                 <button type="submit" class="btn btn-primary signup-submit">Sign Up</button>
 
+                <a href="/drivers.html" class="see-drivers-link">See who's already entered →</a>
+
                 <p class="signup-disclaimer">By signing up you agree to be contacted about this event. Your details won't be shared outside of race admin.</p>
             </form>
 
@@ -1523,6 +1559,7 @@
             <div class="drivers-header">
                 <h2>Drivers Entered <span class="drivers-count" id="driversCount">—</span></h2>
                 <p class="drivers-help">Real-time list of who's in the hat. Selected drivers will be drawn live on the SparksTheory stream on 12 June 2026.</p>
+                <a href="/drivers.html" class="drivers-fullpage-link">View as full page →</a>
                 <div class="drivers-stats" id="driversStats" hidden></div>
             </div>
 
@@ -1629,6 +1666,7 @@
                     <a href="/#shop">Shop</a>
                     <a href="/#tools">Tools</a>
                     <a href="/signup.html">2026 Nords 24 Sign Up</a>
+                    <a href="/drivers.html">Drivers</a>
                     <a href="/#contact">Contact</a>
                 </div>
                 <div class="footer-social">
