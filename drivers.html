@@ -151,6 +151,96 @@
             .stat-trio { grid-template-columns: 1fr; }
         }
 
+        /* Manufacturer popularity chart */
+        .mfr-chart-wrap {
+            background: #060910;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        .mfr-chart {
+            max-width: 1100px;
+            margin: 0 auto 1.25rem;
+            padding: 1.5rem 1.5rem 1.25rem;
+            background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+        }
+        .mfr-chart[hidden] { display: none !important; }
+        .mfr-chart-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .mfr-chart-header h2 {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--color-text);
+            margin: 0;
+            text-indent: 0.3em;
+        }
+        .mfr-chart-sub {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.7rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--color-text-muted);
+        }
+        .mfr-bars {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem 1.5rem;
+        }
+        @media (max-width: 640px) {
+            .mfr-bars { grid-template-columns: 1fr; }
+        }
+        .mfr-row {
+            display: grid;
+            grid-template-columns: 90px 1fr 34px;
+            align-items: center;
+            gap: 0.7rem;
+            font-size: 0.8rem;
+        }
+        .mfr-name {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-weight: 700;
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--color-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mfr-track {
+            position: relative;
+            height: 12px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .mfr-fill {
+            position: absolute;
+            inset: 0 auto 0 0;
+            border-radius: 999px;
+            background: var(--mfr-color, var(--color-primary));
+            box-shadow: 0 0 14px rgba(255,255,255,0.05);
+            transition: width 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+        }
+        .mfr-count {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-weight: 700;
+            color: var(--color-text);
+            font-size: 0.85rem;
+            text-align: right;
+        }
+
         /* Top picks pill */
         .top-picks-wrap {
             background: #060910;
@@ -466,6 +556,17 @@
         </div>
     </section>
 
+    <!-- Manufacturer popularity chart -->
+    <section class="mfr-chart-wrap">
+        <div class="mfr-chart" id="mfrChart" hidden>
+            <div class="mfr-chart-header">
+                <h2>Field by Manufacturer</h2>
+                <span class="mfr-chart-sub" id="mfrChartSub"></span>
+            </div>
+            <div class="mfr-bars" id="mfrBars"></div>
+        </div>
+    </section>
+
     <!-- Top picks -->
     <section class="top-picks-wrap">
         <div class="top-picks" id="topPicks" hidden></div>
@@ -701,6 +802,58 @@
                 animateCount(statM, makes.size);
             }
 
+            function renderMfrChart(drivers) {
+                const chart    = document.getElementById('mfrChart');
+                const barsEl   = document.getElementById('mfrBars');
+                const subEl    = document.getElementById('mfrChartSub');
+                if (!chart || !barsEl) return;
+
+                const counts = new Map();
+                let totalCounted = 0;
+                drivers.forEach((d) => {
+                    const car = (d.preferred_car || '').trim();
+                    if (isUndecided(car)) return;
+                    const m = getMake(car);
+                    if (!m) return;
+                    const key = m.short;
+                    if (!counts.has(key)) counts.set(key, { count: 0, color: m.color });
+                    counts.get(key).count += 1;
+                    totalCounted += 1;
+                });
+                if (!counts.size) {
+                    chart.hidden = true;
+                    return;
+                }
+
+                const rows = [...counts.entries()]
+                    .map(([name, v]) => ({ name, count: v.count, color: v.color }))
+                    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+                const max = rows[0].count;
+                subEl.textContent = `${rows.length} ${rows.length === 1 ? 'make' : 'makes'} · ${totalCounted} car${totalCounted === 1 ? '' : 's'}`;
+
+                barsEl.innerHTML = rows.map((r) => {
+                    const pct = Math.round((r.count / max) * 100);
+                    return `
+                        <div class="mfr-row">
+                            <span class="mfr-name">${esc(r.name)}</span>
+                            <div class="mfr-track"><div class="mfr-fill" style="--mfr-color:${r.color};width:0"></div></div>
+                            <span class="mfr-count">${r.count}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                chart.hidden = false;
+                // Animate bars in on the next frame so the CSS transition fires.
+                requestAnimationFrame(() => {
+                    barsEl.querySelectorAll('.mfr-fill').forEach((el, i) => {
+                        const r = rows[i];
+                        const pct = Math.round((r.count / max) * 100);
+                        el.style.width = pct + '%';
+                    });
+                });
+            }
+
             function renderTopPicks(drivers) {
                 const tally = new Map();
                 drivers.forEach((d) => {
@@ -785,6 +938,7 @@
                     }
                     allDrivers = drivers;
                     renderStats(drivers);
+                    renderMfrChart(drivers);
                     renderTopPicks(drivers);
                     controls.hidden = false;
                     searchEl.addEventListener('input', rerender);
