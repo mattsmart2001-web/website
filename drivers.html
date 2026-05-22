@@ -632,6 +632,10 @@
                     probe.src = `/car-images/${slug}.png`;
                     probe.onload = () => {
                         badge.classList.add('has-image');
+                        // Clear the inline manufacturer-colour background so
+                        // the white .has-image rule actually wins.
+                        badge.style.background = '';
+                        badge.style.color = '';
                         const el = document.createElement('img');
                         el.src = `/car-images/${slug}.png`;
                         el.alt = '';

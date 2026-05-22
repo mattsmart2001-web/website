@@ -1956,6 +1956,8 @@
                     probe.src = `/car-images/${slug}.png`;
                     probe.onload = () => {
                         badge.classList.add('has-image');
+                        badge.style.background = '';
+                        badge.style.color = '';
                         const el = document.createElement('img');
                         el.src = `/car-images/${slug}.png`;
                         el.alt = '';
