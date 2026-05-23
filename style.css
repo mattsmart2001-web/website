@@ -744,6 +744,25 @@ body {
     filter: invert(1) brightness(1.1) drop-shadow(0 0 10px rgba(14, 165, 233, 0.5));
 }
 
+/* "Event Partner" label that sits above a floating Sim-Lab badge on the
+   event-specific pages (signup, drivers, lights-out). */
+.event-partner-label {
+    font-family: var(--font-display, 'Orbitron', sans-serif);
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+    text-align: center;
+    background: rgba(10, 14, 18, 0.9);
+    padding: 0.32rem 0.6rem 0.3rem;
+    border-radius: 999px;
+    border: 1px solid rgba(14, 165, 233, 0.35);
+    backdrop-filter: blur(10px);
+    text-indent: 0.3em;
+    margin-bottom: -0.5rem;
+}
+
 /* ===== ABOUT SECTION ===== */
 .about-content {
     display: grid;
