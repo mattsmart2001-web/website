@@ -763,6 +763,22 @@ body {
     margin-bottom: -0.5rem;
 }
 
+/* Event-partner variant — single big floating badge on event pages
+   (signup, drivers, lights-out). Doesn't affect the sponsor trio
+   already in place on index.html. */
+.sponsor-badges.is-event-partner .sponsor-badge {
+    width: 130px;
+    height: 130px;
+    padding: 1.4rem;
+    border-width: 2.5px;
+}
+.sponsor-badges.is-event-partner .event-partner-label {
+    font-size: 0.78rem;
+    padding: 0.5rem 1rem 0.45rem;
+    letter-spacing: 0.35em;
+    margin-bottom: -0.65rem;
+}
+
 /* ===== ABOUT SECTION ===== */
 .about-content {
     display: grid;
