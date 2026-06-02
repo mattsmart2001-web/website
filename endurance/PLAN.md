@@ -227,9 +227,9 @@ UNIQUE (team_id, driver_id, season_id)
 #### `seasons`
 ```
 id                uuid PK
-year              int unique          -- 2026, 2027, …
-name              text                -- "2026 Championship"
-slug              text unique         -- "2026"
+year              int unique          -- 2027, 2028, …
+name              text                -- "2027 Championship"
+slug              text unique         -- "2027"
 starts_on         date
 ends_on           date
 points_system_id  uuid FK points_systems(id)
@@ -441,7 +441,7 @@ category          enum('most_wins','most_championships','highest_rating',
 driver_id         uuid FK drivers(id) NULL
 team_id           uuid FK teams(id) NULL
 value             text                  -- "47 wins", "5:19.55", …
-context           text                  -- "set at Spa 6h, 2026"
+context           text                  -- "set at Spa 6h, 2027"
 event_id          uuid FK events(id) NULL
 sort_order        int default 0
 auto_generated    boolean default false
@@ -523,12 +523,12 @@ role) values (<your auth.users.id>, 'admin')`. Documented in the README.
 ```
 /endurance/                              Home
 /endurance/seasons/                      Season index (all seasons)
-/endurance/seasons/2026/                 Current season hub
-/endurance/seasons/2026/calendar/        Calendar
-/endurance/seasons/2026/standings/       Standings (drivers/teams/makes tabs)
-/endurance/seasons/2026/standings/teams/
-/endurance/seasons/2026/standings/manufacturers/
-/endurance/races/spa-6h-2026/            Race centre
+/endurance/seasons/2027/                 Current season hub
+/endurance/seasons/2027/calendar/        Calendar
+/endurance/seasons/2027/standings/       Standings (drivers/teams/makes tabs)
+/endurance/seasons/2027/standings/teams/
+/endurance/seasons/2027/standings/manufacturers/
+/endurance/races/spa-6h-2027/            Race centre
 /endurance/teams/                        Teams index
 /endurance/teams/<slug>/                 Team profile
 /endurance/drivers/                      Drivers index
@@ -603,13 +603,13 @@ happening now, what's next.
 
 **Data:** mostly from materialized views + a couple of `events` queries.
 
-### 6.2 Championship (`/endurance/seasons/2026/`)
+### 6.2 Championship (`/endurance/seasons/2027/`)
 
 Per-season hub: hero, description, points system explainer, season
 results so far, links into Calendar/Standings/Drivers/Teams scoped to
 this season, season news.
 
-### 6.3 Calendar (`/endurance/seasons/2026/calendar/`)
+### 6.3 Calendar (`/endurance/seasons/2027/calendar/`)
 
 Vertical timeline. Each round: round number, name, circuit, country
 flag, date, duration, status (scheduled / done / next-up highlight).
@@ -632,7 +632,7 @@ Stewards · Media**.
   ruling, expandable content.
 - **Media**: image gallery + embedded videos for this event.
 
-### 6.5 Standings (`/endurance/seasons/2026/standings/`)
+### 6.5 Standings (`/endurance/seasons/2027/standings/`)
 
 Three tabs: **Drivers · Teams · Manufacturers**. Each is a ranked
 table with points, wins, podiums, poles, fastest laps, starts. Click
@@ -913,7 +913,7 @@ Each phase ends with a shippable artefact behind the hidden gate.
 |---|---|---|---|
 | **1** | This plan doc + folder scaffolding + `robots.txt` update | 3 | – |
 | **2** | Supabase project setup. Apply full schema migration. Bootstrap admin user. README updated with credentials handling. | 4 | DB password and project info from you |
-| **3** | Hidden landing page at `/endurance/` (coming-soon style, GTEC branding, planned 2026 calendar teaser) | 3 | Phase 1 |
+| **3** | Hidden landing page at `/endurance/` (coming-soon style, GTEC branding, planned 2027 calendar teaser) | 3 | Phase 1 |
 | **4a** | Admin auth + login page + protected admin shell. CRUD for **Seasons**, **Manufacturers**, **Teams**, **Drivers**, **team_seasons** (strict manufacturer-lock registration). | 12 | Phase 2 |
 | **4b** | Driver self-serve **profile portal** at `/endurance/profile/`. Claim-link flow. Driver edits bio / photo / socials only. RLS rules for the `driver` role. | 6 | Phase 4a |
 | **5** | Admin CRUD for **Events** + **Entries** + **Entry Drivers** (with `team_seasons` manufacturer-lock validation). Public Calendar + Race-Centre Overview page. | 14 | Phase 4a |
@@ -922,7 +922,7 @@ Each phase ends with a shippable artefact behind the hidden gate.
 | **8** | **Elo engine** + driver rating snapshots + rating history graph. | 10 | Phase 7 |
 | **9** | **Statistics centre** + **Hall of Fame** auto-records. | 10 | Phase 8 |
 | **10** | **News CMS** + **Media gallery** + **Rules** editor. | 14 | Phase 4 |
-| **11** | Seed data: one complete fictional 2026 season (drivers, teams, 6 events with full results) so the platform can be demoed. | 8 | Phase 6 |
+| **11** | Seed data: one complete fictional 2027 season (drivers, teams, 6 events with full results) so the platform can be demoed. | 8 | Phase 6 |
 | **12** | Steward decisions + penalty workflow polish. | 6 | Phase 6 |
 | **13** | Pre-launch QA, accessibility pass, mobile polish, real performance audit. | 6 | All |
 | **14** | Launch: drop robots disallow, add nav entry, submit sitemap, announce. | 1 | Owner ready |
@@ -960,7 +960,7 @@ Phases 11–14 are pre-launch sealing.
 11. **Hidden-mode protection.** No HTTP basic-auth gate — trust `noindex` + `Disallow` in `robots.txt` + obscure URL. Saves us the edge-function complexity but means anyone who knows the URL can read.
 12. **Domain.** Stay on `sparkstheory.co.uk/endurance/`.
 13. **Supabase project.** New project (clean isolation from the main site's Supabase).
-14. **Historical data.** None — 2026 starts fresh.
+14. **Historical data.** None — 2027 starts fresh.
 15. **Design reference.** Blend of FIA WEC + F1 stats sites: dark theme, dense data tables, professional motorsport feel.
 
 ### Implications of decision #8 (driver self-serve portal)
