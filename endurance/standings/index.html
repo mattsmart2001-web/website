@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Standings — Gran Turismo GTEC</title>
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --silver: #cbd5e1;
+            --bronze: #cd7f32;
+            --green: #22c55e;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Nav */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.1rem 2rem;
+            background: rgba(5,6,8,0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-brand {
+            font-family: 'Anton', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            text-decoration: none;
+            color: var(--text);
+            text-indent: 0.3em;
+        }
+        .nav-brand span { color: var(--gold); }
+        .nav-links { display: flex; gap: 1.25rem; align-items: center; }
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            transition: color 0.15s;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-links a.active { color: var(--gold); }
+
+        /* Hero */
+        .hero {
+            padding: 3rem 2rem 1.5rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .hero-eyebrow {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.58rem;
+            letter-spacing: 0.45em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 0.75rem;
+            text-indent: 0.45em;
+        }
+        .hero-title {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            line-height: 1;
+            margin-bottom: 0.4rem;
+        }
+        .hero-sub { color: var(--muted); font-size: 0.88rem; }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .tab {
+            padding: 0.9rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+        /* Content */
+        .content {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 4rem;
+        }
+
+        /* Standings table */
+        .standings {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead th {
+            padding: 0.85rem 1.25rem;
+            text-align: left;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        thead th.right { text-align: right; }
+        thead th.center { text-align: center; }
+
+        tbody td {
+            padding: 0.95rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: rgba(255,255,255,0.02); }
+        td.right { text-align: right; }
+        td.center { text-align: center; }
+        td.muted { color: var(--muted); font-size: 0.85rem; }
+
+        /* Position cell */
+        .pos {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.2rem;
+            width: 50px;
+            color: var(--muted);
+        }
+        .pos.p1 { color: var(--gold); }
+        .pos.p2 { color: var(--silver); }
+        .pos.p3 { color: var(--bronze); }
+
+        /* Name + meta */
+        .name {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.92rem;
+        }
+        .driver-row .name { font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.03em; }
+        .meta-line {
+            font-size: 0.74rem;
+            color: var(--muted);
+            margin-top: 0.15rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .swatch {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            border: 1px solid rgba(255,255,255,0.15);
+            flex-shrink: 0;
+        }
+        .career-num {
+            display: inline-block;
+            background: rgba(255,209,102,0.12);
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.1rem 0.45rem;
+            border-radius: 3px;
+            margin-right: 0.45rem;
+        }
+
+        /* Points cell */
+        .points {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.3rem;
+            color: var(--gold);
+            letter-spacing: 0.02em;
+        }
+
+        .state-msg {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+        .state-msg h3 {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.3rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .state-msg p { color: var(--muted); font-size: 0.88rem; }
+        .loading {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--muted);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 700px) {
+            .nav { padding: 1rem; }
+            .hero { padding: 2rem 1rem 1rem; }
+            .tab-bar { padding: 0 1rem; }
+            .content { padding: 1rem 0.5rem 3rem; }
+            .standings { border-radius: 8px; border-left: none; border-right: none; }
+            thead th, tbody td { padding: 0.7rem 0.6rem; }
+            .pos { width: 36px; font-size: 1rem; }
+            .points { font-size: 1.05rem; }
+            .hide-mob { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="nav">
+    <a class="nav-brand" href="/endurance/">Gran Turismo<span> GTEC</span></a>
+    <div class="nav-links">
+        <a href="/endurance/">Home</a>
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/standings/" class="active">Standings</a>
+    </div>
+</nav>
+
+<div class="hero">
+    <div class="hero-eyebrow">Championship</div>
+    <div class="hero-title" id="season-title">Standings</div>
+    <div class="hero-sub" id="season-sub">&nbsp;</div>
+</div>
+
+<div class="tab-bar">
+    <button class="tab active" data-tab="drivers" onclick="setTab('drivers')">Drivers</button>
+    <button class="tab" data-tab="teams" onclick="setTab('teams')">Teams</button>
+</div>
+
+<div class="content">
+    <div id="panel">
+        <div class="loading">Loading…</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+
+let _drivers = [];
+let _teams   = [];
+let _season  = null;
+let _tab     = 'drivers';
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function posCls(p) {
+    if (p === 1) return 'pos p1';
+    if (p === 2) return 'pos p2';
+    if (p === 3) return 'pos p3';
+    return 'pos';
+}
+
+function setTab(t) {
+    _tab = t;
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+    render();
+}
+
+function render() {
+    const panel = document.getElementById('panel');
+    if (_tab === 'drivers') renderDrivers(panel);
+    else renderTeams(panel);
+}
+
+function renderDrivers(panel) {
+    if (!_drivers.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Results Yet</h3><p>Standings will appear here once race results are recorded.</p></div>`;
+        return;
+    }
+    const rows = _drivers.map((d, i) => {
+        const pos = i + 1;
+        const num = d.career_number ? `<span class="career-num">#${d.career_number}</span>` : '';
+        const teamLine = d.team_name
+            ? `<div class="meta-line">${d.brand_color ? `<span class="swatch" style="background:${esc(d.brand_color)}"></span>` : ''}${esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</div>`
+            : '';
+        return `<tr class="driver-row">
+            <td class="${posCls(pos)}">${pos}</td>
+            <td>
+                <div class="name">${num}${esc(d.driver_name)}</div>
+                ${teamLine}
+            </td>
+            <td class="muted center hide-mob">${d.races}</td>
+            <td class="muted center hide-mob">${d.wins}</td>
+            <td class="muted center hide-mob">${d.podiums}</td>
+            <td class="muted center hide-mob">${d.poles}</td>
+            <td class="muted center hide-mob">${d.fastest_laps}</td>
+            <td class="right"><span class="points">${Number(d.points).toFixed(d.points % 1 === 0 ? 0 : 1)}</span></td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:50px">#</th>
+                    <th>Driver</th>
+                    <th class="center hide-mob">Races</th>
+                    <th class="center hide-mob">Wins</th>
+                    <th class="center hide-mob">Pod</th>
+                    <th class="center hide-mob">Pole</th>
+                    <th class="center hide-mob">FL</th>
+                    <th class="right">Points</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+}
+
+function renderTeams(panel) {
+    if (!_teams.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Results Yet</h3><p>Standings will appear here once race results are recorded.</p></div>`;
+        return;
+    }
+    const rows = _teams.map((t, i) => {
+        const pos = i + 1;
+        const mfrLine = t.manufacturer_name
+            ? `<div class="meta-line">${t.brand_color ? `<span class="swatch" style="background:${esc(t.brand_color)}"></span>` : ''}${esc(t.manufacturer_name)}</div>`
+            : '';
+        return `<tr>
+            <td class="${posCls(pos)}">${pos}</td>
+            <td>
+                <div class="name">${esc(t.team_name)}</div>
+                ${mfrLine}
+            </td>
+            <td class="muted center hide-mob">${t.races}</td>
+            <td class="muted center hide-mob">${t.wins}</td>
+            <td class="muted center hide-mob">${t.podiums}</td>
+            <td class="muted center hide-mob">${t.poles}</td>
+            <td class="muted center hide-mob">${t.fastest_laps}</td>
+            <td class="right"><span class="points">${t.points}</span></td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:50px">#</th>
+                    <th>Team</th>
+                    <th class="center hide-mob">Races</th>
+                    <th class="center hide-mob">Wins</th>
+                    <th class="center hide-mob">Pod</th>
+                    <th class="center hide-mob">Pole</th>
+                    <th class="center hide-mob">FL</th>
+                    <th class="right">Points</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+}
+
+async function load() {
+    const { data: season } = await sb.from('seasons')
+        .select('id, name, year')
+        .eq('is_active', true)
+        .maybeSingle();
+
+    if (!season) {
+        document.getElementById('season-sub').textContent = 'No active season.';
+        document.getElementById('panel').innerHTML =
+            `<div class="state-msg"><h3>Coming Soon</h3><p>Standings will appear here once the season is set up.</p></div>`;
+        return;
+    }
+    _season = season;
+    document.getElementById('season-title').textContent = season.name;
+    document.getElementById('season-sub').textContent = `${season.year} Championship · Live standings`;
+
+    const [d, t] = await Promise.all([
+        sb.from('driver_standings').select('*').eq('season_id', season.id),
+        sb.from('team_standings').select('*').eq('season_id', season.id),
+    ]);
+    _drivers = (d.data || []).sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
+    _teams   = (t.data || []).sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
+    render();
+}
+
+load();
+</script>
+</body>
+</html>

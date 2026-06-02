@@ -1478,6 +1478,9 @@ async function renderEvents() {
                 <td>${evtStatusBadge(e.status)}</td>
                 <td><div class="row-actions">
                     <button class="btn-icon" onclick="viewEventEntries('${e.id}','${esc(e.name)}','${e.season_id}')">Entries</button>
+                    <button class="btn-icon" onclick="viewEventQualifying('${e.id}','${esc(e.name)}')">Qualifying</button>
+                    <button class="btn-icon" onclick="viewEventResults('${e.id}','${esc(e.name)}')">Results</button>
+                    <button class="btn-icon" onclick="viewEventPenalties('${e.id}','${esc(e.name)}')">Penalties</button>
                     <button class="btn-icon" onclick="editEvent('${e.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteEvent('${e.id}','${esc(e.name)}')">Delete</button>
                 </div></td>
@@ -1830,6 +1833,367 @@ async function removeEntryDriver(entryDriverId, eventId, eventName, seasonId) {
     if (error) { toast(error.message, 'error'); return; }
     toast('Driver removed.', 'success');
     await viewEventEntries(eventId, eventName, seasonId);
+}
+
+
+// ============================================================
+// 15. Qualifying (sub-panel of Events)
+// ============================================================
+function parseLapTime(s) {
+    if (!s) return null;
+    s = String(s).trim();
+    if (!s) return null;
+    const m = s.match(/^(?:(\d+):)?(\d+(?:\.\d+)?)$/);
+    if (!m) return null;
+    const min = parseInt(m[1] || '0', 10);
+    const sec = parseFloat(m[2]);
+    return Math.round((min * 60 + sec) * 1000);
+}
+
+function fmtLapTime(ms) {
+    if (ms == null || ms === '') return '';
+    const totalSec = ms / 1000;
+    const min = Math.floor(totalSec / 60);
+    const sec = (totalSec - min * 60).toFixed(3).padStart(6, '0');
+    return min > 0 ? `${min}:${sec}` : sec;
+}
+
+async function viewEventQualifying(eventId, eventName) {
+    const panel = document.getElementById('event-entries-panel');
+    panel.innerHTML = '<div class="loading-state">Loading qualifying…</div>';
+
+    const [entriesRes, quailRes] = await Promise.all([
+        sb.from('entries').select('id, car_number, car_model, teams(name)').eq('event_id', eventId).order('car_number'),
+        sb.from('qualifying_results').select('*').eq('event_id', eventId),
+    ]);
+    if (entriesRes.error) { panel.innerHTML = `<div class="loading-state">${esc(entriesRes.error.message)}</div>`; return; }
+
+    const entries = entriesRes.data || [];
+    const quails  = quailRes.data || [];
+    const qMap    = Object.fromEntries(quails.map(q => [q.entry_id, q]));
+
+    if (entries.length === 0) {
+        panel.innerHTML = `
+            <div class="section-card">
+                <div class="section-card-header"><span class="section-card-title">Qualifying — ${esc(eventName)}</span></div>
+                <div class="empty-state">Add entries first before recording qualifying.</div>
+            </div>`;
+        return;
+    }
+
+    const rows = entries.map(en => {
+        const q = qMap[en.id] || {};
+        return `<tr>
+            <td><strong>#${en.car_number}</strong> <span class="td-muted">${esc(en.teams?.name)}</span></td>
+            <td class="td-muted" style="font-size:0.82rem">${esc(en.car_model)}</td>
+            <td><input type="number" min="1" max="99" data-entry="${en.id}" data-field="position" value="${q.position || ''}" style="width:70px;padding:0.4rem 0.5rem"></td>
+            <td><input type="text" placeholder="1:23.456" data-entry="${en.id}" data-field="best_lap" value="${q.best_lap_ms ? fmtLapTime(q.best_lap_ms) : ''}" style="width:120px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.82rem"></td>
+            <td><input type="text" data-entry="${en.id}" data-field="notes" value="${esc(q.notes || '')}" placeholder="—" style="padding:0.4rem 0.5rem"></td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="section-card">
+            <div class="section-card-header">
+                <span class="section-card-title">Qualifying — ${esc(eventName)}</span>
+                <button class="btn-add" onclick="saveQualifying('${eventId}','${esc(eventName)}')">Save All</button>
+            </div>
+            <table id="qualifying-table"><thead><tr>
+                <th>Entry</th><th>Car</th><th>Pos</th><th>Best Lap</th><th>Notes</th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+}
+
+async function saveQualifying(eventId, eventName) {
+    const inputs = document.querySelectorAll('#qualifying-table input[data-entry]');
+    const map = {};
+    let bad = false;
+    inputs.forEach(inp => {
+        const id = inp.dataset.entry;
+        map[id] = map[id] || { entry_id: id, event_id: eventId };
+        const field = inp.dataset.field;
+        if (field === 'position') {
+            map[id].position = inp.value ? parseInt(inp.value) : null;
+        } else if (field === 'best_lap') {
+            if (inp.value.trim()) {
+                const ms = parseLapTime(inp.value);
+                if (ms == null) { toast(`Invalid lap time: "${inp.value}"`, 'error'); bad = true; }
+                map[id].best_lap_ms = ms;
+            } else {
+                map[id].best_lap_ms = null;
+            }
+        } else if (field === 'notes') {
+            map[id].notes = inp.value.trim() || null;
+        }
+    });
+    if (bad) return;
+
+    const toUpsert = Object.values(map).filter(r => r.position != null || r.best_lap_ms != null || r.notes);
+    const toDelete = Object.values(map).filter(r => r.position == null && r.best_lap_ms == null && !r.notes);
+
+    // Delete cleared rows
+    for (const r of toDelete) {
+        await sb.from('qualifying_results').delete().eq('event_id', eventId).eq('entry_id', r.entry_id);
+    }
+    if (toUpsert.length) {
+        const { error } = await sb.from('qualifying_results').upsert(toUpsert, { onConflict: 'event_id,entry_id' });
+        if (error) { toast(error.message, 'error'); return; }
+    }
+    toast('Qualifying saved.', 'success');
+    await viewEventQualifying(eventId, eventName);
+}
+
+
+// ============================================================
+// 16. Results (sub-panel of Events) + Points Recompute
+// ============================================================
+async function viewEventResults(eventId, eventName) {
+    const panel = document.getElementById('event-entries-panel');
+    panel.innerHTML = '<div class="loading-state">Loading results…</div>';
+
+    const [entriesRes, resultsRes] = await Promise.all([
+        sb.from('entries').select('id, car_number, car_model, teams(name)').eq('event_id', eventId).order('car_number'),
+        sb.from('results').select('*').eq('event_id', eventId),
+    ]);
+    if (entriesRes.error) { panel.innerHTML = `<div class="loading-state">${esc(entriesRes.error.message)}</div>`; return; }
+
+    const entries = entriesRes.data || [];
+    const results = resultsRes.data || [];
+    const rMap    = Object.fromEntries(results.map(r => [r.entry_id, r]));
+
+    if (entries.length === 0) {
+        panel.innerHTML = `
+            <div class="section-card">
+                <div class="section-card-header"><span class="section-card-title">Results — ${esc(eventName)}</span></div>
+                <div class="empty-state">Add entries first before recording results.</div>
+            </div>`;
+        return;
+    }
+
+    const statusOpts = ['classified', 'dnf', 'dsq', 'dns', 'withdrawn'];
+
+    const rows = entries.map(en => {
+        const r = rMap[en.id] || {};
+        const statusSel = statusOpts.map(s =>
+            `<option value="${s}" ${(r.status || 'classified') === s ? 'selected' : ''}>${s}</option>`).join('');
+        return `<tr>
+            <td><strong>#${en.car_number}</strong> <span class="td-muted">${esc(en.teams?.name)}</span></td>
+            <td><input type="number" min="1" max="99" data-entry="${en.id}" data-field="finish_position" value="${r.finish_position || ''}" style="width:60px;padding:0.4rem 0.5rem"></td>
+            <td><input type="number" min="0" data-entry="${en.id}" data-field="laps_completed" value="${r.laps_completed || 0}" style="width:65px;padding:0.4rem 0.5rem"></td>
+            <td><select data-entry="${en.id}" data-field="status" style="padding:0.4rem 0.5rem;font-size:0.82rem">${statusSel}</select></td>
+            <td style="text-align:center"><input type="checkbox" data-entry="${en.id}" data-field="pole_point" ${r.pole_point ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px"></td>
+            <td style="text-align:center"><input type="checkbox" data-entry="${en.id}" data-field="fastest_lap_point" ${r.fastest_lap_point ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px"></td>
+            <td><input type="text" placeholder="—" data-entry="${en.id}" data-field="dnf_reason" value="${esc(r.dnf_reason || '')}" style="padding:0.4rem 0.5rem"></td>
+            <td style="text-align:right;color:var(--gold);font-weight:600">${r.points_awarded ?? 0}</td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="section-card">
+            <div class="section-card-header">
+                <span class="section-card-title">Results — ${esc(eventName)}</span>
+                <div style="display:flex;gap:0.5rem">
+                    <button class="btn-icon" onclick="recomputePoints('${eventId}','${esc(eventName)}')">Recompute Points</button>
+                    <button class="btn-add" onclick="saveResults('${eventId}','${esc(eventName)}')">Save All</button>
+                </div>
+            </div>
+            <table id="results-table"><thead><tr>
+                <th>Entry</th><th>Pos</th><th>Laps</th><th>Status</th><th>Pole</th><th>FL</th><th>DNF Reason</th><th style="text-align:right">Pts</th>
+            </tr></thead><tbody>${rows}</tbody></table>
+            <div style="padding:0.85rem 1.25rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border)">
+                Points are auto-recomputed on save from the season's points system. Pole/FL bonuses apply only to ticked entries.
+            </div>
+        </div>`;
+}
+
+async function saveResults(eventId, eventName) {
+    const rowInputs = document.querySelectorAll('#results-table [data-entry]');
+    const map = {};
+    rowInputs.forEach(inp => {
+        const id = inp.dataset.entry;
+        map[id] = map[id] || { entry_id: id, event_id: eventId };
+        const f = inp.dataset.field;
+        if (inp.type === 'checkbox') {
+            map[id][f] = inp.checked;
+        } else if (f === 'finish_position') {
+            map[id][f] = inp.value ? parseInt(inp.value) : null;
+        } else if (f === 'laps_completed') {
+            map[id][f] = inp.value ? parseInt(inp.value) : 0;
+        } else if (f === 'dnf_reason') {
+            map[id][f] = inp.value.trim() || null;
+        } else {
+            map[id][f] = inp.value || null;
+        }
+    });
+
+    // Pole guard: only one pole per event
+    const poles = Object.values(map).filter(r => r.pole_point);
+    if (poles.length > 1) { toast('Only one entry can have the pole point.', 'error'); return; }
+    const fls = Object.values(map).filter(r => r.fastest_lap_point);
+    if (fls.length > 1) { toast('Only one entry can have the fastest lap point.', 'error'); return; }
+
+    const rows = Object.values(map);
+    const { error } = await sb.from('results').upsert(rows, { onConflict: 'event_id,entry_id' });
+    if (error) { toast(error.message, 'error'); return; }
+
+    // Recompute points
+    const { data: cp, error: cpErr } = await sb.rpc('compute_event_points', { p_event_id: eventId });
+    if (cpErr) { toast('Saved, but points recompute failed: ' + cpErr.message, 'error'); }
+    else if (cp?.error) { toast('Saved, but points recompute failed: ' + cp.error, 'error'); }
+    else toast('Results saved & points recomputed.', 'success');
+
+    await viewEventResults(eventId, eventName);
+}
+
+async function recomputePoints(eventId, eventName) {
+    const { data, error } = await sb.rpc('compute_event_points', { p_event_id: eventId });
+    if (error) { toast(error.message, 'error'); return; }
+    if (data?.error) { toast(data.error, 'error'); return; }
+    toast('Points recomputed.', 'success');
+    await viewEventResults(eventId, eventName);
+}
+
+
+// ============================================================
+// 17. Penalties (sub-panel of Events)
+// ============================================================
+async function viewEventPenalties(eventId, eventName) {
+    const panel = document.getElementById('event-entries-panel');
+    panel.innerHTML = '<div class="loading-state">Loading penalties…</div>';
+
+    const { data, error } = await sb.from('penalties')
+        .select('*, entries(car_number, teams(name)), drivers(display_name)')
+        .eq('event_id', eventId)
+        .order('created_at');
+    if (error) { panel.innerHTML = `<div class="loading-state">${esc(error.message)}</div>`; return; }
+
+    const rows = (data || []).length === 0
+        ? `<tr><td colspan="6"><div class="empty-state">No penalties recorded for this event.</div></td></tr>`
+        : data.map(p => `<tr>
+            <td>${p.entries ? `<strong>#${p.entries.car_number}</strong> ${esc(p.entries.teams?.name || '')}` : '—'}</td>
+            <td class="td-muted">${esc(p.drivers?.display_name) || '—'}</td>
+            <td><span class="badge badge-gold">${esc(p.penalty_type.replace('_',' '))}</span></td>
+            <td class="td-muted">${esc(p.penalty_value) || '—'}</td>
+            <td class="td-muted" style="max-width:280px">${esc(p.reason)}</td>
+            <td><div class="row-actions">
+                <button class="btn-icon danger" onclick="deletePenalty('${p.id}','${eventId}','${esc(eventName)}')">Delete</button>
+            </div></td>
+        </tr>`).join('');
+
+    panel.innerHTML = `
+        <div class="section-card">
+            <div class="section-card-header">
+                <span class="section-card-title">Penalties — ${esc(eventName)}</span>
+                <button class="btn-add" onclick="openAddPenaltyModal('${eventId}','${esc(eventName)}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Penalty
+                </button>
+            </div>
+            <table><thead><tr>
+                <th>Entry</th><th>Driver</th><th>Type</th><th>Value</th><th>Reason</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+}
+
+async function openAddPenaltyModal(eventId, eventName) {
+    const { data: entries } = await sb.from('entries')
+        .select('id, car_number, teams(name), entry_drivers(driver_id, drivers(display_name))')
+        .eq('event_id', eventId)
+        .order('car_number');
+
+    const entryOpts = (entries || []).map(en =>
+        `<option value="${esc(en.id)}">#${en.car_number} — ${esc(en.teams?.name)}</option>`).join('');
+
+    const penaltyTypes = [
+        { value: 'drive_through', label: 'Drive Through' },
+        { value: 'stop_go',       label: 'Stop & Go' },
+        { value: 'time_add',      label: 'Time Added' },
+        { value: 'grid_drop',     label: 'Grid Drop' },
+        { value: 'dsq',           label: 'DSQ' },
+        { value: 'warning',       label: 'Warning' },
+        { value: 'reprimand',     label: 'Reprimand' },
+    ];
+
+    openModal(`Add Penalty — ${esc(eventName)}`,
+        `<form id="entity-form">
+            <div class="form-group">
+                <label>Entry <span class="required">*</span></label>
+                <select id="pen-entry" name="entry_id" required onchange="loadEntryDriversForPenalty(this)">
+                    <option value="">— Select Entry —</option>
+                    ${entryOpts}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Driver (optional)</label>
+                <select name="driver_id" id="pen-driver">
+                    <option value="">— Whole team / unspecified —</option>
+                </select>
+                <div class="form-hint">Select an entry first to populate drivers.</div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Type <span class="required">*</span></label>
+                    ${selectHTML('penalty_type', penaltyTypes, 'time_add')}
+                </div>
+                <div class="form-group">
+                    <label>Value</label>
+                    <input type="text" name="penalty_value" placeholder="+10s, 3 places, etc.">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Reason <span class="required">*</span></label>
+                <textarea name="reason" placeholder="Causing a collision at turn 3…" required></textarea>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="savePenalty('${eventId}','${esc(eventName)}')">Add Penalty</button>`
+    );
+
+    // Cache entries for driver loading
+    window._penaltyEntries = entries || [];
+}
+
+function loadEntryDriversForPenalty(sel) {
+    const entryId = sel.value;
+    const driverSel = document.getElementById('pen-driver');
+    driverSel.innerHTML = '<option value="">— Whole team / unspecified —</option>';
+    const entry = (window._penaltyEntries || []).find(e => e.id === entryId);
+    if (!entry) return;
+    (entry.entry_drivers || []).forEach(ed => {
+        if (!ed.drivers) return;
+        const opt = document.createElement('option');
+        opt.value = ed.driver_id;
+        opt.textContent = ed.drivers.display_name;
+        driverSel.appendChild(opt);
+    });
+}
+
+async function savePenalty(eventId, eventName) {
+    const d = getFormData('entity-form');
+    if (!d.entry_id || !d.penalty_type || !d.reason) {
+        toast('Entry, type and reason are required.', 'error'); return;
+    }
+    const { error } = await sb.from('penalties').insert({
+        event_id: eventId,
+        entry_id: d.entry_id,
+        driver_id: d.driver_id || null,
+        penalty_type: d.penalty_type,
+        penalty_value: d.penalty_value || null,
+        reason: d.reason,
+        issued_by: currentUser.id,
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Penalty added.', 'success');
+    closeModal();
+    await viewEventPenalties(eventId, eventName);
+}
+
+async function deletePenalty(id, eventId, eventName) {
+    if (!confirm('Delete this penalty?')) return;
+    const { error } = await sb.from('penalties').delete().eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Penalty deleted.', 'success');
+    await viewEventPenalties(eventId, eventName);
 }
 
 
