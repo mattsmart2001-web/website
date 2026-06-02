@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Admin Login — Gran Turismo GTEC</title>
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --red: #ef4444;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+        }
+        .logo {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 0.4rem;
+        }
+        .logo span { color: var(--gold); }
+        .subtitle {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 2.5rem;
+            text-indent: 0.4em;
+        }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 0.45rem;
+        }
+        input {
+            display: block;
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 1.25rem;
+        }
+        input:focus { border-color: rgba(255,209,102,0.5); }
+        input::placeholder { color: var(--muted); opacity: 0.6; }
+        .btn {
+            width: 100%;
+            padding: 0.9rem;
+            background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+            color: #1a1300;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: filter 0.2s;
+            margin-top: 0.5rem;
+        }
+        .btn:hover { filter: brightness(1.08); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+        .error {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.4);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #fca5a5;
+            margin-bottom: 1.25rem;
+            display: none;
+        }
+        .back {
+            display: block;
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+            text-decoration: none;
+        }
+        .back:hover { color: var(--text); }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">Gran Turismo<span> GTEC</span></div>
+    <div class="subtitle">Admin Portal</div>
+
+    <div class="error" id="error"></div>
+
+    <form id="login-form">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="admin@example.com" required autocomplete="email">
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+
+        <button class="btn" type="submit" id="submit-btn">Sign In</button>
+    </form>
+
+    <a class="back" href="/endurance/">← Back to GTEC</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+    const { createClient } = window.supabase;
+    const cfg = window.GTEC_CONFIG;
+
+    if (!cfg || cfg.supabaseUrl.includes('YOUR_PROJECT')) {
+        document.getElementById('error').textContent = 'Supabase credentials not configured — fill in endurance/assets/gtec-config.js first.';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('submit-btn').disabled = true;
+    }
+
+    const sb = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+    // If already logged in, redirect straight to admin
+    sb.auth.getSession().then(({ data }) => {
+        if (data.session) window.location.replace('./');
+    });
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        const errEl = document.getElementById('error');
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        btn.disabled = true;
+        btn.textContent = 'Signing in…';
+        errEl.style.display = 'none';
+
+        try {
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+
+            // Check for admin role
+            const { data: roles } = await sb.from('user_roles')
+                .select('role')
+                .eq('user_id', data.user.id)
+                .eq('role', 'admin')
+                .maybeSingle();
+
+            if (!roles) {
+                await sb.auth.signOut();
+                throw new Error('Your account does not have admin access.');
+            }
+
+            window.location.replace('./');
+        } catch (err) {
+            errEl.textContent = err.message;
+            errEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Sign In';
+        }
+    });
+</script>
+</body>
+</html>
