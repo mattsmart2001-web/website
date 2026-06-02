@@ -218,6 +218,31 @@
         .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
         .empty-msg { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
 
+        /* Rating sparkline */
+        .sparkline-wrap {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.1rem 1.25rem;
+        }
+        .sparkline-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 0.75rem;
+        }
+        .sparkline-rating {
+            font-family: 'Anton', sans-serif;
+            font-size: 2rem;
+            line-height: 1;
+            background: linear-gradient(180deg, #fff 0%, var(--gold) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .sparkline-delta { font-size: 0.85rem; font-weight: 600; }
+        .delta-up { color: var(--green); }
+        .delta-down { color: #f87171; }
+        .sparkline-peak { font-size: 0.76rem; color: var(--muted); text-align: right; }
+
         @media (max-width: 600px) {
             .nav { padding: 1rem; }
             .hero { padding: 2rem 1rem 1rem; }
@@ -266,6 +291,32 @@ function posBadge(pos, status) {
     if (!pos) return '<span class="pos-badge">—</span>';
     const cls = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
     return `<span class="pos-badge ${cls}">P${pos}</span>`;
+}
+
+function makeSparkline(ratings) {
+    if (ratings.length < 2) return '';
+    const W = 400, H = 60, P = 8;
+    const vals = ratings.map(r => r.rating_after);
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const range = (hi - lo) || 40;
+    const xFn = i => P + (i / (vals.length - 1)) * (W - P * 2);
+    const yFn = v => P + (1 - (v - lo) / range) * (H - P * 2);
+    const pts = vals.map((v, i) => `${xFn(i).toFixed(1)},${yFn(v).toFixed(1)}`).join(' ');
+    const up  = vals[vals.length - 1] >= vals[0];
+    const col = up ? '#22c55e' : '#f87171';
+    const base1500 = lo < 1500 && hi > 1500;
+    const bY = yFn(1500).toFixed(1);
+    const baseLine = base1500
+        ? `<line x1="${P}" y1="${bY}" x2="${W - P}" y2="${bY}" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4,4"/>`
+        : '';
+    const dots = vals.map((v, i) =>
+        `<circle cx="${xFn(i).toFixed(1)}" cy="${yFn(v).toFixed(1)}" r="3.5" fill="${col}" stroke="var(--bg-1)" stroke-width="1.5"><title>${esc(ratings[i].events?.name || '')}: ${v}</title></circle>`
+    ).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block">
+        ${baseLine}
+        <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+        ${dots}
+    </svg>`;
 }
 
 function avatarHTML(url, name, size = 'card') {
@@ -324,14 +375,11 @@ async function showProfile() {
     }
     document.title = `${driver.display_name} — Gran Turismo GTEC`;
 
-    // Season career stats
-    const { data: seasons } = await sb.from('driver_standings')
-        .select('*')
-        .eq('driver_id', driver.id)
-        .order('season_year', { ascending: false });
-
-    // Race history via result_drivers
-    const { data: rawHistory } = await sb.from('result_drivers')
+    // Season career stats + rating history in parallel with race history
+    const [seasonsRes, ratingRes, historyRes] = await Promise.all([
+        sb.from('driver_standings').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
+        sb.from('driver_ratings').select('rating_before, rating_after, delta, event_id, events(round, name)').eq('driver_id', driver.id).order('created_at'),
+        sb.from('result_drivers')
         .select(`
             points_share,
             results(
@@ -340,15 +388,25 @@ async function showProfile() {
                 events(round, name, starts_at, seasons(year, name))
             )
         `)
-        .eq('driver_id', driver.id);
+        .eq('driver_id', driver.id),
+    ]);
 
-    const history = (rawHistory || [])
+    const seasons    = seasonsRes.data  || [];
+    const ratingHist = ratingRes.data   || [];
+    const rawHistory = historyRes.data  || [];
+
+    const history = rawHistory
         .filter(r => r.results?.events?.starts_at)
         .sort((a, b) => new Date(b.results.events.starts_at) - new Date(a.results.events.starts_at))
         .slice(0, 15);
 
+    // Current rating
+    const currentRating = ratingHist.length ? ratingHist[ratingHist.length - 1].rating_after : null;
+    const peakRating    = ratingHist.length ? Math.max(...ratingHist.map(r => r.rating_after)) : null;
+    const lastDelta     = ratingHist.length ? ratingHist[ratingHist.length - 1].delta : null;
+
     // Career totals
-    const totals = (seasons || []).reduce((acc, s) => {
+    const totals = seasons.reduce((acc, s) => {
         acc.points   += Number(s.points || 0);
         acc.wins     += Number(s.wins || 0);
         acc.podiums  += Number(s.podiums || 0);
@@ -446,20 +504,35 @@ async function showProfile() {
             </div>
 
             <div class="stat-bar">
-                <div class="stat-item"><div class="stat-label">Points</div><div class="stat-value gold">${totals.points.toFixed(totals.points % 1 === 0 ? 0 : 1)}</div></div>
+                ${currentRating != null ? `<div class="stat-item"><div class="stat-label">Elo Rating</div><div class="stat-value gold">${currentRating}</div></div>` : ''}
+                <div class="stat-item"><div class="stat-label">Points</div><div class="stat-value">${totals.points.toFixed(totals.points % 1 === 0 ? 0 : 1)}</div></div>
                 <div class="stat-item"><div class="stat-label">Races</div><div class="stat-value">${totals.races}</div></div>
                 <div class="stat-item"><div class="stat-label">Wins</div><div class="stat-value">${totals.wins}</div></div>
-                <div class="stat-item"><div class="stat-label">Podiums</div><div class="stat-value">${totals.podiums}</div></div>
+                <div class="stat-item hide-mob"><div class="stat-label">Podiums</div><div class="stat-value">${totals.podiums}</div></div>
                 <div class="stat-item hide-mob"><div class="stat-label">Poles</div><div class="stat-value">${totals.poles}</div></div>
-                <div class="stat-item hide-mob"><div class="stat-label">Fastest Laps</div><div class="stat-value">${totals.fl}</div></div>
             </div>
+
+            ${ratingHist.length >= 2 ? `
+            <div class="section">
+                <div class="section-title">Rating History</div>
+                <div class="sparkline-wrap">
+                    <div class="sparkline-meta">
+                        <div>
+                            <div class="sparkline-rating">${currentRating}</div>
+                            ${lastDelta != null ? `<div class="sparkline-delta ${lastDelta >= 0 ? 'delta-up' : 'delta-down'}">${lastDelta >= 0 ? '+' : ''}${lastDelta} last event</div>` : ''}
+                        </div>
+                        <div class="sparkline-peak"><div style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.2rem">Peak</div>${peakRating}</div>
+                    </div>
+                    ${makeSparkline(ratingHist)}
+                </div>
+            </div>` : ''}
 
             ${driver.bio ? `<div class="section"><div class="section-title">Bio</div><div class="bio-text">${esc(driver.bio)}</div></div>` : ''}
 
             ${seasonsHTML}
             ${historyHTML}
 
-            ${!seasons?.length && !history.length ? `<div class="empty-msg" style="margin-top:1rem">No race history yet — check back after the first event.</div>` : ''}
+            ${!seasons.length && !history.length ? `<div class="empty-msg" style="margin-top:1rem">No race history yet — check back after the first event.</div>` : ''}
         </div>`;
 }
 

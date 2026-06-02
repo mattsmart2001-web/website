@@ -272,6 +272,7 @@
 <div class="tab-bar">
     <button class="tab active" data-tab="drivers" onclick="setTab('drivers')">Drivers</button>
     <button class="tab" data-tab="teams" onclick="setTab('teams')">Teams</button>
+    <button class="tab" data-tab="ratings" onclick="setTab('ratings')">Ratings</button>
 </div>
 
 <div class="content">
@@ -289,6 +290,7 @@ const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supab
 
 let _drivers = [];
 let _teams   = [];
+let _ratings = null; // loaded lazily
 let _season  = null;
 let _tab     = 'drivers';
 
@@ -304,16 +306,33 @@ function posCls(p) {
     return 'pos';
 }
 
-function setTab(t) {
+async function setTab(t) {
     _tab = t;
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-    render();
+    if (t === 'ratings' && _ratings === null) {
+        await loadRatings();
+    } else {
+        render();
+    }
 }
 
 function render() {
     const panel = document.getElementById('panel');
-    if (_tab === 'drivers') renderDrivers(panel);
-    else renderTeams(panel);
+    if (_tab === 'drivers')  renderDrivers(panel);
+    else if (_tab === 'teams') renderTeams(panel);
+    else renderRatings(panel);
+}
+
+async function loadRatings() {
+    const panel = document.getElementById('panel');
+    panel.innerHTML = '<div class="loading">Loading ratings…</div>';
+    const { data, error } = await sb.from('driver_current_ratings')
+        .select('*')
+        .not('last_rated_at', 'is', null)
+        .order('rating', { ascending: false });
+    if (error) { panel.innerHTML = `<div class="state-msg"><p>${esc(error.message)}</p></div>`; return; }
+    _ratings = data || [];
+    renderRatings(panel);
 }
 
 function renderDrivers(panel) {
@@ -401,6 +420,48 @@ function renderTeams(panel) {
                 <tbody>${rows}</tbody>
             </table>
         </div>`;
+}
+
+function renderRatings(panel) {
+    if (!_ratings?.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Ratings Yet</h3><p>Ratings appear here after running Compute Elo on a completed event.</p></div>`;
+        return;
+    }
+    const rows = _ratings.map((d, i) => {
+        const pos = i + 1;
+        const delta = d.last_delta;
+        const deltaHTML = delta != null
+            ? `<span style="font-size:0.78rem;font-weight:600;color:${delta >= 0 ? '#4ade80' : '#f87171'}">${delta >= 0 ? '+' : ''}${delta}</span>`
+            : '—';
+        const teamLine = d.team_name
+            ? `<div class="meta-line">${d.brand_color ? `<span class="swatch" style="background:${esc(d.brand_color)}"></span>` : ''}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
+            : '';
+        return `<tr>
+            <td class="${posCls(pos)}">${pos}</td>
+            <td>
+                <div class="name"><a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a></div>
+                ${teamLine}
+            </td>
+            <td class="right"><span class="points">${d.rating}</span></td>
+            <td class="right">${deltaHTML}</td>
+            <td class="right hide-mob" style="color:var(--muted);font-size:0.85rem">${d.peak_rating}</td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:50px">#</th>
+                    <th>Driver</th>
+                    <th class="right">Rating</th>
+                    <th class="right">Last</th>
+                    <th class="right hide-mob">Peak</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.85rem;padding:0 0.25rem">Pairwise Elo (K=32, base 1500). Clamped to [800–3000].</p>`;
 }
 
 async function load() {

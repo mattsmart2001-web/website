@@ -2004,6 +2004,7 @@ async function viewEventResults(eventId, eventName) {
                 <span class="section-card-title">Results — ${esc(eventName)}</span>
                 <div style="display:flex;gap:0.5rem">
                     <button class="btn-icon" onclick="recomputePoints('${eventId}','${esc(eventName)}')">Recompute Points</button>
+                    <button class="btn-icon" onclick="computeElo('${eventId}')">Compute Elo</button>
                     <button class="btn-add" onclick="saveResults('${eventId}','${esc(eventName)}')">Save All</button>
                 </div>
             </div>
@@ -2053,6 +2054,13 @@ async function saveResults(eventId, eventName) {
     else toast('Results saved & points recomputed.', 'success');
 
     await viewEventResults(eventId, eventName);
+}
+
+async function computeElo(eventId) {
+    const { data, error } = await sb.rpc('compute_elo_for_event', { p_event_id: eventId });
+    if (error) { toast(error.message, 'error'); return; }
+    if (data?.error) { toast(data.error, 'error'); return; }
+    toast(`Elo computed for ${data.drivers_rated} driver${data.drivers_rated !== 1 ? 's' : ''}.`, 'success');
 }
 
 async function recomputePoints(eventId, eventName) {
