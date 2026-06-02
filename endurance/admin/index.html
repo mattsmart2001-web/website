@@ -594,6 +594,12 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
             Drivers
         </button>
+
+        <div class="nav-section">Race Events</div>
+        <button class="nav-link" data-section="events">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            Events
+        </button>
     </nav>
     <div class="sidebar-bottom">
         <div class="user-chip" id="user-email">—</div>
@@ -720,6 +726,7 @@ async function navigate(section, pushHash = true) {
         seasons: 'Seasons',
         teams: 'Teams',
         drivers: 'Drivers',
+        events: 'Events',
     };
     document.getElementById('page-title').textContent = titles[section] || section;
 
@@ -742,6 +749,7 @@ async function navigate(section, pushHash = true) {
         case 'seasons':      await renderSeasons(); break;
         case 'teams':        await renderTeams(); break;
         case 'drivers':      await renderDrivers(); break;
+        case 'events':       await renderEvents(); break;
     }
 }
 
@@ -750,16 +758,18 @@ async function navigate(section, pushHash = true) {
 // 4. Dropdown caches
 // ============================================================
 async function loadCache() {
-    const [mfr, ps, tm, dr] = await Promise.all([
+    const [mfr, ps, tm, dr, seas] = await Promise.all([
         sb.from('manufacturers').select('id,name,slug').order('name'),
         sb.from('points_systems').select('id,name').order('name'),
         sb.from('teams').select('id,name,slug').order('name'),
         sb.from('drivers').select('id,display_name,slug').order('display_name'),
+        sb.from('seasons').select('id,name,year').order('year', { ascending: false }),
     ]);
-    _manufacturers = mfr.data || [];
-    _pointsSystems = ps.data  || [];
-    _teams         = tm.data  || [];
-    _drivers       = dr.data  || [];
+    _manufacturers = mfr.data  || [];
+    _pointsSystems = ps.data   || [];
+    _teams         = tm.data   || [];
+    _drivers       = dr.data   || [];
+    _seasons       = seas.data || [];
 }
 
 
@@ -822,11 +832,12 @@ function getFormData(formId) {
 // 6. Dashboard
 // ============================================================
 async function renderDashboard() {
-    const [mfr, seasons, teams, drivers] = await Promise.all([
+    const [mfr, seasons, teams, drivers, evts] = await Promise.all([
         sb.from('manufacturers').select('id', { count: 'exact', head: true }),
         sb.from('seasons').select('id', { count: 'exact', head: true }),
         sb.from('teams').select('id', { count: 'exact', head: true }),
         sb.from('drivers').select('id', { count: 'exact', head: true }),
+        sb.from('events').select('id', { count: 'exact', head: true }),
     ]);
 
     const { data: activeSeason } = await sb.from('seasons').select('name,year').eq('is_active', true).maybeSingle();
@@ -837,6 +848,7 @@ async function renderDashboard() {
             <div class="stat-card"><div class="stat-card-label">Seasons</div><div class="stat-card-value">${seasons.count ?? 0}</div></div>
             <div class="stat-card"><div class="stat-card-label">Teams</div><div class="stat-card-value">${teams.count ?? 0}</div></div>
             <div class="stat-card"><div class="stat-card-label">Drivers</div><div class="stat-card-value">${drivers.count ?? 0}</div></div>
+            <div class="stat-card"><div class="stat-card-label">Events</div><div class="stat-card-value">${evts.count ?? 0}</div></div>
         </div>
         <div class="table-wrap" style="padding:1.5rem">
             <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem;font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase">Active Season</div>
@@ -914,6 +926,7 @@ function openAddModal(section) {
         seasons:       () => openSeasonModal(),
         teams:         () => openTeamModal(),
         drivers:       () => openDriverModal(),
+        events:        () => openEventModal(),
     };
     map[section]?.();
 }
@@ -1437,6 +1450,386 @@ async function generateClaimLink(driverId, driverName) {
 function copyClaimUrl() {
     const input = document.getElementById('claim-url');
     navigator.clipboard.writeText(input.value).then(() => toast('Link copied to clipboard.', 'success'));
+}
+
+
+// ============================================================
+// 13. Events
+// ============================================================
+async function renderEvents() {
+    const { data, error } = await sb.from('events')
+        .select('*, seasons(name,year)')
+        .order('starts_at', { ascending: false });
+    if (error) { toast(error.message, 'error'); return; }
+
+    const evtStatusBadge = s => {
+        const map = { scheduled: 'badge-muted', in_progress: 'badge-gold', completed: 'badge-green', cancelled: 'badge-muted' };
+        return `<span class="badge ${map[s] || 'badge-muted'}">${s.replace('_',' ')}</span>`;
+    };
+
+    const rows = data.length === 0 ? `<tr><td colspan="7"><div class="empty-state">No events yet — add one to get started.</div></td></tr>` :
+        data.map(e => `
+            <tr>
+                <td><strong>R${e.round}</strong> <span class="td-muted" style="font-size:0.78rem">${esc(e.seasons?.name || '')}</span></td>
+                <td><strong>${esc(e.name)}</strong></td>
+                <td class="td-muted">${esc(e.circuit_name)}${e.circuit_country ? ` (${esc(e.circuit_country)})` : ''}</td>
+                <td class="td-muted" style="font-size:0.78rem">${formatDatetime(e.starts_at)}</td>
+                <td class="td-muted">${e.duration_hours}h</td>
+                <td>${evtStatusBadge(e.status)}</td>
+                <td><div class="row-actions">
+                    <button class="btn-icon" onclick="viewEventEntries('${e.id}','${esc(e.name)}','${e.season_id}')">Entries</button>
+                    <button class="btn-icon" onclick="editEvent('${e.id}')">Edit</button>
+                    <button class="btn-icon danger" onclick="deleteEvent('${e.id}','${esc(e.name)}')">Delete</button>
+                </div></td>
+            </tr>`).join('');
+
+    document.getElementById('content').innerHTML = `
+        <div class="table-wrap">
+            <div class="table-toolbar">
+                <input class="table-search" type="search" placeholder="Search events…" oninput="filterTable(this,'events-table')">
+            </div>
+            <table id="events-table"><thead><tr>
+                <th>Round</th><th>Name</th><th>Circuit</th><th>Date</th><th>Duration</th><th>Status</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>
+        <div id="event-entries-panel"></div>`;
+}
+
+function formatDatetime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function toDatetimeLocal(iso) {
+    if (!iso) return '';
+    return iso.slice(0, 16);
+}
+
+function eventForm(e = {}) {
+    const statusOpts = [
+        { value: 'scheduled', label: 'Scheduled' },
+        { value: 'in_progress', label: 'In Progress' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' },
+    ];
+    const seasOpts = _seasons.map(s => ({ value: s.id, label: `${s.year} — ${s.name}` }));
+    return `<form id="entity-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Season <span class="required">*</span></label>
+                ${selectHTML('season_id', seasOpts, e.season_id || '')}
+            </div>
+            <div class="form-group">
+                <label>Round <span class="required">*</span></label>
+                <input type="number" name="round" value="${e.round || ''}" placeholder="1" required min="1" max="99">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Event Name <span class="required">*</span></label>
+                <input type="text" name="name" value="${esc(e.name)}" placeholder="Round 1 — Nürburgring" required oninput="autoSlug(this,'name','ev-slug')">
+            </div>
+            <div class="form-group">
+                <label>Slug <span class="required">*</span></label>
+                <input type="text" name="slug" id="ev-slug" value="${esc(e.slug)}" placeholder="r1-nurburgring" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Circuit Name <span class="required">*</span></label>
+                <input type="text" name="circuit_name" value="${esc(e.circuit_name)}" placeholder="Nürburgring GP" required>
+            </div>
+            <div class="form-group">
+                <label>Circuit Country</label>
+                <input type="text" name="circuit_country" value="${esc(e.circuit_country)}" placeholder="DE">
+                <div class="form-hint">ISO 2-letter code, e.g. GB, DE, JP</div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Duration (hours) <span class="required">*</span></label>
+                <input type="number" name="duration_hours" value="${e.duration_hours || ''}" placeholder="3" required min="0.5" step="0.5">
+            </div>
+            <div class="form-group">
+                <label>Circuit Length (km)</label>
+                <input type="number" name="circuit_length_km" value="${e.circuit_length_km || ''}" placeholder="5.148" step="0.001" min="0.1">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Starts At <span class="required">*</span></label>
+                <input type="datetime-local" name="starts_at" value="${toDatetimeLocal(e.starts_at)}" required>
+            </div>
+            <div class="form-group">
+                <label>Ends At <span class="required">*</span></label>
+                <input type="datetime-local" name="ends_at" value="${toDatetimeLocal(e.ends_at)}" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Status</label>
+                ${selectHTML('status', statusOpts, e.status || 'scheduled')}
+            </div>
+            <div class="form-group">
+                <label>Replay URL</label>
+                <input type="url" name="replay_url" value="${esc(e.replay_url)}" placeholder="https://youtu.be/…">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" placeholder="Admin notes…">${esc(e.notes)}</textarea>
+        </div>
+    </form>`;
+}
+
+function openEventModal(e = {}) {
+    openModal(e.id ? 'Edit Event' : 'Add Event', eventForm(e), `
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEvent('${e.id || ''}')">Save</button>
+    `);
+}
+
+async function editEvent(id) {
+    const { data } = await sb.from('events').select('*').eq('id', id).single();
+    openEventModal(data);
+}
+
+async function saveEvent(id) {
+    const d = getFormData('entity-form');
+    if (!d.season_id || !d.round || !d.name || !d.slug || !d.circuit_name || !d.duration_hours || !d.starts_at || !d.ends_at) {
+        toast('Fill in all required fields.', 'error'); return;
+    }
+    const payload = {
+        season_id: d.season_id,
+        round: parseInt(d.round),
+        name: d.name,
+        slug: d.slug,
+        circuit_name: d.circuit_name,
+        circuit_country: d.circuit_country || null,
+        circuit_length_km: d.circuit_length_km ? parseFloat(d.circuit_length_km) : null,
+        duration_hours: parseFloat(d.duration_hours),
+        starts_at: d.starts_at,
+        ends_at: d.ends_at,
+        status: d.status || 'scheduled',
+        replay_url: d.replay_url || null,
+        notes: d.notes || null,
+    };
+    const { error } = id
+        ? await sb.from('events').update(payload).eq('id', id)
+        : await sb.from('events').insert(payload);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(id ? 'Event updated.' : 'Event created.', 'success');
+    closeModal();
+    await renderEvents();
+}
+
+async function deleteEvent(id, name) {
+    if (!confirm(`Delete "${name}"? This will cascade-delete all entries and results.`)) return;
+    const { error } = await sb.from('events').delete().eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Event deleted.', 'success');
+    await renderEvents();
+}
+
+
+// ============================================================
+// 14. Entries (sub-panel of Events)
+// ============================================================
+async function viewEventEntries(eventId, eventName, seasonId) {
+    const panel = document.getElementById('event-entries-panel');
+    panel.innerHTML = '<div class="loading-state">Loading entries…</div>';
+
+    const { data, error } = await sb.from('entries')
+        .select('*, teams(name), manufacturers(name,brand_color), entry_drivers(id, stint_role, drivers(id,display_name))')
+        .eq('event_id', eventId)
+        .order('car_number');
+
+    if (error) { panel.innerHTML = `<div class="loading-state">${esc(error.message)}</div>`; return; }
+
+    const entrStatusBadge = s => {
+        const map = { confirmed: 'badge-green', withdrawn: 'badge-muted', dnq: 'badge-muted' };
+        return `<span class="badge ${map[s] || 'badge-muted'}">${s}</span>`;
+    };
+
+    const rows = data.length === 0 ? `<tr><td colspan="7"><div class="empty-state">No entries yet — add one.</div></td></tr>` :
+        data.map(en => {
+            const driverTags = (en.entry_drivers || []).map(ed =>
+                `<span style="display:inline-flex;align-items:center;gap:0.2rem;background:rgba(255,255,255,0.06);border-radius:4px;padding:0.1rem 0.4rem;font-size:0.75rem;margin:0.1rem">
+                    ${esc(ed.drivers?.display_name)}
+                    <button onclick="removeEntryDriver('${ed.id}','${eventId}','${esc(eventName)}','${seasonId}')"
+                        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;line-height:1;padding:0 0.1rem">×</button>
+                 </span>`).join('');
+            return `<tr>
+                <td><strong>#${en.car_number}</strong></td>
+                <td>${esc(en.teams?.name) || '—'}</td>
+                <td>${en.manufacturers?.brand_color ? `<span class="color-swatch"><span class="swatch" style="background:${esc(en.manufacturers.brand_color)}"></span></span> ` : ''}${esc(en.manufacturers?.name) || '—'}</td>
+                <td class="td-muted" style="font-size:0.82rem">${esc(en.car_model)}</td>
+                <td><div style="display:flex;flex-wrap:wrap;gap:0.2rem;align-items:center">
+                    ${driverTags}
+                    <button class="btn-icon" style="padding:0.15rem 0.5rem;font-size:0.7rem"
+                        onclick="openAddDriverModal('${en.id}','#${en.car_number} ${esc(en.teams?.name)}','${eventId}','${esc(eventName)}','${seasonId}')">+ Driver</button>
+                </div></td>
+                <td>${entrStatusBadge(en.status)}</td>
+                <td><div class="row-actions">
+                    <button class="btn-icon danger" onclick="removeEntry('${en.id}','${eventId}','${esc(eventName)}','${seasonId}')">Remove</button>
+                </div></td>
+            </tr>`;
+        }).join('');
+
+    panel.innerHTML = `
+        <div class="section-card">
+            <div class="section-card-header">
+                <span class="section-card-title">Entries — ${esc(eventName)}</span>
+                <button class="btn-add" onclick="openAddEntryModal('${eventId}','${esc(eventName)}','${seasonId}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Entry
+                </button>
+            </div>
+            <table><thead><tr>
+                <th>#</th><th>Team</th><th>Manufacturer</th><th>Car Model</th><th>Drivers</th><th>Status</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+}
+
+async function openAddEntryModal(eventId, eventName, seasonId) {
+    const { data: ts } = await sb.from('team_seasons')
+        .select('team_id, manufacturer_id, teams(name), manufacturers(name)')
+        .eq('season_id', seasonId);
+
+    const teamOptsHTML = (ts || [])
+        .sort((a, b) => (a.teams?.name || '').localeCompare(b.teams?.name || ''))
+        .map(t => `<option value="${esc(t.team_id)}" data-mfr="${esc(t.manufacturer_id)}">${esc(t.teams?.name)}</option>`)
+        .join('');
+
+    const mfrOptsHTML = _manufacturers.map(m =>
+        `<option value="${esc(m.id)}">${esc(m.name)}</option>`
+    ).join('');
+
+    const statusOpts = [
+        { value: 'confirmed', label: 'Confirmed' },
+        { value: 'withdrawn', label: 'Withdrawn' },
+        { value: 'dnq', label: 'DNQ' },
+    ];
+
+    openModal(`Add Entry — ${esc(eventName)}`,
+        `<form id="entity-form">
+            <div class="form-group">
+                <label>Team <span class="required">*</span></label>
+                <select id="entry_team_id" name="entry_team_id" onchange="fillEntryMfr(this)" required>
+                    <option value="">— Select Team —</option>
+                    ${teamOptsHTML}
+                </select>
+                <div class="form-hint">Only teams registered for this season are shown.</div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Car Number <span class="required">*</span></label>
+                    <input type="number" name="car_number" placeholder="1" required min="1" max="999">
+                </div>
+                <div class="form-group">
+                    <label>Manufacturer (auto-filled)</label>
+                    <select id="manufacturer_id" name="manufacturer_id" required>
+                        <option value="">— Select Team first —</option>
+                        ${mfrOptsHTML}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Car Model <span class="required">*</span></label>
+                    <input type="text" name="car_model" placeholder="BMW M4 GT3" required>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    ${selectHTML('status', statusOpts, 'confirmed')}
+                </div>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="saveEntry('${eventId}','${esc(eventName)}','${seasonId}')">Add Entry</button>`
+    );
+}
+
+function fillEntryMfr(sel) {
+    const mfrId = sel.selectedOptions[0]?.dataset.mfr || '';
+    const mfrSel = document.getElementById('manufacturer_id');
+    if (mfrSel && mfrId) mfrSel.value = mfrId;
+}
+
+async function saveEntry(eventId, eventName, seasonId) {
+    const d = getFormData('entity-form');
+    if (!d.entry_team_id || !d.car_number || !d.manufacturer_id || !d.car_model) {
+        toast('Fill in all required fields.', 'error'); return;
+    }
+    const { error } = await sb.from('entries').insert({
+        event_id: eventId,
+        team_id: d.entry_team_id,
+        car_number: parseInt(d.car_number),
+        manufacturer_id: d.manufacturer_id,
+        car_model: d.car_model,
+        status: d.status || 'confirmed',
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Entry added.', 'success');
+    closeModal();
+    await viewEventEntries(eventId, eventName, seasonId);
+}
+
+async function removeEntry(entryId, eventId, eventName, seasonId) {
+    if (!confirm('Remove this entry and all its results?')) return;
+    const { error } = await sb.from('entries').delete().eq('id', entryId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Entry removed.', 'success');
+    await viewEventEntries(eventId, eventName, seasonId);
+}
+
+async function openAddDriverModal(entryId, entryLabel, eventId, eventName, seasonId) {
+    const driverOptsHTML = _drivers.map(d =>
+        `<option value="${esc(d.id)}">${esc(d.display_name)}</option>`
+    ).join('');
+    const roleOpts = [{ value: 'starting', label: 'Starting' }, { value: 'reserve', label: 'Reserve' }];
+
+    openModal(`Add Driver — ${esc(entryLabel)}`,
+        `<form id="entity-form">
+            <div class="form-group">
+                <label>Driver <span class="required">*</span></label>
+                <select name="driver_id" required>
+                    <option value="">— Select Driver —</option>
+                    ${driverOptsHTML}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Stint Role</label>
+                ${selectHTML('stint_role', roleOpts, 'starting')}
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="saveEntryDriver('${entryId}','${eventId}','${esc(eventName)}','${seasonId}')">Add</button>`
+    );
+}
+
+async function saveEntryDriver(entryId, eventId, eventName, seasonId) {
+    const d = getFormData('entity-form');
+    if (!d.driver_id) { toast('Select a driver.', 'error'); return; }
+    const { error } = await sb.from('entry_drivers').insert({
+        entry_id: entryId,
+        driver_id: d.driver_id,
+        stint_role: d.stint_role || 'starting',
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Driver added to entry.', 'success');
+    closeModal();
+    await viewEventEntries(eventId, eventName, seasonId);
+}
+
+async function removeEntryDriver(entryDriverId, eventId, eventName, seasonId) {
+    if (!confirm('Remove this driver from the entry?')) return;
+    const { error } = await sb.from('entry_drivers').delete().eq('id', entryDriverId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Driver removed.', 'success');
+    await viewEventEntries(eventId, eventName, seasonId);
 }
 
 
