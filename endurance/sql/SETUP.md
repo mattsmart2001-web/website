@@ -1,0 +1,84 @@
+# Gran Turismo GTEC — Supabase Setup Guide
+
+Apply this once to a fresh Supabase project to get the GTEC database ready.
+
+---
+
+## 1. Create a new Supabase project
+
+1. Go to [supabase.com](https://supabase.com) → **New project**
+2. Name it something like `gtec` or `sparkstheory-gtec`
+3. Choose a strong database password (save it — you'll need it)
+4. Pick a region close to your users (e.g. **EU West** for a UK audience)
+5. Wait for the project to initialise (~1 min)
+
+---
+
+## 2. Apply the schema
+
+1. In your Supabase project, go to **SQL Editor** (left sidebar)
+2. Click **New query**
+3. Open `01_schema.sql` from this folder, paste the entire contents, click **Run**
+4. You should see: `Success. No rows returned.`
+
+---
+
+## 3. Apply the seed data
+
+1. Still in SQL Editor → **New query**
+2. Open `02_seed_defaults.sql`, paste the entire contents, click **Run**
+3. This inserts:
+   - The default **F1 points system** (25-18-15-12-10-8-6-4-2-1 + pole + fastest lap)
+   - Five starter **rules pages** (Sporting, Technical, Penalties, Conduct, Stewarding)
+
+---
+
+## 4. Bootstrap your first admin
+
+After you've signed up at `/endurance/admin/login` (Phase 4a — not built yet), or created a user directly in the Supabase Auth dashboard:
+
+1. In Supabase → **Authentication** → **Users** → find your user → copy the UUID
+2. In SQL Editor → **New query**, run:
+
+```sql
+INSERT INTO user_roles (user_id, role)
+VALUES ('<YOUR_AUTH_UUID_HERE>'::uuid, 'admin')
+ON CONFLICT (user_id, role) DO NOTHING;
+```
+
+You're now admin. The instructions are also in `02_seed_defaults.sql` as comments.
+
+---
+
+## 5. Save your project credentials
+
+You'll need these later when wiring up the frontend (Phase 4+):
+
+| Variable | Where to find it |
+|---|---|
+| `SUPABASE_URL` | Project Settings → API → Project URL |
+| `SUPABASE_ANON_KEY` | Project Settings → API → `anon` `public` key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Project Settings → API → `service_role` key (keep secret) |
+
+Store the service role key in Netlify environment variables — never expose it client-side.
+
+---
+
+## What's in the schema
+
+`01_schema.sql` creates:
+
+- **Enums**: `user_role`, `entry_status`, `session_type`, `session_status`, `incident_verdict`
+- **Tables** (18): `user_roles`, `points_systems`, `seasons`, `teams`, `drivers`, `entries`, `sessions`, `laps`, `results`, `race_incidents`, `steward_decisions`, `fastest_laps`, `team_standings`, `driver_standings`, `driver_stats`, `rules_pages`, `news_articles`, `media_items`
+- **Triggers**: `touch_updated_at` (auto-timestamp), `check_entry_manufacturer_lock` (one manufacturer per team per season)
+- **Helper**: `has_role(uuid, user_role)` function for RLS policies
+- **RLS**: Enabled on every table with read-public / write-admin policies
+
+---
+
+## File order matters
+
+Always apply in this order:
+
+1. `01_schema.sql` — creates all tables, triggers, functions, RLS
+2. `02_seed_defaults.sql` — inserts default data (idempotent, safe to re-run)
