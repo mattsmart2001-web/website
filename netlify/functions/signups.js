@@ -2,6 +2,25 @@ const fetch = require('node-fetch');
 
 const FORM_NAME = 'nordschleife-24h-signup';
 
+// Names to hide from the public driver list entirely. Matches either the
+// PSN ID OR the Discord username on each submission, case-insensitive and
+// stripping non-alphanumerics — so "TCR_LittleWatt" catches "tcr_littlewatt",
+// "TCR-Little-Watt", etc.
+const HIDDEN_DRIVERS = ['TCR_LittleWatt'];
+
+function normalize(s) {
+  return (s || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function isHidden(sub) {
+  const data = (sub && sub.data) || {};
+  const psn = normalize(data.psn_id);
+  const dis = normalize(data.discord_username);
+  return HIDDEN_DRIVERS.some((h) => {
+    const n = normalize(h);
+    return n && (n === psn || n === dis);
+  });
+}
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -57,7 +76,11 @@ exports.handler = async (event) => {
     const subs = await subsResp.json();
 
     // 3. Strip to public-safe fields only: PSN ID + chosen car.
+    //    Hidden drivers are filtered out at the raw-submission level so
+    //    they don't appear anywhere downstream (drivers.html, the inline
+    //    list on signup.html, the draw tool's hat).
     const all = subs
+      .filter((s) => !isHidden(s))
       .map((s) => ({
         psn_id: ((s.data && s.data.psn_id) || '').toString().trim(),
         preferred_car: ((s.data && s.data.preferred_car) || '').toString().trim(),
