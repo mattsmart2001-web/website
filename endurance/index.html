@@ -491,63 +491,6 @@
             color: var(--text);
         }
 
-        /* ---------- Interest form ---------- */
-        .interest-form {
-            display: flex;
-            gap: 0.75rem;
-            max-width: 500px;
-            margin: 2rem auto 0;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .interest-form input[type="email"] {
-            flex: 1;
-            min-width: 220px;
-            padding: 0.85rem 1.2rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .interest-form input[type="email"]:focus {
-            border-color: rgba(255, 209, 102, 0.5);
-        }
-        .interest-form input[type="email"]::placeholder { color: var(--muted); }
-        .interest-form button {
-            padding: 0.85rem 1.6rem;
-            background: linear-gradient(135deg, var(--gold), var(--gold-deep));
-            color: #1a1300;
-            border: none;
-            border-radius: 999px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: filter 0.2s, transform 0.2s;
-            white-space: nowrap;
-        }
-        .interest-form button:hover { filter: brightness(1.08); transform: translateY(-1px); }
-        .interest-note {
-            font-size: 0.78rem;
-            color: var(--muted);
-            margin-top: 0.75rem;
-            text-align: center;
-        }
-        .form-success {
-            display: none;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.8rem;
-            letter-spacing: 0.15em;
-            color: var(--gold);
-            margin-top: 1.5rem;
-            text-align: center;
-        }
 
         /* ---------- Stay-in-the-loop CTA ---------- */
         .cta-section {
@@ -592,13 +535,6 @@
         }
         .cta-btn.ghost:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.25); }
         .cta-btn svg { width: 16px; height: 16px; }
-        .cta-divider {
-            width: 1px;
-            height: 2.5rem;
-            background: var(--border);
-            margin: 2.5rem auto;
-        }
-
         /* ---------- Footer ---------- */
         .gtec-footer {
             padding: 2.5rem 1.5rem;
@@ -844,19 +780,8 @@
     <h2 class="gtec-h2">Be on the grid.</h2>
     <p class="gtec-section-lead" style="margin: 1.25rem auto 0">
         Team registration and driver applications open closer to season start.
-        Drop your email and be first to know.
+        Join the Discord to stay in the loop.
     </p>
-
-    <form class="interest-form" name="gtec-interest" method="POST" data-netlify="true" netlify-honeypot="bot-field" id="interest-form">
-        <input type="hidden" name="form-name" value="gtec-interest">
-        <input type="hidden" name="bot-field" style="display:none">
-        <input type="email" name="email" placeholder="your@email.com" required autocomplete="email">
-        <button type="submit">Notify me</button>
-    </form>
-    <p class="interest-note">No spam. One email when registration opens.</p>
-    <p class="form-success" id="form-success">✓ &nbsp;You're on the list. We'll be in touch.</p>
-
-    <div class="cta-divider"></div>
 
     <div class="cta-btns">
         <a class="cta-btn gold" href="https://discord.gg/rMRNYNXnZx" target="_blank" rel="noopener">
@@ -967,22 +892,6 @@
         document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
     })();
 
-    /* ---- Interest form AJAX submit ---- */
-    (function () {
-        const form = document.getElementById('interest-form');
-        const success = document.getElementById('form-success');
-        if (!form) return;
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const data = new URLSearchParams(new FormData(form));
-            try {
-                await fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: data.toString() });
-            } catch (_) {}
-            form.style.display = 'none';
-            document.querySelector('.interest-note').style.display = 'none';
-            success.style.display = 'block';
-        });
-    })();
 </script>
 
 </body>
