@@ -174,22 +174,82 @@
         textarea::placeholder, input::placeholder { color: var(--muted); opacity: 0.6; }
         .form-hint { font-size: 0.73rem; color: var(--muted); margin-top: 0.3rem; }
 
-        /* Photo preview */
-        .photo-preview {
-            width: 80px;
-            height: 80px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--bg-2);
+        /* Photo upload */
+        .photo-upload-wrap {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .avatar-upload {
+            position: relative;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            cursor: pointer;
             overflow: hidden;
-            margin-bottom: 0.75rem;
+        }
+        .avatar-upload img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        .avatar-upload .placeholder {
+            width: 100%; height: 100%;
+            background: var(--bg-2);
+            border: 2px dashed rgba(255,255,255,0.15);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: var(--muted);
-            font-size: 0.75rem;
+            font-size: 1.8rem;
+            font-family: 'Anton', sans-serif;
         }
-        .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-upload .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .avatar-upload:hover .overlay { opacity: 1; }
+        .avatar-upload .overlay svg { width: 22px; height: 22px; color: #fff; }
+        .upload-info { flex: 1; }
+        .upload-info .hint { font-size: 0.78rem; color: var(--muted); margin-top: 0.35rem; line-height: 1.5; }
+        .btn-upload {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.55rem 1.1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .btn-upload:hover { border-color: rgba(255,209,102,0.4); background: rgba(255,209,102,0.05); }
+        .btn-upload:disabled { opacity: 0.5; cursor: not-allowed; }
+        .upload-progress {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-top: 0.6rem;
+            overflow: hidden;
+            display: none;
+        }
+        .upload-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold-deep), var(--gold));
+            border-radius: 2px;
+            width: 0;
+            transition: width 0.3s ease;
+        }
 
         /* Save button */
         .btn-save {
@@ -251,10 +311,26 @@
     <div class="card">
         <div class="card-title">Edit Your Profile</div>
         <div class="form-group">
-            <label class="field-label">Photo</label>
-            <div class="photo-preview" id="photo-preview">No photo</div>
-            <input type="url" id="photo-url" placeholder="https://…" oninput="previewPhoto(this.value)">
-            <div class="form-hint">Paste a direct image URL. Supabase Storage upload coming in a future update.</div>
+            <label class="field-label">Profile Photo</label>
+            <div class="photo-upload-wrap">
+                <div class="avatar-upload" id="avatar-upload" onclick="document.getElementById('photo-file').click()">
+                    <div class="placeholder" id="upload-placeholder">?</div>
+                    <div class="overlay">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    </div>
+                </div>
+                <div class="upload-info">
+                    <button class="btn-upload" id="btn-upload" onclick="document.getElementById('photo-file').click()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                        Upload Photo
+                    </button>
+                    <div class="upload-progress" id="upload-progress">
+                        <div class="upload-progress-bar" id="upload-bar"></div>
+                    </div>
+                    <div class="hint">JPG, PNG or WebP · Max 2 MB</div>
+                </div>
+            </div>
+            <input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadPhoto(this)">
         </div>
         <div class="form-group">
             <label class="field-label">Bio</label>
@@ -290,25 +366,86 @@ function esc(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function previewPhoto(url) {
-    const el = document.getElementById('photo-preview');
-    if (!url) { el.innerHTML = 'No photo'; return; }
-    el.innerHTML = `<img src="${esc(url)}" onerror="this.parentElement.innerHTML='Invalid URL'" alt="">`;
-    // Also update avatar
-    const avatar = document.getElementById('avatar-el');
-    avatar.innerHTML = `<img src="${esc(url)}" onerror="this.innerHTML='?'" alt="">`;
+function setPhotoUI(url, initial = '') {
+    const wrap = document.getElementById('avatar-upload');
+    const placeholder = document.getElementById('upload-placeholder');
+    if (url) {
+        // replace placeholder with image (keep overlay on top)
+        let img = wrap.querySelector('img');
+        if (!img) {
+            img = document.createElement('img');
+            img.alt = '';
+            wrap.insertBefore(img, wrap.firstChild);
+        }
+        img.src = url;
+        placeholder.style.display = 'none';
+        // Also update the header avatar
+        const headerAvatar = document.getElementById('avatar-el');
+        headerAvatar.innerHTML = `<img src="${esc(url)}" alt="" style="width:100%;height:100%;object-fit:cover">`;
+    } else {
+        placeholder.textContent = initial || '?';
+        placeholder.style.display = '';
+    }
+}
+
+async function uploadPhoto(input) {
+    const file = input.files[0];
+    input.value = ''; // reset so same file can be re-selected
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) { toast('Image must be under 2 MB.', 'error'); return; }
+
+    const btn = document.getElementById('btn-upload');
+    const progress = document.getElementById('upload-progress');
+    const bar = document.getElementById('upload-bar');
+    btn.disabled = true;
+    btn.innerHTML = 'Uploading…';
+    progress.style.display = 'block';
+    bar.style.width = '30%';
+
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+    const path = `${driverId}.${ext}`;
+
+    const { error: upErr } = await sb.storage
+        .from('gtec-drivers')
+        .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (upErr) {
+        toast(upErr.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = 'Upload Photo';
+        progress.style.display = 'none';
+        return;
+    }
+
+    bar.style.width = '75%';
+
+    const { data: { publicUrl } } = sb.storage.from('gtec-drivers').getPublicUrl(path);
+
+    const { error: updateErr } = await sb.from('drivers')
+        .update({ photo_url: publicUrl })
+        .eq('id', driverId);
+
+    bar.style.width = '100%';
+    setTimeout(() => { progress.style.display = 'none'; bar.style.width = '0'; }, 600);
+
+    btn.disabled = false;
+    btn.innerHTML = 'Upload Photo';
+
+    if (updateErr) { toast(updateErr.message, 'error'); return; }
+    setPhotoUI(publicUrl);
+    toast('Photo updated!', 'success');
 }
 
 async function saveProfile() {
     const btn = document.getElementById('btn-save');
     const bio = document.getElementById('bio').value;
-    const photo_url = document.getElementById('photo-url').value.trim() || null;
 
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
     const { error } = await sb.from('drivers')
-        .update({ bio, photo_url })
+        .update({ bio })
         .eq('id', driverId);
 
     btn.disabled = false;
@@ -316,7 +453,6 @@ async function saveProfile() {
 
     if (error) { toast(error.message, 'error'); return; }
     toast('Profile saved.', 'success');
-    previewPhoto(photo_url);
 }
 
 async function init() {
@@ -353,13 +489,18 @@ async function init() {
     document.getElementById('nav-user').textContent = session.user.email;
     document.getElementById('driver-name').textContent = driver.display_name;
 
-    // Avatar
+    const initial = driver.display_name.charAt(0).toUpperCase();
+
+    // Header avatar
     const avatar = document.getElementById('avatar-el');
     if (driver.photo_url) {
-        avatar.innerHTML = `<img src="${esc(driver.photo_url)}" alt="">`;
+        avatar.innerHTML = `<img src="${esc(driver.photo_url)}" alt="" style="width:100%;height:100%;object-fit:cover">`;
     } else {
-        avatar.textContent = driver.display_name.charAt(0).toUpperCase();
+        avatar.textContent = initial;
     }
+
+    // Upload widget photo
+    setPhotoUI(driver.photo_url || null, initial);
 
     // Tags
     const tags = [];
@@ -382,11 +523,7 @@ async function init() {
     ).join('');
 
     // Editable fields
-    if (driver.bio)       document.getElementById('bio').value = driver.bio;
-    if (driver.photo_url) {
-        document.getElementById('photo-url').value = driver.photo_url;
-        previewPhoto(driver.photo_url);
-    }
+    if (driver.bio) document.getElementById('bio').value = driver.bio;
 
     document.getElementById('btn-logout').addEventListener('click', async () => {
         await sb.auth.signOut();
