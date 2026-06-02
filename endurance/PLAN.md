@@ -913,17 +913,14 @@ Phases 11–14 are pre-launch sealing.
 
 Please answer these before Phase 2 begins. Reasonable defaults in brackets.
 
-1. **Points system.** Use F1 25-18-15-12-10-8-6-4-2-1, or your own table?
-   [Default: F1 system + 1 point for pole + 1 point for fastest lap if
-   classified.]
-2. **Driver substitutions mid-season.** Allowed? If so, do their points
-   travel with them or stay with the team's number?
-   [Default: substitutions allowed any time, points credited to the
-   driver who actually drove.]
-3. **Are races scored on a per-driver basis or per-team-entry?**
-   Endurance championships usually credit ALL drivers in the car with
-   the points. [Default: all entered drivers get the full points; team
-   gets one set of points; per-driver Elo is scaled by stint share.]
+### Decided ✅
+
+1. **Points system.** ✅ **F1 25-18-15-12-10-8-6-4-2-1 + 1 point for pole + 1 point for fastest lap (only if classified).**
+2. **Driver substitutions mid-season.** ✅ **Allowed any time. Points credited to the driver who actually drove.**
+3. **Per-driver vs per-team scoring.** ✅ **All entered drivers of an entry get the full points; the team gets one set of points; per-driver Elo is scaled by stint share.**
+
+### Still open
+
 4. **Manufacturer lock — strict?** "Cars remain locked to a manufacturer
    for the season" — does this mean each team is locked, or each
    driver? [Default: each entry locks to a manufacturer at season
