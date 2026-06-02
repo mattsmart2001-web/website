@@ -1,4 +1,8 @@
-# GT Endurance Championship (GTEC) — Build Plan & Specification
+# Gran Turismo GTEC — Build Plan & Specification
+
+(brand: **Gran Turismo GTEC**; the project was initially scoped as
+"GT Endurance Championship" and that phrase still appears in several
+places below — they all refer to Gran Turismo GTEC.)
 
 > **Status:** Pre-build planning. No production code yet.
 > Hidden behind `/endurance/` during development.

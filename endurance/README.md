@@ -1,4 +1,6 @@
-# GT Endurance Championship (GTEC)
+# Gran Turismo GTEC
+
+(formerly working title: GT Endurance Championship.)
 
 Hidden platform under development. Lives at `/endurance/`.
 
