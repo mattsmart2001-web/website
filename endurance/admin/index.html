@@ -854,6 +854,13 @@ async function renderDashboard() {
             <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem;font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase">Active Season</div>
             <div style="font-family:'Anton',sans-serif;font-size:1.6rem;letter-spacing:0.04em">${activeSeason ? esc(activeSeason.name) : '<span style="color:var(--muted);font-size:1rem;font-family:Inter,sans-serif">None — create a season and mark it active</span>'}</div>
         </div>
+        <div class="table-wrap" style="padding:1.5rem;margin-top:1rem">
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Maintenance</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+                <div style="font-size:0.85rem;color:var(--muted)">Rebuild Hall of Fame records from current career stats.</div>
+                <button class="btn btn-primary" onclick="refreshHallOfFame()">Refresh Hall of Fame</button>
+            </div>
+        </div>
     `;
 }
 
@@ -2054,6 +2061,13 @@ async function saveResults(eventId, eventName) {
     else toast('Results saved & points recomputed.', 'success');
 
     await viewEventResults(eventId, eventName);
+}
+
+async function refreshHallOfFame() {
+    const { data, error } = await sb.rpc('refresh_hall_of_fame');
+    if (error) { toast(error.message, 'error'); return; }
+    if (data?.error) { toast(data.error, 'error'); return; }
+    toast(`Hall of Fame refreshed — ${data.records_inserted} record${data.records_inserted !== 1 ? 's' : ''}.`, 'success');
 }
 
 async function computeElo(eventId) {
