@@ -2,6 +2,11 @@
   publish = "."
   command = "echo 'No build needed - static site'"
 
+[build.environment]
+  # gtec-config.js intentionally contains the public Supabase anon key and URL.
+  # These are client-side credentials by design — not secrets.
+  SECRETS_SCAN_OMIT_PATHS = "endurance/assets/gtec-config.js"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
