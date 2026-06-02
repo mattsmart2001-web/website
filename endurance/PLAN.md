@@ -188,6 +188,24 @@ bio               text
 created_at        timestamptz
 ```
 
+#### `team_seasons`
+A team's season registration. Locks the team to a single manufacturer
+for the whole season (strict manufacturer lock, per decision §14.4).
+```
+id                uuid PK
+team_id           uuid FK teams(id)
+season_id         uuid FK seasons(id)
+manufacturer_id   uuid FK manufacturers(id)
+registered_at     timestamptz
+admin_override_at timestamptz NULL    -- set if manufacturer was changed mid-season
+admin_override_reason text NULL
+UNIQUE (team_id, season_id)
+```
+A `BEFORE INSERT OR UPDATE` trigger on `entries` checks that
+`entries.manufacturer_id` equals `team_seasons.manufacturer_id` for
+`(entries.team_id, entries.event.season_id)`. Mismatch → raises an
+exception, blocked at the DB level.
+
 #### `team_drivers`
 Join table, snapshots driver lineup per season.
 ```
@@ -453,8 +471,21 @@ cron.
 | `admin` | Everything. Manages all data, all users. |
 | `steward` | Create steward decisions + penalties. Cannot edit results directly. |
 | `editor` | Create + edit news articles, manage media. No competition data. |
-| `team_manager` | Edit own team's profile + media. Cannot edit results. |
+| `team_manager` | Edit own team's profile + logo + lineup. Cannot edit results. |
+| `driver` | Edit own driver profile (bio, photo, social handles) via the driver portal. Cannot edit anything else. |
 | (no role) | Read-only public access. |
+
+### Driver claim flow
+
+Driver records are created by admins. To activate self-edit on a profile:
+1. Admin clicks "Generate claim link" on the driver record.
+2. A short-lived (24h) signed URL is emailed (or shared via Discord) to
+   the driver: `/endurance/profile/claim/<token>`.
+3. The driver signs up with Supabase Auth on that page; the token is
+   exchanged for a row in `user_roles` (`role = 'driver'`) and the
+   `drivers.user_id` field is set to their `auth.users.id`.
+4. From then on they can log into `/endurance/profile/` and edit their
+   own bio/photo/socials only.
 
 ### RLS policies
 
@@ -879,8 +910,9 @@ Each phase ends with a shippable artefact behind the hidden gate.
 | **1** | This plan doc + folder scaffolding + `robots.txt` update | 3 | – |
 | **2** | Supabase project setup. Apply full schema migration. Bootstrap admin user. README updated with credentials handling. | 4 | DB password and project info from you |
 | **3** | Hidden landing page at `/endurance/` (coming-soon style, GTEC branding, planned 2026 calendar teaser) | 3 | Phase 1 |
-| **4** | Admin auth + login page + protected admin shell. CRUD for **Seasons**, **Manufacturers**, **Teams**, **Drivers** (the static lookup data). | 12 | Phase 2 |
-| **5** | Admin CRUD for **Events** + **Entries** + **Entry Drivers**. Public Calendar + Race-Centre Overview page. | 14 | Phase 4 |
+| **4a** | Admin auth + login page + protected admin shell. CRUD for **Seasons**, **Manufacturers**, **Teams**, **Drivers**, **team_seasons** (strict manufacturer-lock registration). | 12 | Phase 2 |
+| **4b** | Driver self-serve **profile portal** at `/endurance/profile/`. Claim-link flow. Driver edits bio / photo / socials only. RLS rules for the `driver` role. | 6 | Phase 4a |
+| **5** | Admin CRUD for **Events** + **Entries** + **Entry Drivers** (with `team_seasons` manufacturer-lock validation). Public Calendar + Race-Centre Overview page. | 14 | Phase 4a |
 | **6** | Admin: **Qualifying** + **Results** + **Penalties** entry. Points calculation + standings materialized views. Public Standings page. | 18 | Phase 5 |
 | **7** | Public **Driver profiles** + **Team profiles** + career stats. | 12 | Phase 6 |
 | **8** | **Elo engine** + driver rating snapshots + rating history graph. | 10 | Phase 7 |
@@ -909,54 +941,39 @@ Phases 11–14 are pre-launch sealing.
 
 ---
 
-## 14. Open questions for you
+## 14. Decisions (all locked) ✅
 
-Please answer these before Phase 2 begins. Reasonable defaults in brackets.
+1. **Points system.** F1 25-18-15-12-10-8-6-4-2-1 + 1 point for pole + 1 point for fastest lap (only if classified).
+2. **Driver substitutions mid-season.** Allowed any time. Points credited to the driver who actually drove.
+3. **Per-driver vs per-team scoring.** All entered drivers of an entry get the full points; the team gets one set of points; per-driver Elo is scaled by stint share.
+4. **Manufacturer lock.** **Strict.** Each team registers ONE manufacturer per season. All entries that team enters must use that manufacturer for the entire season. Drivers in those entries inherit the manufacturer from the team-season registration. Enforced at the DB level via `team_seasons` table (see §3 update) and at the admin UI level.
+5. **Result data entry.** Manual via admin form only for MVP. CSV import deferred to future feature.
+6. **Steward decisions.** Publish **immediately on save** (no draft state). The "Edit" affordance stays available afterwards in case of correction.
+7. **News editor.** Markdown with live preview.
+8. **Driver photos / team logos.** Drivers upload via a self-service profile portal (new scope — see §4 and Phase 4b below). Team logos uploaded by team_manager role.
+9. **Hall of Fame.** Auto-generated only. No curator's-picks section.
+10. **Discord integration.** Deferred (post-MVP).
+11. **Hidden-mode protection.** No HTTP basic-auth gate — trust `noindex` + `Disallow` in `robots.txt` + obscure URL. Saves us the edge-function complexity but means anyone who knows the URL can read.
+12. **Domain.** Stay on `sparkstheory.co.uk/endurance/`.
+13. **Supabase project.** New project (clean isolation from the main site's Supabase).
+14. **Historical data.** None — 2026 starts fresh.
+15. **Design reference.** Blend of FIA WEC + F1 stats sites: dark theme, dense data tables, professional motorsport feel.
 
-### Decided ✅
+### Implications of decision #8 (driver self-serve portal)
 
-1. **Points system.** ✅ **F1 25-18-15-12-10-8-6-4-2-1 + 1 point for pole + 1 point for fastest lap (only if classified).**
-2. **Driver substitutions mid-season.** ✅ **Allowed any time. Points credited to the driver who actually drove.**
-3. **Per-driver vs per-team scoring.** ✅ **All entered drivers of an entry get the full points; the team gets one set of points; per-driver Elo is scaled by stint share.**
+Adding driver self-upload means:
+- New **`driver`** role (in addition to admin/steward/editor/team_manager).
+- A driver portal lives at `/endurance/profile/` (or similar). It requires login.
+- Drivers can log in and edit their own bio, photo, social handles. Cannot edit race results / standings.
+- Admins still **create** the driver record; the driver claims/links it via their auth account (one-time `claim-code` or admin invite link).
+- Phase 4 splits into 4a (admin CRUD) and 4b (driver portal + claim flow). Adds ~6 hours.
 
-### Still open
+### Implications of decision #4 (strict manufacturer lock)
 
-4. **Manufacturer lock — strict?** "Cars remain locked to a manufacturer
-   for the season" — does this mean each team is locked, or each
-   driver? [Default: each entry locks to a manufacturer at season
-   start; team can run multiple entries with different makes if
-   they want.]
-5. **Result data entry method.** Manual via admin form, CSV import,
-   or both? [Default: both. Form for ad-hoc, CSV for bulk.]
-6. **Steward decision publishing.** Do these go live immediately on
-   save, or do they need a separate publish step? [Default:
-   publish-toggle, default draft.]
-7. **News editor.** Markdown with live preview (lightweight, ships in
-   Phase 10) or full WYSIWYG (TipTap, adds ~2 days)? [Default: markdown.]
-8. **Driver photos / team logos.** Who provides? You manually upload,
-   or do drivers upload via a profile portal (Phase 15)?
-   [Default: admin-uploaded for now.]
-9. **Hall of Fame.** Auto-generated only, manually curated only, or
-   both? [Default: both — auto categories below, plus a "curator's
-   picks" admin section.]
-10. **Discord integration.** Is auto-posting race results to a Discord
-    channel a Phase 1 must-have, or a later add-on? [Default: later.]
-11. **Hidden-mode password.** Want to gate `/endurance/*` behind HTTP
-    basic auth during dev, or trust noindex + obscure URL? [Default:
-    HTTP basic auth via Netlify edge.]
-12. **Domain / subdomain.** `sparkstheory.co.uk/endurance/` (your
-    stated preference) or eventually a dedicated `gtec.sparkstheory.co.uk`
-    subdomain? [Default: stay on `/endurance/` path for simplicity.]
-13. **Use existing Supabase project or a new one?** The current site
-    already loads Supabase — same project (separate schema for GTEC)
-    or fresh project? [Default: new project, cleaner isolation.]
-14. **What seasons of historical data exist?** Are there past seasons
-    to import, or does GTEC start fresh in 2026? [Default: 2026 fresh,
-    no historical import.]
-15. **Visual reference site(s).** Got a specific reference to point me
-    at for design direction (e.g. fiawec.com, formula1.com,
-    racingline.app, etc.)? [Default: blend of WEC + F1 stats site
-    aesthetic, dark, dense data tables.]
+- New table `team_seasons` (team_id + season_id → manufacturer_id, locked at season registration).
+- A Postgres trigger on `entries` insert/update verifies `entries.manufacturer_id` matches the team's `team_seasons.manufacturer_id` for that season. Hard error if it doesn't.
+- Admin UI dropdown for entry's manufacturer is pre-filled and disabled once the season is locked.
+- Mid-season manufacturer change for a team = explicit admin override (with audit log entry).
 
 ---
 
