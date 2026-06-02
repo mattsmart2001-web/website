@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Drivers — Gran Turismo GTEC</title>
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --green: #22c55e;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .nav {
+            position: sticky; top: 0; z-index: 10;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1.1rem 2rem;
+            background: rgba(5,6,8,0.9); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-brand { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.3em; text-transform: uppercase; text-decoration: none; color: var(--text); }
+        .nav-brand span { color: var(--gold); }
+        .nav-links { display: flex; gap: 1.25rem; align-items: center; }
+        .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.82rem; font-weight: 500; transition: color 0.15s; }
+        .nav-links a:hover { color: var(--text); }
+        .nav-links a.active { color: var(--gold); }
+
+        /* Hero */
+        .hero { padding: 3rem 2rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+        .hero-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; }
+        .hero-title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.4rem; }
+        .hero-sub { color: var(--muted); font-size: 0.88rem; }
+
+        /* Content */
+        .content { max-width: 1100px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+
+        /* ===== LISTING ===== */
+        .driver-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .driver-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            text-decoration: none;
+            color: var(--text);
+            transition: border-color 0.2s, transform 0.15s;
+            cursor: pointer;
+        }
+        .driver-card:hover { border-color: rgba(255,209,102,0.35); transform: translateY(-2px); }
+        .driver-card-photo {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            background: var(--bg-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .driver-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .driver-initials {
+            font-family: 'Anton', sans-serif;
+            font-size: 2.5rem;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            opacity: 0.4;
+        }
+        .driver-card-body { padding: 0.9rem; }
+        .driver-card-num {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.1em;
+            margin-bottom: 0.2rem;
+        }
+        .driver-card-name { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.03em; text-transform: uppercase; line-height: 1.1; margin-bottom: 0.3rem; }
+        .driver-card-meta { font-size: 0.74rem; color: var(--muted); }
+
+        /* ===== PROFILE ===== */
+        .profile-header {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-end;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .profile-avatar {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 3px solid var(--border);
+            overflow: hidden;
+            background: var(--bg-2);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-avatar-init { font-family: 'Anton', sans-serif; font-size: 3rem; color: var(--muted); opacity: 0.5; }
+        .profile-name-block { flex: 1; min-width: 0; }
+        .profile-number { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; color: var(--gold); letter-spacing: 0.2em; margin-bottom: 0.35rem; }
+        .profile-name { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.5rem; }
+        .profile-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+        .profile-tag {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.3rem 0.75rem;
+            background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px;
+            font-size: 0.76rem; color: var(--muted);
+        }
+        .profile-tag .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+        /* Stat bar */
+        .stat-bar {
+            display: flex;
+            gap: 0;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        .stat-item {
+            flex: 1;
+            padding: 1rem 0.75rem;
+            text-align: center;
+            border-right: 1px solid var(--border);
+        }
+        .stat-item:last-child { border-right: none; }
+        .stat-label { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem; }
+        .stat-value { font-family: 'Anton', sans-serif; font-size: 1.6rem; line-height: 1; color: var(--text); }
+        .stat-value.gold { background: linear-gradient(180deg, #fff 0%, var(--gold) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+        /* Section */
+        .section { margin-bottom: 2rem; }
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            text-indent: 0.35em;
+        }
+        .bio-text { color: var(--muted); line-height: 1.7; font-size: 0.9rem; }
+
+        /* Table */
+        .data-table {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .data-table table { width: 100%; border-collapse: collapse; }
+        .data-table th {
+            padding: 0.7rem 1.1rem;
+            text-align: left;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .data-table th.right { text-align: right; }
+        .data-table td {
+            padding: 0.75rem 1.1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.87rem;
+            vertical-align: middle;
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .data-table td.right { text-align: right; }
+        .data-table td.muted { color: var(--muted); }
+        .pts { font-weight: 700; color: var(--gold); }
+        .pos-badge {
+            display: inline-block;
+            min-width: 28px;
+            text-align: center;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            background: var(--bg-2);
+        }
+        .pos-1 { background: rgba(255,209,102,0.2); color: var(--gold); }
+        .pos-2 { background: rgba(203,213,225,0.15); color: #cbd5e1; }
+        .pos-3 { background: rgba(205,127,50,0.2); color: #cd7f32; }
+        .status-dnf { color: #fca5a5; font-size: 0.76rem; }
+        .status-dsq { color: #fca5a5; font-size: 0.76rem; }
+
+        /* Back link */
+        .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.82rem; text-decoration: none; margin-bottom: 1.5rem; }
+        .back-link:hover { color: var(--text); }
+
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+        .empty-msg { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
+
+        @media (max-width: 600px) {
+            .nav { padding: 1rem; }
+            .hero { padding: 2rem 1rem 1rem; }
+            .content { padding: 1rem 1rem 3rem; }
+            .stat-bar { flex-wrap: wrap; }
+            .stat-item { min-width: 33%; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+            .profile-header { gap: 1.25rem; }
+            .profile-avatar { width: 100px; height: 100px; }
+            .hide-mob { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="nav">
+    <a class="nav-brand" href="/endurance/">Gran Turismo<span> GTEC</span></a>
+    <div class="nav-links">
+        <a href="/endurance/">Home</a>
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/drivers/" class="active">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+    </div>
+</nav>
+
+<div id="app"><div class="loading">Loading…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb  = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+const app = document.getElementById('app');
+const slug = new URLSearchParams(location.search).get('slug');
+
+const FLAGS = { AD:'🇦🇩',AE:'🇦🇪',AT:'🇦🇹',AU:'🇦🇺',BE:'🇧🇪',BH:'🇧🇭',BR:'🇧🇷',CA:'🇨🇦',CN:'🇨🇳',CZ:'🇨🇿',DE:'🇩🇪',ES:'🇪🇸',FR:'🇫🇷',GB:'🇬🇧',HU:'🇭🇺',IT:'🇮🇹',JP:'🇯🇵',MX:'🇲🇽',NL:'🇳🇱',PL:'🇵🇱',PT:'🇵🇹',SA:'🇸🇦',SE:'🇸🇪',SG:'🇸🇬',US:'🇺🇸' };
+function flag(c) { return FLAGS[c?.toUpperCase()] || ''; }
+function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function initials(name) { return (name || '??').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2); }
+
+function posBadge(pos, status) {
+    if (!pos && status && status !== 'classified') {
+        return `<span class="status-${esc(status)}">${esc(status.toUpperCase())}</span>`;
+    }
+    if (!pos) return '<span class="pos-badge">—</span>';
+    const cls = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
+    return `<span class="pos-badge ${cls}">P${pos}</span>`;
+}
+
+function avatarHTML(url, name, size = 'card') {
+    if (url) return `<img src="${esc(url)}" alt="${esc(name)}" loading="lazy">`;
+    return `<span class="${size === 'profile' ? 'profile-avatar-init' : 'driver-initials'}">${initials(name)}</span>`;
+}
+
+// ============================================================
+// LISTING
+// ============================================================
+async function showListing() {
+    document.title = 'Drivers — Gran Turismo GTEC';
+    const { data, error } = await sb.from('drivers')
+        .select('id, display_name, slug, nationality, career_number, photo_url, teams(name,slug), manufacturers(name,brand_color)')
+        .order('display_name');
+
+    if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
+
+    const cards = (data || []).map(d => `
+        <div class="driver-card" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'">
+            <div class="driver-card-photo">${avatarHTML(d.photo_url, d.display_name, 'card')}</div>
+            <div class="driver-card-body">
+                ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
+                <div class="driver-card-name">${esc(d.display_name)}</div>
+                <div class="driver-card-meta">
+                    ${d.nationality ? flag(d.nationality) + ' ' + esc(d.nationality) : ''}
+                    ${d.teams?.name ? `<br>${esc(d.teams.name)}` : ''}
+                </div>
+            </div>
+        </div>`).join('');
+
+    app.innerHTML = `
+        <div class="hero">
+            <div class="hero-eyebrow">Championship</div>
+            <div class="hero-title">Drivers</div>
+            <div class="hero-sub">${data.length} registered driver${data.length !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="content">
+            ${data.length ? `<div class="driver-grid">${cards}</div>` : `<div class="empty-msg">No drivers registered yet.</div>`}
+        </div>`;
+}
+
+// ============================================================
+// PROFILE
+// ============================================================
+async function showProfile() {
+    const { data: driver, error } = await sb.from('drivers')
+        .select('*, teams(name,slug), manufacturers(name,brand_color)')
+        .eq('slug', slug)
+        .maybeSingle();
+
+    if (error || !driver) {
+        app.innerHTML = `<div class="hero"><div class="hero-title">Driver not found</div></div>
+            <div class="content"><a class="back-link" href="/endurance/drivers/">← All Drivers</a></div>`;
+        return;
+    }
+    document.title = `${driver.display_name} — Gran Turismo GTEC`;
+
+    // Season career stats
+    const { data: seasons } = await sb.from('driver_standings')
+        .select('*')
+        .eq('driver_id', driver.id)
+        .order('season_year', { ascending: false });
+
+    // Race history via result_drivers
+    const { data: rawHistory } = await sb.from('result_drivers')
+        .select(`
+            points_share,
+            results(
+                finish_position, status, points_awarded, pole_point, fastest_lap_point, laps_completed,
+                entries(car_number, teams(name)),
+                events(round, name, starts_at, seasons(year, name))
+            )
+        `)
+        .eq('driver_id', driver.id);
+
+    const history = (rawHistory || [])
+        .filter(r => r.results?.events?.starts_at)
+        .sort((a, b) => new Date(b.results.events.starts_at) - new Date(a.results.events.starts_at))
+        .slice(0, 15);
+
+    // Career totals
+    const totals = (seasons || []).reduce((acc, s) => {
+        acc.points   += Number(s.points || 0);
+        acc.wins     += Number(s.wins || 0);
+        acc.podiums  += Number(s.podiums || 0);
+        acc.poles    += Number(s.poles || 0);
+        acc.fl       += Number(s.fastest_laps || 0);
+        acc.races    += Number(s.races || 0);
+        return acc;
+    }, { points: 0, wins: 0, podiums: 0, poles: 0, fl: 0, races: 0 });
+
+    // Tags
+    const tags = [];
+    if (driver.nationality) tags.push(`${flag(driver.nationality)} ${esc(driver.nationality)}`);
+    if (driver.psn_id)      tags.push(`PSN: ${esc(driver.psn_id)}`);
+    if (driver.teams?.name) {
+        const swatchStyle = driver.manufacturers?.brand_color ? `style="background:${esc(driver.manufacturers.brand_color)}"` : '';
+        tags.push(`${driver.manufacturers?.brand_color ? `<span class="swatch" ${swatchStyle}></span>` : ''}${esc(driver.teams.name)}`);
+    }
+    if (driver.manufacturers?.name && !driver.teams?.name) tags.push(esc(driver.manufacturers.name));
+    if (driver.joined_at) tags.push(`Since ${esc(driver.joined_at.slice(0,4))}`);
+
+    const tagsHTML = tags.map(t => `<span class="profile-tag">${t}</span>`).join('');
+
+    // Career stats table
+    const seasonsHTML = (seasons || []).length ? `
+        <div class="section">
+            <div class="section-title">Career Stats</div>
+            <div class="data-table">
+                <table>
+                    <thead><tr>
+                        <th>Season</th><th>Team</th><th class="right">Pts</th>
+                        <th class="right">Races</th><th class="right">Wins</th>
+                        <th class="right">Pod</th><th class="right hide-mob">Poles</th><th class="right hide-mob">FL</th>
+                    </tr></thead>
+                    <tbody>
+                        ${seasons.map(s => `<tr>
+                            <td>${s.season_year}</td>
+                            <td class="muted">${s.team_name ? `${s.brand_color ? `<span class="swatch" style="width:10px;height:10px;border-radius:2px;background:${esc(s.brand_color)};display:inline-block;margin-right:4px;border:1px solid rgba(255,255,255,0.15)"></span>` : ''}${esc(s.team_name)}` : '—'}</td>
+                            <td class="right pts">${Number(s.points).toFixed(s.points % 1 === 0 ? 0 : 1)}</td>
+                            <td class="right muted">${s.races}</td>
+                            <td class="right muted">${s.wins}</td>
+                            <td class="right muted">${s.podiums}</td>
+                            <td class="right muted hide-mob">${s.poles}</td>
+                            <td class="right muted hide-mob">${s.fastest_laps}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>` : '';
+
+    // Race history table
+    const historyHTML = history.length ? `
+        <div class="section">
+            <div class="section-title">Race History</div>
+            <div class="data-table">
+                <table>
+                    <thead><tr>
+                        <th>Event</th><th>Season</th><th class="hide-mob">Car</th>
+                        <th class="right">Pos</th><th class="right">Pts</th>
+                    </tr></thead>
+                    <tbody>
+                        ${history.map(r => {
+                            const res = r.results;
+                            const ev  = res.events;
+                            const pts = Math.round(res.points_awarded * r.points_share);
+                            const bonuses = [res.pole_point ? 'P' : '', res.fastest_lap_point ? 'FL' : ''].filter(Boolean).join('+');
+                            return `<tr>
+                                <td>
+                                    <strong>R${ev.round} — ${esc(ev.name)}</strong>
+                                    ${bonuses ? `<span style="font-size:0.7rem;color:var(--gold);margin-left:0.4rem">${bonuses}</span>` : ''}
+                                </td>
+                                <td class="muted">${esc(ev.seasons?.year)}</td>
+                                <td class="muted hide-mob">#${res.entries?.car_number} ${esc(res.entries?.teams?.name || '')}</td>
+                                <td class="right">${posBadge(res.finish_position, res.status)}</td>
+                                <td class="right pts">${pts || 0}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>` : '';
+
+    app.innerHTML = `
+        <div class="hero">
+            <div class="hero-eyebrow">Driver Profile</div>
+        </div>
+        <div class="content">
+            <a class="back-link" href="/endurance/drivers/">← All Drivers</a>
+            <div class="profile-header">
+                <div class="profile-avatar">${avatarHTML(driver.photo_url, driver.display_name, 'profile')}</div>
+                <div class="profile-name-block">
+                    ${driver.career_number ? `<div class="profile-number">#${driver.career_number}</div>` : ''}
+                    <div class="profile-name">${esc(driver.display_name)}</div>
+                    <div class="profile-tags">${tagsHTML}</div>
+                </div>
+            </div>
+
+            <div class="stat-bar">
+                <div class="stat-item"><div class="stat-label">Points</div><div class="stat-value gold">${totals.points.toFixed(totals.points % 1 === 0 ? 0 : 1)}</div></div>
+                <div class="stat-item"><div class="stat-label">Races</div><div class="stat-value">${totals.races}</div></div>
+                <div class="stat-item"><div class="stat-label">Wins</div><div class="stat-value">${totals.wins}</div></div>
+                <div class="stat-item"><div class="stat-label">Podiums</div><div class="stat-value">${totals.podiums}</div></div>
+                <div class="stat-item hide-mob"><div class="stat-label">Poles</div><div class="stat-value">${totals.poles}</div></div>
+                <div class="stat-item hide-mob"><div class="stat-label">Fastest Laps</div><div class="stat-value">${totals.fl}</div></div>
+            </div>
+
+            ${driver.bio ? `<div class="section"><div class="section-title">Bio</div><div class="bio-text">${esc(driver.bio)}</div></div>` : ''}
+
+            ${seasonsHTML}
+            ${historyHTML}
+
+            ${!seasons?.length && !history.length ? `<div class="empty-msg" style="margin-top:1rem">No race history yet — check back after the first event.</div>` : ''}
+        </div>`;
+}
+
+// ============================================================
+// Init
+// ============================================================
+if (slug) showProfile();
+else showListing();
+</script>
+</body>
+</html>

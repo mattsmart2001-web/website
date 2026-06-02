@@ -258,6 +258,8 @@
         <a href="/endurance/">Home</a>
         <a href="/endurance/calendar/">Calendar</a>
         <a href="/endurance/standings/" class="active">Standings</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
     </div>
 </nav>
 
@@ -323,12 +325,12 @@ function renderDrivers(panel) {
         const pos = i + 1;
         const num = d.career_number ? `<span class="career-num">#${d.career_number}</span>` : '';
         const teamLine = d.team_name
-            ? `<div class="meta-line">${d.brand_color ? `<span class="swatch" style="background:${esc(d.brand_color)}"></span>` : ''}${esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</div>`
+            ? `<div class="meta-line">${d.brand_color ? `<span class="swatch" style="background:${esc(d.brand_color)}"></span>` : ''}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.color='#fff'" onmouseout="this.style.color=''">${esc(d.team_name)}</a>` : esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</div>`
             : '';
         return `<tr class="driver-row">
             <td class="${posCls(pos)}">${pos}</td>
             <td>
-                <div class="name">${num}${esc(d.driver_name)}</div>
+                <div class="name">${num}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a></div>
                 ${teamLine}
             </td>
             <td class="muted center hide-mob">${d.races}</td>
@@ -371,7 +373,7 @@ function renderTeams(panel) {
         return `<tr>
             <td class="${posCls(pos)}">${pos}</td>
             <td>
-                <div class="name">${esc(t.team_name)}</div>
+                <div class="name"><a href="/endurance/teams/?slug=${esc(t.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(t.team_name)}</a></div>
                 ${mfrLine}
             </td>
             <td class="muted center hide-mob">${t.races}</td>
