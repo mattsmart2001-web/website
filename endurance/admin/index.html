@@ -1510,6 +1510,15 @@ function toDatetimeLocal(iso) {
     return iso.slice(0, 16);
 }
 
+function autoFillEndsAt() {
+    const starts = document.getElementById('ev-starts')?.value;
+    const hours  = parseFloat(document.getElementById('ev-duration')?.value);
+    const endsEl = document.getElementById('ev-ends');
+    if (!starts || !hours || !endsEl) return;
+    const ms = new Date(starts).getTime() + hours * 3600 * 1000;
+    if (!isNaN(ms)) endsEl.value = toDatetimeLocal(new Date(ms).toISOString());
+}
+
 function eventForm(e = {}) {
     const statusOpts = [
         { value: 'scheduled', label: 'Scheduled' },
@@ -1553,7 +1562,7 @@ function eventForm(e = {}) {
         <div class="form-row">
             <div class="form-group">
                 <label>Duration (hours) <span class="required">*</span></label>
-                <input type="number" name="duration_hours" value="${e.duration_hours || ''}" placeholder="3" required min="0.5" step="0.5">
+                <input type="number" name="duration_hours" id="ev-duration" value="${e.duration_hours || ''}" placeholder="3" required min="0.5" step="0.5" oninput="autoFillEndsAt()">
             </div>
             <div class="form-group">
                 <label>Circuit Length (km)</label>
@@ -1563,11 +1572,12 @@ function eventForm(e = {}) {
         <div class="form-row">
             <div class="form-group">
                 <label>Starts At <span class="required">*</span></label>
-                <input type="datetime-local" name="starts_at" value="${toDatetimeLocal(e.starts_at)}" required>
+                <input type="datetime-local" name="starts_at" id="ev-starts" value="${toDatetimeLocal(e.starts_at)}" required oninput="autoFillEndsAt()">
             </div>
             <div class="form-group">
                 <label>Ends At <span class="required">*</span></label>
-                <input type="datetime-local" name="ends_at" value="${toDatetimeLocal(e.ends_at)}" required>
+                <input type="datetime-local" name="ends_at" id="ev-ends" value="${toDatetimeLocal(e.ends_at)}" required>
+                <div class="form-hint">Auto-fills from start + duration.</div>
             </div>
         </div>
         <div class="form-row">
