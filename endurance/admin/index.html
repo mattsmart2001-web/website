@@ -1287,7 +1287,7 @@ async function renderDrivers() {
         .order('display_name');
     if (error) { toast(error.message, 'error'); return; }
 
-    const rows = data.length === 0 ? `<tr><td colspan="6"><div class="empty-state">No drivers yet.</div></td></tr>` :
+    const rows = data.length === 0 ? `<tr><td colspan="7"><div class="empty-state">No drivers yet.</div></td></tr>` :
         data.map(d => `
             <tr>
                 <td><strong>${esc(d.display_name)}</strong>${d.career_number ? ` <span class="badge badge-gold">#${d.career_number}</span>` : ''}</td>
@@ -1295,7 +1295,9 @@ async function renderDrivers() {
                 <td class="td-muted">${esc(d.nationality) || '—'}</td>
                 <td class="td-muted">${esc(d.teams?.name) || '—'}</td>
                 <td class="td-muted">${esc(d.manufacturers?.name) || '—'}</td>
+                <td>${d.user_id ? '<span class="badge badge-green">Claimed</span>' : '<span class="badge badge-muted">Unclaimed</span>'}</td>
                 <td><div class="row-actions">
+                    ${!d.user_id ? `<button class="btn-icon" onclick="generateClaimLink('${d.id}','${esc(d.display_name)}')">Claim Link</button>` : ''}
                     <button class="btn-icon" onclick="editDriver('${d.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteDriver('${d.id}','${esc(d.display_name)}')">Delete</button>
                 </div></td>
@@ -1307,7 +1309,7 @@ async function renderDrivers() {
                 <input class="table-search" type="search" placeholder="Search drivers…" oninput="filterTable(this,'drivers-table')">
             </div>
             <table id="drivers-table"><thead><tr>
-                <th>Name</th><th>PSN ID</th><th>Nationality</th><th>Team</th><th>Manufacturer</th><th></th>
+                <th>Name</th><th>PSN ID</th><th>Nationality</th><th>Team</th><th>Manufacturer</th><th>Portal</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
 }
@@ -1405,7 +1407,41 @@ async function deleteDriver(id, name) {
 
 
 // ============================================================
-// 11. Utilities
+// 11. Driver claim link generation
+// ============================================================
+async function generateClaimLink(driverId, driverName) {
+    const { data, error } = await sb.from('driver_claim_tokens')
+        .insert({ driver_id: driverId })
+        .select('token')
+        .single();
+    if (error) { toast(error.message, 'error'); return; }
+
+    const url = `${location.origin}/endurance/profile/claim/?token=${data.token}`;
+    openModal(`Claim Link — ${driverName}`,
+        `<p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">
+            Share this link with <strong style="color:var(--text)">${esc(driverName)}</strong>.
+            It expires in <strong style="color:var(--text)">24 hours</strong> and can only be used once.
+        </p>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+            <input type="text" id="claim-url" value="${esc(url)}" readonly
+                style="flex:1;font-size:0.78rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:0.6rem 0.85rem;color:var(--muted)">
+            <button class="btn btn-primary" onclick="copyClaimUrl()">Copy</button>
+        </div>
+        <p style="color:var(--muted);font-size:0.75rem;margin-top:0.75rem">
+            The driver visits this link, creates an account, and their profile is linked automatically.
+        </p>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`
+    );
+}
+
+function copyClaimUrl() {
+    const input = document.getElementById('claim-url');
+    navigator.clipboard.writeText(input.value).then(() => toast('Link copied to clipboard.', 'success'));
+}
+
+
+// ============================================================
+// 12. Utilities
 // ============================================================
 function autoSlug(input, sourceName, targetId) {
     const target = document.getElementById(targetId);
