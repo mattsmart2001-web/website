@@ -40,7 +40,7 @@ A professional-feeling motorsport championship platform for the Gran
 Turismo 7 endurance league:
 
 - Single-class racing (Gr.3 cars only)
-- Teams of 2–4 drivers
+- Teams of 2 drivers
 - Cars locked to a manufacturer for the season
 - Each race ≥ 6 hours
 - Multiple seasons supported with permanent historical data
