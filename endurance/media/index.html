@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Media — Gran Turismo GTEC</title>
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .gtec-nav {
+            position: sticky; top: 0; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5,6,8,0.85); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; transition: color 0.2s, border-color 0.2s; }
+        .gtec-nav .back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Page */
+        .page-wrap { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem 5rem; }
+        .page-hero { margin-bottom: 2.5rem; }
+        .eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; text-indent: 0.45em; }
+        .page-title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: 0.04em; text-transform: uppercase; }
+
+        /* Masonry grid */
+        .media-grid { columns: 4 200px; gap: 1rem; }
+        .media-item {
+            break-inside: avoid;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg-1);
+            transition: border-color 0.2s, transform 0.15s;
+        }
+        .media-item:hover { border-color: rgba(255,209,102,0.3); transform: scale(1.01); }
+        .media-item img { width: 100%; display: block; }
+        .media-item-info { padding: 0.5rem 0.65rem 0.65rem; }
+        .media-item-title { font-size: 0.78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .media-item-caption { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .media-item-event { font-size: 0.68rem; color: var(--gold); margin-top: 0.2rem; }
+
+        /* Lightbox */
+        .lightbox {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.93); z-index: 999;
+            align-items: center; justify-content: center; padding: 2rem;
+            cursor: zoom-out;
+        }
+        .lightbox.open { display: flex; }
+        .lightbox-img { max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; pointer-events: none; }
+        .lightbox-caption { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.82rem; color: var(--muted); white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+        .lightbox-close { position: fixed; top: 1rem; right: 1rem; width: 36px; height: 36px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; color: var(--text); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+        .lightbox-close:hover { background: rgba(255,255,255,0.2); }
+
+        /* States */
+        .state-msg { text-align: center; padding: 5rem 2rem; }
+        .state-msg h3 { font-family: 'Anton', sans-serif; font-size: 1.3rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .state-msg p { color: var(--muted); font-size: 0.88rem; }
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+
+        @media (max-width: 580px) {
+            .gtec-nav { padding: 1rem; }
+            .page-wrap { padding: 1.5rem 1rem 3rem; }
+            .media-grid { columns: 2 140px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/">Gran Turismo<span class="accent"> GTEC</span></a>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a class="back" href="/">← SparksTheory</a>
+    </div>
+</nav>
+
+<div class="page-wrap">
+    <div class="page-hero">
+        <div class="eyebrow">Championship</div>
+        <div class="page-title">Media</div>
+    </div>
+    <div id="media-grid"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <img class="lightbox-img" id="lightbox-img" src="" alt="">
+    <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function load() {
+    const grid = document.getElementById('media-grid');
+    const { data, error } = await sb.from('media_items')
+        .select('*, events(name)')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        grid.innerHTML = `<div class="state-msg"><h3>Error</h3><p>${esc(error.message)}</p></div>`;
+        return;
+    }
+
+    if (!data?.length) {
+        grid.innerHTML = `<div class="state-msg"><h3>No Photos Yet</h3><p>Race photos and highlights will appear here.</p></div>`;
+        return;
+    }
+
+    grid.className = 'media-grid';
+    grid.innerHTML = data.map(m => `
+        <div class="media-item" onclick="openLightbox('${esc(m.url)}','${esc(m.caption || m.title || '')}')">
+            <img src="${esc(m.url)}" alt="${esc(m.title || '')}" loading="lazy">
+            ${(m.title || m.caption || m.events?.name) ? `
+            <div class="media-item-info">
+                ${m.title ? `<div class="media-item-title">${esc(m.title)}</div>` : ''}
+                ${m.caption ? `<div class="media-item-caption">${esc(m.caption)}</div>` : ''}
+                ${m.events?.name ? `<div class="media-item-event">${esc(m.events.name)}</div>` : ''}
+            </div>` : ''}
+        </div>`).join('');
+}
+
+function openLightbox(url, caption) {
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox-caption').textContent = caption;
+    document.getElementById('lightbox-caption').style.display = caption ? '' : 'none';
+    document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+load();
+</script>
+</body>
+</html>

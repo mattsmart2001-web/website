@@ -600,6 +600,20 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
             Events
         </button>
+
+        <div class="nav-section">Content</div>
+        <button class="nav-link" data-section="news">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a4 4 0 0 1-4 4zm0 0a4 4 0 0 1-4-4V8a2 2 0 0 1 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6z"/></svg>
+            News
+        </button>
+        <button class="nav-link" data-section="media">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Media
+        </button>
+        <button class="nav-link" data-section="pages">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Pages
+        </button>
     </nav>
     <div class="sidebar-bottom">
         <div class="user-chip" id="user-email">—</div>
@@ -727,11 +741,14 @@ async function navigate(section, pushHash = true) {
         teams: 'Teams',
         drivers: 'Drivers',
         events: 'Events',
+        news: 'News',
+        media: 'Media',
+        pages: 'Pages',
     };
     document.getElementById('page-title').textContent = titles[section] || section;
 
     const addBtn = document.getElementById('btn-add');
-    if (section === 'dashboard') {
+    if (section === 'dashboard' || section === 'pages') {
         addBtn.style.display = 'none';
     } else {
         addBtn.style.display = '';
@@ -750,6 +767,9 @@ async function navigate(section, pushHash = true) {
         case 'teams':        await renderTeams(); break;
         case 'drivers':      await renderDrivers(); break;
         case 'events':       await renderEvents(); break;
+        case 'news':         await renderNews(); break;
+        case 'media':        await renderMedia(); break;
+        case 'pages':        await renderPages(); break;
     }
 }
 
@@ -934,6 +954,8 @@ function openAddModal(section) {
         teams:         () => openTeamModal(),
         drivers:       () => openDriverModal(),
         events:        () => openEventModal(),
+        news:          () => openNewsModal(),
+        media:         () => openMediaModal(),
     };
     map[section]?.();
 }
@@ -2250,6 +2272,280 @@ async function deletePenalty(id, eventId, eventName) {
     if (error) { toast(error.message, 'error'); return; }
     toast('Penalty deleted.', 'success');
     await viewEventPenalties(eventId, eventName);
+}
+
+
+// ============================================================
+// 11b. News
+// ============================================================
+async function renderNews() {
+    const { data, error } = await sb.from('news')
+        .select('id, title, slug, author, is_published, published_at, created_at')
+        .order('created_at', { ascending: false });
+    if (error) { toast(error.message, 'error'); return; }
+
+    const rows = !data?.length
+        ? `<tr><td colspan="5"><div class="empty-state">No articles yet. Use the Add button to write the first one.</div></td></tr>`
+        : data.map(n => `
+            <tr>
+                <td>
+                    <strong>${esc(n.title)}</strong>
+                    <br><small class="td-muted">/endurance/news/?slug=${esc(n.slug)}</small>
+                </td>
+                <td class="td-muted">${esc(n.author) || '—'}</td>
+                <td><span class="badge ${n.is_published ? 'badge-green' : 'badge-muted'}">${n.is_published ? 'Published' : 'Draft'}</span></td>
+                <td class="td-muted">${n.published_at ? n.published_at.slice(0,10) : '—'}</td>
+                <td><div class="row-actions">
+                    <button class="btn-icon" onclick="editNews('${n.id}')">Edit</button>
+                    <button class="btn-icon danger" onclick="deleteNews('${n.id}','${esc(n.title)}')">Delete</button>
+                </div></td>
+            </tr>`).join('');
+
+    document.getElementById('content').innerHTML = `
+        <div class="table-wrap">
+            <div class="table-toolbar">
+                <input class="table-search" type="search" placeholder="Search articles…" oninput="filterTable(this,'news-table')">
+            </div>
+            <table id="news-table"><thead><tr>
+                <th>Title / Slug</th><th>Author</th><th>Status</th><th>Published</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+}
+
+function newsForm(n = {}) {
+    return `<form id="entity-form">
+        <div class="form-group">
+            <label>Title <span class="required">*</span></label>
+            <input type="text" name="title" id="news-title" value="${esc(n.title)}" placeholder="Race Report: Round 1" required
+                oninput="autoSlug(this,'title','news-slug')">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Slug <span class="required">*</span></label>
+                <input type="text" name="slug" id="news-slug" value="${esc(n.slug)}" placeholder="race-report-round-1" required>
+            </div>
+            <div class="form-group">
+                <label>Author</label>
+                <input type="text" name="author" value="${esc(n.author)}" placeholder="GTEC Admin">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Excerpt</label>
+            <input type="text" name="excerpt" value="${esc(n.excerpt)}" placeholder="Short teaser shown in article listings…">
+        </div>
+        <div class="form-group">
+            <label>Cover Image URL</label>
+            <input type="url" name="cover_url" value="${esc(n.cover_url)}" placeholder="https://…">
+        </div>
+        <div class="form-group">
+            <label>Body <span class="required">*</span></label>
+            <textarea name="body" rows="12" placeholder="Article content — HTML supported (&lt;p&gt;, &lt;h2&gt;, &lt;strong&gt;, &lt;ul&gt;, etc.)" style="font-family:monospace;font-size:0.78rem">${esc(n.body)}</textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Publish Date</label>
+                <input type="datetime-local" name="published_at" value="${n.published_at ? n.published_at.slice(0,16) : ''}">
+            </div>
+            <div class="form-group" style="align-self:flex-end;padding-bottom:0.6rem">
+                <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+                    <input type="checkbox" name="is_published" id="news-pub-cb" ${n.is_published ? 'checked' : ''} style="width:auto;margin:0">
+                    Published (visible on site)
+                </label>
+            </div>
+        </div>
+    </form>`;
+}
+
+function openNewsModal(n = {}) {
+    openModal(n.id ? 'Edit Article' : 'New Article', newsForm(n), `
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNews('${n.id || ''}')">Save</button>
+    `);
+}
+
+async function editNews(id) {
+    const { data } = await sb.from('news').select('*').eq('id', id).single();
+    if (data) openNewsModal(data);
+}
+
+async function saveNews(id) {
+    const d = getFormData('entity-form');
+    if (!d.title || !d.slug) { toast('Title and slug are required.', 'error'); return; }
+    const isPublished = !!document.getElementById('news-pub-cb')?.checked;
+    const payload = {
+        title: d.title,
+        slug: d.slug,
+        author: d.author || null,
+        excerpt: d.excerpt || null,
+        cover_url: d.cover_url || null,
+        body: d.body || '',
+        is_published: isPublished,
+        published_at: d.published_at ? new Date(d.published_at).toISOString() : null,
+        updated_at: new Date().toISOString(),
+    };
+    const { error } = id
+        ? await sb.from('news').update(payload).eq('id', id)
+        : await sb.from('news').insert(payload);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(id ? 'Article updated.' : 'Article created.', 'success');
+    closeModal();
+    await renderNews();
+}
+
+async function deleteNews(id, title) {
+    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    const { error } = await sb.from('news').delete().eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Article deleted.', 'success');
+    await renderNews();
+}
+
+
+// ============================================================
+// 11c. Media
+// ============================================================
+async function renderMedia() {
+    const { data, error } = await sb.from('media_items')
+        .select('*, events(name)')
+        .order('created_at', { ascending: false });
+    if (error) { toast(error.message, 'error'); return; }
+
+    const grid = !data?.length
+        ? `<div class="empty-state" style="grid-column:1/-1">No media yet. Upload the first image with the Add button.</div>`
+        : data.map(m => `
+            <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:8px;overflow:hidden;position:relative">
+                <img src="${esc(m.url)}" alt="${esc(m.title) || 'Media'}"
+                    style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block"
+                    onerror="this.style.minHeight='80px';this.alt='(load failed)'">
+                <div style="padding:0.55rem 0.75rem">
+                    <div style="font-size:0.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.title) || '—'}</div>
+                    ${m.caption ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:0.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.caption)}</div>` : ''}
+                    ${m.events?.name ? `<div style="font-size:0.68rem;color:var(--gold);margin-top:0.2rem">${esc(m.events.name)}</div>` : ''}
+                </div>
+                <button class="btn-icon danger" style="position:absolute;top:0.4rem;right:0.4rem;background:rgba(0,0,0,0.75);border-radius:4px;padding:0.2rem 0.4rem;font-size:0.7rem"
+                    onclick="deleteMedia('${m.id}')">✕</button>
+            </div>`).join('');
+
+    document.getElementById('content').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem">
+            ${grid}
+        </div>`;
+}
+
+function openMediaModal() {
+    const evtOpts = '<option value="">— No event —</option>' +
+        _seasons.map(s => `<option disabled style="color:var(--muted)">── ${esc(s.name)} ──</option>`).join('');
+    openModal('Upload Media', `
+        <form id="entity-form">
+            <div class="form-group">
+                <label>Image File <span class="required">*</span></label>
+                <input type="file" id="media-file" accept="image/*" required style="padding:0.4rem 0">
+                <div class="form-hint">Uploads to Supabase Storage (gtec-media bucket). Max 50 MB.</div>
+            </div>
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" name="title" placeholder="Race Start — Round 1">
+            </div>
+            <div class="form-group">
+                <label>Caption</label>
+                <input type="text" name="caption" placeholder="Optional short caption">
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="saveMedia()">Upload</button>`
+    );
+}
+
+async function saveMedia() {
+    const fileInput = document.getElementById('media-file');
+    const d = getFormData('entity-form');
+    if (!fileInput?.files?.[0]) { toast('Select an image file.', 'error'); return; }
+    const file = fileInput.files[0];
+    const ext = file.name.split('.').pop().toLowerCase();
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+    toast('Uploading…', 'success');
+    const { error: upErr } = await sb.storage.from('gtec-media').upload(path, file);
+    if (upErr) { toast(upErr.message, 'error'); return; }
+    const { data: { publicUrl } } = sb.storage.from('gtec-media').getPublicUrl(path);
+    const { error } = await sb.from('media_items').insert({
+        title:   d.title   || null,
+        caption: d.caption || null,
+        url:     publicUrl,
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Media uploaded.', 'success');
+    closeModal();
+    await renderMedia();
+}
+
+async function deleteMedia(id) {
+    if (!confirm('Delete this media item? The image file in storage will NOT be deleted automatically.')) return;
+    const { error } = await sb.from('media_items').delete().eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Deleted.', 'success');
+    await renderMedia();
+}
+
+
+// ============================================================
+// 11d. Pages
+// ============================================================
+async function renderPages() {
+    const { data, error } = await sb.from('pages').select('*').order('slug');
+    if (error) { toast(error.message, 'error'); return; }
+
+    const rows = !data?.length
+        ? `<tr><td colspan="4"><div class="empty-state">No pages found. Run the SQL to seed the rules page.</div></td></tr>`
+        : data.map(p => `
+            <tr>
+                <td><strong>${esc(p.title)}</strong></td>
+                <td class="td-muted">/endurance/${esc(p.slug)}/</td>
+                <td class="td-muted">${p.updated_at ? p.updated_at.slice(0,10) : '—'}</td>
+                <td><div class="row-actions">
+                    <button class="btn-icon" onclick="editPage('${esc(p.slug)}')">Edit</button>
+                </div></td>
+            </tr>`).join('');
+
+    document.getElementById('content').innerHTML = `
+        <div class="table-wrap">
+            <table id="pages-table"><thead><tr>
+                <th>Title</th><th>URL</th><th>Last Updated</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+}
+
+async function editPage(slug) {
+    const { data } = await sb.from('pages').select('*').eq('slug', slug).single();
+    if (!data) { toast('Page not found.', 'error'); return; }
+    openModal(`Edit Page — ${esc(data.title)}`, `
+        <form id="entity-form">
+            <div class="form-group">
+                <label>Title <span class="required">*</span></label>
+                <input type="text" name="title" value="${esc(data.title)}" required>
+            </div>
+            <div class="form-group">
+                <label>Body <span class="required">*</span></label>
+                <textarea name="body" rows="14" placeholder="HTML content…" style="font-family:monospace;font-size:0.78rem">${esc(data.body)}</textarea>
+                <div class="form-hint">HTML is supported: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;a href=""&gt;, etc.</div>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="savePage('${esc(slug)}')">Save</button>`
+    );
+}
+
+async function savePage(slug) {
+    const d = getFormData('entity-form');
+    if (!d.title) { toast('Title is required.', 'error'); return; }
+    const { error } = await sb.from('pages').update({
+        title:      d.title,
+        body:       d.body || '',
+        updated_at: new Date().toISOString(),
+    }).eq('slug', slug);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Page saved.', 'success');
+    closeModal();
+    await renderPages();
 }
 
 
