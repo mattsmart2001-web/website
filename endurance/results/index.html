@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Results — Gran Turismo GTEC</title>
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --green: #22c55e;
+            --red: #ef4444;
+            --silver: #c0c0c0;
+            --bronze: #cd7f32;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .gtec-nav { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 2rem; background: rgba(5,6,8,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--bg); background: var(--gold); text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 999px; transition: opacity 0.2s; }
+        .gtec-nav .apply:hover { opacity: 0.85; }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; transition: color 0.2s, border-color 0.2s; }
+        .gtec-nav .back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Page */
+        .page-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 5rem; }
+        .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.82rem; text-decoration: none; margin-bottom: 1.75rem; transition: color 0.15s; }
+        .back-link:hover { color: var(--text); }
+
+        /* Event header */
+        .event-header { background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem 2rem; margin-bottom: 2rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+        .event-header-left {}
+        .event-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
+        .event-name { font-family: 'Anton', sans-serif; font-size: clamp(1.5rem, 4vw, 2.5rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.5rem; }
+        .event-meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: 0.82rem; color: var(--muted); }
+        .badge { display: inline-flex; align-items: center; padding: 0.22rem 0.6rem; border-radius: 4px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+        .badge-completed { background: rgba(34,197,94,0.12); color: #4ade80; }
+        .badge-in_progress { background: rgba(255,209,102,0.15); color: var(--gold); }
+
+        /* Section heading */
+        .section-heading { font-family: 'Anton', sans-serif; font-size: 1.1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+
+        /* Podium */
+        .podium { display: flex; align-items: flex-end; justify-content: center; gap: 0.5rem; margin-bottom: 2.5rem; }
+        .podium-step { flex: 1; max-width: 280px; display: flex; flex-direction: column; align-items: center; }
+        .podium-card { width: 100%; background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1rem 0.75rem; text-align: center; margin-bottom: 0; }
+        .podium-step.p1 .podium-card { border-color: rgba(255,209,102,0.4); background: rgba(255,209,102,0.04); }
+        .podium-step.p2 .podium-card { border-color: rgba(192,192,192,0.3); }
+        .podium-step.p3 .podium-card { border-color: rgba(205,127,50,0.3); }
+        .podium-pos { font-family: 'Anton', sans-serif; font-size: 0.6rem; letter-spacing: 0.4em; text-transform: uppercase; margin-bottom: 0.35rem; }
+        .podium-step.p1 .podium-pos { color: var(--gold); }
+        .podium-step.p2 .podium-pos { color: var(--silver); }
+        .podium-step.p3 .podium-pos { color: var(--bronze); }
+        .podium-car-num { font-family: 'Anton', sans-serif; font-size: 2.2rem; line-height: 1; margin-bottom: 0.3rem; }
+        .podium-step.p1 .podium-car-num { color: var(--gold); }
+        .podium-team { font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .podium-drivers { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.35rem; }
+        .podium-gap { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+        .podium-step.p1 .podium-gap { color: var(--gold); font-weight: 700; }
+        .podium-plinth { width: 100%; display: flex; align-items: center; justify-content: center; border-radius: 0 0 8px 8px; font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.15em; }
+        .podium-step.p1 .podium-plinth { background: rgba(255,209,102,0.15); color: var(--gold); height: 64px; }
+        .podium-step.p2 .podium-plinth { background: rgba(192,192,192,0.1); color: var(--silver); height: 46px; }
+        .podium-step.p3 .podium-plinth { background: rgba(205,127,50,0.1); color: var(--bronze); height: 32px; }
+
+        /* Results table */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+        thead th { background: var(--bg-2); color: var(--muted); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.65rem 0.75rem; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
+        tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+        tbody tr:hover { background: rgba(255,255,255,0.02); }
+        tbody td { padding: 0.75rem 0.75rem; vertical-align: middle; }
+        .td-muted { color: var(--muted); }
+        .td-center { text-align: center; }
+        .td-num { font-family: 'Anton', sans-serif; font-size: 1.1rem; letter-spacing: 0.04em; }
+
+        /* Position cells */
+        .pos-cell { font-family: 'Anton', sans-serif; font-size: 1.1rem; width: 40px; text-align: center; }
+        .pos-1 { color: var(--gold); }
+        .pos-2 { color: var(--silver); }
+        .pos-3 { color: var(--bronze); }
+        .pos-dnf { color: var(--red); font-size: 0.7rem; font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 0.06em; }
+
+        /* Car color dot */
+        .mfr-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 0.4rem; vertical-align: middle; }
+        .driver-list { font-size: 0.78rem; color: var(--muted); }
+        .driver-list a { color: inherit; text-decoration: none; }
+        .driver-list a:hover { color: var(--text); }
+
+        /* FL highlight */
+        .fl-time { color: #a78bfa; font-weight: 600; }
+        .fl-badge { display: inline-block; background: rgba(167,139,250,0.15); color: #a78bfa; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.12rem 0.35rem; border-radius: 3px; margin-left: 0.3rem; }
+
+        /* DNF row */
+        tr.row-dnf { opacity: 0.55; }
+        tr.row-dnf:hover { opacity: 0.7; }
+
+        /* Qualifying, penalties */
+        .q-table th, .q-table td { padding: 0.6rem 0.75rem; }
+
+        /* Fastest lap callout */
+        .fl-callout { background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.2); border-radius: 10px; padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+        .fl-callout-label { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; letter-spacing: 0.35em; text-transform: uppercase; color: #a78bfa; margin-bottom: 0.2rem; }
+        .fl-callout-time { font-family: 'Anton', sans-serif; font-size: 1.4rem; color: #a78bfa; }
+        .fl-callout-car { font-size: 0.82rem; color: var(--muted); }
+
+        /* Index listing */
+        .results-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .results-item { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; text-decoration: none; color: var(--text); transition: border-color 0.15s, transform 0.1s; }
+        .results-item:hover { border-color: rgba(255,209,102,0.25); transform: translateX(2px); }
+        .results-item-round { font-family: 'Anton', sans-serif; font-size: 1.6rem; color: var(--gold); line-height: 1; min-width: 2ch; text-align: center; }
+        .results-item-info { flex: 1; min-width: 0; }
+        .results-item-name { font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.04em; text-transform: uppercase; }
+        .results-item-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+        .results-item-arrow { color: var(--muted); }
+
+        /* States */
+        .state-msg { text-align: center; padding: 5rem 2rem; }
+        .state-msg h3 { font-family: 'Anton', sans-serif; font-size: 1.3rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .state-msg p { color: var(--muted); font-size: 0.88rem; }
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+
+        @media (max-width: 700px) {
+            .gtec-nav { padding: 1rem; }
+            .page-wrap { padding: 1.5rem 1rem 3rem; }
+            .podium { gap: 0.25rem; }
+            .podium-car-num { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/">Gran Turismo<span class="accent"> GTEC</span></a>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/">← SparksTheory</a>
+    </div>
+</nav>
+
+<div id="app"><div class="loading">Loading…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+const app = document.getElementById('app');
+
+const FLAGS = {
+    AD:'🇦🇩',AE:'🇦🇪',AT:'🇦🇹',AU:'🇦🇺',BE:'🇧🇪',BH:'🇧🇭',BR:'🇧🇷',
+    CA:'🇨🇦',CN:'🇨🇳',CZ:'🇨🇿',DE:'🇩🇪',ES:'🇪🇸',FR:'🇫🇷',GB:'🇬🇧',
+    HU:'🇭🇺',IT:'🇮🇹',JP:'🇯🇵',MX:'🇲🇽',NL:'🇳🇱',PL:'🇵🇱',PT:'🇵🇹',
+    SA:'🇸🇦',SE:'🇸🇪',SG:'🇸🇬',US:'🇺🇸',
+};
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function flag(c) { return FLAGS[c?.toUpperCase()] || ''; }
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+}
+function fmtMs(ms) {
+    if (ms == null) return '—';
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const ms3 = String(ms % 1000).padStart(3,'0');
+    const ss = String(s).padStart(2,'0');
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${ss}.${ms3}`;
+    return `${m}:${ss}.${ms3}`;
+}
+function fmtGap(gapMs, leaderLaps, myLaps) {
+    if (!gapMs && gapMs !== 0) return '—';
+    if (gapMs === 0) return 'Leader';
+    const lapDiff = (leaderLaps || 0) - (myLaps || 0);
+    if (lapDiff >= 1) return `+${lapDiff} Lap${lapDiff > 1 ? 's' : ''}`;
+    return `+${(gapMs / 1000).toFixed(3)}s`;
+}
+
+const slug = new URLSearchParams(location.search).get('slug');
+slug ? loadResults(slug) : loadIndex();
+
+// ── Index: list all completed events ─────────────────────────
+async function loadIndex() {
+    const { data: events, error } = await sb.from('events')
+        .select('id, name, slug, circuit_name, circuit_country, starts_at, round, seasons(name, year)')
+        .eq('status', 'completed')
+        .order('starts_at', { ascending: false });
+
+    if (error) { app.innerHTML = errMsg(error.message); return; }
+
+    if (!events?.length) {
+        app.innerHTML = `
+        <div class="page-wrap">
+            <div class="state-msg"><h3>No Results Yet</h3><p>Race results will appear here once events are completed.</p></div>
+        </div>`;
+        return;
+    }
+
+    const items = events.map(e => `
+        <a class="results-item" href="/endurance/results/?slug=${encodeURIComponent(e.slug)}">
+            <div class="results-item-round">${e.round}</div>
+            <div class="results-item-info">
+                <div class="results-item-name">${esc(e.name)}</div>
+                <div class="results-item-meta">${flag(e.circuit_country)} ${esc(e.circuit_name)} · ${fmtDate(e.starts_at)} · ${esc(e.seasons?.name)}</div>
+            </div>
+            <div class="results-item-arrow">→</div>
+        </a>`).join('');
+
+    app.innerHTML = `
+    <div class="page-wrap">
+        <div style="margin-bottom:2rem">
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.55rem;letter-spacing:0.4em;text-transform:uppercase;color:var(--gold);margin-bottom:0.6rem">Season Results</div>
+            <div style="font-family:'Anton',sans-serif;font-size:clamp(2rem,5vw,3rem);letter-spacing:0.04em;text-transform:uppercase">Results</div>
+        </div>
+        <div class="results-list">${items}</div>
+    </div>`;
+}
+
+// ── Single event results ──────────────────────────────────────
+async function loadResults(slug) {
+    const [evtRes, resultsRes, qualyRes, penRes] = await Promise.all([
+        sb.from('events').select('*, seasons(name, year)').eq('slug', slug).maybeSingle(),
+        sb.from('results').select('*').eq('event_id', (await sb.from('events').select('id').eq('slug', slug).maybeSingle()).data?.id || '00000000-0000-0000-0000-000000000000'),
+        sb.from('qualifying_results').select('*').eq('event_id', (await sb.from('events').select('id').eq('slug', slug).maybeSingle()).data?.id || '00000000-0000-0000-0000-000000000000'),
+        sb.from('penalties').select('*, entries(car_number, teams(name))').eq('event_id', (await sb.from('events').select('id').eq('slug', slug).maybeSingle()).data?.id || '00000000-0000-0000-0000-000000000000'),
+    ]);
+
+    // Re-fetch properly with the event id we now know
+    const event = evtRes.data;
+    if (!event) { app.innerHTML = `<div class="page-wrap">${errMsg('Event not found.')}</div>`; return; }
+
+    document.title = `${event.name} Results — Gran Turismo GTEC`;
+
+    const [entriesRes, rRes, qRes, pRes] = await Promise.all([
+        sb.from('entries')
+            .select('id, car_number, car_model, teams(name, slug), manufacturers(name, brand_color), entry_drivers(stint_role, drivers(display_name, slug, nationality))')
+            .eq('event_id', event.id)
+            .in('status', ['confirmed']),
+        sb.from('results').select('*').eq('event_id', event.id),
+        sb.from('qualifying_results').select('*').eq('event_id', event.id),
+        sb.from('penalties').select('*, entries(car_number, teams(name))').eq('event_id', event.id),
+    ]);
+
+    const entries = entriesRes.data || [];
+    const results = rRes.data || [];
+    const qualy   = qRes.data || [];
+    const pens    = pRes.data || [];
+
+    // Map results and qualy to entry_id
+    const rMap = {}, qMap = {};
+    results.forEach(r => rMap[r.entry_id] = r);
+    qualy.forEach(q => qMap[q.entry_id] = q);
+
+    // Enrich entries
+    const enriched = entries.map(e => ({ ...e, result: rMap[e.id] || null, qualy: qMap[e.id] || null }));
+
+    const classified   = enriched.filter(e => e.result?.classified).sort((a,b) => (a.result.finish_position||999) - (b.result.finish_position||999));
+    const unclassified = enriched.filter(e => !e.result?.classified);
+
+    // Overall fastest lap
+    const flEntry = classified.reduce((best, e) => {
+        if (!e.result?.fastest_lap_ms) return best;
+        if (!best?.result?.fastest_lap_ms) return e;
+        return e.result.fastest_lap_ms < best.result.fastest_lap_ms ? e : best;
+    }, null);
+
+    const leaderLaps = classified[0]?.result?.laps_completed || 0;
+
+    // ── Render ────────────────────────────────────────────────
+    const statusLabel = { completed:'Completed', in_progress:'Live', scheduled:'Scheduled' };
+
+    app.innerHTML = `
+    <div class="page-wrap">
+        <a class="back-link" href="/endurance/results/">← All Results</a>
+
+        <!-- Event Header -->
+        <div class="event-header">
+            <div class="event-header-left">
+                <div class="event-eyebrow">${esc(event.seasons?.name)} · Round ${event.round}</div>
+                <div class="event-name">${esc(event.name)}</div>
+                <div class="event-meta">
+                    <span>${flag(event.circuit_country)} ${esc(event.circuit_name)}${event.circuit_country ? ` · ${esc(event.circuit_country)}` : ''}</span>
+                    <span>📅 ${fmtDate(event.starts_at)}</span>
+                    <span>⏱ ${event.duration_hours}h</span>
+                    ${event.circuit_length_km ? `<span>📏 ${event.circuit_length_km} km</span>` : ''}
+                </div>
+            </div>
+            <span class="badge badge-${esc(event.status)}">${esc(statusLabel[event.status] || event.status)}</span>
+        </div>
+
+        ${classified.length === 0 ? `
+            <div class="state-msg"><h3>No Results Yet</h3><p>Race results haven't been posted for this event.</p></div>
+        ` : `
+            <!-- Podium -->
+            ${classified.length >= 3 ? renderPodium(classified, leaderLaps) : ''}
+
+            <!-- Fastest Lap callout -->
+            ${flEntry ? renderFLCallout(flEntry) : ''}
+
+            <!-- Race Results -->
+            <div class="section-heading">Race Classification</div>
+            <div class="table-wrap">
+                ${renderResultsTable(classified, unclassified, leaderLaps, flEntry)}
+            </div>
+
+            <!-- Qualifying -->
+            ${qualy.length ? `
+            <div class="section-heading">Qualifying</div>
+            <div class="table-wrap">
+                ${renderQualyTable(enriched, qualy)}
+            </div>` : ''}
+
+            <!-- Penalties -->
+            ${pens.length ? `
+            <div class="section-heading">Penalties</div>
+            <div class="table-wrap">
+                ${renderPenaltiesTable(pens)}
+            </div>` : ''}
+        `}
+    </div>`;
+}
+
+function renderPodium(classified, leaderLaps) {
+    const [p1, p2, p3] = [classified[0], classified[1], classified[2]];
+    const stepHTML = (entry, cls, posLabel) => {
+        const drivers = (entry.entry_drivers || []).map(ed => esc(ed.drivers?.display_name)).filter(Boolean).join(', ');
+        const gap = cls === 'p1' ? 'Leader'
+            : fmtGap(entry.result.gap_to_winner_ms, leaderLaps, entry.result.laps_completed);
+        return `
+        <div class="podium-step ${cls}">
+            <div class="podium-card">
+                <div class="podium-pos">${posLabel}</div>
+                <div class="podium-car-num">#${entry.car_number}</div>
+                <div class="podium-team">${esc(entry.teams?.name)}</div>
+                <div class="podium-drivers">${drivers || '—'}</div>
+                <div class="podium-gap">${gap}</div>
+            </div>
+            <div class="podium-plinth">${posLabel}</div>
+        </div>`;
+    };
+    return `
+    <div class="podium">
+        ${stepHTML(p2,'p2','P2')}
+        ${stepHTML(p1,'p1','P1')}
+        ${stepHTML(p3,'p3','P3')}
+    </div>`;
+}
+
+function renderFLCallout(flEntry) {
+    const drivers = (flEntry.entry_drivers || []).map(ed => esc(ed.drivers?.display_name)).filter(Boolean).join(' / ');
+    return `
+    <div class="fl-callout">
+        <div>
+            <div class="fl-callout-label">Fastest Lap</div>
+            <div class="fl-callout-time">${fmtMs(flEntry.result.fastest_lap_ms)}</div>
+        </div>
+        <div>
+            <div style="font-weight:600">#${flEntry.car_number} ${esc(flEntry.teams?.name)}</div>
+            <div class="fl-callout-car">${drivers ? `${drivers} · ` : ''}${esc(flEntry.car_model)}</div>
+        </div>
+    </div>`;
+}
+
+function renderResultsTable(classified, unclassified, leaderLaps, flEntry) {
+    const rowHTML = (e, posDisplay, posClass, isDNF) => {
+        const r = e.result;
+        const drivers = (e.entry_drivers || []).sort((a,b) => a.stint_role === 'starting' ? -1 : 1)
+            .map(ed => ed.drivers?.slug
+                ? `<a href="/endurance/drivers/?slug=${encodeURIComponent(ed.drivers.slug)}">${flag(ed.drivers.nationality)} ${esc(ed.drivers.display_name)}</a>`
+                : esc(ed.drivers?.display_name))
+            .filter(Boolean).join('<br>');
+        const isFl = flEntry && e.id === flEntry.id;
+        const gap = r ? fmtGap(r.gap_to_winner_ms, leaderLaps, r.laps_completed) : '—';
+        const color = e.manufacturers?.brand_color;
+        return `
+        <tr class="${isDNF ? 'row-dnf' : ''}">
+            <td class="pos-cell ${posClass}">${posDisplay}</td>
+            <td class="td-num">${e.car_number}</td>
+            <td>
+                ${color ? `<span class="mfr-dot" style="background:${esc(color)}"></span>` : ''}
+                <strong>${esc(e.teams?.name)}</strong>
+                <div style="font-size:0.72rem;color:var(--muted)">${esc(e.car_model)}</div>
+            </td>
+            <td class="driver-list">${drivers || '—'}</td>
+            <td class="td-muted td-center">${r?.laps_completed ?? '—'}</td>
+            <td class="td-muted">${r ? (r.finish_position === 1 ? fmtMs(r.total_time_ms) : gap) : '—'}</td>
+            <td>${r?.fastest_lap_ms ? `<span class="${isFl ? 'fl-time' : 'td-muted'}">${fmtMs(r.fastest_lap_ms)}${isFl ? '<span class="fl-badge">FL</span>' : ''}</span>` : '<span class="td-muted">—</span>'}</td>
+            <td class="td-center" style="font-weight:600;color:var(--gold)">${r?.points_awarded ?? '—'}</td>
+        </tr>`;
+    };
+
+    const rows = classified.map((e, i) => {
+        const pos = e.result.finish_position;
+        const cls = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
+        return rowHTML(e, pos, cls, false);
+    });
+
+    const dnfRows = unclassified.map(e => {
+        const status = e.result?.status || 'DNF';
+        return rowHTML(e, `<span class="pos-dnf">${esc(status.toUpperCase())}</span>`, '', true);
+    });
+
+    return `
+    <table>
+        <thead><tr>
+            <th>Pos</th><th>Car</th><th>Team / Car</th><th>Drivers</th>
+            <th class="td-center">Laps</th><th>Time / Gap</th><th>Fastest Lap</th><th class="td-center">Pts</th>
+        </tr></thead>
+        <tbody>${[...rows, ...dnfRows].join('')}</tbody>
+    </table>`;
+}
+
+function renderQualyTable(enriched, qualy) {
+    const qMap = {};
+    qualy.forEach(q => qMap[q.entry_id] = q);
+    const sorted = enriched.filter(e => qMap[e.id]).sort((a,b) => (qMap[a.id].position||999) - (qMap[b.id].position||999));
+    const pole = sorted[0];
+    const rows = sorted.map(e => {
+        const q = qMap[e.id];
+        const gap = e === pole ? '—' : (q.gap_ms ? `+${(q.gap_ms/1000).toFixed(3)}s` : '—');
+        const color = e.manufacturers?.brand_color;
+        return `<tr>
+            <td class="pos-cell ${q.position===1?'pos-1':q.position===2?'pos-2':q.position===3?'pos-3':''}">${q.position}</td>
+            <td class="td-num">${e.car_number}</td>
+            <td>${color?`<span class="mfr-dot" style="background:${esc(color)}"></span>`:''}${esc(e.teams?.name)}</td>
+            <td class="td-muted ${q.position===1?'fl-time':''}">${fmtMs(q.best_lap_ms)}</td>
+            <td class="td-muted">${gap}</td>
+        </tr>`;
+    }).join('');
+    return `<table class="q-table"><thead><tr><th>Pos</th><th>Car</th><th>Team</th><th>Best Lap</th><th>Gap</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderPenaltiesTable(pens) {
+    const rows = pens.map(p => `<tr>
+        <td class="td-num">#${esc(p.entries?.car_number)}</td>
+        <td>${esc(p.entries?.teams?.name)}</td>
+        <td class="td-muted">${esc(p.penalty_type?.replace(/_/g,' '))}</td>
+        <td style="color:var(--red);font-weight:600">${p.penalty_value ? `${p.penalty_value}` : '—'}</td>
+        <td class="td-muted">${esc(p.reason) || '—'}</td>
+    </tr>`).join('');
+    return `<table><thead><tr><th>Car</th><th>Team</th><th>Penalty</th><th>Value</th><th>Reason</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function errMsg(msg) {
+    return `<div class="state-msg"><h3>Error</h3><p>${esc(msg)}</p></div>`;
+}
+</script>
+</body>
+</html>

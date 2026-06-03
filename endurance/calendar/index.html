@@ -66,6 +66,8 @@
         }
         .gtec-nav .nav-links a:hover { color: var(--text); }
         .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--bg); background: var(--gold); text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 999px; transition: opacity 0.2s; }
+        .gtec-nav .apply:hover { opacity: 0.85; }
         .gtec-nav .back {
             font-family: 'Orbitron', sans-serif;
             font-size: 0.7rem;
@@ -275,6 +277,7 @@
         <a href="/endurance/teams/">Teams</a>
         <a href="/endurance/stats/">Stats</a>
         <a href="/endurance/rules/">Rules</a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
         <a class="back" href="/">← SparksTheory</a>
     </div>
 </nav>
@@ -355,7 +358,7 @@ async function load() {
         const f = flag(e.circuit_country);
         const circuitLine = [f, esc(e.circuit_name), e.circuit_country ? `· ${esc(e.circuit_country)}` : ''].filter(Boolean).join(' ');
         const resultsBtn = e.status === 'completed'
-            ? `<a class="btn-results" href="/endurance/results/${esc(e.slug)}/">Results →</a>`
+            ? `<a class="btn-results" href="/endurance/results/?slug=${esc(e.slug)}">Results →</a>`
             : '';
         const replayBtn = e.replay_url
             ? `<a class="btn-results" href="${esc(e.replay_url)}" target="_blank" rel="noopener">▶ Replay</a>`

@@ -290,6 +290,7 @@
         .badge-green { background: rgba(34,197,94,0.15); color: #4ade80; }
         .badge-muted { background: rgba(255,255,255,0.06); color: var(--muted); }
         .badge-gold  { background: rgba(255,209,102,0.15); color: var(--gold); }
+        .badge-red   { background: rgba(239,68,68,0.12); color: #fca5a5; }
         .row-actions {
             display: flex;
             gap: 0.4rem;
@@ -601,6 +602,12 @@
             Events
         </button>
 
+        <div class="nav-section">Registration</div>
+        <button class="nav-link" data-section="applications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+            Applications
+        </button>
+
         <div class="nav-section">Content</div>
         <button class="nav-link" data-section="news">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a4 4 0 0 1-4 4zm0 0a4 4 0 0 1-4-4V8a2 2 0 0 1 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6z"/></svg>
@@ -741,6 +748,7 @@ async function navigate(section, pushHash = true) {
         teams: 'Teams',
         drivers: 'Drivers',
         events: 'Events',
+        applications: 'Applications',
         news: 'News',
         media: 'Media',
         pages: 'Pages',
@@ -748,7 +756,7 @@ async function navigate(section, pushHash = true) {
     document.getElementById('page-title').textContent = titles[section] || section;
 
     const addBtn = document.getElementById('btn-add');
-    if (section === 'dashboard' || section === 'pages') {
+    if (section === 'dashboard' || section === 'pages' || section === 'applications') {
         addBtn.style.display = 'none';
     } else {
         addBtn.style.display = '';
@@ -767,6 +775,7 @@ async function navigate(section, pushHash = true) {
         case 'teams':        await renderTeams(); break;
         case 'drivers':      await renderDrivers(); break;
         case 'events':       await renderEvents(); break;
+        case 'applications': await renderApplications(); break;
         case 'news':         await renderNews(); break;
         case 'media':        await renderMedia(); break;
         case 'pages':        await renderPages(); break;
@@ -2272,6 +2281,119 @@ async function deletePenalty(id, eventId, eventName) {
     if (error) { toast(error.message, 'error'); return; }
     toast('Penalty deleted.', 'success');
     await viewEventPenalties(eventId, eventName);
+}
+
+
+// ============================================================
+// 11a. Applications
+// ============================================================
+async function renderApplications() {
+    const { data, error } = await sb.from('applications')
+        .select('*, manufacturers(name)')
+        .order('created_at', { ascending: false });
+    if (error) { toast(error.message, 'error'); return; }
+
+    const statusBadge = {
+        pending:    '<span class="badge badge-muted">Pending</span>',
+        accepted:   '<span class="badge badge-green">Accepted</span>',
+        waitlisted: '<span class="badge badge-gold">Waitlisted</span>',
+        rejected:   '<span class="badge badge-red">Rejected</span>',
+    };
+
+    const counts = { pending:0, accepted:0, waitlisted:0, rejected:0 };
+    (data || []).forEach(a => counts[a.status] = (counts[a.status]||0) + 1);
+
+    const rows = !data?.length
+        ? `<tr><td colspan="7"><div class="empty-state">No applications yet. Share the /endurance/apply/ page.</div></td></tr>`
+        : data.map(a => `
+            <tr>
+                <td><strong>${esc(a.name)}</strong><br><small class="td-muted">${esc(a.psn_id) || '—'}</small></td>
+                <td class="td-muted">${esc(a.type)}</td>
+                <td class="td-muted">${esc(a.nationality) || '—'}</td>
+                <td class="td-muted">${esc(a.timezone) || '—'}</td>
+                <td class="td-muted">${esc(a.manufacturers?.name) || '—'}</td>
+                <td>${statusBadge[a.status] || esc(a.status)}</td>
+                <td><div class="row-actions">
+                    <button class="btn-icon" onclick="viewApplication('${a.id}')">View</button>
+                    <button class="btn-icon danger" onclick="deleteApplication('${a.id}','${esc(a.name)}')">Delete</button>
+                </div></td>
+            </tr>`).join('');
+
+    document.getElementById('content').innerHTML = `
+        <div class="stat-grid" style="margin-bottom:1.5rem">
+            <div class="stat-card"><div class="stat-card-label">Pending</div><div class="stat-card-value">${counts.pending}</div></div>
+            <div class="stat-card"><div class="stat-card-label">Accepted</div><div class="stat-card-value">${counts.accepted}</div></div>
+            <div class="stat-card"><div class="stat-card-label">Waitlisted</div><div class="stat-card-value">${counts.waitlisted}</div></div>
+            <div class="stat-card"><div class="stat-card-label">Rejected</div><div class="stat-card-value">${counts.rejected}</div></div>
+        </div>
+        <div class="table-wrap">
+            <div class="table-toolbar">
+                <input class="table-search" type="search" placeholder="Search applications…" oninput="filterTable(this,'apps-table')">
+            </div>
+            <table id="apps-table"><thead><tr>
+                <th>Name / PSN</th><th>Type</th><th>Nationality</th><th>Timezone</th><th>Preferred Mfr</th><th>Status</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+}
+
+async function viewApplication(id) {
+    const { data: a } = await sb.from('applications')
+        .select('*, manufacturers(name)')
+        .eq('id', id).single();
+    if (!a) { toast('Not found.', 'error'); return; }
+
+    const statusOpts = ['pending','accepted','waitlisted','rejected']
+        .map(s => `<option value="${s}" ${a.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`)
+        .join('');
+
+    openModal(`Application — ${esc(a.name)}`, `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1.5rem;font-size:0.84rem;margin-bottom:1.25rem">
+            <div><span style="color:var(--muted)">Type</span><br><strong>${esc(a.type)}</strong></div>
+            <div><span style="color:var(--muted)">PSN ID</span><br><strong>${esc(a.psn_id)||'—'}</strong></div>
+            <div><span style="color:var(--muted)">Nationality</span><br><strong>${esc(a.nationality)||'—'}</strong></div>
+            <div><span style="color:var(--muted)">Timezone</span><br><strong>${esc(a.timezone)||'—'}</strong></div>
+            <div><span style="color:var(--muted)">Pref. Manufacturer</span><br><strong>${esc(a.manufacturers?.name)||'—'}</strong></div>
+            <div><span style="color:var(--muted)">Applied</span><br><strong>${a.created_at?.slice(0,10)}</strong></div>
+            ${a.type==='team'?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Team Name</span><br><strong>${esc(a.team_name)||'—'}</strong></div>`:''}
+        </div>
+        ${a.experience ? `<div style="font-size:0.82rem;margin-bottom:0.75rem"><span style="color:var(--muted)">Experience</span><br>${esc(a.experience)}</div>` : ''}
+        ${a.message    ? `<div style="font-size:0.82rem;margin-bottom:1.25rem"><span style="color:var(--muted)">Message</span><br>${esc(a.message)}</div>` : ''}
+        <form id="entity-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status">${statusOpts}</select>
+                </div>
+                <div class="form-group">
+                    <label>Reviewer Note</label>
+                    <input type="text" name="reviewer_note" value="${esc(a.reviewer_note)}" placeholder="Internal note…">
+                </div>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Close</button>
+         <button class="btn btn-primary" onclick="saveApplicationStatus('${a.id}')">Save Status</button>`
+    );
+}
+
+async function saveApplicationStatus(id) {
+    const d = getFormData('entity-form');
+    const { error } = await sb.from('applications').update({
+        status: d.status,
+        reviewer_note: d.reviewer_note || null,
+        reviewed_at: new Date().toISOString(),
+    }).eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Status updated.', 'success');
+    closeModal();
+    await renderApplications();
+}
+
+async function deleteApplication(id, name) {
+    if (!confirm(`Delete application from "${name}"?`)) return;
+    const { error } = await sb.from('applications').delete().eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Deleted.', 'success');
+    await renderApplications();
 }
 
 

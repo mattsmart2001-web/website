@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Apply — Gran Turismo GTEC</title>
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --border: rgba(255,255,255,0.08);
+            --input-bg: #0d1320;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .gtec-nav { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 2rem; background: rgba(5,6,8,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--bg); background: var(--gold); text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 999px; transition: opacity 0.2s; }
+        .gtec-nav .apply:hover { opacity: 0.85; }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; transition: color 0.2s, border-color 0.2s; }
+        .gtec-nav .back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Hero */
+        .hero { max-width: 720px; margin: 0 auto; padding: 3.5rem 2rem 2rem; }
+        .hero-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; text-indent: 0.45em; }
+        .hero-title { font-family: 'Anton', sans-serif; font-size: clamp(2.2rem, 6vw, 3.8rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.6rem; }
+        .hero-sub { color: var(--muted); font-size: 0.9rem; line-height: 1.6; max-width: 540px; }
+
+        /* Form container */
+        .form-wrap { max-width: 720px; margin: 0 auto; padding: 0 2rem 5rem; }
+
+        /* Type switcher */
+        .type-switch { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+        .type-btn { flex: 1; padding: 0.85rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-1); color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; text-align: center; }
+        .type-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(255,209,102,0.06); }
+        .type-btn:hover:not(.active) { border-color: rgba(255,255,255,0.18); color: var(--text); }
+
+        /* Form */
+        .form-section { margin-bottom: 1.75rem; }
+        .form-section-title { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.35em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .form-group.full { grid-column: 1 / -1; }
+        label { font-size: 0.78rem; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+        label .req { color: var(--gold); margin-left: 2px; }
+        input, select, textarea {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            padding: 0.65rem 0.85rem;
+            width: 100%;
+            transition: border-color 0.15s;
+            outline: none;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--gold); }
+        input::placeholder, textarea::placeholder { color: #3d4a5c; }
+        select option { background: #0d1320; }
+        textarea { resize: vertical; min-height: 100px; line-height: 1.55; }
+        .hint { font-size: 0.73rem; color: var(--muted); margin-top: 0.2rem; }
+
+        /* Team-only fields */
+        .team-only { display: none; }
+        body.type-team .team-only { display: contents; }
+        body.type-driver .driver-hint { display: block; }
+
+        /* Submit */
+        .form-footer { margin-top: 2rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .btn-submit {
+            padding: 0.9rem 2.5rem;
+            background: var(--gold);
+            color: var(--bg);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+        }
+        .btn-submit:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-submit:disabled { opacity: 0.4; cursor: default; transform: none; }
+        .form-note { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+
+        /* Error */
+        .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.84rem; color: #fca5a5; margin-bottom: 1rem; }
+
+        /* Thank you state */
+        .thankyou { text-align: center; padding: 5rem 2rem; }
+        .thankyou-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .thankyou h2 { font-family: 'Anton', sans-serif; font-size: 2rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; }
+        .thankyou p { color: var(--muted); font-size: 0.9rem; line-height: 1.65; max-width: 440px; margin: 0 auto 1rem; }
+        .thankyou a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+
+        @media (max-width: 580px) {
+            .gtec-nav { padding: 1rem; }
+            .hero { padding: 2rem 1rem 1.5rem; }
+            .form-wrap { padding: 0 1rem 3rem; }
+            .form-grid { grid-template-columns: 1fr; }
+            .form-group.full { grid-column: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/">Gran Turismo<span class="accent"> GTEC</span></a>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/">← SparksTheory</a>
+    </div>
+</nav>
+
+<div class="hero">
+    <div class="hero-eyebrow">Join the Grid</div>
+    <h1 class="hero-title">Apply to Race</h1>
+    <p class="hero-sub">Register your interest for the GTEC championship. Applications are reviewed by our admin team — accepted drivers will be contacted directly.</p>
+</div>
+
+<div class="form-wrap">
+    <div id="form-area">
+        <!-- Type switch -->
+        <div class="type-switch">
+            <button class="type-btn active" id="btn-driver" onclick="setType('driver')">🏁 Driver Application</button>
+            <button class="type-btn" id="btn-team" onclick="setType('team')">🏎 Team Application</button>
+        </div>
+
+        <div id="error-box" class="error-msg" style="display:none"></div>
+
+        <form id="apply-form" onsubmit="submitForm(event)">
+            <input type="hidden" name="type" id="field-type" value="driver">
+
+            <!-- Identity -->
+            <div class="form-section">
+                <div class="form-section-title">Identity</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="field-name">Display Name <span class="req">*</span></label>
+                        <input type="text" id="field-name" name="name" placeholder="Your racing name" required autocomplete="nickname">
+                    </div>
+                    <div class="form-group">
+                        <label for="field-psn">PSN ID <span class="req">*</span></label>
+                        <input type="text" id="field-psn" name="psn_id" placeholder="YourPSNHandle" required>
+                        <div class="hint">Your PlayStation Network username</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="field-nationality">Nationality</label>
+                        <input type="text" id="field-nationality" name="nationality" placeholder="e.g. GB, DE, JP" maxlength="4">
+                    </div>
+                    <div class="form-group">
+                        <label for="field-timezone">Timezone <span class="req">*</span></label>
+                        <select id="field-timezone" name="timezone" required>
+                            <option value="">— Select timezone —</option>
+                            <option>UTC-8 (Pacific US)</option>
+                            <option>UTC-5 (Eastern US)</option>
+                            <option>UTC+0 (UK/GMT)</option>
+                            <option>UTC+1 (CET / Central Europe)</option>
+                            <option>UTC+2 (EET / Eastern Europe)</option>
+                            <option>UTC+3 (Moscow)</option>
+                            <option>UTC+5:30 (India)</option>
+                            <option>UTC+8 (China / Singapore)</option>
+                            <option>UTC+9 (Japan / Korea)</option>
+                            <option>UTC+10 (AEST / East Australia)</option>
+                            <option>UTC+12 (New Zealand)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Championship preferences -->
+            <div class="form-section">
+                <div class="form-section-title">Championship Preferences</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="field-mfr">Preferred Manufacturer</label>
+                        <select id="field-mfr" name="preferred_manufacturer_id">
+                            <option value="">— No preference —</option>
+                        </select>
+                    </div>
+                    <!-- Team-only: team name -->
+                    <div class="form-group team-only">
+                        <label for="field-team-name">Team Name <span class="req">*</span></label>
+                        <input type="text" id="field-team-name" name="team_name" placeholder="Your team name">
+                    </div>
+                    <div class="form-group full">
+                        <label for="field-exp">Racing Experience</label>
+                        <textarea id="field-exp" name="experience" placeholder="Brief GT7 racing background — championships entered, leagues, notable results…"></textarea>
+                    </div>
+                    <div class="form-group full">
+                        <label for="field-msg">Message to Admins</label>
+                        <textarea id="field-msg" name="message" placeholder="Anything else you'd like us to know…"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-footer">
+                <button type="submit" class="btn-submit" id="btn-submit">Submit Application</button>
+                <p class="form-note">We'll review your application and be in touch via your PSN. No spam, ever.</p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Load manufacturers for dropdown
+(async () => {
+    const { data: mfrs } = await sb.from('manufacturers').select('id, name').order('name');
+    const sel = document.getElementById('field-mfr');
+    (mfrs || []).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name;
+        sel.appendChild(opt);
+    });
+})();
+
+function setType(type) {
+    document.getElementById('field-type').value = type;
+    document.body.className = `type-${type}`;
+    document.getElementById('btn-driver').classList.toggle('active', type === 'driver');
+    document.getElementById('btn-team').classList.toggle('active', type === 'team');
+    const tn = document.getElementById('field-team-name');
+    if (tn) tn.required = type === 'team';
+}
+
+async function submitForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-submit');
+    const errBox = document.getElementById('error-box');
+    errBox.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    const f = new FormData(document.getElementById('apply-form'));
+    const payload = {
+        type:                      f.get('type') || 'driver',
+        name:                      f.get('name'),
+        psn_id:                    f.get('psn_id') || null,
+        nationality:               f.get('nationality') || null,
+        timezone:                  f.get('timezone') || null,
+        preferred_manufacturer_id: f.get('preferred_manufacturer_id') || null,
+        team_name:                 f.get('team_name') || null,
+        experience:                f.get('experience') || null,
+        message:                   f.get('message') || null,
+    };
+
+    const { error } = await sb.from('applications').insert(payload);
+
+    if (error) {
+        errBox.textContent = error.message;
+        errBox.style.display = '';
+        btn.disabled = false;
+        btn.textContent = 'Submit Application';
+        return;
+    }
+
+    // Thank you screen
+    document.getElementById('form-area').innerHTML = `
+    <div class="thankyou">
+        <div class="thankyou-icon">🏁</div>
+        <h2>Application Received</h2>
+        <p>Thanks, <strong style="color:var(--text)">${esc(payload.name)}</strong>! Your application has been submitted. Our admin team will review it and reach out via PSN.</p>
+        <p>In the meantime, explore the <a href="/endurance/">GTEC championship hub</a> or check the <a href="/endurance/rules/">sporting regulations</a>.</p>
+    </div>`;
+}
+</script>
+</body>
+</html>
