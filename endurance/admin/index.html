@@ -1519,6 +1519,7 @@ async function renderEvents() {
                     <button class="btn-icon" onclick="viewEventQualifying('${e.id}','${esc(e.name)}')">Qualifying</button>
                     <button class="btn-icon" onclick="viewEventResults('${e.id}','${esc(e.name)}')">Results</button>
                     <button class="btn-icon" onclick="viewEventPenalties('${e.id}','${esc(e.name)}')">Penalties</button>
+                    <button class="btn-icon" onclick="viewEventSteward('${e.id}','${esc(e.name)}')">Steward</button>
                     <button class="btn-icon" onclick="editEvent('${e.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteEvent('${e.id}','${esc(e.name)}')">Delete</button>
                 </div></td>
@@ -2281,6 +2282,170 @@ async function deletePenalty(id, eventId, eventName) {
     if (error) { toast(error.message, 'error'); return; }
     toast('Penalty deleted.', 'success');
     await viewEventPenalties(eventId, eventName);
+}
+
+
+// ─── Steward Decisions ────────────────────────────────────────
+async function viewEventSteward(eventId, eventName) {
+    const panel = document.getElementById('event-entries-panel');
+    panel.innerHTML = '<div class="loading-state">Loading steward decisions…</div>';
+
+    const { data, error } = await sb.from('steward_decisions')
+        .select('*, entries(car_number, teams(name)), drivers(display_name)')
+        .eq('event_id', eventId)
+        .order('issued_at', { ascending: false });
+    if (error) { panel.innerHTML = `<div class="loading-state">${esc(error.message)}</div>`; return; }
+
+    const rulingBadge = {
+        no_action: '<span class="badge badge-muted">No Action</span>',
+        reprimand: '<span class="badge badge-gold">Reprimand</span>',
+        penalty:   '<span class="badge badge-red">Penalty</span>',
+        dsq:       '<span class="badge badge-red">DSQ</span>',
+    };
+
+    const rows = !(data || []).length
+        ? `<tr><td colspan="6"><div class="empty-state">No steward decisions for this event.</div></td></tr>`
+        : data.map(d => `<tr>
+            <td class="td-muted">${esc(d.decision_no) || '—'}</td>
+            <td><strong>${esc(d.title)}</strong></td>
+            <td class="td-muted">${d.entries ? `#${d.entries.car_number} ${esc(d.entries.teams?.name)}` : '—'}</td>
+            <td class="td-muted">${esc(d.drivers?.display_name) || '—'}</td>
+            <td>${rulingBadge[d.ruling] || esc(d.ruling)}</td>
+            <td><div class="row-actions">
+                <button class="btn-icon" onclick="openStewardModal('${eventId}','${esc(eventName)}','${d.id}')">Edit</button>
+                <button class="btn-icon danger" onclick="deleteStewardDecision('${d.id}','${eventId}','${esc(eventName)}')">Delete</button>
+            </div></td>
+        </tr>`).join('');
+
+    panel.innerHTML = `
+        <div class="section-card">
+            <div class="section-card-header">
+                <span class="section-card-title">Steward Decisions — ${esc(eventName)}</span>
+                <button class="btn-add" onclick="openStewardModal('${eventId}','${esc(eventName)}','')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Decision
+                </button>
+            </div>
+            <table><thead><tr>
+                <th>No.</th><th>Title</th><th>Entry</th><th>Driver</th><th>Ruling</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+}
+
+async function openStewardModal(eventId, eventName, decisionId) {
+    let existing = {};
+    if (decisionId) {
+        const { data } = await sb.from('steward_decisions').select('*').eq('id', decisionId).single();
+        if (data) existing = data;
+    }
+
+    const { data: entries } = await sb.from('entries')
+        .select('id, car_number, teams(name), entry_drivers(driver_id, drivers(display_name))')
+        .eq('event_id', eventId)
+        .order('car_number');
+
+    const entryOpts = '<option value="">— No entry / general —</option>' +
+        (entries || []).map(en => `<option value="${esc(en.id)}" ${en.id===existing.entry_id?'selected':''}>#${en.car_number} — ${esc(en.teams?.name)}</option>`).join('');
+
+    const rulings = [
+        { value: 'no_action', label: 'No Action' },
+        { value: 'reprimand', label: 'Reprimand' },
+        { value: 'penalty',   label: 'Penalty' },
+        { value: 'dsq',       label: 'DSQ' },
+    ];
+
+    window._stewardEntries = entries || [];
+
+    openModal(decisionId ? `Edit Decision — ${esc(eventName)}` : `New Decision — ${esc(eventName)}`,
+        `<form id="entity-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Decision No.</label>
+                    <input type="text" name="decision_no" value="${esc(existing.decision_no)}" placeholder="01, 02…">
+                </div>
+                <div class="form-group">
+                    <label>Ruling <span class="required">*</span></label>
+                    ${selectHTML('ruling', rulings, existing.ruling || 'no_action')}
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Title <span class="required">*</span></label>
+                <input type="text" name="title" value="${esc(existing.title)}" placeholder="Contact at Turn 3, Lap 12" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Entry (optional)</label>
+                    <select id="sd-entry" name="entry_id" onchange="loadEntryDriversForSteward(this)">
+                        ${entryOpts}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Driver (optional)</label>
+                    <select name="driver_id" id="sd-driver">
+                        <option value="">— Whole team / N/A —</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Decision Content <span class="required">*</span></label>
+                <textarea name="content" rows="8" placeholder="Investigation, finding, ruling rationale…" required>${esc(existing.content)}</textarea>
+                <div class="form-hint">Shown verbatim on the public results page.</div>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="saveStewardDecision('${eventId}','${esc(eventName)}','${decisionId}')">Save Decision</button>`
+    );
+
+    // If editing, pre-load driver options for the existing entry
+    if (existing.entry_id) {
+        const sel = document.getElementById('sd-entry');
+        loadEntryDriversForSteward(sel);
+        const driverSel = document.getElementById('sd-driver');
+        if (existing.driver_id && driverSel) driverSel.value = existing.driver_id;
+    }
+}
+
+function loadEntryDriversForSteward(sel) {
+    const driverSel = document.getElementById('sd-driver');
+    driverSel.innerHTML = '<option value="">— Whole team / N/A —</option>';
+    const entry = (window._stewardEntries || []).find(e => e.id === sel.value);
+    if (!entry) return;
+    (entry.entry_drivers || []).forEach(ed => {
+        if (!ed.drivers) return;
+        const opt = document.createElement('option');
+        opt.value = ed.driver_id;
+        opt.textContent = ed.drivers.display_name;
+        driverSel.appendChild(opt);
+    });
+}
+
+async function saveStewardDecision(eventId, eventName, decisionId) {
+    const d = getFormData('entity-form');
+    if (!d.title || !d.content) { toast('Title and content are required.', 'error'); return; }
+    const payload = {
+        event_id:    eventId,
+        decision_no: d.decision_no || null,
+        title:       d.title,
+        content:     d.content,
+        ruling:      d.ruling || 'no_action',
+        entry_id:    d.entry_id  || null,
+        driver_id:   d.driver_id || null,
+    };
+    const { error } = decisionId
+        ? await sb.from('steward_decisions').update(payload).eq('id', decisionId)
+        : await sb.from('steward_decisions').insert({ ...payload, issued_by: currentUser.id });
+    if (error) { toast(error.message, 'error'); return; }
+    toast(decisionId ? 'Decision updated.' : 'Decision recorded.', 'success');
+    closeModal();
+    await viewEventSteward(eventId, eventName);
+}
+
+async function deleteStewardDecision(id, eventId, eventName) {
+    if (!confirm('Delete this steward decision?')) return;
+    const { error } = await sb.from('steward_decisions').delete().eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Decision deleted.', 'success');
+    await viewEventSteward(eventId, eventName);
 }
 
 
