@@ -2478,7 +2478,7 @@ async function deleteStewardDecision(id, eventId, eventName) {
 // ============================================================
 async function renderApplications() {
     const { data, error } = await sb.from('applications')
-        .select('*, manufacturers(name)')
+        .select('*, manufacturers(name), linked_driver:drivers!linked_driver_id(display_name), linked_team:teams!linked_team_id(name)')
         .order('created_at', { ascending: false });
     if (error) { toast(error.message, 'error'); return; }
 
@@ -2493,8 +2493,13 @@ async function renderApplications() {
     (data || []).forEach(a => counts[a.status] = (counts[a.status]||0) + 1);
 
     const rows = !data?.length
-        ? `<tr><td colspan="7"><div class="empty-state">No applications yet. Share the /endurance/apply/ page.</div></td></tr>`
-        : data.map(a => `
+        ? `<tr><td colspan="8"><div class="empty-state">No applications yet. Share the /endurance/apply/ page.</div></td></tr>`
+        : data.map(a => {
+            const linkedName = a.type === 'driver' ? a.linked_driver?.display_name : a.linked_team?.name;
+            const rosterCell = linkedName
+                ? `<span class="badge badge-green">✓ ${esc(linkedName)}</span>`
+                : (a.status === 'accepted' ? `<button class="btn-icon" onclick="createRecordFromApplication('${a.id}')">+ Add to roster</button>` : '<span class="td-muted">—</span>');
+            return `
             <tr>
                 <td><strong>${esc(a.name)}</strong><br><small class="td-muted">${esc(a.psn_id) || '—'}</small></td>
                 <td class="td-muted">${esc(a.type)}</td>
@@ -2502,11 +2507,13 @@ async function renderApplications() {
                 <td class="td-muted">${esc(a.timezone) || '—'}</td>
                 <td class="td-muted">${esc(a.manufacturers?.name) || '—'}</td>
                 <td>${statusBadge[a.status] || esc(a.status)}</td>
+                <td>${rosterCell}</td>
                 <td><div class="row-actions">
                     <button class="btn-icon" onclick="viewApplication('${a.id}')">View</button>
                     <button class="btn-icon danger" onclick="deleteApplication('${a.id}','${esc(a.name)}')">Delete</button>
                 </div></td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
 
     document.getElementById('content').innerHTML = `
         <div class="stat-grid" style="margin-bottom:1.5rem">
@@ -2520,14 +2527,14 @@ async function renderApplications() {
                 <input class="table-search" type="search" placeholder="Search applications…" oninput="filterTable(this,'apps-table')">
             </div>
             <table id="apps-table"><thead><tr>
-                <th>Name / PSN</th><th>Type</th><th>Nationality</th><th>Timezone</th><th>Preferred Mfr</th><th>Status</th><th></th>
+                <th>Name / PSN</th><th>Type</th><th>Nationality</th><th>Timezone</th><th>Preferred Mfr</th><th>Status</th><th>Roster</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
 }
 
 async function viewApplication(id) {
     const { data: a } = await sb.from('applications')
-        .select('*, manufacturers(name)')
+        .select('*, manufacturers(name), linked_driver:drivers!linked_driver_id(id,display_name,slug), linked_team:teams!linked_team_id(id,name,slug)')
         .eq('id', id).single();
     if (!a) { toast('Not found.', 'error'); return; }
 
@@ -2535,7 +2542,27 @@ async function viewApplication(id) {
         .map(s => `<option value="${s}" ${a.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`)
         .join('');
 
+    const linked = a.type === 'driver' ? a.linked_driver : a.linked_team;
+    const linkedName = a.type === 'driver' ? linked?.display_name : linked?.name;
+
+    let rosterPanel = '';
+    if (linked) {
+        rosterPanel = `<div style="margin-bottom:1.25rem;padding:0.85rem 1rem;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:6px;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+            <div style="font-size:0.85rem">
+                <span style="color:#4ade80;font-weight:600">✓ Added to roster</span>
+                · <strong>${esc(linkedName)}</strong>
+            </div>
+            <button class="btn-icon" onclick="navigate('${a.type === 'driver' ? 'drivers' : 'teams'}'); closeModal()">Open ${a.type}</button>
+        </div>`;
+    } else if (a.status === 'accepted') {
+        rosterPanel = `<div style="margin-bottom:1.25rem;padding:0.85rem 1rem;background:rgba(255,209,102,0.08);border:1px solid rgba(255,209,102,0.25);border-radius:6px;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+            <div style="font-size:0.85rem;color:var(--muted)">Application accepted — not yet on the roster.</div>
+            <button class="btn btn-primary" onclick="createRecordFromApplication('${a.id}')">Create ${a.type} record</button>
+        </div>`;
+    }
+
     openModal(`Application — ${esc(a.name)}`, `
+        ${rosterPanel}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1.5rem;font-size:0.84rem;margin-bottom:1.25rem">
             <div><span style="color:var(--muted)">Type</span><br><strong>${esc(a.type)}</strong></div>
             <div><span style="color:var(--muted)">PSN ID</span><br><strong>${esc(a.psn_id)||'—'}</strong></div>
@@ -2562,6 +2589,83 @@ async function viewApplication(id) {
         `<button class="btn btn-ghost" onclick="closeModal()">Close</button>
          <button class="btn btn-primary" onclick="saveApplicationStatus('${a.id}')">Save Status</button>`
     );
+}
+
+// Open the driver/team form pre-filled from an application
+async function createRecordFromApplication(appId) {
+    const { data: a } = await sb.from('applications').select('*').eq('id', appId).single();
+    if (!a) { toast('Application not found.', 'error'); return; }
+
+    const slugify = s => (s || '').toLowerCase().trim()
+        .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+    closeModal();
+
+    if (a.type === 'driver') {
+        const prefill = {
+            display_name: a.name,
+            slug: slugify(a.name),
+            psn_id: a.psn_id || '',
+            nationality: a.nationality || '',
+            current_manufacturer_id: a.preferred_manufacturer_id || '',
+            joined_at: new Date().toISOString().slice(0, 10),
+            bio: '',
+        };
+        openModal('Add Driver (from application)', driverForm(prefill), `
+            <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveDriverFromApplication('${appId}')">Save &amp; Link</button>
+        `);
+    } else {
+        const prefill = {
+            name: a.team_name || a.name,
+            slug: slugify(a.team_name || a.name),
+            manufacturer_id: a.preferred_manufacturer_id || '',
+            home_country: a.nationality || '',
+            founded_on: new Date().toISOString().slice(0, 10),
+            bio: '',
+        };
+        openModal('Add Team (from application)', teamForm(prefill), `
+            <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveTeamFromApplication('${appId}')">Save &amp; Link</button>
+        `);
+    }
+}
+
+async function saveDriverFromApplication(appId) {
+    const d = getFormData('entity-form');
+    if (!d.display_name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
+    const payload = {
+        display_name: d.display_name, slug: d.slug, psn_id: d.psn_id,
+        nationality: d.nationality, career_number: d.career_number ? parseInt(d.career_number) : null,
+        current_team_id: d.current_team_id || null, current_manufacturer_id: d.current_manufacturer_id || null,
+        joined_at: d.joined_at || null, bio: d.bio,
+    };
+    const { data: created, error } = await sb.from('drivers').insert(payload).select('id').single();
+    if (error) { toast(error.message, 'error'); return; }
+    const { error: linkErr } = await sb.from('applications')
+        .update({ linked_driver_id: created.id })
+        .eq('id', appId);
+    if (linkErr) { toast(`Driver created, but link failed: ${linkErr.message}`, 'error'); }
+    else { toast('Driver added and linked to application.', 'success'); }
+    closeModal();
+    await loadCache();
+    await renderApplications();
+}
+
+async function saveTeamFromApplication(appId) {
+    const d = getFormData('entity-form');
+    if (!d.name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
+    const payload = { name: d.name, slug: d.slug, manufacturer_id: d.manufacturer_id || null, home_country: d.home_country, founded_on: d.founded_on, bio: d.bio };
+    const { data: created, error } = await sb.from('teams').insert(payload).select('id').single();
+    if (error) { toast(error.message, 'error'); return; }
+    const { error: linkErr } = await sb.from('applications')
+        .update({ linked_team_id: created.id })
+        .eq('id', appId);
+    if (linkErr) { toast(`Team created, but link failed: ${linkErr.message}`, 'error'); }
+    else { toast('Team added and linked to application.', 'success'); }
+    closeModal();
+    await loadCache();
+    await renderApplications();
 }
 
 async function saveApplicationStatus(id) {

@@ -89,3 +89,4 @@ Always apply in this order:
 7. `07_content.sql` — news, media, pages tables + `gtec-media` bucket
 8. `08_applications.sql` — driver / team applications table
 9. `09_manufacturer_logos.sql` — `gtec-manufacturers` bucket + view refresh to expose logos
+10. `10_application_links.sql` — tracks which driver/team record was created from each application
