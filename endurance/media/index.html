@@ -104,7 +104,7 @@
         <a href="/endurance/teams/">Teams</a>
         <a href="/endurance/stats/">Stats</a>
         <a href="/endurance/rules/">Rules</a>
-        <a href="/endurance/profile/">Portal</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile</a>
         <a class="apply" href="/endurance/apply/">Apply</a>
         <a class="back" href="/">← SparksTheory</a>
     </div>
@@ -131,6 +131,7 @@
 'use strict';
 const { createClient } = window.supabase;
 const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+sb.auth.getSession().then(({ data }) => { if (data.session) { const el = document.getElementById('nav-portal'); if (el) el.style.display = ''; } });
 
 function esc(s) {
     if (s == null) return '';
