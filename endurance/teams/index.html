@@ -198,13 +198,19 @@ function driverAvatarHTML(url, name) {
     return `<span class="driver-avatar-init">${initials(name)}</span>`;
 }
 
+function mfrBadge(logoUrl, brandColor, name) {
+    if (logoUrl) return `<img src="${esc(logoUrl)}" alt="${esc(name || '')}" loading="lazy" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;display:inline-block">`;
+    if (brandColor) return `<span class="swatch" style="background:${esc(brandColor)}"></span>`;
+    return '';
+}
+
 // ============================================================
 // LISTING
 // ============================================================
 async function showListing() {
     document.title = 'Teams — Gran Turismo GTEC';
     const { data, error } = await sb.from('teams')
-        .select('id, name, slug, home_country, bio, manufacturers(name,brand_color)')
+        .select('id, name, slug, home_country, bio, manufacturers(name,brand_color,logo_url)')
         .order('name');
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
@@ -222,7 +228,7 @@ async function showListing() {
         const dCount = countMap[t.id] || 0;
         return `
         <div class="team-card" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'">
-            ${mfr ? `<div class="team-card-mfr">${mfr.brand_color ? `<span class="swatch" style="background:${esc(mfr.brand_color)}"></span>` : ''}${esc(mfr.name)}</div>` : ''}
+            ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}</div>` : ''}
             <div class="team-card-name">${esc(t.name)}</div>
             <div class="team-card-meta">
                 ${t.home_country ? flag(t.home_country) + ' ' + esc(t.home_country) + ' &nbsp;·&nbsp; ' : ''}
@@ -247,7 +253,7 @@ async function showListing() {
 // ============================================================
 async function showProfile() {
     const { data: team, error } = await sb.from('teams')
-        .select('*, manufacturers(name,brand_color)')
+        .select('*, manufacturers(name,brand_color,logo_url)')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -286,8 +292,8 @@ async function showProfile() {
     // Tags
     const tags = [];
     if (team.manufacturers?.name) {
-        const sw = team.manufacturers.brand_color ? `<span class="swatch" style="background:${esc(team.manufacturers.brand_color)}"></span>` : '';
-        tags.push(`${sw}${esc(team.manufacturers.name)}`);
+        const badge = mfrBadge(team.manufacturers.logo_url, team.manufacturers.brand_color, team.manufacturers.name);
+        tags.push(`${badge}${esc(team.manufacturers.name)}`);
     }
     if (team.home_country) tags.push(`${flag(team.home_country)} ${esc(team.home_country)}`);
     if (team.founded_on)   tags.push(`Est. ${esc(team.founded_on.slice(0,4))}`);
@@ -323,7 +329,7 @@ async function showProfile() {
                     <tbody>
                         ${standings.map(s => `<tr>
                             <td>${s.season_year}</td>
-                            <td class="muted">${s.manufacturer_name ? `${s.brand_color ? `<span class="swatch" style="width:10px;height:10px;border-radius:2px;background:${esc(s.brand_color)};display:inline-block;margin-right:4px;border:1px solid rgba(255,255,255,0.15)"></span>` : ''}${esc(s.manufacturer_name)}` : '—'}</td>
+                            <td class="muted">${s.manufacturer_name ? `${mfrBadge(s.manufacturer_logo_url, s.brand_color, s.manufacturer_name)} ${esc(s.manufacturer_name)}` : '—'}</td>
                             <td class="right pts">${s.points}</td>
                             <td class="right muted">${s.races}</td>
                             <td class="right muted">${s.wins}</td>

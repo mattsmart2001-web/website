@@ -901,9 +901,12 @@ async function renderManufacturers() {
     const { data, error } = await sb.from('manufacturers').select('*').order('name');
     if (error) { toast(error.message, 'error'); return; }
 
-    const rows = data.length === 0 ? `<tr><td colspan="5"><div class="empty-state">No manufacturers yet — add one to get started.</div></td></tr>` :
+    const rows = data.length === 0 ? `<tr><td colspan="6"><div class="empty-state">No manufacturers yet — add one to get started.</div></td></tr>` :
         data.map(m => `
             <tr>
+                <td>${m.logo_url
+                    ? `<img src="${esc(m.logo_url)}" alt="${esc(m.name)}" style="width:32px;height:32px;object-fit:contain;background:rgba(255,255,255,0.04);border-radius:4px;padding:2px">`
+                    : `<div style="width:32px;height:32px;border-radius:4px;background:${esc(m.brand_color || 'rgba(255,255,255,0.05)')};border:1px solid var(--border)"></div>`}</td>
                 <td><strong>${esc(m.name)}</strong></td>
                 <td class="td-muted">${esc(m.slug)}</td>
                 <td class="td-muted">${esc(m.country) || '—'}</td>
@@ -920,7 +923,7 @@ async function renderManufacturers() {
                 <input class="table-search" type="search" placeholder="Search manufacturers…" oninput="filterTable(this,'mfr-table')">
             </div>
             <table id="mfr-table"><thead><tr>
-                <th>Name</th><th>Slug</th><th>Country</th><th>Brand Colour</th><th></th>
+                <th style="width:60px">Logo</th><th>Name</th><th>Slug</th><th>Country</th><th>Brand Colour</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
 }
@@ -949,9 +952,17 @@ function mfrForm(m = {}) {
             </div>
         </div>
         <div class="form-group">
-            <label>Logo URL</label>
-            <input type="url" name="logo_url" value="${esc(m.logo_url)}" placeholder="https://…">
-            <div class="form-hint">Supabase Storage URL — optional for now</div>
+            <label>Logo</label>
+            <div style="display:flex;align-items:center;gap:1rem">
+                <div id="mfr-logo-preview" style="width:64px;height:64px;flex-shrink:0;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden">
+                    ${m.logo_url ? `<img src="${esc(m.logo_url)}" style="max-width:100%;max-height:100%;object-fit:contain">` : '<span style="font-size:0.7rem;color:var(--muted)">No logo</span>'}
+                </div>
+                <div style="flex:1">
+                    <input type="file" id="mfr-logo-file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="padding:0.4rem 0">
+                    <input type="hidden" name="logo_url" value="${esc(m.logo_url)}">
+                    <div class="form-hint">PNG / SVG / WebP recommended. Square transparent works best. Uploads to gtec-manufacturers bucket.</div>
+                </div>
+            </div>
         </div>
     </form>`;
 }
@@ -984,7 +995,20 @@ async function editManufacturer(id) {
 async function saveManufacturer(id) {
     const d = getFormData('entity-form');
     if (!d.name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
-    const payload = { name: d.name, slug: d.slug, country: d.country, brand_color: d.brand_color, logo_url: d.logo_url };
+
+    let logoUrl = d.logo_url || null;
+    const fileInput = document.getElementById('mfr-logo-file');
+    const file = fileInput?.files?.[0];
+    if (file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const path = `${d.slug}-${Date.now()}.${ext}`;
+        toast('Uploading logo…', 'success');
+        const { error: upErr } = await sb.storage.from('gtec-manufacturers').upload(path, file, { upsert: true });
+        if (upErr) { toast(upErr.message, 'error'); return; }
+        logoUrl = sb.storage.from('gtec-manufacturers').getPublicUrl(path).data.publicUrl;
+    }
+
+    const payload = { name: d.name, slug: d.slug, country: d.country, brand_color: d.brand_color, logo_url: logoUrl };
     const { error } = id
         ? await sb.from('manufacturers').update(payload).eq('id', id)
         : await sb.from('manufacturers').insert(payload);

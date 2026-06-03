@@ -82,3 +82,10 @@ Always apply in this order:
 
 1. `01_schema.sql` — creates all tables, triggers, functions, RLS
 2. `02_seed_defaults.sql` — inserts default data (idempotent, safe to re-run)
+3. `03_driver_claim_tokens.sql` — driver self-service claim tokens
+4. `04_standings.sql` — driver / team standings views
+5. `05_elo.sql` — pairwise Elo rating tables + views
+6. `06_stats.sql` — Hall of Fame / career stats
+7. `07_content.sql` — news, media, pages tables + `gtec-media` bucket
+8. `08_applications.sql` — driver / team applications table
+9. `09_manufacturer_logos.sql` — `gtec-manufacturers` bucket + view refresh to expose logos

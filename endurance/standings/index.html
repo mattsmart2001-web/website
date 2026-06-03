@@ -216,6 +216,14 @@
             border: 1px solid rgba(255,255,255,0.15);
             flex-shrink: 0;
         }
+        .mfr-logo {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            flex-shrink: 0;
+            vertical-align: middle;
+        }
         .career-num {
             display: inline-block;
             background: rgba(255,209,102,0.12);
@@ -332,6 +340,13 @@ function posCls(p) {
     return 'pos';
 }
 
+// Manufacturer logo (preferred) or coloured swatch fallback
+function mfrBadge(logoUrl, brandColor, name) {
+    if (logoUrl) return `<img class="mfr-logo" src="${esc(logoUrl)}" alt="${esc(name || '')}" loading="lazy">`;
+    if (brandColor) return `<span class="swatch" style="background:${esc(brandColor)}"></span>`;
+    return '';
+}
+
 async function setTab(t) {
     _tab = t;
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
@@ -370,7 +385,7 @@ function renderDrivers(panel) {
         const pos = i + 1;
         const num = d.career_number ? `<span class="career-num">#${d.career_number}</span>` : '';
         const teamLine = d.team_name
-            ? `<div class="meta-line">${d.brand_color ? `<span class="swatch" style="background:${esc(d.brand_color)}"></span>` : ''}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.color='#fff'" onmouseout="this.style.color=''">${esc(d.team_name)}</a>` : esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</div>`
+            ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name)}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.color='#fff'" onmouseout="this.style.color=''">${esc(d.team_name)}</a>` : esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</div>`
             : '';
         return `<tr class="driver-row">
             <td class="${posCls(pos)}">${pos}</td>
@@ -413,7 +428,7 @@ function renderTeams(panel) {
     const rows = _teams.map((t, i) => {
         const pos = i + 1;
         const mfrLine = t.manufacturer_name
-            ? `<div class="meta-line">${t.brand_color ? `<span class="swatch" style="background:${esc(t.brand_color)}"></span>` : ''}${esc(t.manufacturer_name)}</div>`
+            ? `<div class="meta-line">${mfrBadge(t.manufacturer_logo_url, t.brand_color, t.manufacturer_name)}${esc(t.manufacturer_name)}</div>`
             : '';
         return `<tr>
             <td class="${posCls(pos)}">${pos}</td>
@@ -460,7 +475,7 @@ function renderRatings(panel) {
             ? `<span style="font-size:0.78rem;font-weight:600;color:${delta >= 0 ? '#4ade80' : '#f87171'}">${delta >= 0 ? '+' : ''}${delta}</span>`
             : '—';
         const teamLine = d.team_name
-            ? `<div class="meta-line">${d.brand_color ? `<span class="swatch" style="background:${esc(d.brand_color)}"></span>` : ''}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
+            ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name)}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
             : '';
         return `<tr>
             <td class="${posCls(pos)}">${pos}</td>
