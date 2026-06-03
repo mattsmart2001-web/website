@@ -287,12 +287,10 @@
             letter-spacing: 0.05em;
             text-transform: uppercase;
         }
-        .badge-green  { background: rgba(34,197,94,0.15); color: #4ade80; }
-        .badge-muted  { background: rgba(255,255,255,0.06); color: var(--muted); }
-        .badge-gold   { background: rgba(255,209,102,0.15); color: var(--gold); }
-        .badge-red    { background: rgba(239,68,68,0.12); color: #fca5a5; }
-        .badge-yellow { background: rgba(251,191,36,0.15); color: #fbbf24; }
-        .stat-card-alert { border-color: rgba(251,191,36,0.35); }
+        .badge-green { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .badge-muted { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .badge-gold  { background: rgba(255,209,102,0.15); color: var(--gold); }
+        .badge-red   { background: rgba(239,68,68,0.12); color: #fca5a5; }
         .row-actions {
             display: flex;
             gap: 0.4rem;
@@ -863,91 +861,28 @@ function getFormData(formId) {
 // 6. Dashboard
 // ============================================================
 async function renderDashboard() {
-    const [mfr, seasons, teams, drivers, evts, pendingApps] = await Promise.all([
+    const [mfr, seasons, teams, drivers, evts] = await Promise.all([
         sb.from('manufacturers').select('id', { count: 'exact', head: true }),
         sb.from('seasons').select('id', { count: 'exact', head: true }),
         sb.from('teams').select('id', { count: 'exact', head: true }),
         sb.from('drivers').select('id', { count: 'exact', head: true }),
         sb.from('events').select('id', { count: 'exact', head: true }),
-        sb.from('applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     ]);
 
-    const { data: activeSeason } = await sb.from('seasons').select('id,name,year').eq('is_active', true).maybeSingle();
-
-    // Fetch upcoming events + recent results if active season
-    let upcomingEvents = [], recentResults = [];
-    if (activeSeason) {
-        const [upRes, resRes] = await Promise.all([
-            sb.from('events').select('id,name,round,starts_at,status')
-                .eq('season_id', activeSeason.id)
-                .in('status', ['scheduled', 'live'])
-                .order('starts_at').limit(4),
-            sb.from('events').select('id,name,round,starts_at')
-                .eq('season_id', activeSeason.id)
-                .eq('status', 'completed')
-                .order('starts_at', { ascending: false }).limit(3),
-        ]);
-        upcomingEvents = upRes.data || [];
-        recentResults  = resRes.data || [];
-    }
-
-    const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) : 'TBC';
-
-    const pendingBadge = (pendingApps.count ?? 0) > 0
-        ? `<span class="badge badge-yellow" style="margin-left:0.5rem">${pendingApps.count}</span>`
-        : '';
+    const { data: activeSeason } = await sb.from('seasons').select('name,year').eq('is_active', true).maybeSingle();
 
     document.getElementById('content').innerHTML = `
         <div class="stat-grid">
             <div class="stat-card"><div class="stat-card-label">Manufacturers</div><div class="stat-card-value">${mfr.count ?? 0}</div></div>
+            <div class="stat-card"><div class="stat-card-label">Seasons</div><div class="stat-card-value">${seasons.count ?? 0}</div></div>
             <div class="stat-card"><div class="stat-card-label">Teams</div><div class="stat-card-value">${teams.count ?? 0}</div></div>
             <div class="stat-card"><div class="stat-card-label">Drivers</div><div class="stat-card-value">${drivers.count ?? 0}</div></div>
             <div class="stat-card"><div class="stat-card-label">Events</div><div class="stat-card-value">${evts.count ?? 0}</div></div>
-            <div class="stat-card ${(pendingApps.count ?? 0) > 0 ? 'stat-card-alert' : ''}" onclick="navigate('applications')" style="cursor:pointer">
-                <div class="stat-card-label">Pending Applications${pendingBadge}</div>
-                <div class="stat-card-value">${pendingApps.count ?? 0}</div>
-            </div>
         </div>
-
-        <div class="table-wrap" style="padding:1.5rem;margin-top:1rem">
-            <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.65rem">Active Season</div>
-            ${activeSeason
-                ? `<div style="font-family:'Anton',sans-serif;font-size:1.6rem;letter-spacing:0.04em">${esc(activeSeason.name)}</div>`
-                : `<div style="color:var(--muted);font-size:0.88rem">None — create a season and mark it active.</div>`}
+        <div class="table-wrap" style="padding:1.5rem">
+            <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem;font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase">Active Season</div>
+            <div style="font-family:'Anton',sans-serif;font-size:1.6rem;letter-spacing:0.04em">${activeSeason ? esc(activeSeason.name) : '<span style="color:var(--muted);font-size:1rem;font-family:Inter,sans-serif">None — create a season and mark it active</span>'}</div>
         </div>
-
-        ${upcomingEvents.length ? `
-        <div class="table-wrap" style="margin-top:1rem">
-            <div style="padding:1rem 1.25rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted)">Upcoming Events</div>
-            <table>
-                <thead><tr><th>Round</th><th>Event</th><th>Date</th><th>Status</th></tr></thead>
-                <tbody>
-                    ${upcomingEvents.map(e => `<tr>
-                        <td class="muted">R${e.round}</td>
-                        <td><strong>${esc(e.name)}</strong></td>
-                        <td class="muted">${fmtDate(e.starts_at)}</td>
-                        <td><span class="badge ${e.status === 'live' ? 'badge-yellow' : 'badge-muted'}">${esc(e.status)}</span></td>
-                    </tr>`).join('')}
-                </tbody>
-            </table>
-        </div>` : ''}
-
-        ${recentResults.length ? `
-        <div class="table-wrap" style="margin-top:1rem">
-            <div style="padding:1rem 1.25rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted)">Recent Results</div>
-            <table>
-                <thead><tr><th>Round</th><th>Event</th><th>Date</th><th></th></tr></thead>
-                <tbody>
-                    ${recentResults.map(e => `<tr>
-                        <td class="muted">R${e.round}</td>
-                        <td><strong>${esc(e.name)}</strong></td>
-                        <td class="muted">${fmtDate(e.starts_at)}</td>
-                        <td><span class="badge badge-green">Completed</span></td>
-                    </tr>`).join('')}
-                </tbody>
-            </table>
-        </div>` : ''}
-
         <div class="table-wrap" style="padding:1.5rem;margin-top:1rem">
             <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Maintenance</div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
