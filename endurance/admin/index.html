@@ -1718,7 +1718,31 @@ async function openAddEntryModal(eventId, eventName, seasonId) {
         .select('team_id, manufacturer_id, teams(name), manufacturers(name)')
         .eq('season_id', seasonId);
 
-    const teamOptsHTML = (ts || [])
+    if (!ts || ts.length === 0) {
+        const { count: teamCount } = await sb.from('teams').select('*', { count: 'exact', head: true });
+        const msg = teamCount
+            ? `You have ${teamCount} team${teamCount === 1 ? '' : 's'}, but none are registered for this season yet.`
+            : `No teams exist yet.`;
+        openModal(`Add Entry — ${esc(eventName)}`,
+            `<div style="padding:0.5rem 0">
+                <p style="color:#fca5a5;margin-bottom:0.85rem;font-weight:600">${esc(msg)}</p>
+                <p style="color:var(--muted);font-size:0.88rem;line-height:1.5">
+                    Each team must be registered to a season with a locked manufacturer before they can be entered into events. To fix this:
+                </p>
+                <ol style="color:var(--muted);font-size:0.88rem;line-height:1.7;padding-left:1.25rem;margin-top:0.6rem">
+                    <li>Open the <strong style="color:var(--text)">Seasons</strong> section.</li>
+                    <li>Click <strong style="color:var(--text)">Teams</strong> on the relevant season.</li>
+                    <li>Register each team with their manufacturer for the season.</li>
+                    <li>Return here and add entries to the event.</li>
+                </ol>
+            </div>`,
+            `<button class="btn btn-ghost" onclick="closeModal()">Close</button>
+             <button class="btn btn-primary" onclick="closeModal(); navigate('seasons')">Go to Seasons</button>`
+        );
+        return;
+    }
+
+    const teamOptsHTML = ts
         .sort((a, b) => (a.teams?.name || '').localeCompare(b.teams?.name || ''))
         .map(t => `<option value="${esc(t.team_id)}" data-mfr="${esc(t.manufacturer_id)}">${esc(t.teams?.name)}</option>`)
         .join('');
