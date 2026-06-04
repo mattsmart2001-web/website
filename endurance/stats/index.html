@@ -236,11 +236,16 @@
             .hide-mob { display: none; }
         }
     </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
 </head>
 <body>
 
 <nav class="gtec-nav">
     <a class="brand" href="/endurance/">Gran Turismo<span class="accent"> GTEC</span></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
     <div class="nav-links">
         <a href="/endurance/calendar/">Calendar</a>
         <a href="/endurance/news/">News</a>
@@ -403,5 +408,6 @@ async function load() {
 
 load();
 </script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,87 @@
+/* ============================================================
+   GTEC shared nav — mobile-responsive layer.
+   Each page declares its own .gtec-nav rules inline (for desktop),
+   and this stylesheet adds the hamburger button + drawer behavior
+   on small screens. Use selector "nav.gtec-nav" so these rules win
+   over the inline .gtec-nav declarations at the matching breakpoint.
+   ============================================================ */
+
+/* Hamburger toggle button (hidden on desktop) */
+.gtec-nav-toggle {
+    display: none;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    padding: 0;
+    flex-shrink: 0;
+}
+.gtec-nav-toggle:hover {
+    color: #f1f5f9;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+.gtec-nav-toggle svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+.gtec-nav-toggle .icon-close { display: none; }
+body.nav-open .gtec-nav-toggle .icon-open  { display: none; }
+body.nav-open .gtec-nav-toggle .icon-close { display: block; }
+
+@media (max-width: 720px) {
+    /* Show hamburger */
+    .gtec-nav-toggle { display: inline-flex; }
+
+    /* Collapse the link group into a drop-down drawer */
+    nav.gtec-nav {
+        padding: 0.9rem 1rem;
+    }
+    nav.gtec-nav .nav-links,
+    nav.gtec-nav > div[style*="display:flex"] {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 0.5rem 0 0.75rem;
+        background: rgba(5, 6, 8, 0.98);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    body.nav-open nav.gtec-nav .nav-links,
+    body.nav-open nav.gtec-nav > div[style*="display:flex"] {
+        display: flex;
+    }
+    nav.gtec-nav .nav-links a {
+        padding: 0.85rem 1.5rem;
+        font-size: 0.72rem;
+        letter-spacing: 0.2em;
+    }
+    nav.gtec-nav .nav-links a:hover {
+        background: rgba(255, 255, 255, 0.04);
+    }
+    nav.gtec-nav .nav-links .apply,
+    nav.gtec-nav .nav-links .back {
+        margin: 0.5rem 1.5rem;
+        text-align: center;
+        padding: 0.7rem 0.85rem;
+    }
+    /* Portal page: keep the user chip + sign-out tidy in the drawer */
+    nav.gtec-nav .nav-links .nav-user {
+        padding: 0.5rem 1.5rem;
+        font-size: 0.78rem;
+    }
+    nav.gtec-nav .nav-links .btn-sm {
+        margin: 0.25rem 1.5rem 0.5rem;
+    }
+}

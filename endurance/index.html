@@ -85,6 +85,37 @@
             color: var(--text);
             border-color: rgba(255, 255, 255, 0.25);
         }
+        .gtec-nav .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .gtec-nav .nav-links a {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .apply {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--bg);
+            background: var(--gold);
+            text-decoration: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 999px;
+            transition: opacity 0.2s;
+        }
+        .gtec-nav .apply:hover { opacity: 0.85; }
 
         /* ---------- Hero ---------- */
         .gtec-hero {
@@ -558,6 +589,7 @@
         }
         .gtec-footer .presented a:hover { text-decoration: underline; }
     </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
 </head>
 <body>
 
@@ -565,17 +597,21 @@
 
 <nav class="gtec-nav">
     <a class="brand" href="/endurance/">Gran Turismo<span class="accent"> GTEC</span></a>
-    <div style="display:flex;align-items:center;gap:1.25rem">
-        <a href="/endurance/calendar/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Calendar</a>
-        <a href="/endurance/news/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">News</a>
-        <a href="/endurance/standings/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Standings</a>
-        <a href="/endurance/drivers/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Drivers</a>
-        <a href="/endurance/teams/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Teams</a>
-        <a href="/endurance/stats/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Stats</a>
-        <a href="/endurance/rules/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Rules</a>
-        <a id="nav-signin" href="/endurance/profile/login/" style="display:none;font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Sign In</a>
-        <a id="nav-portal" href="/endurance/profile/" style="display:none;font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">My Profile</a>
-        <a href="/endurance/apply/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--bg);background:var(--gold);text-decoration:none;padding:0.4rem 0.8rem;border-radius:999px;transition:opacity 0.2s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Apply</a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a id="nav-signin" href="/endurance/profile/login/" style="display:none">Sign In</a>
+        <a id="nav-portal" href="/endurance/profile/" style="display:none">My Profile</a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
         <a class="back" href="/">← SparksTheory</a>
     </div>
 </nav>
@@ -921,5 +957,6 @@
     })();
 </script>
 
+<script src="/endurance/assets/gtec-nav.js" defer></script>
 </body>
 </html>
