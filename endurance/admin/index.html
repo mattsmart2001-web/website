@@ -820,7 +820,7 @@ async function loadCache() {
     const [mfr, ps, tm, dr, seas] = await Promise.all([
         sb.from('manufacturers').select('id,name,slug').order('name'),
         sb.from('points_systems').select('id,name').order('name'),
-        sb.from('teams').select('id,name,slug').order('name'),
+        sb.from('teams').select('id,name,slug,manufacturer_id').order('name'),
         sb.from('drivers').select('id,display_name,slug').order('display_name'),
         sb.from('seasons').select('id,name,year').order('year', { ascending: false }),
     ]);
@@ -1422,6 +1422,7 @@ async function renderDrivers() {
 function driverForm(d = {}) {
     const teamOpts = _teams.map(t => ({ value: t.id, label: t.name }));
     const mfrOpts  = _manufacturers.map(m => ({ value: m.id, label: m.name }));
+    const hasTeam  = !!d.current_team_id;
     return `<form id="entity-form">
         <div class="form-row">
             <div class="form-group">
@@ -1456,11 +1457,18 @@ function driverForm(d = {}) {
         <div class="form-row">
             <div class="form-group">
                 <label>Current Team</label>
-                ${selectHTML('current_team_id', teamOpts, d.current_team_id || '')}
+                <select id="current_team_id" name="current_team_id" onchange="syncDriverMfrToTeam()">
+                    <option value="">— Free agent —</option>
+                    ${teamOpts.map(o => `<option value="${esc(o.value)}" ${o.value === d.current_team_id ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+                </select>
             </div>
             <div class="form-group">
                 <label>Current Manufacturer</label>
-                ${selectHTML('current_manufacturer_id', mfrOpts, d.current_manufacturer_id || '')}
+                <select id="current_manufacturer_id" name="current_manufacturer_id" ${hasTeam ? 'disabled' : ''}>
+                    <option value="">— Select —</option>
+                    ${mfrOpts.map(o => `<option value="${esc(o.value)}" ${o.value === d.current_manufacturer_id ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+                </select>
+                <div class="form-hint" id="mfr-hint">${hasTeam ? 'Locked to team manufacturer.' : 'Free agents only — set when no team is selected.'}</div>
             </div>
         </div>
         <div class="form-group">
@@ -1468,6 +1476,22 @@ function driverForm(d = {}) {
             <textarea name="bio" placeholder="Driver bio…">${esc(d.bio)}</textarea>
         </div>
     </form>`;
+}
+
+function syncDriverMfrToTeam() {
+    const teamSel = document.getElementById('current_team_id');
+    const mfrSel  = document.getElementById('current_manufacturer_id');
+    const hint    = document.getElementById('mfr-hint');
+    if (!teamSel || !mfrSel) return;
+    const team = _teams.find(t => t.id === teamSel.value);
+    if (team) {
+        mfrSel.value = team.manufacturer_id || '';
+        mfrSel.disabled = true;
+        if (hint) hint.textContent = 'Locked to team manufacturer.';
+    } else {
+        mfrSel.disabled = false;
+        if (hint) hint.textContent = 'Free agents only — set when no team is selected.';
+    }
 }
 
 function openDriverModal(d = {}) {
