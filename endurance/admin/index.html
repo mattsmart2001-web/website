@@ -1420,7 +1420,11 @@ async function renderDrivers() {
 }
 
 function driverForm(d = {}) {
-    const teamOpts = _teams.map(t => ({ value: t.id, label: t.name }));
+    const mfrName  = id => _manufacturers.find(m => m.id === id)?.name;
+    const teamOpts = _teams.map(t => ({
+        value: t.id,
+        label: mfrName(t.manufacturer_id) ? `${t.name} (${mfrName(t.manufacturer_id)})` : t.name,
+    }));
     const mfrOpts  = _manufacturers.map(m => ({ value: m.id, label: m.name }));
     const hasTeam  = !!d.current_team_id;
     return `<form id="entity-form">
