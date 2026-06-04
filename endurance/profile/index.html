@@ -20,22 +20,26 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
 
-        /* Nav — portal-specific (no hub links, just brand + user) */
-        .portal-nav {
+        /* Nav — standard gtec-nav (matches site-wide) with portal user chip */
+        .gtec-nav {
             position: sticky; top: 0; z-index: 10;
             display: flex; justify-content: space-between; align-items: center;
             padding: 1.25rem 2rem;
             background: rgba(5,6,8,0.9); backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border);
         }
-        .portal-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
-        .portal-nav .brand .accent { color: var(--gold); }
-        .portal-nav .nav-right { display: flex; align-items: center; gap: 1rem; }
-        .portal-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; }
-        .portal-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
-        .portal-nav .nav-links a:hover { color: var(--text); }
-        .nav-user { font-size: 0.78rem; color: var(--muted); }
-        .btn-sm { padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'Inter', sans-serif; transition: color 0.15s, border-color 0.15s; }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--bg); background: var(--gold); text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 999px; transition: opacity 0.2s; }
+        .gtec-nav .apply:hover { opacity: 0.85; }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; transition: color 0.2s, border-color 0.2s; }
+        .gtec-nav .back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .nav-user { font-size: 0.72rem; color: var(--muted); }
+        .btn-sm { padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'Inter', sans-serif; transition: color 0.15s, border-color 0.15s; }
         .btn-sm:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
 
         /* Layout */
@@ -147,15 +151,21 @@
 
 <div id="auth-loading">Loading…</div>
 
-<nav class="portal-nav">
+<nav class="gtec-nav">
     <a class="brand" href="/endurance/">Gran Turismo<span class="accent"> GTEC</span></a>
-    <div class="nav-right">
-        <div class="nav-links">
-            <a href="/endurance/calendar/">Calendar</a>
-            <a href="/endurance/standings/">Standings</a>
-        </div>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/profile/" class="active">My Profile</a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
         <span class="nav-user" id="nav-user"></span>
         <button class="btn-sm" id="btn-logout">Sign out</button>
+        <a class="back" href="/">← SparksTheory</a>
     </div>
 </nav>
 
