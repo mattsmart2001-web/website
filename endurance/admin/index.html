@@ -635,6 +635,12 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             Pages
         </button>
+
+        <div class="nav-section">System</div>
+        <button class="nav-link" data-section="admins">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Admins
+        </button>
     </nav>
     <div class="sidebar-bottom">
         <div class="user-chip" id="user-email">—</div>
@@ -782,11 +788,12 @@ async function navigate(section, pushHash = true) {
         news: 'News',
         media: 'Media',
         pages: 'Pages',
+        admins: 'Admins',
     };
     document.getElementById('page-title').textContent = titles[section] || section;
 
     const addBtn = document.getElementById('btn-add');
-    if (section === 'dashboard' || section === 'pages' || section === 'applications') {
+    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins') {
         addBtn.style.display = 'none';
     } else {
         addBtn.style.display = '';
@@ -809,6 +816,7 @@ async function navigate(section, pushHash = true) {
         case 'news':         await renderNews(); break;
         case 'media':        await renderMedia(); break;
         case 'pages':        await renderPages(); break;
+        case 'admins':       await renderAdmins(); break;
     }
 }
 
@@ -3021,6 +3029,70 @@ async function savePage(slug) {
     toast('Page saved.', 'success');
     closeModal();
     await renderPages();
+}
+
+
+// ============================================================
+// 11d. Admins
+// ============================================================
+async function renderAdmins() {
+    const { data, error } = await sb.rpc('list_admins');
+    if (error) { toast(error.message, 'error'); return; }
+
+    const rows = !data?.length
+        ? `<tr><td colspan="4"><div class="empty-state">No admins found — that shouldn't happen.</div></td></tr>`
+        : data.map(a => {
+            const isSelf = currentUser && a.user_id === currentUser.id;
+            return `<tr>
+                <td><strong>${esc(a.email)}</strong>${isSelf ? ' <span class="badge badge-gold">You</span>' : ''}</td>
+                <td class="td-muted" style="font-family:monospace;font-size:0.72rem">${esc(a.user_id)}</td>
+                <td class="td-muted">${a.created_at ? a.created_at.slice(0,10) : '—'}</td>
+                <td><div class="row-actions">
+                    ${isSelf
+                        ? '<span class="td-muted" style="font-size:0.78rem">Cannot revoke self</span>'
+                        : `<button class="btn-icon danger" onclick="revokeAdmin('${a.user_id}','${esc(a.email)}')">Revoke</button>`}
+                </div></td>
+            </tr>`;
+        }).join('');
+
+    document.getElementById('content').innerHTML = `
+        <div class="table-wrap" style="padding:1.25rem;margin-bottom:1rem">
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem">Grant Admin Access</div>
+            <form onsubmit="grantAdminFromForm(event)" style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                <input type="email" id="grant-email" placeholder="person@example.com" required
+                    style="flex:1;min-width:240px;padding:0.6rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem">
+                <button class="btn btn-primary" type="submit">Grant Admin</button>
+            </form>
+            <div style="margin-top:0.75rem;font-size:0.78rem;color:var(--muted);line-height:1.5">
+                The person must first create an account in Supabase Auth (or sign up at <code>/endurance/admin/login</code>) — this just adds the admin role to their existing user.
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table><thead><tr>
+                <th>Email</th><th>User ID</th><th>Granted</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+}
+
+async function grantAdminFromForm(e) {
+    e.preventDefault();
+    const email = document.getElementById('grant-email').value.trim();
+    if (!email) return;
+    const { data, error } = await sb.rpc('grant_admin', { p_email: email });
+    if (error) { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not grant admin.', 'error'); return; }
+    toast(`Admin granted to ${email}.`, 'success');
+    await renderAdmins();
+}
+
+async function revokeAdmin(userId, email) {
+    if (!confirm(`Revoke admin access for ${email}?`)) return;
+    const { data, error } = await sb.rpc('revoke_admin', { p_user_id: userId });
+    if (error) { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not revoke.', 'error'); return; }
+    toast('Admin access revoked.', 'success');
+    await renderAdmins();
 }
 
 
