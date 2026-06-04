@@ -3042,15 +3042,15 @@ async function renderAdmins() {
     const rows = !data?.length
         ? `<tr><td colspan="4"><div class="empty-state">No admins found — that shouldn't happen.</div></td></tr>`
         : data.map(a => {
-            const isSelf = currentUser && a.user_id === currentUser.id;
+            const isSelf = currentUser && a.admin_user_id === currentUser.id;
             return `<tr>
-                <td><strong>${esc(a.email)}</strong>${isSelf ? ' <span class="badge badge-gold">You</span>' : ''}</td>
-                <td class="td-muted" style="font-family:monospace;font-size:0.72rem">${esc(a.user_id)}</td>
-                <td class="td-muted">${a.created_at ? a.created_at.slice(0,10) : '—'}</td>
+                <td><strong>${esc(a.admin_email)}</strong>${isSelf ? ' <span class="badge badge-gold">You</span>' : ''}</td>
+                <td class="td-muted" style="font-family:monospace;font-size:0.72rem">${esc(a.admin_user_id)}</td>
+                <td class="td-muted">${a.granted_at ? a.granted_at.slice(0,10) : '—'}</td>
                 <td><div class="row-actions">
                     ${isSelf
                         ? '<span class="td-muted" style="font-size:0.78rem">Cannot revoke self</span>'
-                        : `<button class="btn-icon danger" onclick="revokeAdmin('${a.user_id}','${esc(a.email)}')">Revoke</button>`}
+                        : `<button class="btn-icon danger" onclick="revokeAdmin('${a.admin_user_id}','${esc(a.admin_email)}')">Revoke</button>`}
                 </div></td>
             </tr>`;
         }).join('');
