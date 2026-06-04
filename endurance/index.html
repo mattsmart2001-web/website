@@ -573,6 +573,7 @@
         <a href="/endurance/teams/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Teams</a>
         <a href="/endurance/stats/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Stats</a>
         <a href="/endurance/rules/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Rules</a>
+        <a id="nav-signin" href="/endurance/profile/login/" style="display:none;font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Sign In</a>
         <a id="nav-portal" href="/endurance/profile/" style="display:none;font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">My Profile</a>
         <a href="/endurance/apply/" style="font-family:'Orbitron',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--bg);background:var(--gold);text-decoration:none;padding:0.4rem 0.8rem;border-radius:999px;transition:opacity 0.2s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Apply</a>
         <a class="back" href="/">← SparksTheory</a>
@@ -912,10 +913,10 @@
         if (!window.supabase || !window.GTEC_CONFIG) return;
         const sb = window.supabase.createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
         sb.auth.getSession().then(({ data }) => {
-            if (data.session) {
-                const el = document.getElementById('nav-portal');
-                if (el) el.style.display = '';
-            }
+            const portal = document.getElementById('nav-portal');
+            const signin = document.getElementById('nav-signin');
+            if (data.session) { if (portal) portal.style.display = ''; }
+            else              { if (signin) signin.style.display = ''; }
         });
     })();
 </script>

@@ -445,7 +445,7 @@ async function loadRecentResults(driverId) {
 // ── Main init ─────────────────────────────────────────────────
 async function init() {
     const { data: { session } } = await sb.auth.getSession();
-    if (!session) { window.location.replace('./claim/?redirect=1'); return; }
+    if (!session) { window.location.replace('./login/'); return; }
 
     const { data: role } = await sb.from('user_roles')
         .select('role').eq('user_id', session.user.id).eq('role', 'driver').maybeSingle();
