@@ -92,3 +92,4 @@ Always apply in this order:
 10. `10_application_links.sql` — tracks which driver/team record was created from each application
 11. `11_driver_team_manufacturer_lock.sql` — driver's manufacturer auto-syncs to their team's manufacturer
 12. `12_admin_management.sql` — RPCs so admins can grant / revoke admin access from the admin UI
+13. `13_application_discord_unique_numbers.sql` — Discord handle on applications + unique driver career numbers

@@ -888,7 +888,7 @@ async function loadCache() {
         sb.from('manufacturers').select('id,name,slug').order('name'),
         sb.from('points_systems').select('id,name').order('name'),
         sb.from('teams').select('id,name,slug,manufacturer_id').order('name'),
-        sb.from('drivers').select('id,display_name,slug').order('display_name'),
+        sb.from('drivers').select('id,display_name,slug,career_number').order('display_name'),
         sb.from('seasons').select('id,name,year').order('year', { ascending: false }),
     ]);
     _manufacturers = mfr.data  || [];
@@ -1577,12 +1577,27 @@ async function editDriver(id) {
     openDriverModal(data);
 }
 
+function checkCareerNumber(raw, ignoreDriverId) {
+    if (raw === '' || raw == null) return { ok: true, value: null };
+    const n = parseInt(raw, 10);
+    if (Number.isNaN(n) || n < 1 || n > 999) {
+        return { ok: false, error: 'Career number must be between 1 and 999.' };
+    }
+    const clash = _drivers.find(d => d.career_number === n && d.id !== ignoreDriverId);
+    if (clash) {
+        return { ok: false, error: `#${n} is already used by ${clash.display_name}.` };
+    }
+    return { ok: true, value: n };
+}
+
 async function saveDriver(id) {
     const d = getFormData('entity-form');
     if (!d.display_name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
+    const num = checkCareerNumber(d.career_number, id);
+    if (!num.ok) { toast(num.error, 'error'); return; }
     const payload = {
         display_name: d.display_name, slug: d.slug, psn_id: d.psn_id,
-        nationality: d.nationality, career_number: d.career_number ? parseInt(d.career_number) : null,
+        nationality: d.nationality, career_number: num.value,
         current_team_id: d.current_team_id || null, current_manufacturer_id: d.current_manufacturer_id || null,
         joined_at: d.joined_at || null, bio: d.bio,
     };
@@ -2694,6 +2709,7 @@ async function viewApplication(id) {
             <div><span style="color:var(--muted)">Nationality</span><br><strong>${esc(a.nationality)||'—'}</strong></div>
             <div><span style="color:var(--muted)">Timezone</span><br><strong>${esc(a.timezone)||'—'}</strong></div>
             <div><span style="color:var(--muted)">Pref. Manufacturer</span><br><strong>${esc(a.manufacturers?.name)||'—'}</strong></div>
+            <div><span style="color:var(--muted)">Discord</span><br><strong>${esc(a.discord_username)||'—'}</strong></div>
             <div><span style="color:var(--muted)">Applied</span><br><strong>${a.created_at?.slice(0,10)}</strong></div>
             ${a.type==='team'?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Team Name</span><br><strong>${esc(a.team_name)||'—'}</strong></div>`:''}
         </div>
@@ -2759,9 +2775,11 @@ async function createRecordFromApplication(appId) {
 async function saveDriverFromApplication(appId) {
     const d = getFormData('entity-form');
     if (!d.display_name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
+    const num = checkCareerNumber(d.career_number, null);
+    if (!num.ok) { toast(num.error, 'error'); return; }
     const payload = {
         display_name: d.display_name, slug: d.slug, psn_id: d.psn_id,
-        nationality: d.nationality, career_number: d.career_number ? parseInt(d.career_number) : null,
+        nationality: d.nationality, career_number: num.value,
         current_team_id: d.current_team_id || null, current_manufacturer_id: d.current_manufacturer_id || null,
         joined_at: d.joined_at || null, bio: d.bio,
     };

@@ -178,6 +178,11 @@
                         <div class="hint">Your PlayStation Network username</div>
                     </div>
                     <div class="form-group">
+                        <label for="field-discord">Discord Username</label>
+                        <input type="text" id="field-discord" name="discord_username" placeholder="yourhandle">
+                        <div class="hint">So we can add you to the GTEC channel</div>
+                    </div>
+                    <div class="form-group">
                         <label for="field-nationality">Nationality</label>
                         <input type="text" id="field-nationality" name="nationality" placeholder="e.g. GB, DE, JP" maxlength="4">
                     </div>
@@ -287,6 +292,7 @@ async function submitForm(e) {
         type:                      f.get('type') || 'driver',
         name:                      f.get('name'),
         psn_id:                    f.get('psn_id') || null,
+        discord_username:          f.get('discord_username') || null,
         nationality:               f.get('nationality') || null,
         timezone:                  f.get('timezone') || null,
         preferred_manufacturer_id: f.get('preferred_manufacturer_id') || null,
