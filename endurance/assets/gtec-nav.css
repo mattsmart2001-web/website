@@ -6,6 +6,18 @@
    over the inline .gtec-nav declarations at the matching breakpoint.
    ============================================================ */
 
+/* Logo image used in the nav brand */
+.gtec-nav .brand-logo {
+    height: 22px;
+    width: auto;
+    vertical-align: middle;
+    margin-left: 0.45em;
+    display: inline-block;
+}
+@media (max-width: 720px) {
+    .gtec-nav .brand-logo { height: 18px; margin-left: 0.35em; }
+}
+
 /* Hamburger toggle button (hidden on desktop) */
 .gtec-nav-toggle {
     display: none;
