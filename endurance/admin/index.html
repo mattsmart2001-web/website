@@ -2027,12 +2027,8 @@ async function openAddEntryModal(eventId, eventName, seasonId) {
 
     const teamOptsHTML = ts
         .sort((a, b) => (a.teams?.name || '').localeCompare(b.teams?.name || ''))
-        .map(t => `<option value="${esc(t.team_id)}" data-mfr="${esc(t.manufacturer_id)}">${esc(t.teams?.name)}</option>`)
+        .map(t => `<option value="${esc(t.team_id)}" data-mfr-id="${esc(t.manufacturer_id)}" data-mfr-name="${esc(t.manufacturers?.name || '')}">${esc(t.teams?.name)}</option>`)
         .join('');
-
-    const mfrOptsHTML = _manufacturers.map(m =>
-        `<option value="${esc(m.id)}">${esc(m.name)}</option>`
-    ).join('');
 
     const statusOpts = [
         { value: 'confirmed', label: 'Confirmed' },
@@ -2056,11 +2052,11 @@ async function openAddEntryModal(eventId, eventName, seasonId) {
                     <input type="number" name="car_number" placeholder="1" required min="1" max="999">
                 </div>
                 <div class="form-group">
-                    <label>Manufacturer (auto-filled)</label>
-                    <select id="manufacturer_id" name="manufacturer_id" required>
-                        <option value="">— Select Team first —</option>
-                        ${mfrOptsHTML}
-                    </select>
+                    <label>Manufacturer</label>
+                    <input type="hidden" name="manufacturer_id" id="manufacturer_id" value="">
+                    <div id="entry-mfr-display" style="padding:0.65rem 0.85rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;font-size:0.88rem;color:var(--muted);min-height:42px;display:flex;align-items:center">
+                        Pick a team — manufacturer is locked by the season registration.
+                    </div>
                 </div>
             </div>
             <div class="form-row">
@@ -2080,9 +2076,18 @@ async function openAddEntryModal(eventId, eventName, seasonId) {
 }
 
 function fillEntryMfr(sel) {
-    const mfrId = sel.selectedOptions[0]?.dataset.mfr || '';
-    const mfrSel = document.getElementById('manufacturer_id');
-    if (mfrSel && mfrId) mfrSel.value = mfrId;
+    const opt = sel.selectedOptions[0];
+    const mfrId   = opt?.dataset.mfrId   || '';
+    const mfrName = opt?.dataset.mfrName || '';
+    const hidden  = document.getElementById('manufacturer_id');
+    const display = document.getElementById('entry-mfr-display');
+    if (hidden)  hidden.value = mfrId;
+    if (display) {
+        display.textContent = mfrName
+            ? mfrName + '  (locked by season registration)'
+            : 'Pick a team — manufacturer is locked by the season registration.';
+        display.style.color = mfrName ? 'var(--text)' : 'var(--muted)';
+    }
 }
 
 async function saveEntry(eventId, eventName, seasonId) {
