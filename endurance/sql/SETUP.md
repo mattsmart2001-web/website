@@ -96,6 +96,7 @@ Always apply in this order:
 14. `14_unique_names.sql` — case-insensitive uniqueness on driver display names and team names
 15. `15_application_email_ratings.sql` — email + GT7 DR/SR ratings on applications and drivers
 16. `16_application_email_log.sql` — log of acceptance / waitlist / rejection emails sent
+17. `17_entries_car_number_optional.sql` — entries.car_number derived from first driver, no longer required
 
 ---
 

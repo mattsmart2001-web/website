@@ -1965,14 +1965,14 @@ async function viewEventEntries(eventId, eventName, seasonId) {
                         style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;line-height:1;padding:0 0.1rem">×</button>
                  </span>`).join('');
             return `<tr>
-                <td><strong>#${en.car_number}</strong></td>
+                <td><strong>${en.car_number != null ? '#' + en.car_number : '<span class="td-muted">—</span>'}</strong></td>
                 <td>${esc(en.teams?.name) || '—'}</td>
                 <td>${en.manufacturers?.brand_color ? `<span class="color-swatch"><span class="swatch" style="background:${esc(en.manufacturers.brand_color)}"></span></span> ` : ''}${esc(en.manufacturers?.name) || '—'}</td>
                 <td class="td-muted" style="font-size:0.82rem">${esc(en.car_model)}</td>
                 <td><div style="display:flex;flex-wrap:wrap;gap:0.2rem;align-items:center">
                     ${driverTags}
                     <button class="btn-icon" style="padding:0.15rem 0.5rem;font-size:0.7rem"
-                        onclick="openAddDriverModal('${en.id}','#${en.car_number} ${esc(en.teams?.name)}','${eventId}','${esc(eventName)}','${seasonId}')">+ Driver</button>
+                        onclick="openAddDriverModal('${en.id}','${en.car_number != null ? '#' + en.car_number + ' ' : ''}${esc(en.teams?.name)}','${eventId}','${esc(eventName)}','${seasonId}')">+ Driver</button>
                 </div></td>
                 <td>${entrStatusBadge(en.status)}</td>
                 <td><div class="row-actions">
@@ -2046,17 +2046,11 @@ async function openAddEntryModal(eventId, eventName, seasonId) {
                 </select>
                 <div class="form-hint">Only teams registered for this season are shown.</div>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Car Number <span class="required">*</span></label>
-                    <input type="number" name="car_number" placeholder="1" required min="1" max="999">
-                </div>
-                <div class="form-group">
-                    <label>Manufacturer</label>
-                    <input type="hidden" name="manufacturer_id" id="manufacturer_id" value="">
-                    <div id="entry-mfr-display" style="padding:0.65rem 0.85rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;font-size:0.88rem;color:var(--muted);min-height:42px;display:flex;align-items:center">
-                        Pick a team — manufacturer is locked by the season registration.
-                    </div>
+            <div class="form-group">
+                <label>Manufacturer</label>
+                <input type="hidden" name="manufacturer_id" id="manufacturer_id" value="">
+                <div id="entry-mfr-display" style="padding:0.65rem 0.85rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;font-size:0.88rem;color:var(--muted);min-height:42px;display:flex;align-items:center">
+                    Pick a team — manufacturer is locked by the season registration.
                 </div>
             </div>
             <div class="form-row">
@@ -2069,6 +2063,7 @@ async function openAddEntryModal(eventId, eventName, seasonId) {
                     ${selectHTML('status', statusOpts, 'confirmed')}
                 </div>
             </div>
+            <div class="form-hint" style="margin-top:0.4rem">Car number is set automatically from the first driver's career number once they're assigned.</div>
         </form>`,
         `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
          <button class="btn btn-primary" onclick="saveEntry('${eventId}','${esc(eventName)}','${seasonId}')">Add Entry</button>`
@@ -2092,19 +2087,18 @@ function fillEntryMfr(sel) {
 
 async function saveEntry(eventId, eventName, seasonId) {
     const d = getFormData('entity-form');
-    if (!d.entry_team_id || !d.car_number || !d.manufacturer_id || !d.car_model) {
+    if (!d.entry_team_id || !d.manufacturer_id || !d.car_model) {
         toast('Fill in all required fields.', 'error'); return;
     }
     const { error } = await sb.from('entries').insert({
         event_id: eventId,
         team_id: d.entry_team_id,
-        car_number: parseInt(d.car_number),
         manufacturer_id: d.manufacturer_id,
         car_model: d.car_model,
         status: d.status || 'confirmed',
     });
     if (error) { toast(error.message, 'error'); return; }
-    toast('Entry added.', 'success');
+    toast('Entry added — assign drivers next to set the car number.', 'success');
     closeModal();
     await viewEventEntries(eventId, eventName, seasonId);
 }
@@ -2151,6 +2145,17 @@ async function saveEntryDriver(entryId, eventId, eventName, seasonId) {
         stint_role: d.stint_role || 'starting',
     });
     if (error) { toast(error.message, 'error'); return; }
+
+    // If this is the entry's first driver and the entry has no car number yet,
+    // adopt the driver's career number as the car number.
+    const { data: entry } = await sb.from('entries').select('car_number').eq('id', entryId).single();
+    if (entry && entry.car_number == null) {
+        const { data: drv } = await sb.from('drivers').select('career_number').eq('id', d.driver_id).single();
+        if (drv?.career_number) {
+            await sb.from('entries').update({ car_number: drv.career_number }).eq('id', entryId);
+        }
+    }
+
     toast('Driver added to entry.', 'success');
     closeModal();
     await viewEventEntries(eventId, eventName, seasonId);
@@ -2213,7 +2218,7 @@ async function viewEventQualifying(eventId, eventName) {
     const rows = entries.map(en => {
         const q = qMap[en.id] || {};
         return `<tr>
-            <td><strong>#${en.car_number}</strong> <span class="td-muted">${esc(en.teams?.name)}</span></td>
+            <td><strong>${en.car_number != null ? '#' + en.car_number : '<span class="td-muted">—</span>'}</strong> <span class="td-muted">${esc(en.teams?.name)}</span></td>
             <td class="td-muted" style="font-size:0.82rem">${esc(en.car_model)}</td>
             <td><input type="number" min="1" max="99" data-entry="${en.id}" data-field="position" value="${q.position || ''}" style="width:70px;padding:0.4rem 0.5rem"></td>
             <td><input type="text" placeholder="1:23.456" data-entry="${en.id}" data-field="best_lap" value="${q.best_lap_ms ? fmtLapTime(q.best_lap_ms) : ''}" style="width:120px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.82rem"></td>
@@ -2306,7 +2311,7 @@ async function viewEventResults(eventId, eventName) {
         const statusSel = statusOpts.map(s =>
             `<option value="${s}" ${(r.status || 'classified') === s ? 'selected' : ''}>${s}</option>`).join('');
         return `<tr>
-            <td><strong>#${en.car_number}</strong> <span class="td-muted">${esc(en.teams?.name)}</span></td>
+            <td><strong>${en.car_number != null ? '#' + en.car_number : '<span class="td-muted">—</span>'}</strong> <span class="td-muted">${esc(en.teams?.name)}</span></td>
             <td><input type="number" min="1" max="99" data-entry="${en.id}" data-field="finish_position" value="${r.finish_position || ''}" style="width:60px;padding:0.4rem 0.5rem"></td>
             <td><input type="number" min="0" data-entry="${en.id}" data-field="laps_completed" value="${r.laps_completed || 0}" style="width:65px;padding:0.4rem 0.5rem"></td>
             <td><select data-entry="${en.id}" data-field="status" style="padding:0.4rem 0.5rem;font-size:0.82rem">${statusSel}</select></td>
@@ -2414,7 +2419,7 @@ async function viewEventPenalties(eventId, eventName) {
     const rows = (data || []).length === 0
         ? `<tr><td colspan="6"><div class="empty-state">No penalties recorded for this event.</div></td></tr>`
         : data.map(p => `<tr>
-            <td>${p.entries ? `<strong>#${p.entries.car_number}</strong> ${esc(p.entries.teams?.name || '')}` : '—'}</td>
+            <td>${p.entries ? `${p.entries.car_number != null ? '<strong>#' + p.entries.car_number + '</strong> ' : ''}${esc(p.entries.teams?.name || '')}` : '—'}</td>
             <td class="td-muted">${esc(p.drivers?.display_name) || '—'}</td>
             <td><span class="badge badge-gold">${esc(p.penalty_type.replace('_',' '))}</span></td>
             <td class="td-muted">${esc(p.penalty_value) || '—'}</td>
@@ -2446,7 +2451,7 @@ async function openAddPenaltyModal(eventId, eventName) {
         .order('car_number');
 
     const entryOpts = (entries || []).map(en =>
-        `<option value="${esc(en.id)}">#${en.car_number} — ${esc(en.teams?.name)}</option>`).join('');
+        `<option value="${esc(en.id)}">${en.car_number != null ? '#' + en.car_number + ' — ' : ''}${esc(en.teams?.name)}</option>`).join('');
 
     const penaltyTypes = [
         { value: 'drive_through', label: 'Drive Through' },
@@ -2564,7 +2569,7 @@ async function viewEventSteward(eventId, eventName) {
         : data.map(d => `<tr>
             <td class="td-muted">${esc(d.decision_no) || '—'}</td>
             <td><strong>${esc(d.title)}</strong></td>
-            <td class="td-muted">${d.entries ? `#${d.entries.car_number} ${esc(d.entries.teams?.name)}` : '—'}</td>
+            <td class="td-muted">${d.entries ? `${d.entries.car_number != null ? '#' + d.entries.car_number + ' ' : ''}${esc(d.entries.teams?.name)}` : '—'}</td>
             <td class="td-muted">${esc(d.drivers?.display_name) || '—'}</td>
             <td>${rulingBadge[d.ruling] || esc(d.ruling)}</td>
             <td><div class="row-actions">
@@ -2601,7 +2606,7 @@ async function openStewardModal(eventId, eventName, decisionId) {
         .order('car_number');
 
     const entryOpts = '<option value="">— No entry / general —</option>' +
-        (entries || []).map(en => `<option value="${esc(en.id)}" ${en.id===existing.entry_id?'selected':''}>#${en.car_number} — ${esc(en.teams?.name)}</option>`).join('');
+        (entries || []).map(en => `<option value="${esc(en.id)}" ${en.id===existing.entry_id?'selected':''}>${en.car_number != null ? '#' + en.car_number + ' — ' : ''}${esc(en.teams?.name)}</option>`).join('');
 
     const rulings = [
         { value: 'no_action', label: 'No Action' },
