@@ -189,7 +189,7 @@
                     </div>
                     <div class="form-group">
                         <label for="field-nationality">Nationality</label>
-                        <input type="text" id="field-nationality" name="nationality" placeholder="e.g. GB, DE, JP" maxlength="4">
+                        <select id="field-nationality" name="nationality"></select>
                     </div>
                     <div class="form-group">
                         <label for="field-timezone">Timezone <span class="req">*</span></label>
@@ -272,6 +272,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
+<script src="../assets/countries.js"></script>
 <script>
 'use strict';
 const { createClient } = window.supabase;
@@ -287,6 +288,9 @@ function esc(s) {
     if (s == null) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// Country dropdown
+document.getElementById('field-nationality').innerHTML = window.gtecCountryOptions();
 
 // Load manufacturers for dropdown
 (async () => {

@@ -239,8 +239,7 @@
             </div>
             <div class="form-group">
                 <label class="field-label">Nationality</label>
-                <input type="text" id="field-nationality" placeholder="GB" maxlength="4">
-                <div class="form-hint">2-letter country code</div>
+                <select id="field-nationality"></select>
             </div>
             <div class="form-group">
                 <label class="field-label">Date of Birth</label>
@@ -263,6 +262,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
+<script src="../assets/countries.js"></script>
 <script>
 'use strict';
 const { createClient } = window.supabase;
@@ -520,9 +520,9 @@ async function init() {
     ).join('');
 
     // Editable fields
+    document.getElementById('field-nationality').innerHTML = window.gtecCountryOptions(driver.nationality);
     if (driver.bio)           document.getElementById('field-bio').value = driver.bio;
     if (driver.psn_id)        document.getElementById('field-psn').value = driver.psn_id;
-    if (driver.nationality)   document.getElementById('field-nationality').value = driver.nationality;
     if (driver.date_of_birth) document.getElementById('field-dob').value = driver.date_of_birth;
 
     // Show page
