@@ -218,6 +218,36 @@
         }
         .bio-text { color: var(--muted); line-height: 1.7; font-size: 0.9rem; }
 
+        /* Discipline */
+        .discipline-list { display: flex; flex-direction: column; gap: 0.65rem; }
+        .disc-row {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--muted);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+        }
+        .disc-row-penalty            { border-left-color: #f87171; }
+        .disc-row-steward            { border-left-color: var(--gold); }
+        .disc-head { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.35rem; }
+        .disc-pill {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem; font-weight: 700;
+            letter-spacing: 0.18em; text-transform: uppercase;
+            padding: 0.25rem 0.55rem; border-radius: 4px;
+            background: rgba(255,255,255,0.06); color: var(--muted);
+            white-space: nowrap;
+        }
+        .disc-pill.disc-penalty    { background: rgba(239,68,68,0.15); color: #fca5a5; }
+        .disc-pill.disc-reprimand  { background: rgba(255,209,102,0.15); color: var(--gold); }
+        .disc-pill.disc-dsq        { background: rgba(239,68,68,0.2); color: #fca5a5; }
+        .disc-pill.disc-no_action  { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .disc-meta { font-size: 0.75rem; color: var(--muted); }
+        .disc-meta a { color: inherit; text-decoration: none; }
+        .disc-meta a:hover { color: var(--text); }
+        .disc-title { font-weight: 600; font-size: 0.92rem; margin-bottom: 0.25rem; }
+        .disc-body  { font-size: 0.84rem; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
+
         /* Table */
         .data-table {
             background: var(--bg-1);
@@ -458,7 +488,7 @@ async function showProfile() {
     document.title = `${driver.display_name} — Gran Turismo GTEC`;
 
     // Season career stats + rating history in parallel with race history
-    const [seasonsRes, ratingRes, historyRes] = await Promise.all([
+    const [seasonsRes, ratingRes, historyRes, penaltiesRes, stewardRes] = await Promise.all([
         sb.from('driver_standings').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
         sb.from('driver_ratings').select('rating_before, rating_after, delta, event_id, events(round, name)').eq('driver_id', driver.id).order('created_at'),
         sb.from('result_drivers')
@@ -471,11 +501,19 @@ async function showProfile() {
             )
         `)
         .eq('driver_id', driver.id),
+        sb.from('penalties')
+            .select('penalty_type, penalty_value, reason, created_at, events(name, slug, starts_at)')
+            .eq('driver_id', driver.id),
+        sb.from('steward_decisions')
+            .select('decision_no, title, content, ruling, issued_at, events(name, slug, starts_at)')
+            .eq('driver_id', driver.id),
     ]);
 
     const seasons    = seasonsRes.data  || [];
     const ratingHist = ratingRes.data   || [];
     const rawHistory = historyRes.data  || [];
+    const penalties  = penaltiesRes.data || [];
+    const stewards   = stewardRes.data   || [];
 
     const history = rawHistory
         .filter(r => r.results?.events?.starts_at)
@@ -579,6 +617,53 @@ async function showProfile() {
             </div>
         </div>` : '';
 
+    // Discipline: penalties + steward decisions merged + sorted desc
+    const discItems = [
+        ...penalties.map(p => ({
+            kind: 'penalty',
+            when: p.events?.starts_at || p.created_at,
+            eventName: p.events?.name || '',
+            eventSlug: p.events?.slug || '',
+            label: (p.penalty_type || '').replace(/_/g,' '),
+            value: p.penalty_value || '',
+            body:  p.reason || '',
+        })),
+        ...stewards.map(s => ({
+            kind: 'steward',
+            when: s.events?.starts_at || s.issued_at,
+            eventName: s.events?.name || '',
+            eventSlug: s.events?.slug || '',
+            label: s.ruling || 'decision',
+            value: s.decision_no || '',
+            title: s.title || '',
+            body:  s.content || '',
+        })),
+    ].sort((a, b) => new Date(b.when) - new Date(a.when));
+
+    const disciplineHTML = discItems.length ? `
+        <div class="section">
+            <div class="section-title">Discipline</div>
+            <div class="discipline-list">
+                ${discItems.map(d => {
+                    const dateStr = d.when ? new Date(d.when).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
+                    const eventLink = d.eventSlug
+                        ? `<a href="/endurance/results/?slug=${esc(d.eventSlug)}">${esc(d.eventName)}</a>`
+                        : esc(d.eventName);
+                    const pill = d.kind === 'steward'
+                        ? `<span class="disc-pill disc-${esc(d.label)}">${esc(d.label.replace(/_/g,' '))}</span>`
+                        : `<span class="disc-pill disc-penalty">${esc(d.label)}${d.value ? ' · ' + esc(d.value) : ''}</span>`;
+                    return `<div class="disc-row disc-row-${d.kind}">
+                        <div class="disc-head">
+                            ${pill}
+                            <div class="disc-meta">${eventLink ? eventLink + ' · ' : ''}${dateStr}</div>
+                        </div>
+                        ${d.title ? `<div class="disc-title">${esc(d.title)}</div>` : ''}
+                        ${d.body  ? `<div class="disc-body">${esc(d.body)}</div>` : ''}
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>` : '';
+
     app.innerHTML = `
         <div class="hero">
             <div class="hero-eyebrow">Driver Profile</div>
@@ -622,8 +707,9 @@ async function showProfile() {
 
             ${seasonsHTML}
             ${historyHTML}
+            ${disciplineHTML}
 
-            ${!seasons.length && !history.length ? `<div class="empty-msg" style="margin-top:1rem">No race history yet — check back after the first event.</div>` : ''}
+            ${!seasons.length && !history.length && !discItems.length ? `<div class="empty-msg" style="margin-top:1rem">No race history yet — check back after the first event.</div>` : ''}
         </div>`;
 }
 
