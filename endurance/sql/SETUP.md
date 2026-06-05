@@ -97,6 +97,7 @@ Always apply in this order:
 15. `15_application_email_ratings.sql` — email + GT7 DR/SR ratings on applications and drivers
 16. `16_application_email_log.sql` — log of acceptance / waitlist / rejection emails sent
 17. `17_entries_car_number_optional.sql` — entries.car_number derived from first driver, no longer required
+18. `18_penalty_points_deduction.sql` — adds `points_deduction` to the penalty_type enum
 
 ---
 

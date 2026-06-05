@@ -2454,13 +2454,14 @@ async function openAddPenaltyModal(eventId, eventName) {
         `<option value="${esc(en.id)}">${en.car_number != null ? '#' + en.car_number + ' — ' : ''}${esc(en.teams?.name)}</option>`).join('');
 
     const penaltyTypes = [
-        { value: 'drive_through', label: 'Drive Through' },
-        { value: 'stop_go',       label: 'Stop & Go' },
-        { value: 'time_add',      label: 'Time Added' },
-        { value: 'grid_drop',     label: 'Grid Drop' },
-        { value: 'dsq',           label: 'DSQ' },
-        { value: 'warning',       label: 'Warning' },
-        { value: 'reprimand',     label: 'Reprimand' },
+        { value: 'drive_through',    label: 'Drive Through' },
+        { value: 'stop_go',          label: 'Stop & Go' },
+        { value: 'time_add',         label: 'Time Added' },
+        { value: 'grid_drop',        label: 'Grid Drop' },
+        { value: 'points_deduction', label: 'Points Deduction' },
+        { value: 'dsq',              label: 'DSQ' },
+        { value: 'warning',          label: 'Warning' },
+        { value: 'reprimand',        label: 'Reprimand' },
     ];
 
     openModal(`Add Penalty — ${esc(eventName)}`,
