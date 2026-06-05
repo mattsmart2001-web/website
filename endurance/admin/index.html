@@ -1429,6 +1429,8 @@ async function editTeam(id) {
 async function saveTeam(id) {
     const d = getFormData('entity-form');
     if (!d.name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
+    const dupName = checkTeamNameUnique(d.name, id);
+    if (dupName) { toast(dupName, 'error'); return; }
     const payload = { name: d.name, slug: d.slug, manufacturer_id: d.manufacturer_id || null, home_country: d.home_country, founded_on: d.founded_on, bio: d.bio };
     const { error } = id
         ? await sb.from('teams').update(payload).eq('id', id)
@@ -1590,9 +1592,29 @@ function checkCareerNumber(raw, ignoreDriverId) {
     return { ok: true, value: n };
 }
 
+function checkDriverNameUnique(name, ignoreId) {
+    const t = (name || '').trim().toLowerCase();
+    if (!t) return null;
+    const clash = _drivers.find(d =>
+        (d.display_name || '').trim().toLowerCase() === t && d.id !== ignoreId
+    );
+    return clash ? `Driver name "${name}" is already taken.` : null;
+}
+
+function checkTeamNameUnique(name, ignoreId) {
+    const t = (name || '').trim().toLowerCase();
+    if (!t) return null;
+    const clash = _teams.find(team =>
+        (team.name || '').trim().toLowerCase() === t && team.id !== ignoreId
+    );
+    return clash ? `Team name "${name}" is already taken.` : null;
+}
+
 async function saveDriver(id) {
     const d = getFormData('entity-form');
     if (!d.display_name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
+    const dupName = checkDriverNameUnique(d.display_name, id);
+    if (dupName) { toast(dupName, 'error'); return; }
     const num = checkCareerNumber(d.career_number, id);
     if (!num.ok) { toast(num.error, 'error'); return; }
     const payload = {
@@ -2775,6 +2797,8 @@ async function createRecordFromApplication(appId) {
 async function saveDriverFromApplication(appId) {
     const d = getFormData('entity-form');
     if (!d.display_name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
+    const dupName = checkDriverNameUnique(d.display_name, null);
+    if (dupName) { toast(dupName, 'error'); return; }
     const num = checkCareerNumber(d.career_number, null);
     if (!num.ok) { toast(num.error, 'error'); return; }
     const payload = {
@@ -2798,6 +2822,8 @@ async function saveDriverFromApplication(appId) {
 async function saveTeamFromApplication(appId) {
     const d = getFormData('entity-form');
     if (!d.name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
+    const dupName = checkTeamNameUnique(d.name, null);
+    if (dupName) { toast(dupName, 'error'); return; }
     const payload = { name: d.name, slug: d.slug, manufacturer_id: d.manufacturer_id || null, home_country: d.home_country, founded_on: d.founded_on, bio: d.bio };
     const { data: created, error } = await sb.from('teams').insert(payload).select('id').single();
     if (error) { toast(error.message, 'error'); return; }
