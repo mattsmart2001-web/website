@@ -173,6 +173,11 @@
                         <input type="text" id="field-name" name="name" placeholder="Your racing name" required autocomplete="nickname">
                     </div>
                     <div class="form-group">
+                        <label for="field-email">Email <span class="req">*</span></label>
+                        <input type="email" id="field-email" name="email" placeholder="you@example.com" required autocomplete="email">
+                        <div class="hint">We'll send your acceptance and team comms here</div>
+                    </div>
+                    <div class="form-group">
                         <label for="field-psn">PSN ID <span class="req">*</span></label>
                         <input type="text" id="field-psn" name="psn_id" placeholder="YourPSNHandle" required>
                         <div class="hint">Your PlayStation Network username</div>
@@ -201,6 +206,31 @@
                             <option>UTC+9 (Japan / Korea)</option>
                             <option>UTC+10 (AEST / East Australia)</option>
                             <option>UTC+12 (New Zealand)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="field-dr">GT7 Driver Rating (DR)</label>
+                        <select id="field-dr" name="gt7_dr_rating">
+                            <option value="">— Select —</option>
+                            <option>E</option>
+                            <option>D</option>
+                            <option>C</option>
+                            <option>B</option>
+                            <option>A</option>
+                            <option>A+</option>
+                            <option>S</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="field-sr">GT7 Sportsmanship Rating (SR)</label>
+                        <select id="field-sr" name="gt7_sr_rating">
+                            <option value="">— Select —</option>
+                            <option>E</option>
+                            <option>D</option>
+                            <option>C</option>
+                            <option>B</option>
+                            <option>A</option>
+                            <option>S</option>
                         </select>
                     </div>
                 </div>
@@ -291,10 +321,13 @@ async function submitForm(e) {
     const payload = {
         type:                      f.get('type') || 'driver',
         name:                      f.get('name'),
+        email:                     f.get('email') || null,
         psn_id:                    f.get('psn_id') || null,
         discord_username:          f.get('discord_username') || null,
         nationality:               f.get('nationality') || null,
         timezone:                  f.get('timezone') || null,
+        gt7_dr_rating:             f.get('gt7_dr_rating') || null,
+        gt7_sr_rating:             f.get('gt7_sr_rating') || null,
         preferred_manufacturer_id: f.get('preferred_manufacturer_id') || null,
         team_name:                 f.get('team_name') || null,
         experience:                f.get('experience') || null,

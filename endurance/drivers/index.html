@@ -168,6 +168,20 @@
             font-size: 0.76rem; color: var(--muted);
         }
         .profile-tag .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+        .rating-chip {
+            display: inline-flex; align-items: stretch; overflow: hidden;
+            border-radius: 6px; border: 1px solid var(--border);
+            font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+        }
+        .rating-chip .rc-label { padding: 0.3rem 0.55rem; color: var(--muted); background: var(--bg-2); }
+        .rating-chip .rc-value { padding: 0.3rem 0.6rem; color: #fff; font-weight: 800; }
+        .rc-E  { background: #475569; }
+        .rc-D  { background: #16a34a; }
+        .rc-C  { background: #0ea5e9; }
+        .rc-B  { background: #ca8a04; }
+        .rc-A  { background: #dc2626; }
+        .rc-Ap { background: linear-gradient(135deg,#dc2626,#7f1d1d); }
+        .rc-S  { background: linear-gradient(135deg,#a855f7,#4c1d95); }
 
         /* Stat bar */
         .stat-bar {
@@ -495,7 +509,16 @@ async function showProfile() {
     if (driver.manufacturers?.name && !driver.teams?.name) tags.push(esc(driver.manufacturers.name));
     if (driver.joined_at) tags.push(`Since ${esc(driver.joined_at.slice(0,4))}`);
 
-    const tagsHTML = tags.map(t => `<span class="profile-tag">${t}</span>`).join('');
+    const ratingClass = r => 'rc-' + (r === 'A+' ? 'Ap' : r);
+    const ratingChips = [];
+    if (driver.gt7_dr_rating) {
+        ratingChips.push(`<span class="rating-chip"><span class="rc-label">DR</span><span class="rc-value ${ratingClass(driver.gt7_dr_rating)}">${esc(driver.gt7_dr_rating)}</span></span>`);
+    }
+    if (driver.gt7_sr_rating) {
+        ratingChips.push(`<span class="rating-chip"><span class="rc-label">SR</span><span class="rc-value ${ratingClass(driver.gt7_sr_rating)}">${esc(driver.gt7_sr_rating)}</span></span>`);
+    }
+
+    const tagsHTML = tags.map(t => `<span class="profile-tag">${t}</span>`).join('') + ratingChips.join('');
 
     // Career stats table
     const seasonsHTML = (seasons || []).length ? `

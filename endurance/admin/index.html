@@ -1529,6 +1529,22 @@ function driverForm(d = {}) {
         </div>
         <div class="form-row">
             <div class="form-group">
+                <label>GT7 Driver Rating</label>
+                <select name="gt7_dr_rating">
+                    <option value="">— Select —</option>
+                    ${['E','D','C','B','A','A+','S'].map(r => `<option ${d.gt7_dr_rating === r ? 'selected' : ''}>${r}</option>`).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>GT7 Sportsmanship Rating</label>
+                <select name="gt7_sr_rating">
+                    <option value="">— Select —</option>
+                    ${['E','D','C','B','A','S'].map(r => `<option ${d.gt7_sr_rating === r ? 'selected' : ''}>${r}</option>`).join('')}
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
                 <label>Current Team</label>
                 <select id="current_team_id" name="current_team_id" onchange="syncDriverMfrToTeam()">
                     <option value="">— Free agent —</option>
@@ -1622,6 +1638,7 @@ async function saveDriver(id) {
         nationality: d.nationality, career_number: num.value,
         current_team_id: d.current_team_id || null, current_manufacturer_id: d.current_manufacturer_id || null,
         joined_at: d.joined_at || null, bio: d.bio,
+        gt7_dr_rating: d.gt7_dr_rating || null, gt7_sr_rating: d.gt7_sr_rating || null,
     };
     const { error } = id
         ? await sb.from('drivers').update(payload).eq('id', id)
@@ -2730,8 +2747,10 @@ async function viewApplication(id) {
             <div><span style="color:var(--muted)">PSN ID</span><br><strong>${esc(a.psn_id)||'—'}</strong></div>
             <div><span style="color:var(--muted)">Nationality</span><br><strong>${esc(a.nationality)||'—'}</strong></div>
             <div><span style="color:var(--muted)">Timezone</span><br><strong>${esc(a.timezone)||'—'}</strong></div>
+            <div><span style="color:var(--muted)">Email</span><br><strong>${a.email ? `<a href="mailto:${esc(a.email)}" style="color:inherit">${esc(a.email)}</a>` : '—'}</strong></div>
             <div><span style="color:var(--muted)">Pref. Manufacturer</span><br><strong>${esc(a.manufacturers?.name)||'—'}</strong></div>
             <div><span style="color:var(--muted)">Discord</span><br><strong>${esc(a.discord_username)||'—'}</strong></div>
+            <div><span style="color:var(--muted)">DR / SR</span><br><strong>${esc(a.gt7_dr_rating)||'—'} / ${esc(a.gt7_sr_rating)||'—'}</strong></div>
             <div><span style="color:var(--muted)">Applied</span><br><strong>${a.created_at?.slice(0,10)}</strong></div>
             ${a.type==='team'?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Team Name</span><br><strong>${esc(a.team_name)||'—'}</strong></div>`:''}
         </div>
@@ -2772,6 +2791,8 @@ async function createRecordFromApplication(appId) {
             nationality: a.nationality || '',
             current_manufacturer_id: a.preferred_manufacturer_id || '',
             joined_at: new Date().toISOString().slice(0, 10),
+            gt7_dr_rating: a.gt7_dr_rating || '',
+            gt7_sr_rating: a.gt7_sr_rating || '',
             bio: '',
         };
         openModal('Add Driver (from application)', driverForm(prefill), `
@@ -2806,6 +2827,7 @@ async function saveDriverFromApplication(appId) {
         nationality: d.nationality, career_number: num.value,
         current_team_id: d.current_team_id || null, current_manufacturer_id: d.current_manufacturer_id || null,
         joined_at: d.joined_at || null, bio: d.bio,
+        gt7_dr_rating: d.gt7_dr_rating || null, gt7_sr_rating: d.gt7_sr_rating || null,
     };
     const { data: created, error } = await sb.from('drivers').insert(payload).select('id').single();
     if (error) { toast(error.message, 'error'); return; }

@@ -94,3 +94,4 @@ Always apply in this order:
 12. `12_admin_management.sql` — RPCs so admins can grant / revoke admin access from the admin UI
 13. `13_application_discord_unique_numbers.sql` — Discord handle on applications + unique driver career numbers
 14. `14_unique_names.sql` — case-insensitive uniqueness on driver display names and team names
+15. `15_application_email_ratings.sql` — email + GT7 DR/SR ratings on applications and drivers
