@@ -95,3 +95,23 @@ Always apply in this order:
 13. `13_application_discord_unique_numbers.sql` — Discord handle on applications + unique driver career numbers
 14. `14_unique_names.sql` — case-insensitive uniqueness on driver display names and team names
 15. `15_application_email_ratings.sql` — email + GT7 DR/SR ratings on applications and drivers
+16. `16_application_email_log.sql` — log of acceptance / waitlist / rejection emails sent
+
+---
+
+## Sending applicant emails (Resend)
+
+The admin **Application → View** modal has Acceptance / Waitlist / Rejection
+buttons. Each one calls the `send-application-email` Netlify Function, which
+delivers via Resend and writes a row to `application_emails`.
+
+To enable it:
+
+1. Sign up at [resend.com](https://resend.com) (free tier: 3,000 emails / month).
+2. Add a Netlify env var **`RESEND_API_KEY`** with the key from Resend's API Keys page.
+3. Add **`SUPABASE_URL`** and **`SUPABASE_ANON_KEY`** to Netlify env vars too
+   (these are used by the function to verify the admin caller).
+4. (Optional, recommended) Verify your sending domain in Resend's dashboard, then
+   set **`GTEC_FROM_EMAIL`** to something like
+   `"Gran Turismo GTEC <noreply@yourdomain.com>"`. If you skip this, mails go from
+   `onboarding@resend.dev`, which works for testing but isn't a great look in production.

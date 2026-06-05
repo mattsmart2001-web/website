@@ -2717,6 +2717,11 @@ async function viewApplication(id) {
         .eq('id', id).single();
     if (!a) { toast('Not found.', 'error'); return; }
 
+    const { data: emails } = await sb.from('application_emails')
+        .select('email_type, sent_to, sent_at, ok, error')
+        .eq('application_id', id)
+        .order('sent_at', { ascending: false });
+
     const statusOpts = ['pending','accepted','waitlisted','rejected']
         .map(s => `<option value="${s}" ${a.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`)
         .join('');
@@ -2740,6 +2745,27 @@ async function viewApplication(id) {
         </div>`;
     }
 
+    const emailDisabled = a.email ? '' : 'disabled title="No email address on this application"';
+    const emailRows = (emails || []).map(e => {
+        const dt = new Date(e.sent_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+        const status = e.ok ? `<span class="badge badge-green">✓</span>` : `<span class="badge badge-red" title="${esc(e.error || '')}">✗</span>`;
+        return `<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:0.35rem 0;border-bottom:1px solid var(--border)">
+            <span>${status} <strong>${esc(e.email_type)}</strong> → ${esc(e.sent_to)}</span>
+            <span class="td-muted">${dt}</span>
+        </div>`;
+    }).join('');
+
+    const emailPanel = `<div style="margin-bottom:1.25rem;padding:1rem;background:var(--bg-1);border:1px solid var(--border);border-radius:6px">
+        <div style="font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.65rem">Send Email</div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button class="btn-icon" ${emailDisabled} onclick="sendApplicationEmail('${a.id}','accepted')">Acceptance</button>
+            <button class="btn-icon" ${emailDisabled} onclick="sendApplicationEmail('${a.id}','waitlisted')">Waitlist</button>
+            <button class="btn-icon" ${emailDisabled} onclick="sendApplicationEmail('${a.id}','rejected')">Rejection</button>
+        </div>
+        ${!a.email ? '<div style="margin-top:0.5rem;font-size:0.72rem;color:var(--muted)">No email address — can\'t send.</div>' : ''}
+        ${emailRows ? `<div style="margin-top:0.85rem">${emailRows}</div>` : ''}
+    </div>`;
+
     openModal(`Application — ${esc(a.name)}`, `
         ${rosterPanel}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1.5rem;font-size:0.84rem;margin-bottom:1.25rem">
@@ -2756,6 +2782,7 @@ async function viewApplication(id) {
         </div>
         ${a.experience ? `<div style="font-size:0.82rem;margin-bottom:0.75rem"><span style="color:var(--muted)">Experience</span><br>${esc(a.experience)}</div>` : ''}
         ${a.message    ? `<div style="font-size:0.82rem;margin-bottom:1.25rem"><span style="color:var(--muted)">Message</span><br>${esc(a.message)}</div>` : ''}
+        ${emailPanel}
         <form id="entity-form">
             <div class="form-row">
                 <div class="form-group">
@@ -2771,6 +2798,35 @@ async function viewApplication(id) {
         `<button class="btn btn-ghost" onclick="closeModal()">Close</button>
          <button class="btn btn-primary" onclick="saveApplicationStatus('${a.id}')">Save Status</button>`
     );
+}
+
+async function sendApplicationEmail(applicationId, emailType) {
+    if (!confirm(`Send the ${emailType} email to this applicant?`)) return;
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { toast('Not signed in.', 'error'); return; }
+
+    toast('Sending…', 'success');
+    try {
+        const res = await fetch('/.netlify/functions/send-application-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ application_id: applicationId, email_type: emailType }),
+        });
+        const text = await res.text();
+        let payload = {};
+        try { payload = JSON.parse(text); } catch {}
+        if (!res.ok) {
+            toast(`Email failed: ${payload.error || text || res.status}`, 'error');
+            return;
+        }
+        toast(`${emailType.charAt(0).toUpperCase()+emailType.slice(1)} email sent.`, 'success');
+        await viewApplication(applicationId);
+    } catch (err) {
+        toast(`Email failed: ${err.message}`, 'error');
+    }
 }
 
 // Open the driver/team form pre-filled from an application
