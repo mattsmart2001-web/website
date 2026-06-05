@@ -1768,6 +1768,7 @@ async function renderEvents() {
                 <td>${evtStatusBadge(e.status)}</td>
                 <td><div class="row-actions">
                     <button class="btn-icon" onclick="viewEventEntries('${e.id}','${esc(e.name)}','${e.season_id}')">Entries</button>
+                    <button class="btn-icon" onclick="viewEventLobbies('${e.id}','${esc(e.name)}','${e.season_id}')">Lobbies</button>
                     <button class="btn-icon" onclick="viewEventQualifying('${e.id}','${esc(e.name)}')">Qualifying</button>
                     <button class="btn-icon" onclick="viewEventResults('${e.id}','${esc(e.name)}')">Results</button>
                     <button class="btn-icon" onclick="viewEventPenalties('${e.id}','${esc(e.name)}')">Penalties</button>
@@ -2168,6 +2169,175 @@ async function removeEntryDriver(entryDriverId, eventId, eventName, seasonId) {
     if (error) { toast(error.message, 'error'); return; }
     toast('Driver removed.', 'success');
     await viewEventEntries(eventId, eventName, seasonId);
+}
+
+
+// ============================================================
+// 14b. Lobbies (sub-panel of Events)
+// ============================================================
+const DR_TO_ELO = { 'E': 800, 'D': 1100, 'C': 1300, 'B': 1500, 'A': 1700, 'A+': 1850, 'S': 2000 };
+
+function drToElo(letter) {
+    return DR_TO_ELO[letter] ?? 1500;
+}
+
+async function viewEventLobbies(eventId, eventName, seasonId) {
+    const panel = document.getElementById('event-entries-panel');
+    panel.innerHTML = '<div class="loading-state">Loading lobbies…</div>';
+
+    const { data: entries, error } = await sb.from('entries')
+        .select(`
+            id, lobby_number, car_number, car_model, status,
+            teams(name),
+            manufacturers(name, brand_color),
+            entry_drivers(driver_id, drivers(id, display_name, career_number, gt7_dr_rating))
+        `)
+        .eq('event_id', eventId);
+    if (error) { panel.innerHTML = `<div class="loading-state">${esc(error.message)}</div>`; return; }
+
+    // Fetch current Elo for any driver in any entry
+    const driverIds = Array.from(new Set((entries || []).flatMap(en => (en.entry_drivers || []).map(ed => ed.driver_id)))).filter(Boolean);
+    const ratingMap = new Map();
+    if (driverIds.length) {
+        const { data: ratings } = await sb.from('driver_current_ratings')
+            .select('driver_id, rating')
+            .in('driver_id', driverIds);
+        (ratings || []).forEach(r => ratingMap.set(r.driver_id, r.rating));
+    }
+
+    // Attach team skill (avg of drivers' Elo, falling back to DR-based seed)
+    (entries || []).forEach(en => {
+        const drs = (en.entry_drivers || []).map(ed => {
+            const e = ratingMap.get(ed.driver_id);
+            return (e != null) ? e : drToElo(ed.drivers?.gt7_dr_rating);
+        });
+        en._skill = drs.length ? Math.round(drs.reduce((a,b)=>a+b,0) / drs.length) : 1500;
+        en._driverNames = (en.entry_drivers || []).map(ed => ed.drivers?.display_name).filter(Boolean).join(' / ');
+    });
+
+    // Group by lobby
+    const groups = {};
+    (entries || []).forEach(en => {
+        const key = en.lobby_number ?? 0;  // 0 = unassigned
+        (groups[key] = groups[key] || []).push(en);
+    });
+    const lobbyNumbers = Object.keys(groups).map(Number).sort((a, b) => {
+        if (a === 0) return 1; if (b === 0) return -1; return a - b;
+    });
+
+    const totalEntries = (entries || []).length;
+
+    const renderLobbyCard = (lobbyNum, list) => {
+        const title = lobbyNum === 0 ? 'Unassigned' : `Lobby ${lobbyNum}`;
+        const sorted = list.sort((a, b) => b._skill - a._skill);
+        const rows = sorted.map(en => `<tr>
+            <td>${en.car_number != null ? '<strong>#' + en.car_number + '</strong>' : '<span class="td-muted">—</span>'}</td>
+            <td>${esc(en.teams?.name) || '—'}</td>
+            <td class="td-muted" style="font-size:0.78rem">${esc(en._driverNames) || '—'}</td>
+            <td class="td-muted" style="font-family:'Orbitron',sans-serif;font-size:0.78rem">${en._skill}</td>
+            <td><div class="row-actions" style="gap:0.25rem;justify-content:flex-end">
+                <button class="btn-icon" title="Move to a lower lobby (faster split)"
+                    onclick="moveEntryLobby('${en.id}',-1,'${eventId}','${esc(eventName)}','${seasonId}')">↑</button>
+                <button class="btn-icon" title="Move to a higher lobby (slower split)"
+                    onclick="moveEntryLobby('${en.id}',1,'${eventId}','${esc(eventName)}','${seasonId}')">↓</button>
+                ${lobbyNum !== 0 ? `<button class="btn-icon" title="Unassign"
+                    onclick="setEntryLobby('${en.id}',null,'${eventId}','${esc(eventName)}','${seasonId}')">×</button>` : ''}
+            </div></td>
+        </tr>`).join('');
+        return `<div class="section-card" style="margin-bottom:1rem">
+            <div class="section-card-header">
+                <span class="section-card-title">${title} <span class="td-muted" style="font-weight:normal;font-size:0.78rem">· ${list.length} ${list.length === 1 ? 'entry' : 'entries'}</span></span>
+            </div>
+            <table><thead><tr>
+                <th>Car</th><th>Team</th><th>Drivers</th><th>Team Elo</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+    };
+
+    const lobbyCardsHTML = totalEntries === 0
+        ? `<div class="empty-state">No entries yet — add them in the Entries panel first.</div>`
+        : lobbyNumbers.map(n => renderLobbyCard(n, groups[n])).join('');
+
+    panel.innerHTML = `
+        <div class="section-card" style="margin-bottom:1rem">
+            <div class="section-card-header">
+                <span class="section-card-title">Lobbies — ${esc(eventName)}</span>
+            </div>
+            <div style="padding:1rem 1.25rem;display:flex;gap:0.85rem;align-items:flex-end;flex-wrap:wrap">
+                <div class="form-group" style="margin:0;min-width:130px">
+                    <label style="display:block;font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.35rem">Lobby size</label>
+                    <input type="number" id="lobby-size" value="16" min="2" max="32" style="width:100%;padding:0.55rem 0.75rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem">
+                </div>
+                <button class="btn btn-primary" onclick="autoAllocateLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Auto-allocate</button>
+                <button class="btn btn-ghost" onclick="clearAllLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Clear All</button>
+                <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Team Elo = avg of drivers' current Elo (DR-seeded if unrated).</div>
+            </div>
+        </div>
+        ${lobbyCardsHTML}`;
+}
+
+async function autoAllocateLobbies(eventId, eventName, seasonId) {
+    const sizeInput = document.getElementById('lobby-size');
+    const lobbySize = Math.max(2, Math.min(32, parseInt(sizeInput?.value, 10) || 16));
+
+    const { data: entries } = await sb.from('entries')
+        .select(`id, entry_drivers(driver_id, drivers(gt7_dr_rating))`)
+        .eq('event_id', eventId)
+        .neq('status', 'withdrawn');
+    if (!entries?.length) { toast('No entries to allocate.', 'error'); return; }
+
+    const driverIds = Array.from(new Set(entries.flatMap(en => (en.entry_drivers || []).map(ed => ed.driver_id)))).filter(Boolean);
+    const ratingMap = new Map();
+    if (driverIds.length) {
+        const { data: ratings } = await sb.from('driver_current_ratings')
+            .select('driver_id, rating')
+            .in('driver_id', driverIds);
+        (ratings || []).forEach(r => ratingMap.set(r.driver_id, r.rating));
+    }
+
+    entries.forEach(en => {
+        const drs = (en.entry_drivers || []).map(ed => {
+            const e = ratingMap.get(ed.driver_id);
+            return (e != null) ? e : drToElo(ed.drivers?.gt7_dr_rating);
+        });
+        en._skill = drs.length ? drs.reduce((a,b)=>a+b,0) / drs.length : 1500;
+    });
+
+    entries.sort((a, b) => b._skill - a._skill);
+
+    // Bulk-update each entry's lobby_number sequentially (small N — fine)
+    let failures = 0;
+    for (let i = 0; i < entries.length; i++) {
+        const lobby = Math.floor(i / lobbySize) + 1;
+        const { error } = await sb.from('entries').update({ lobby_number: lobby }).eq('id', entries[i].id);
+        if (error) failures++;
+    }
+    const totalLobbies = Math.ceil(entries.length / lobbySize);
+    toast(failures
+        ? `Allocated with ${failures} failure(s).`
+        : `${entries.length} entries split across ${totalLobbies} lobb${totalLobbies === 1 ? 'y' : 'ies'}.`, failures ? 'error' : 'success');
+    await viewEventLobbies(eventId, eventName, seasonId);
+}
+
+async function clearAllLobbies(eventId, eventName, seasonId) {
+    if (!confirm('Clear all lobby assignments for this event?')) return;
+    const { error } = await sb.from('entries').update({ lobby_number: null }).eq('event_id', eventId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Lobby assignments cleared.', 'success');
+    await viewEventLobbies(eventId, eventName, seasonId);
+}
+
+async function moveEntryLobby(entryId, delta, eventId, eventName, seasonId) {
+    const { data: en } = await sb.from('entries').select('lobby_number').eq('id', entryId).single();
+    const current = en?.lobby_number ?? 1;
+    const next = Math.max(1, current + delta);
+    await setEntryLobby(entryId, next, eventId, eventName, seasonId);
+}
+
+async function setEntryLobby(entryId, lobbyNumber, eventId, eventName, seasonId) {
+    const { error } = await sb.from('entries').update({ lobby_number: lobbyNumber }).eq('id', entryId);
+    if (error) { toast(error.message, 'error'); return; }
+    await viewEventLobbies(eventId, eventName, seasonId);
 }
 
 

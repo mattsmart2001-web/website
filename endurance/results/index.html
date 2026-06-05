@@ -58,6 +58,17 @@
         /* Section heading */
         .section-heading { font-family: 'Anton', sans-serif; font-size: 1.1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
 
+        /* Lobby grid */
+        .lobbies-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; }
+        .lobby-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem 1rem; }
+        .lobby-title { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: baseline; }
+        .lobby-count { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 0.15em; color: var(--muted); font-weight: 700; }
+        .lobby-row { display: grid; grid-template-columns: 38px 1fr; column-gap: 0.5rem; padding: 0.4rem 0; font-size: 0.85rem; border-top: 1px solid var(--border); }
+        .lobby-row:first-of-type { border-top: none; padding-top: 0; }
+        .lobby-car { font-family: 'Anton', sans-serif; color: var(--gold); }
+        .lobby-team { font-weight: 600; }
+        .lobby-drivers { grid-column: 2; font-size: 0.74rem; color: var(--muted); margin-top: 0.1rem; }
+
         /* Podium */
         .podium { display: flex; align-items: flex-end; justify-content: center; gap: 0.5rem; margin-bottom: 2.5rem; }
         .podium-step { flex: 1; max-width: 280px; display: flex; flex-direction: column; align-items: center; }
@@ -296,7 +307,7 @@ async function loadResults(slug) {
 
     const [entriesRes, rRes, qRes, pRes, sdRes] = await Promise.all([
         sb.from('entries')
-            .select('id, car_number, car_model, teams(name, slug), manufacturers(name, brand_color), entry_drivers(stint_role, drivers(display_name, slug, nationality))')
+            .select('id, car_number, car_model, lobby_number, teams(name, slug), manufacturers(name, brand_color), entry_drivers(stint_role, drivers(display_name, slug, nationality))')
             .eq('event_id', event.id)
             .in('status', ['confirmed']),
         sb.from('results').select('*').eq('event_id', event.id),
@@ -356,6 +367,8 @@ async function loadResults(slug) {
             <span class="badge badge-${esc(event.status)}">${esc(statusLabel[event.status] || event.status)}</span>
         </div>
 
+        ${renderLobbiesGrid(entries)}
+
         ${classified.length === 0 ? `
             <div class="state-msg"><h3>No Results Yet</h3><p>Race results haven't been posted for this event.</p></div>
         ` : `
@@ -393,6 +406,40 @@ async function loadResults(slug) {
             </div>` : ''}
         `}
     </div>`;
+}
+
+function renderLobbiesGrid(entries) {
+    const assigned = (entries || []).filter(en => en.lobby_number != null);
+    if (!assigned.length) return '';
+    const groups = {};
+    assigned.forEach(en => {
+        (groups[en.lobby_number] = groups[en.lobby_number] || []).push(en);
+    });
+    const nums = Object.keys(groups).map(Number).sort((a, b) => a - b);
+    const cards = nums.map(n => {
+        const rows = groups[n]
+            .sort((a, b) => (a.car_number ?? 999) - (b.car_number ?? 999))
+            .map(en => {
+                const driverNames = (en.entry_drivers || [])
+                    .map(ed => ed.drivers?.display_name).filter(Boolean).join(' / ');
+                const teamSlug = en.teams?.slug;
+                const teamName = en.teams?.name || '—';
+                const teamCell = teamSlug
+                    ? `<a href="/endurance/teams/?slug=${esc(teamSlug)}" style="color:inherit;text-decoration:none">${esc(teamName)}</a>`
+                    : esc(teamName);
+                return `<div class="lobby-row">
+                    <span class="lobby-car">${en.car_number != null ? '#' + en.car_number : '—'}</span>
+                    <span class="lobby-team">${teamCell}</span>
+                    <span class="lobby-drivers">${esc(driverNames)}</span>
+                </div>`;
+            }).join('');
+        return `<div class="lobby-card">
+            <div class="lobby-title">Lobby ${n} <span class="lobby-count">${groups[n].length} ${groups[n].length === 1 ? 'entry' : 'entries'}</span></div>
+            ${rows}
+        </div>`;
+    }).join('');
+    return `<div class="section-heading">Lobby Allocations</div>
+        <div class="lobbies-grid">${cards}</div>`;
 }
 
 function renderPodium(classified, leaderLaps) {
