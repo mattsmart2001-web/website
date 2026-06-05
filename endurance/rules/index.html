@@ -114,6 +114,7 @@
     <div id="rules-content"><div class="loading">Loading…</div></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script>
@@ -126,6 +127,16 @@ sb.auth.getSession().then(({ data }) => {
     if (data.session) { if (portal) portal.style.display = ''; }
     else              { if (signin) signin.style.display = ''; }
 });
+
+function renderBody(src) {
+    const s = (src || '').trim();
+    if (!s) return '<p style="color:var(--muted)">No content published yet.</p>';
+    if (window.marked) {
+        marked.setOptions({ gfm: true, breaks: false });
+        return marked.parse(s);
+    }
+    return s;
+}
 
 async function load() {
     const el = document.getElementById('rules-content');
@@ -144,7 +155,7 @@ async function load() {
         : null;
 
     el.innerHTML = `
-        <div class="rules-body">${data.body || '<p style="color:var(--muted)">No content published yet.</p>'}</div>
+        <div class="rules-body">${renderBody(data.body)}</div>
         ${updatedStr ? `<div class="updated-stamp">Last updated: ${updatedStr}</div>` : ''}`;
 }
 

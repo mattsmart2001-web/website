@@ -466,6 +466,49 @@
         select option { background: var(--bg-2); }
         textarea { resize: vertical; min-height: 80px; }
         .form-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
+
+        /* EasyMDE dark-theme overrides — keep editor consistent with admin */
+        .EasyMDEContainer .editor-toolbar {
+            background: var(--bg-2);
+            border-color: var(--border);
+            border-top-left-radius: 8px; border-top-right-radius: 8px;
+            opacity: 1;
+        }
+        .EasyMDEContainer .editor-toolbar button {
+            color: var(--muted) !important;
+            border-color: transparent !important;
+        }
+        .EasyMDEContainer .editor-toolbar button:hover,
+        .EasyMDEContainer .editor-toolbar button.active {
+            background: rgba(255,255,255,0.06) !important;
+            border-color: var(--border) !important;
+            color: var(--text) !important;
+        }
+        .EasyMDEContainer .editor-toolbar i.separator {
+            border-color: var(--border);
+        }
+        .EasyMDEContainer .CodeMirror {
+            background: var(--bg-1) !important;
+            color: var(--text) !important;
+            border-color: var(--border) !important;
+            border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;
+            font-family: 'Inter', 'SF Mono', Menlo, monospace !important;
+            font-size: 0.9rem !important;
+        }
+        .EasyMDEContainer .CodeMirror-cursor { border-color: var(--gold); }
+        .EasyMDEContainer .CodeMirror-selected { background: rgba(255,209,102,0.18) !important; }
+        .EasyMDEContainer .cm-header { color: var(--gold); }
+        .EasyMDEContainer .cm-link, .EasyMDEContainer .cm-url { color: #38bdf8; }
+        .EasyMDEContainer .cm-strong { color: var(--text); }
+        .EasyMDEContainer .editor-statusbar { color: var(--muted); }
+        .EasyMDEContainer .editor-preview, .EasyMDEContainer .editor-preview-side {
+            background: var(--bg-1);
+            color: var(--text);
+            border-color: var(--border) !important;
+        }
+        .EasyMDEContainer .editor-preview h1,
+        .EasyMDEContainer .editor-preview h2,
+        .EasyMDEContainer .editor-preview h3 { color: var(--gold); }
         .form-check {
             display: flex;
             align-items: center;
@@ -608,6 +651,8 @@
             .topbar { padding: 0.85rem 1rem; }
         }
     </style>
+    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <script src="https://unpkg.com/easymde/dist/easymde.min.js" defer></script>
 </head>
 <body>
 
@@ -918,6 +963,7 @@ function openModal(title, bodyHTML, footerHTML) {
 }
 function closeModal() {
     document.getElementById('modal-overlay').classList.remove('open');
+    if (window._pageMDE) { try { window._pageMDE.toTextArea(); } catch {} window._pageMDE = null; }
 }
 document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('modal-overlay').addEventListener('click', (e) => {
@@ -3188,22 +3234,46 @@ async function editPage(slug) {
                 <input type="text" name="title" value="${esc(data.title)}" required>
             </div>
             <div class="form-group">
-                <label>Body <span class="required">*</span></label>
-                <textarea name="body" rows="14" placeholder="HTML content…" style="font-family:monospace;font-size:0.78rem">${esc(data.body)}</textarea>
-                <div class="form-hint">HTML is supported: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, &lt;a href=""&gt;, etc.</div>
+                <label>Body</label>
+                <textarea id="page-body-editor" name="body">${esc(data.body)}</textarea>
+                <div class="form-hint">Markdown — use the toolbar or type: <code># Heading</code>, <code>**bold**</code>, <code>- list</code>, <code>[link](url)</code></div>
             </div>
         </form>`,
         `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
          <button class="btn btn-primary" onclick="savePage('${esc(slug)}')">Save</button>`
     );
+    // Init EasyMDE after the modal is rendered
+    setTimeout(() => {
+        if (!window.EasyMDE) { toast('Editor failed to load — check your connection.', 'error'); return; }
+        window._pageMDE = new EasyMDE({
+            element: document.getElementById('page-body-editor'),
+            spellChecker: false,
+            autoDownloadFontAwesome: false,
+            status: ['lines', 'words'],
+            minHeight: '380px',
+            toolbar: [
+                'bold', 'italic', '|',
+                'heading-2', 'heading-3', '|',
+                'unordered-list', 'ordered-list', '|',
+                'link', 'quote', 'horizontal-rule', 'table', '|',
+                'preview', 'side-by-side', 'fullscreen', '|',
+                'guide',
+            ],
+            renderingConfig: { singleLineBreaks: false },
+        });
+    }, 0);
 }
 
 async function savePage(slug) {
-    const d = getFormData('entity-form');
-    if (!d.title) { toast('Title is required.', 'error'); return; }
+    const titleEl = document.querySelector('#entity-form [name="title"]');
+    const title = titleEl?.value?.trim();
+    if (!title) { toast('Title is required.', 'error'); return; }
+    const body = window._pageMDE
+        ? window._pageMDE.value()
+        : (document.querySelector('#entity-form [name="body"]')?.value || '');
     const { error } = await sb.from('pages').update({
-        title:      d.title,
-        body:       d.body || '',
+        title,
+        body,
         updated_at: new Date().toISOString(),
     }).eq('slug', slug);
     if (error) { toast(error.message, 'error'); return; }
