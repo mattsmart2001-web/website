@@ -7,10 +7,10 @@
 // logs the result to public.application_emails.
 //
 // Env vars required:
-//   SUPABASE_URL
-//   SUPABASE_ANON_KEY
+//   GTEC_SUPABASE_URL       (falls back to SUPABASE_URL if unset)
+//   GTEC_SUPABASE_ANON_KEY  (falls back to SUPABASE_ANON_KEY if unset)
 //   RESEND_API_KEY
-//   GTEC_FROM_EMAIL    (e.g. "Gran Turismo GTEC <noreply@yourdomain.com>")
+//   GTEC_FROM_EMAIL         (e.g. "Gran Turismo GTEC <noreply@yourdomain.com>")
 // ============================================================
 
 const fetch = require('node-fetch');
@@ -18,8 +18,8 @@ const fetch = require('node-fetch');
 const SITE_URL    = 'https://sparkstheory.co.uk';
 const DISCORD_URL = 'https://discord.gg/rMRNYNXnZx';
 
-const SUPABASE_URL      = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL      = process.env.GTEC_SUPABASE_URL      || process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.GTEC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 const RESEND_API_KEY    = process.env.RESEND_API_KEY;
 const FROM_EMAIL        = process.env.GTEC_FROM_EMAIL
     || 'Gran Turismo GTEC <onboarding@resend.dev>';

@@ -109,8 +109,10 @@ To enable it:
 
 1. Sign up at [resend.com](https://resend.com) (free tier: 3,000 emails / month).
 2. Add a Netlify env var **`RESEND_API_KEY`** with the key from Resend's API Keys page.
-3. Add **`SUPABASE_URL`** and **`SUPABASE_ANON_KEY`** to Netlify env vars too
-   (these are used by the function to verify the admin caller).
+3. Add **`GTEC_SUPABASE_URL`** and **`GTEC_SUPABASE_ANON_KEY`** to Netlify env vars,
+   set to the values from `endurance/assets/gtec-config.js`. (The function falls
+   back to `SUPABASE_URL` / `SUPABASE_ANON_KEY` if those are unset, but use the
+   GTEC-prefixed names if you already have those in use for another project.)
 4. (Optional, recommended) Verify your sending domain in Resend's dashboard, then
    set **`GTEC_FROM_EMAIL`** to something like
    `"Gran Turismo GTEC <noreply@yourdomain.com>"`. If you skip this, mails go from
