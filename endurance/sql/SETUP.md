@@ -100,6 +100,7 @@ Always apply in this order:
 18. `18_penalty_points_deduction.sql` — adds `points_deduction` to the penalty_type enum
 19. `19_entry_lobbies.sql` — adds `entries.lobby_number` for skill-based lobby allocation
 20. `20_reset_statistics.sql` — admin RPCs to wipe race data per event or globally
+21. `21_driver_contact_messages.sql` — driver→admin contact form storage (race disputes, issues)
 
 ---
 

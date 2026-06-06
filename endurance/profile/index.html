@@ -125,6 +125,21 @@
         .btn-save { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.75rem; background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: #1a1300; border: none; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: filter 0.2s; }
         .btn-save:hover { filter: brightness(1.08); }
         .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.25rem; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+        .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Contact Admin button + modal */
+        .btn-contact { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.1rem; background: rgba(255,209,102,0.08); border: 1px solid rgba(255,209,102,0.3); border-radius: 999px; color: var(--gold); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+        .btn-contact:hover { background: rgba(255,209,102,0.15); border-color: rgba(255,209,102,0.55); }
+        .contact-overlay { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 1.5rem; }
+        .contact-overlay.open { display: flex; }
+        .contact-modal { width: 100%; max-width: 540px; background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem 1.6rem 1.6rem; max-height: 92vh; overflow-y: auto; }
+        .contact-modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+        .contact-modal-title { font-family: 'Anton', sans-serif; font-size: 1.25rem; letter-spacing: 0.06em; text-transform: uppercase; }
+        .contact-modal-close { background: none; border: none; color: var(--muted); font-size: 1.5rem; line-height: 1; cursor: pointer; padding: 0 0.35rem; }
+        .contact-modal-close:hover { color: var(--text); }
+        .contact-modal-sub { font-size: 0.82rem; color: var(--muted); line-height: 1.5; margin-bottom: 1.25rem; }
+        .contact-modal textarea { resize: vertical; min-height: 120px; }
 
         /* Toast */
         .toast-container { position: fixed; top: 1.25rem; right: 1.25rem; z-index: 200; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
@@ -183,6 +198,37 @@
             <h1 id="driver-name">—</h1>
             <a class="profile-link" id="public-link" href="#">View public profile →</a>
             <div class="profile-tags" id="profile-tags"></div>
+        </div>
+        <button class="btn-contact" onclick="openContactModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            Contact Admin
+        </button>
+    </div>
+
+    <!-- Contact admin modal -->
+    <div class="contact-overlay" id="contact-overlay" onclick="if (event.target === this) closeContactModal()">
+        <div class="contact-modal">
+            <div class="contact-modal-head">
+                <div class="contact-modal-title">Contact Admin</div>
+                <button class="contact-modal-close" onclick="closeContactModal()" aria-label="Close">×</button>
+            </div>
+            <p class="contact-modal-sub">Race dispute, scheduling issue, or anything else — admins will see this in their portal and reply via email.</p>
+            <div class="form-group">
+                <label class="field-label">Subject</label>
+                <input type="text" id="contact-subject" placeholder="e.g. Incident in Round 3, lobby 1">
+            </div>
+            <div class="form-group">
+                <label class="field-label">Message <span style="color:#fca5a5">*</span></label>
+                <textarea id="contact-message" rows="6" placeholder="Describe what happened…"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="field-label">Incident Link <span class="td-muted" style="font-weight:normal;font-size:0.7rem">(optional)</span></label>
+                <input type="url" id="contact-url" placeholder="https://… (YouTube, Twitch clip, screenshot, etc.)">
+            </div>
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
+                <button class="btn-ghost" onclick="closeContactModal()">Cancel</button>
+                <button class="btn-save" id="contact-submit" onclick="submitContactMessage()">Send to Admin</button>
+            </div>
         </div>
     </div>
 
@@ -349,6 +395,43 @@ async function uploadPhoto(input) {
     if (upd) { toast(upd.message, 'error'); return; }
     setPhotoUI(publicUrl);
     toast('Photo updated!', 'success');
+}
+
+function openContactModal() {
+    document.getElementById('contact-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('contact-message').focus(), 50);
+}
+function closeContactModal() {
+    document.getElementById('contact-overlay').classList.remove('open');
+    document.getElementById('contact-subject').value = '';
+    document.getElementById('contact-message').value = '';
+    document.getElementById('contact-url').value = '';
+}
+
+async function submitContactMessage() {
+    const btn      = document.getElementById('contact-submit');
+    const subject  = document.getElementById('contact-subject').value.trim() || null;
+    const message  = document.getElementById('contact-message').value.trim();
+    const urlInput = document.getElementById('contact-url').value.trim();
+
+    if (!message) { toast('Please write a message.', 'error'); return; }
+    if (urlInput && !/^https?:\/\//i.test(urlInput)) {
+        toast('Incident link should start with http:// or https://', 'error'); return;
+    }
+    if (!driverId) { toast('Profile not loaded yet — try again in a moment.', 'error'); return; }
+
+    btn.disabled = true; btn.textContent = 'Sending…';
+    const { error } = await sb.from('driver_contact_messages').insert({
+        driver_id:    driverId,
+        user_id:      (await sb.auth.getUser()).data.user?.id || null,
+        subject,
+        message,
+        incident_url: urlInput || null,
+    });
+    btn.disabled = false; btn.textContent = 'Send to Admin';
+    if (error) { toast(error.message, 'error'); return; }
+    closeContactModal();
+    toast('Message sent — admins will respond by email.', 'success');
 }
 
 async function changePassword() {

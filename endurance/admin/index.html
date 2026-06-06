@@ -703,6 +703,11 @@
             Applications
             <span class="nav-badge" id="apps-badge" style="display:none">0</span>
         </button>
+        <button class="nav-link" data-section="messages">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            Messages
+            <span class="nav-badge" id="msgs-badge" style="display:none">0</span>
+        </button>
 
         <div class="nav-section">Content</div>
         <button class="nav-link" data-section="news">
@@ -825,8 +830,24 @@ async function initAuth() {
 
     setupNav();
     await refreshAppsBadge();
+    await refreshMsgsBadge();
     setInterval(refreshAppsBadge, 60000);
+    setInterval(refreshMsgsBadge, 60000);
     await navigate('dashboard');
+}
+
+async function refreshMsgsBadge() {
+    const { count } = await sb.from('driver_contact_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'new');
+    const el = document.getElementById('msgs-badge');
+    if (!el) return;
+    if (count && count > 0) {
+        el.textContent = count;
+        el.style.display = '';
+    } else {
+        el.style.display = 'none';
+    }
 }
 
 async function refreshAppsBadge() {
@@ -892,6 +913,7 @@ async function navigate(section, pushHash = true) {
         drivers: 'Drivers',
         events: 'Events',
         applications: 'Applications',
+        messages: 'Driver Messages',
         news: 'News',
         media: 'Media',
         pages: 'Pages',
@@ -900,7 +922,7 @@ async function navigate(section, pushHash = true) {
     document.getElementById('page-title').textContent = titles[section] || section;
 
     const addBtn = document.getElementById('btn-add');
-    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins') {
+    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins' || section === 'messages') {
         addBtn.style.display = 'none';
     } else {
         addBtn.style.display = '';
@@ -924,6 +946,7 @@ async function navigate(section, pushHash = true) {
         case 'media':        await renderMedia(); break;
         case 'pages':        await renderPages(); break;
         case 'admins':       await renderAdmins(); break;
+        case 'messages':     await renderMessages(); break;
     }
 }
 
@@ -3189,6 +3212,126 @@ async function deleteApplication(id, name) {
     await renderApplications();
     await refreshAppsBadge();
 }
+
+
+// ============================================================
+// 11c. Driver Messages
+// ============================================================
+async function renderMessages() {
+    const { data, error } = await sb.from('driver_contact_messages')
+        .select('*, drivers(id, display_name, slug, psn_id)')
+        .order('created_at', { ascending: false });
+    if (error) { toast(error.message, 'error'); return; }
+
+    const statusBadge = {
+        new:         '<span class="badge badge-yellow">New</span>',
+        in_progress: '<span class="badge badge-gold">In Progress</span>',
+        resolved:    '<span class="badge badge-green">Resolved</span>',
+        dismissed:   '<span class="badge badge-muted">Dismissed</span>',
+    };
+    const counts = { new:0, in_progress:0, resolved:0, dismissed:0 };
+    (data || []).forEach(m => counts[m.status] = (counts[m.status]||0) + 1);
+
+    const fmtWhen = iso => iso ? new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+
+    const rows = !data?.length
+        ? `<tr><td colspan="6"><div class="empty-state">No messages from drivers yet.</div></td></tr>`
+        : data.map(m => `
+            <tr>
+                <td><strong>${esc(m.drivers?.display_name) || '—'}</strong>${m.drivers?.psn_id ? `<br><small class="td-muted">${esc(m.drivers.psn_id)}</small>` : ''}</td>
+                <td class="td-muted" style="font-size:0.84rem">${esc(m.subject) || '<em>No subject</em>'}</td>
+                <td class="td-muted" style="font-size:0.82rem;max-width:340px">${esc((m.message || '').slice(0, 120))}${(m.message || '').length > 120 ? '…' : ''}</td>
+                <td>${statusBadge[m.status] || esc(m.status)}</td>
+                <td class="td-muted" style="font-size:0.78rem;white-space:nowrap">${fmtWhen(m.created_at)}</td>
+                <td><div class="row-actions">
+                    <button class="btn-icon" onclick="viewMessage('${m.id}')">View</button>
+                    <button class="btn-icon danger" onclick="deleteMessage('${m.id}')">Delete</button>
+                </div></td>
+            </tr>`).join('');
+
+    document.getElementById('content').innerHTML = `
+        <div class="stat-grid" style="margin-bottom:1.5rem">
+            <div class="stat-card${counts.new > 0 ? ' stat-card-alert' : ''}"><div class="stat-card-label">New</div><div class="stat-card-value">${counts.new}</div></div>
+            <div class="stat-card"><div class="stat-card-label">In Progress</div><div class="stat-card-value">${counts.in_progress}</div></div>
+            <div class="stat-card"><div class="stat-card-label">Resolved</div><div class="stat-card-value">${counts.resolved}</div></div>
+            <div class="stat-card"><div class="stat-card-label">Dismissed</div><div class="stat-card-value">${counts.dismissed}</div></div>
+        </div>
+        <div class="table-wrap">
+            <table><thead><tr>
+                <th>Driver</th><th>Subject</th><th>Message</th><th>Status</th><th>Sent</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+}
+
+async function viewMessage(id) {
+    const { data: m } = await sb.from('driver_contact_messages')
+        .select('*, drivers(display_name, slug, psn_id)')
+        .eq('id', id).single();
+    if (!m) { toast('Message not found.', 'error'); return; }
+
+    const statusOpts = ['new','in_progress','resolved','dismissed']
+        .map(s => `<option value="${s}" ${m.status===s?'selected':''}>${s.replace('_',' ').replace(/^./, c => c.toUpperCase())}</option>`)
+        .join('');
+
+    const profileLink = m.drivers?.slug
+        ? `<a href="/endurance/drivers/?slug=${esc(m.drivers.slug)}" target="_blank" style="color:var(--gold);text-decoration:none">View profile →</a>`
+        : '';
+
+    const incidentLink = m.incident_url
+        ? `<div style="font-size:0.82rem;margin-bottom:0.75rem">
+              <span style="color:var(--muted)">Incident link</span><br>
+              <a href="${esc(m.incident_url)}" target="_blank" rel="noopener" style="color:var(--gold);word-break:break-all">${esc(m.incident_url)}</a>
+           </div>`
+        : '';
+
+    openModal(`Message from ${esc(m.drivers?.display_name) || 'Driver'}`, `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1.5rem;font-size:0.84rem;margin-bottom:1.25rem">
+            <div><span style="color:var(--muted)">Driver</span><br><strong>${esc(m.drivers?.display_name) || '—'}</strong> ${profileLink}</div>
+            <div><span style="color:var(--muted)">PSN ID</span><br><strong>${esc(m.drivers?.psn_id) || '—'}</strong></div>
+            <div><span style="color:var(--muted)">Subject</span><br><strong>${esc(m.subject) || '<em>(none)</em>'}</strong></div>
+            <div><span style="color:var(--muted)">Sent</span><br><strong>${m.created_at ? new Date(m.created_at).toLocaleString('en-GB') : '—'}</strong></div>
+        </div>
+        <div style="font-size:0.88rem;margin-bottom:1rem;padding:0.85rem 1rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;white-space:pre-wrap;line-height:1.55">${esc(m.message)}</div>
+        ${incidentLink}
+        <form id="entity-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status">${statusOpts}</select>
+                </div>
+                <div class="form-group">
+                    <label>Admin Note</label>
+                    <input type="text" name="admin_note" value="${esc(m.admin_note)}" placeholder="Internal note (optional)…">
+                </div>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Close</button>
+         <button class="btn btn-primary" onclick="saveMessageStatus('${m.id}')">Save</button>`
+    );
+}
+
+async function saveMessageStatus(id) {
+    const d = getFormData('entity-form');
+    const { error } = await sb.from('driver_contact_messages').update({
+        status:     d.status,
+        admin_note: d.admin_note || null,
+    }).eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Message updated.', 'success');
+    closeModal();
+    await renderMessages();
+    await refreshMsgsBadge();
+}
+
+async function deleteMessage(id) {
+    if (!confirm('Delete this message? This cannot be undone.')) return;
+    const { error } = await sb.from('driver_contact_messages').delete().eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Deleted.', 'success');
+    await renderMessages();
+    await refreshMsgsBadge();
+}
+
 
 
 // ============================================================
