@@ -99,6 +99,7 @@ Always apply in this order:
 17. `17_entries_car_number_optional.sql` — entries.car_number derived from first driver, no longer required
 18. `18_penalty_points_deduction.sql` — adds `points_deduction` to the penalty_type enum
 19. `19_entry_lobbies.sql` — adds `entries.lobby_number` for skill-based lobby allocation
+20. `20_reset_statistics.sql` — admin RPCs to wipe race data per event or globally
 
 ---
 

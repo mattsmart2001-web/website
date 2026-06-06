@@ -1031,9 +1031,13 @@ async function renderDashboard() {
         </div>
         <div class="table-wrap" style="padding:1.5rem;margin-top:1rem">
             <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Maintenance</div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding-bottom:0.85rem;border-bottom:1px solid var(--border)">
                 <div style="font-size:0.85rem;color:var(--muted)">Rebuild Hall of Fame records from current career stats.</div>
                 <button class="btn btn-primary" onclick="refreshHallOfFame()">Refresh Hall of Fame</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding-top:0.85rem">
+                <div style="font-size:0.85rem;color:#fca5a5">Delete all race data — entries, results, qualifying, ratings, penalties, steward decisions, Hall of Fame. Events, drivers, teams, manufacturers and seasons are kept.</div>
+                <button class="btn-icon danger" onclick="resetAllStats()">Reset All Statistics</button>
             </div>
         </div>
     `;
@@ -1774,6 +1778,7 @@ async function renderEvents() {
                     <button class="btn-icon" onclick="viewEventPenalties('${e.id}','${esc(e.name)}')">Penalties</button>
                     <button class="btn-icon" onclick="viewEventSteward('${e.id}','${esc(e.name)}')">Steward</button>
                     <button class="btn-icon" onclick="editEvent('${e.id}')">Edit</button>
+                    <button class="btn-icon danger" onclick="resetEventStats('${e.id}','${esc(e.name)}')">Reset Stats</button>
                     <button class="btn-icon danger" onclick="deleteEvent('${e.id}','${esc(e.name)}')">Delete</button>
                 </div></td>
             </tr>`).join('');
@@ -2555,6 +2560,24 @@ async function refreshHallOfFame() {
     if (error) { toast(error.message, 'error'); return; }
     if (data?.error) { toast(data.error, 'error'); return; }
     toast(`Hall of Fame refreshed — ${data.records_inserted} record${data.records_inserted !== 1 ? 's' : ''}.`, 'success');
+}
+
+async function resetEventStats(eventId, eventName) {
+    if (!confirm(`Reset ALL stats for "${eventName}"?\n\nThis deletes entries, results, qualifying, ratings, penalties, and steward decisions for this event. The event itself stays.\n\nThis cannot be undone.`)) return;
+    const { error } = await sb.rpc('reset_event_stats', { p_event_id: eventId });
+    if (error) { toast(error.message, 'error'); return; }
+    toast(`Stats reset for "${eventName}".`, 'success');
+    await renderEvents();
+}
+
+async function resetAllStats() {
+    if (!confirm(`Reset ALL race statistics across every event?\n\nThis deletes entries, results, qualifying, ratings, penalties, steward decisions, and Hall of Fame records.\n\nEvents, drivers, teams, manufacturers, and seasons are kept.\n\nThis cannot be undone.`)) return;
+    const phrase = prompt(`Type RESET to confirm:`);
+    if (phrase !== 'RESET') { toast('Cancelled — phrase did not match.', 'error'); return; }
+    const { error } = await sb.rpc('reset_all_stats');
+    if (error) { toast(error.message, 'error'); return; }
+    toast('All statistics reset.', 'success');
+    await renderDashboard();
 }
 
 async function computeElo(eventId) {
