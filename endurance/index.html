@@ -148,6 +148,33 @@
             mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
             pointer-events: none;
         }
+        .hero-presented {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            color: var(--muted);
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            text-indent: 0.35em;
+            padding: 0.5rem 0.95rem 0.5rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.02);
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .hero-presented img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .hero-presented:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.18); }
         .gtec-status {
             display: inline-flex;
             align-items: center;
@@ -583,6 +610,30 @@
             text-decoration: none;
         }
         .gtec-footer .presented a:hover { text-decoration: underline; }
+        .gtec-footer .sparks-mark {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin-bottom: 0.85rem;
+            color: var(--muted);
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            text-indent: 0.32em;
+            transition: opacity 0.2s;
+        }
+        .gtec-footer .sparks-mark:hover { opacity: 0.85; }
+        .gtec-footer .sparks-mark img {
+            width: 38px;
+            height: 38px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.04);
+            padding: 4px;
+        }
     </style>
     <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
 </head>
@@ -612,6 +663,10 @@
 </nav>
 
 <header class="gtec-hero">
+    <a class="hero-presented" href="/" aria-label="SparksTheory">
+        <img src="/endurance/assets/Sparks_logo_small.png" alt="SparksTheory">
+        <span>Presented by SparksTheory</span>
+    </a>
     <span class="gtec-status">Launching 2027</span>
     <div class="gtec-kicker">Gran Turismo 7</div>
     <img class="gtec-title" src="/endurance/assets/gtec-logo.png" alt="Gran Turismo GTEC">
@@ -839,7 +894,10 @@
 </section>
 
 <footer class="gtec-footer">
-    <div class="presented">Presented by <a href="/">SparksTheory</a></div>
+    <a class="sparks-mark" href="/">
+        <img src="/endurance/assets/Sparks_logo_small.png" alt="SparksTheory">
+        Presented by SparksTheory
+    </a>
     <div>Gran Turismo GTEC · Coming 2027 · &copy; 2026 SparksTheory.</div>
 </footer>
 
