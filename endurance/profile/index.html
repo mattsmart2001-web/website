@@ -367,8 +367,6 @@ async function loadStanding(driverId) {
     const st = stRes.data;
     const rt = ratingRes.data;
 
-    if (!st && !rt) return;
-
     const card = document.getElementById('card-standing');
     document.getElementById('standing-season-label').textContent = `${season.name} — Season Standing`;
 
@@ -387,12 +385,14 @@ async function loadStanding(driverId) {
     }
 
     if (rt) {
-        document.getElementById('elo-value').textContent = Math.round(rt.current_rating);
+        document.getElementById('elo-value').textContent = Math.round(rt.rating ?? 1500);
         const delta = rt.last_delta;
         if (delta != null) {
             const sign = delta >= 0 ? '+' : '';
             document.getElementById('elo-delta-el').innerHTML = `<span class="elo-delta ${delta >= 0 ? 'elo-up' : 'elo-dn'}">(${sign}${delta})</span>`;
         }
+    } else {
+        document.getElementById('elo-value').textContent = '1500';
     }
 
     card.style.display = '';
