@@ -1090,7 +1090,7 @@ function mfrForm(m = {}) {
         <div class="form-row">
             <div class="form-group">
                 <label>Country</label>
-                <input type="text" name="country" value="${esc(m.country)}" placeholder="Germany">
+                <select name="country">${window.gtecCountryOptions(m.country)}</select>
             </div>
             <div class="form-group">
                 <label>Brand Colour</label>
@@ -1847,8 +1847,7 @@ function eventForm(e = {}) {
             </div>
             <div class="form-group">
                 <label>Circuit Country</label>
-                <input type="text" name="circuit_country" value="${esc(e.circuit_country)}" placeholder="DE">
-                <div class="form-hint">ISO 2-letter code, e.g. GB, DE, JP</div>
+                <select name="circuit_country">${window.gtecCountryOptions(e.circuit_country)}</select>
             </div>
         </div>
         <div class="form-row">
