@@ -521,9 +521,10 @@ async function showProfile() {
         .slice(0, 15);
 
     // Current rating
-    const currentRating = ratingHist.length ? ratingHist[ratingHist.length - 1].rating_after : null;
-    const peakRating    = ratingHist.length ? Math.max(...ratingHist.map(r => r.rating_after)) : null;
+    const currentRating = ratingHist.length ? ratingHist[ratingHist.length - 1].rating_after : 1500;
+    const peakRating    = ratingHist.length ? Math.max(...ratingHist.map(r => r.rating_after)) : 1500;
     const lastDelta     = ratingHist.length ? ratingHist[ratingHist.length - 1].delta : null;
+    const isProvisional = ratingHist.length === 0;
 
     // Career totals
     const totals = seasons.reduce((acc, s) => {
@@ -680,7 +681,7 @@ async function showProfile() {
             </div>
 
             <div class="stat-bar">
-                ${currentRating != null ? `<div class="stat-item"><div class="stat-label">Elo Rating</div><div class="stat-value gold">${currentRating}</div></div>` : ''}
+                <div class="stat-item"><div class="stat-label">Elo Rating${isProvisional ? ' <span style="color:var(--muted);font-size:0.55rem;letter-spacing:0.15em">· Provisional</span>' : ''}</div><div class="stat-value gold">${currentRating}</div></div>
                 <div class="stat-item"><div class="stat-label">Points</div><div class="stat-value">${totals.points.toFixed(totals.points % 1 === 0 ? 0 : 1)}</div></div>
                 <div class="stat-item"><div class="stat-label">Races</div><div class="stat-value">${totals.races}</div></div>
                 <div class="stat-item"><div class="stat-label">Wins</div><div class="stat-value">${totals.wins}</div></div>
