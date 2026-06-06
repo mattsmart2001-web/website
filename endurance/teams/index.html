@@ -103,6 +103,7 @@
         .profile-name { font-family: 'Anton', sans-serif; font-size: clamp(2.2rem, 6vw, 3.5rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.75rem; }
         .profile-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
         .profile-tag { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.75rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; font-size: 0.76rem; color: var(--muted); }
+        .leader-pill { display: inline-block; padding: 0.1rem 0.45rem; background: rgba(255,209,102,0.15); color: var(--gold); border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; margin-right: 0.25rem; }
 
         /* Stat bar */
         .stat-bar { display: flex; background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 2rem; }
@@ -265,7 +266,7 @@ async function showListing() {
 // ============================================================
 async function showProfile() {
     const { data: team, error } = await sb.from('teams')
-        .select('*, manufacturers(name,brand_color,logo_url)')
+        .select('*, manufacturers(name,brand_color,logo_url), leader:drivers!leader_driver_id(id, display_name, slug)')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -309,6 +310,12 @@ async function showProfile() {
     }
     if (team.home_country) tags.push(`${flag(team.home_country)} ${esc(team.home_country)}`);
     if (team.founded_on)   tags.push(`Est. ${esc(team.founded_on.slice(0,4))}`);
+    if (team.leader?.display_name) {
+        const slugAttr = team.leader.slug ? esc(team.leader.slug) : '';
+        const linkOpen = team.leader.slug ? `<a href="/endurance/drivers/?slug=${slugAttr}" style="color:inherit;text-decoration:none">` : '';
+        const linkClose = team.leader.slug ? '</a>' : '';
+        tags.push(`<span class="leader-pill">★ Team Leader</span> ${linkOpen}${esc(team.leader.display_name)}${linkClose}`);
+    }
 
     // Roster HTML
     const rosterHTML = drivers.length ? `

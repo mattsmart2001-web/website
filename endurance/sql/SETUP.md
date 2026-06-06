@@ -101,6 +101,8 @@ Always apply in this order:
 19. `19_entry_lobbies.sql` — adds `entries.lobby_number` for skill-based lobby allocation
 20. `20_reset_statistics.sql` — admin RPCs to wipe race data per event or globally
 21. `21_driver_contact_messages.sql` — driver→admin contact form storage (race disputes, issues)
+22. `22_message_replies.sql` — admin reply field + driver-read tracking for the inbox
+23. `23_team_leaders_and_join_requests.sql` — team leaders, join requests, approve RPC
 
 ---
 

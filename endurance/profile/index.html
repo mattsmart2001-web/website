@@ -76,6 +76,40 @@
         .results-list { display: flex; flex-direction: column; gap: 0.6rem; }
         .result-row { display: flex; align-items: center; gap: 0.85rem; padding: 0.65rem 0.85rem; background: var(--bg-2); border-radius: 8px; text-decoration: none; color: var(--text); transition: background 0.15s; }
         .result-row:hover { background: rgba(255,255,255,0.04); }
+
+        /* Inbox */
+        .inbox-list { display: flex; flex-direction: column; gap: 0.85rem; }
+        .inbox-thread { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.95rem 1.1rem; }
+        .inbox-thread.unread { border-color: rgba(255,209,102,0.45); }
+        .inbox-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.35rem; }
+        .inbox-subj { font-weight: 600; font-size: 0.92rem; }
+        .inbox-when { font-size: 0.7rem; color: var(--muted); font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; }
+        .inbox-body { font-size: 0.85rem; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
+        .inbox-incident { font-size: 0.78rem; margin-top: 0.45rem; word-break: break-all; }
+        .inbox-incident a { color: var(--gold); text-decoration: none; }
+        .inbox-incident a:hover { text-decoration: underline; }
+        .inbox-reply { margin-top: 0.85rem; padding: 0.85rem 1rem; background: rgba(255,209,102,0.06); border: 1px solid rgba(255,209,102,0.2); border-left: 3px solid var(--gold); border-radius: 6px; }
+        .inbox-reply-head { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.35rem; }
+        .inbox-reply-body { font-size: 0.86rem; line-height: 1.55; white-space: pre-wrap; color: var(--text); }
+        .inbox-status { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.18rem 0.5rem; border-radius: 4px; }
+        .inbox-status.new         { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .inbox-status.in_progress { background: rgba(255,209,102,0.15); color: var(--gold); }
+        .inbox-status.resolved    { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .inbox-status.dismissed   { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+        /* Team-application rows (find-a-team + leader inbox) */
+        .open-team-row, .req-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.85rem 1rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.65rem; flex-wrap: wrap; }
+        .open-team-name { font-weight: 600; font-size: 0.95rem; }
+        .open-team-meta { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+        .pill { display: inline-block; padding: 0.18rem 0.5rem; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; }
+        .pill-gold  { background: rgba(255,209,102,0.15); color: var(--gold); }
+        .pill-green { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .pill-muted { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .btn-small { padding: 0.45rem 0.9rem; border-radius: 6px; font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: color 0.15s, border-color 0.15s; }
+        .btn-small:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .btn-small.primary { background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: #1a1300; border: none; }
+        .btn-small.primary:hover { filter: brightness(1.08); }
+        .btn-small.danger:hover { color: #fca5a5; border-color: rgba(239,68,68,0.4); }
         .result-pos { font-family: 'Anton', sans-serif; font-size: 1.2rem; width: 28px; text-align: center; flex-shrink: 0; }
         .pos-1-c { color: var(--gold); } .pos-2-c { color: var(--silver); } .pos-3-c { color: var(--bronze); }
         .result-info { flex: 1; min-width: 0; }
@@ -212,7 +246,7 @@
                 <div class="contact-modal-title">Contact Admin</div>
                 <button class="contact-modal-close" onclick="closeContactModal()" aria-label="Close">×</button>
             </div>
-            <p class="contact-modal-sub">Race dispute, scheduling issue, or anything else — admins will see this in their portal and reply via email.</p>
+            <p class="contact-modal-sub">Race dispute, scheduling issue, or anything else — admins will see this and reply in your portal inbox below.</p>
             <div class="form-group">
                 <label class="field-label">Subject</label>
                 <input type="text" id="contact-subject" placeholder="e.g. Incident in Round 3, lobby 1">
@@ -253,6 +287,31 @@
     <div class="card" id="card-results" style="display:none">
         <div class="card-title">Recent Results</div>
         <div class="results-list" id="results-list"></div>
+    </div>
+
+    <!-- Inbox -->
+    <div class="card" id="card-inbox" style="display:none">
+        <div class="card-title">Inbox <span id="inbox-unread-pill" style="display:none;margin-left:0.5rem;padding:0.18rem 0.55rem;background:var(--gold);color:#1a1300;border-radius:999px;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.15em">0 NEW</span></div>
+        <div class="inbox-list" id="inbox-list"></div>
+    </div>
+
+    <!-- Team requests (shown to team leaders only) -->
+    <div class="card" id="card-team-requests" style="display:none">
+        <div class="card-title">Drivers Applying to Your Team</div>
+        <div id="team-requests-list"></div>
+    </div>
+
+    <!-- Find a team (shown to drivers without a team) -->
+    <div class="card" id="card-find-team" style="display:none">
+        <div class="card-title">Find a Team</div>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.85rem">Teams with an open seat are listed below. Send a short message and the team leader will decide.</p>
+        <div id="find-team-list"></div>
+    </div>
+
+    <!-- Driver's outstanding outgoing requests -->
+    <div class="card" id="card-my-requests" style="display:none">
+        <div class="card-title">Your Team Applications</div>
+        <div id="my-requests-list"></div>
     </div>
 
     <!-- Edit profile -->
@@ -431,7 +490,8 @@ async function submitContactMessage() {
     btn.disabled = false; btn.textContent = 'Send to Admin';
     if (error) { toast(error.message, 'error'); return; }
     closeContactModal();
-    toast('Message sent — admins will respond by email.', 'success');
+    await loadInbox(driverId);
+    toast('Message sent — replies appear in your inbox.', 'success');
 }
 
 async function changePassword() {
@@ -652,6 +712,200 @@ async function init() {
     loadStanding(driver.id);
     loadUpcoming(driver.id);
     loadRecentResults(driver.id);
+    loadInbox(driver.id);
+    loadTeamingSections(driver);
+}
+
+let _currentDriver = null;
+
+async function loadTeamingSections(driver) {
+    _currentDriver = driver;
+
+    // If they don't have a team, show the find-a-team list and any outgoing requests
+    if (!driver.current_team_id) {
+        const { data: teams } = await sb.from('team_open_seats')
+            .select('*')
+            .gt('open_seats', 0);
+        if (teams?.length) {
+            const card = document.getElementById('card-find-team');
+            document.getElementById('find-team-list').innerHTML = teams.map(t => `
+                <div class="open-team-row">
+                    <div style="flex:1;min-width:0">
+                        <div class="open-team-name">
+                            <a href="/endurance/teams/?slug=${esc(t.team_slug)}" style="color:inherit;text-decoration:none">${esc(t.team_name)}</a>
+                            ${t.leader_name ? `<span style="font-size:0.72rem;color:var(--muted);margin-left:0.5rem">Led by ${esc(t.leader_name)}</span>` : ''}
+                        </div>
+                        <div class="open-team-meta">
+                            ${t.manufacturer_name ? esc(t.manufacturer_name) + ' · ' : ''}${t.driver_count}/${t.max_drivers} drivers · ${t.open_seats} seat${t.open_seats === 1 ? '' : 's'} open
+                        </div>
+                    </div>
+                    <button class="btn-small primary" onclick="applyToTeam('${esc(t.team_id)}','${esc(t.team_name)}')">Apply</button>
+                </div>`).join('');
+            card.style.display = '';
+        }
+    }
+
+    // Outgoing requests (always show if any exist)
+    const { data: myReqs } = await sb.from('team_join_requests')
+        .select('id, status, message, created_at, teams(name, slug)')
+        .eq('driver_id', driver.id)
+        .order('created_at', { ascending: false });
+    if (myReqs?.length) {
+        document.getElementById('card-my-requests').style.display = '';
+        document.getElementById('my-requests-list').innerHTML = myReqs.map(r => {
+            const pill = r.status === 'pending' ? 'pill-gold' :
+                         r.status === 'approved' ? 'pill-green' : 'pill-muted';
+            const cancelBtn = r.status === 'pending'
+                ? `<button class="btn-small danger" onclick="cancelMyRequest('${esc(r.id)}')">Cancel</button>`
+                : '';
+            return `<div class="req-row">
+                <div style="flex:1;min-width:0">
+                    <div class="open-team-name">${esc(r.teams?.name) || '—'}</div>
+                    <div class="open-team-meta">
+                        <span class="pill ${pill}">${esc(r.status)}</span>
+                        · ${new Date(r.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
+                        ${r.message ? '<br><em style="font-size:0.78rem">' + esc(r.message) + '</em>' : ''}
+                    </div>
+                </div>
+                ${cancelBtn}
+            </div>`;
+        }).join('');
+    }
+
+    // Incoming requests if this driver leads a team
+    const { data: leadTeam } = await sb.from('teams')
+        .select('id, name')
+        .eq('leader_driver_id', driver.id)
+        .maybeSingle();
+    if (leadTeam) {
+        const { data: incoming } = await sb.from('team_join_requests')
+            .select('id, status, message, created_at, drivers(id, display_name, slug, psn_id, gt7_dr_rating, gt7_sr_rating)')
+            .eq('team_id', leadTeam.id)
+            .eq('status', 'pending')
+            .order('created_at');
+        if (incoming?.length) {
+            document.getElementById('card-team-requests').style.display = '';
+            document.getElementById('team-requests-list').innerHTML = incoming.map(r => `
+                <div class="req-row">
+                    <div style="flex:1;min-width:0">
+                        <div class="open-team-name">
+                            ${r.drivers?.slug
+                                ? `<a href="/endurance/drivers/?slug=${esc(r.drivers.slug)}" style="color:inherit;text-decoration:none">${esc(r.drivers.display_name)}</a>`
+                                : esc(r.drivers?.display_name)}
+                        </div>
+                        <div class="open-team-meta">
+                            ${r.drivers?.psn_id ? esc(r.drivers.psn_id) + ' · ' : ''}
+                            ${r.drivers?.gt7_dr_rating ? 'DR ' + esc(r.drivers.gt7_dr_rating) + ' · ' : ''}
+                            ${r.drivers?.gt7_sr_rating ? 'SR ' + esc(r.drivers.gt7_sr_rating) + ' · ' : ''}
+                            ${new Date(r.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}
+                            ${r.message ? '<br><em style="font-size:0.8rem">' + esc(r.message) + '</em>' : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.4rem">
+                        <button class="btn-small primary" onclick="approveRequest('${esc(r.id)}')">Approve</button>
+                        <button class="btn-small danger"  onclick="rejectRequest('${esc(r.id)}')">Reject</button>
+                    </div>
+                </div>`).join('');
+        }
+    }
+}
+
+async function applyToTeam(teamId, teamName) {
+    const message = prompt(`Message to the team leader of ${teamName} (optional):`, '');
+    if (message === null) return;
+    const { error } = await sb.from('team_join_requests').insert({
+        team_id: teamId,
+        driver_id: _currentDriver.id,
+        message: message.trim() || null,
+    });
+    if (error) {
+        toast(error.message.includes('duplicate') ? 'You already have a pending request for this team.' : error.message, 'error');
+        return;
+    }
+    toast(`Request sent to ${teamName}.`, 'success');
+    await loadTeamingSections(_currentDriver);
+}
+
+async function cancelMyRequest(requestId) {
+    if (!confirm('Cancel this application?')) return;
+    const { error } = await sb.from('team_join_requests').update({ status: 'cancelled', decided_at: new Date().toISOString() }).eq('id', requestId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Request cancelled.', 'success');
+    await loadTeamingSections(_currentDriver);
+}
+
+async function approveRequest(requestId) {
+    if (!confirm('Approve this driver and add them to your team?')) return;
+    const { data, error } = await sb.rpc('approve_team_join_request', { p_request_id: requestId });
+    if (error)       { toast(error.message, 'error'); return; }
+    if (!data?.ok)   { toast(data?.error || 'Could not approve.', 'error'); return; }
+    toast('Driver approved.', 'success');
+    await loadTeamingSections(_currentDriver);
+}
+
+async function rejectRequest(requestId) {
+    if (!confirm('Reject this application?')) return;
+    const { error } = await sb.from('team_join_requests').update({
+        status: 'rejected', decided_at: new Date().toISOString(),
+    }).eq('id', requestId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Application rejected.', 'success');
+    await loadTeamingSections(_currentDriver);
+}
+
+async function loadInbox(driverId) {
+    const { data: messages } = await sb.from('driver_contact_messages')
+        .select('id, subject, message, incident_url, status, created_at, admin_reply, replied_at, driver_read_reply_at')
+        .eq('driver_id', driverId)
+        .order('created_at', { ascending: false });
+    if (!messages?.length) return;
+
+    const card     = document.getElementById('card-inbox');
+    const list     = document.getElementById('inbox-list');
+    const pill     = document.getElementById('inbox-unread-pill');
+    const fmtWhen  = iso => new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+    const unreadIds = messages
+        .filter(m => m.admin_reply && !m.driver_read_reply_at)
+        .map(m => m.id);
+
+    list.innerHTML = messages.map(m => {
+        const unread = m.admin_reply && !m.driver_read_reply_at;
+        const reply = m.admin_reply
+            ? `<div class="inbox-reply">
+                  <div class="inbox-reply-head">Admin reply${m.replied_at ? ' · ' + fmtWhen(m.replied_at) : ''}${unread ? ' · NEW' : ''}</div>
+                  <div class="inbox-reply-body">${esc(m.admin_reply)}</div>
+               </div>`
+            : `<div style="margin-top:0.85rem;font-size:0.78rem;color:var(--muted);font-style:italic">Awaiting admin reply…</div>`;
+        const incident = m.incident_url
+            ? `<div class="inbox-incident">Incident: <a href="${esc(m.incident_url)}" target="_blank" rel="noopener">${esc(m.incident_url)}</a></div>`
+            : '';
+        return `<div class="inbox-thread ${unread ? 'unread' : ''}">
+            <div class="inbox-head">
+                <div>
+                    <div class="inbox-subj">${esc(m.subject) || '<em>No subject</em>'}</div>
+                    <div class="inbox-when">Sent ${fmtWhen(m.created_at)} · <span class="inbox-status ${esc(m.status)}">${esc(m.status.replace('_',' '))}</span></div>
+                </div>
+            </div>
+            <div class="inbox-body">${esc(m.message)}</div>
+            ${incident}
+            ${reply}
+        </div>`;
+    }).join('');
+
+    if (unreadIds.length) {
+        pill.textContent = `${unreadIds.length} NEW`;
+        pill.style.display = '';
+        // Mark them read (best-effort, fire and forget).
+        sb.from('driver_contact_messages')
+            .update({ driver_read_reply_at: new Date().toISOString() })
+            .in('id', unreadIds)
+            .then(() => {});
+    } else {
+        pill.style.display = 'none';
+    }
+
+    card.style.display = '';
 }
 
 init();

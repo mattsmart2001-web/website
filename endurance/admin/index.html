@@ -3177,14 +3177,46 @@ async function saveTeamFromApplication(appId) {
     if (!d.name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
     const dupName = checkTeamNameUnique(d.name, null);
     if (dupName) { toast(dupName, 'error'); return; }
-    const payload = { name: d.name, slug: d.slug, manufacturer_id: d.manufacturer_id || null, home_country: d.home_country, founded_on: d.founded_on, bio: d.bio };
-    const { data: created, error } = await sb.from('teams').insert(payload).select('id').single();
-    if (error) { toast(error.message, 'error'); return; }
+
+    // Load the application — we'll spin up the applicant as the team leader.
+    const { data: app } = await sb.from('applications').select('*').eq('id', appId).single();
+
+    // 1. Create the team
+    const teamPayload = { name: d.name, slug: d.slug, manufacturer_id: d.manufacturer_id || null, home_country: d.home_country, founded_on: d.founded_on, bio: d.bio };
+    const { data: createdTeam, error: teamErr } = await sb.from('teams').insert(teamPayload).select('id').single();
+    if (teamErr) { toast(teamErr.message, 'error'); return; }
+
+    // 2. Try to create the team leader driver from the application's PSN/name
+    let leaderDriverId = null;
+    if (app?.name) {
+        const slugify = s => (s || '').toLowerCase().trim()
+            .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        const driverPayload = {
+            display_name: app.name,
+            slug: slugify(app.name),
+            psn_id: app.psn_id || null,
+            nationality: app.nationality || null,
+            gt7_dr_rating: app.gt7_dr_rating || null,
+            gt7_sr_rating: app.gt7_sr_rating || null,
+            current_team_id: createdTeam.id,
+            joined_at: new Date().toISOString().slice(0, 10),
+        };
+        const { data: createdDriver, error: drvErr } = await sb.from('drivers').insert(driverPayload).select('id').single();
+        if (!drvErr && createdDriver) {
+            leaderDriverId = createdDriver.id;
+            await sb.from('teams').update({ leader_driver_id: leaderDriverId }).eq('id', createdTeam.id);
+            await sb.from('applications').update({ linked_driver_id: leaderDriverId }).eq('id', appId);
+        } else if (drvErr) {
+            console.warn('Driver creation skipped:', drvErr.message);
+        }
+    }
+
+    // 3. Link the team to the application
     const { error: linkErr } = await sb.from('applications')
-        .update({ linked_team_id: created.id })
+        .update({ linked_team_id: createdTeam.id })
         .eq('id', appId);
     if (linkErr) { toast(`Team created, but link failed: ${linkErr.message}`, 'error'); }
-    else { toast('Team added and linked to application.', 'success'); }
+    else { toast(leaderDriverId ? 'Team created — applicant added as team leader.' : 'Team created.', 'success'); }
     closeModal();
     await loadCache();
     await renderApplications();
@@ -3284,6 +3316,14 @@ async function viewMessage(id) {
            </div>`
         : '';
 
+    const replyHistory = m.admin_reply
+        ? `<div style="margin-bottom:1rem;padding:0.85rem 1rem;background:rgba(255,209,102,0.06);border:1px solid rgba(255,209,102,0.2);border-radius:6px">
+              <div style="font-size:0.7rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:0.35rem">Previous Reply${m.replied_at ? ' · ' + new Date(m.replied_at).toLocaleString('en-GB') : ''}</div>
+              <div style="font-size:0.86rem;white-space:pre-wrap;line-height:1.5">${esc(m.admin_reply)}</div>
+              <div style="font-size:0.72rem;color:var(--muted);margin-top:0.45rem">${m.driver_read_reply_at ? '✓ Read by driver' : 'Unread by driver'}</div>
+           </div>`
+        : '';
+
     openModal(`Message from ${esc(m.drivers?.display_name) || 'Driver'}`, `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1.5rem;font-size:0.84rem;margin-bottom:1.25rem">
             <div><span style="color:var(--muted)">Driver</span><br><strong>${esc(m.drivers?.display_name) || '—'}</strong> ${profileLink}</div>
@@ -3293,14 +3333,19 @@ async function viewMessage(id) {
         </div>
         <div style="font-size:0.88rem;margin-bottom:1rem;padding:0.85rem 1rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;white-space:pre-wrap;line-height:1.55">${esc(m.message)}</div>
         ${incidentLink}
+        ${replyHistory}
         <form id="entity-form">
+            <div class="form-group">
+                <label>Reply to driver <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(visible in their portal inbox)</span></label>
+                <textarea name="admin_reply" rows="5" placeholder="${m.admin_reply ? 'Update your reply…' : 'Write a reply…'}">${esc(m.admin_reply)}</textarea>
+            </div>
             <div class="form-row">
                 <div class="form-group">
                     <label>Status</label>
                     <select name="status">${statusOpts}</select>
                 </div>
                 <div class="form-group">
-                    <label>Admin Note</label>
+                    <label>Admin Note <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(internal)</span></label>
                     <input type="text" name="admin_note" value="${esc(m.admin_note)}" placeholder="Internal note (optional)…">
                 </div>
             </div>
@@ -3312,12 +3357,27 @@ async function viewMessage(id) {
 
 async function saveMessageStatus(id) {
     const d = getFormData('entity-form');
-    const { error } = await sb.from('driver_contact_messages').update({
+    const reply = (d.admin_reply || '').trim();
+
+    // Look up current reply to see if this is a NEW reply we should stamp
+    const { data: existing } = await sb.from('driver_contact_messages')
+        .select('admin_reply').eq('id', id).single();
+
+    const payload = {
         status:     d.status,
         admin_note: d.admin_note || null,
-    }).eq('id', id);
+        admin_reply: reply || null,
+    };
+    if (reply && (!existing?.admin_reply || existing.admin_reply !== reply)) {
+        const { data: u } = await sb.auth.getUser();
+        payload.replied_at = new Date().toISOString();
+        payload.replied_by = u.user?.id || null;
+        payload.driver_read_reply_at = null;  // reset read state for the new reply
+    }
+
+    const { error } = await sb.from('driver_contact_messages').update(payload).eq('id', id);
     if (error) { toast(error.message, 'error'); return; }
-    toast('Message updated.', 'success');
+    toast(reply ? 'Reply sent to driver.' : 'Message updated.', 'success');
     closeModal();
     await renderMessages();
     await refreshMsgsBadge();
