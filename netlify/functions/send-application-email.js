@@ -22,7 +22,7 @@ const SUPABASE_URL      = process.env.GTEC_SUPABASE_URL      || process.env.SUPA
 const SUPABASE_ANON_KEY = process.env.GTEC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 const RESEND_API_KEY    = process.env.RESEND_API_KEY;
 const FROM_EMAIL        = process.env.GTEC_FROM_EMAIL
-    || 'Gran Turismo GTEC <onboarding@resend.dev>';
+    || 'Gran Turismo GTEC <GTEC@sparkstheory.co.uk>';
 
 function esc(s) {
     if (s == null) return '';
