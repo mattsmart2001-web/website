@@ -36,7 +36,7 @@ function shell(title, bodyHtml) {
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#050608"><tr><td align="center" style="padding:40px 16px">
     <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0a0e15;border:1px solid rgba(255,255,255,0.08);border-radius:14px">
         <tr><td style="padding:32px 32px 8px">
-            <div style="font-family:Impact,'Anton',sans-serif;font-size:14px;letter-spacing:0.32em;text-transform:uppercase;color:#f1f5f9">Gran Turismo <span style="color:#ffd166">GTEC</span></div>
+            <div style="font-family:Impact,'Anton',sans-serif;font-size:14px;letter-spacing:0.32em;text-transform:uppercase;color:#f1f5f9">Gran Turismo <span style="color:#ffd166"></span></div>
             <div style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:#94a3b8;margin-top:6px">${esc(title)}</div>
         </td></tr>
         <tr><td style="padding:24px 32px 32px;font-size:15px;line-height:1.65;color:#cbd5e1">
@@ -56,12 +56,12 @@ function templateFor(emailType, app) {
     switch (emailType) {
         case 'accepted':
             return {
-                subject: 'You\'re in — Gran Turismo GTEC',
+                subject: 'You\'re in — Gran Turismo ',
                 html: shell('Application Accepted', `
                     <h2 style="font-family:Impact,'Anton',sans-serif;font-size:26px;letter-spacing:0.04em;text-transform:uppercase;color:#ffd166;margin:0 0 18px">Welcome to the grid, ${name}.</h2>
                     <p>Your application to Gran Turismo GTEC has been <strong style="color:#4ade80">accepted</strong>. Congrats.</p>
                     <p>Next up, your team admin will be in touch via PSN and Discord with team assignment and round details. In the meantime, jump into the Discord to meet the rest of the grid.</p>
-                    <p style="margin:24px 0"><a href="${DISCORD_URL}" style="display:inline-block;background:#ffd166;color:#1a1300;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;font-size:12px">Join the GTEC Discord</a></p>
+                    <p style="margin:24px 0"><a href="${DISCORD_URL}" style="display:inline-block;background:#ffd166;color:#1a1300;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;font-size:12px">Join the SparksTheory Discord</a></p>
                     <p style="font-size:13px;color:#94a3b8">See you on track.</p>`),
             };
         case 'waitlisted':
