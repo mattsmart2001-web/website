@@ -269,7 +269,7 @@
 <body>
 
 <nav class="gtec-nav">
-    <a class="brand" href="/endurance/">Gran Turismo<span class="accent"> GTEC</span></a>
+    <a class="brand" href="/endurance/">Gran Turismo<img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
     <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
         <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
@@ -342,7 +342,7 @@ async function load() {
     const list = document.getElementById('event-list');
 
     const { data: season } = await sb.from('seasons')
-        .select('id, name, year')
+        .select('id, name, year, starts_on, ends_on, description')
         .eq('is_active', true)
         .maybeSingle();
 
@@ -353,7 +353,30 @@ async function load() {
     }
 
     document.getElementById('season-title').textContent = season.name;
-    document.getElementById('season-sub').textContent = `${season.year} Championship · Race Calendar`;
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const startDt = season.starts_on ? new Date(season.starts_on) : null;
+    const endDt   = season.ends_on   ? new Date(season.ends_on)   : null;
+    const upcoming = startDt && startDt > today;
+
+    const range = startDt && endDt
+        ? `${startDt.toLocaleDateString('en-GB', { day:'numeric', month:'short' })} – ${endDt.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}`
+        : `${season.year} Season`;
+
+    const subEl = document.getElementById('season-sub');
+    if (upcoming) {
+        const days = Math.ceil((startDt - today) / 86400000);
+        subEl.innerHTML = `<span style="color:var(--gold);font-weight:600">Starts ${startDt.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</span> · ${range} · ${days} day${days===1?'':'s'} to go`;
+    } else {
+        subEl.textContent = `${range} · Race Calendar`;
+    }
+
+    if (season.description) {
+        const descEl = document.createElement('p');
+        descEl.style.cssText = 'color:var(--muted);font-size:0.9rem;line-height:1.6;margin-top:0.85rem;max-width:680px';
+        descEl.textContent = season.description;
+        subEl.insertAdjacentElement('afterend', descEl);
+    }
 
     const { data: events, error } = await sb.from('events')
         .select('*')
