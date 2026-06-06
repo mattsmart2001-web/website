@@ -5,6 +5,10 @@
 --   * reset_event_stats(event_id)  — clears a single event
 --   * reset_all_stats()             — clears every event
 -- Both keep events, drivers, teams, manufacturers and seasons.
+--
+-- Supabase ships with the `safeupdate` extension enabled, which
+-- requires every DELETE/UPDATE to carry a WHERE clause. The no-op
+-- `WHERE true` keeps the global wipe legal.
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION reset_event_stats(p_event_id uuid)
@@ -21,8 +25,6 @@ BEGIN
         RAISE EXCEPTION 'forbidden';
     END IF;
 
-    -- Children of results / entries cascade via FK; we still clear
-    -- the per-event lookups explicitly for clarity + safety.
     DELETE FROM public.steward_decisions  WHERE event_id = p_event_id;
     DELETE FROM public.penalties          WHERE event_id = p_event_id;
     DELETE FROM public.driver_ratings     WHERE event_id = p_event_id;
@@ -49,13 +51,13 @@ BEGIN
         RAISE EXCEPTION 'forbidden';
     END IF;
 
-    DELETE FROM public.steward_decisions;
-    DELETE FROM public.penalties;
-    DELETE FROM public.driver_ratings;
-    DELETE FROM public.qualifying_results;
-    DELETE FROM public.results;
-    DELETE FROM public.entries;
-    DELETE FROM public.hall_of_fame_records;
+    DELETE FROM public.steward_decisions  WHERE true;
+    DELETE FROM public.penalties          WHERE true;
+    DELETE FROM public.driver_ratings     WHERE true;
+    DELETE FROM public.qualifying_results WHERE true;
+    DELETE FROM public.results            WHERE true;
+    DELETE FROM public.entries            WHERE true;
+    DELETE FROM public.hall_of_fame_records WHERE true;
 
     RETURN jsonb_build_object('ok', true);
 END;
