@@ -110,6 +110,18 @@
         .btn-small.primary { background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: #1a1300; border: none; }
         .btn-small.primary:hover { filter: brightness(1.08); }
         .btn-small.danger:hover { color: #fca5a5; border-color: rgba(239,68,68,0.4); }
+
+        /* Team summary on portal */
+        .team-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.85rem 1.5rem; }
+        .team-info-item .ti-label { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.25rem; }
+        .team-info-item .ti-value { font-size: 0.92rem; font-weight: 600; }
+        .team-info-item .ti-value a { color: inherit; text-decoration: none; }
+        .team-info-item .ti-value a:hover { color: var(--gold); }
+        .team-roster { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.9rem; }
+        .roster-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.5rem 0.75rem; background: var(--bg-2); border-radius: 6px; font-size: 0.85rem; }
+        .roster-row a { color: var(--text); text-decoration: none; flex: 1; }
+        .roster-row a:hover { color: var(--gold); }
+        .roster-row .pill { flex-shrink: 0; }
         .result-pos { font-family: 'Anton', sans-serif; font-size: 1.2rem; width: 28px; text-align: center; flex-shrink: 0; }
         .pos-1-c { color: var(--gold); } .pos-2-c { color: var(--silver); } .pos-3-c { color: var(--bronze); }
         .result-info { flex: 1; min-width: 0; }
@@ -287,6 +299,35 @@
     <div class="card" id="card-results" style="display:none">
         <div class="card-title">Recent Results</div>
         <div class="results-list" id="results-list"></div>
+    </div>
+
+    <!-- Team (shown if driver is on a team) -->
+    <div class="card" id="card-team" style="display:none">
+        <div class="card-title">
+            <span id="team-card-title">Team</span>
+            <span id="team-leader-pill" class="pill pill-gold" style="display:none;margin-left:0.5rem">★ Team Leader</span>
+        </div>
+        <div id="team-summary"></div>
+        <div id="team-edit" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)">
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.85rem">Team Settings</div>
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label class="field-label">Team Bio</label>
+                    <textarea id="team-bio" placeholder="Tell the championship about your team…"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="field-label">Home Country</label>
+                    <select id="team-home-country"></select>
+                </div>
+                <div class="form-group">
+                    <label class="field-label">Founded On</label>
+                    <input type="date" id="team-founded-on">
+                </div>
+            </div>
+            <div style="margin-top:1rem">
+                <button class="btn-save" id="btn-save-team" onclick="saveTeamSettings()">Save Team</button>
+            </div>
+        </div>
     </div>
 
     <!-- Inbox -->
@@ -714,6 +755,90 @@ async function init() {
     loadRecentResults(driver.id);
     loadInbox(driver.id);
     loadTeamingSections(driver);
+    loadTeamCard(driver);
+}
+
+let _editableTeam = null;
+
+async function loadTeamCard(driver) {
+    if (!driver.current_team_id) return;
+    const { data: team } = await sb.from('teams')
+        .select('id, name, slug, bio, home_country, founded_on, leader_driver_id, manufacturers(name, brand_color, logo_url)')
+        .eq('id', driver.current_team_id)
+        .maybeSingle();
+    if (!team) return;
+
+    const isLeader = team.leader_driver_id === driver.id;
+    _editableTeam = isLeader ? team : null;
+
+    const { data: roster } = await sb.from('drivers')
+        .select('id, display_name, slug, psn_id, career_number')
+        .eq('current_team_id', team.id)
+        .order('display_name');
+
+    document.getElementById('team-card-title').textContent = team.name;
+    if (isLeader) document.getElementById('team-leader-pill').style.display = '';
+
+    const mfr = team.manufacturers || null;
+    const country = team.home_country ? `${flag(team.home_country)} ${team.home_country}` : '—';
+    const founded = team.founded_on ? team.founded_on.slice(0, 4) : '—';
+
+    const rosterHTML = (roster || []).map(d => `
+        <div class="roster-row">
+            <a href="/endurance/drivers/?slug=${esc(d.slug)}">${esc(d.display_name)}</a>
+            ${d.career_number ? `<span class="pill pill-muted">#${d.career_number}</span>` : ''}
+            ${d.id === team.leader_driver_id ? '<span class="pill pill-gold">Leader</span>' : ''}
+        </div>`).join('');
+
+    document.getElementById('team-summary').innerHTML = `
+        <div class="team-summary-grid" style="margin-bottom:0.85rem">
+            <div class="team-info-item">
+                <div class="ti-label">Team</div>
+                <div class="ti-value"><a href="/endurance/teams/?slug=${esc(team.slug)}">${esc(team.name)}</a></div>
+            </div>
+            <div class="team-info-item">
+                <div class="ti-label">Manufacturer</div>
+                <div class="ti-value">${mfr?.name ? esc(mfr.name) : '—'}</div>
+            </div>
+            <div class="team-info-item">
+                <div class="ti-label">Home</div>
+                <div class="ti-value">${country}</div>
+            </div>
+            <div class="team-info-item">
+                <div class="ti-label">Founded</div>
+                <div class="ti-value">${founded}</div>
+            </div>
+        </div>
+        ${team.bio ? `<div style="color:var(--muted);font-size:0.88rem;line-height:1.55;margin-bottom:0.25rem">${esc(team.bio)}</div>` : ''}
+        <div style="font-family:'Orbitron',sans-serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin:1rem 0 0.4rem">Roster</div>
+        <div class="team-roster">${rosterHTML || '<div style="color:var(--muted);font-size:0.85rem">No drivers yet.</div>'}</div>`;
+
+    if (isLeader) {
+        document.getElementById('team-edit').style.display = '';
+        document.getElementById('team-bio').value = team.bio || '';
+        document.getElementById('team-home-country').innerHTML = window.gtecCountryOptions(team.home_country);
+        document.getElementById('team-founded-on').value = team.founded_on ? team.founded_on.slice(0, 10) : '';
+    }
+
+    document.getElementById('card-team').style.display = '';
+}
+
+async function saveTeamSettings() {
+    if (!_editableTeam) { toast('Only the team leader can edit team settings.', 'error'); return; }
+    const btn = document.getElementById('btn-save-team');
+    const bio    = document.getElementById('team-bio').value.trim();
+    const home   = document.getElementById('team-home-country').value || null;
+    const founded = document.getElementById('team-founded-on').value || null;
+    btn.disabled = true; btn.textContent = 'Saving…';
+    const { error } = await sb.from('teams').update({
+        bio: bio || null,
+        home_country: home,
+        founded_on: founded,
+    }).eq('id', _editableTeam.id);
+    btn.disabled = false; btn.textContent = 'Save Team';
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Team updated.', 'success');
+    await loadTeamCard(_currentDriver);
 }
 
 let _currentDriver = null;
