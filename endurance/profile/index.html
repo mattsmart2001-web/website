@@ -655,7 +655,7 @@ async function init() {
     }
 
     const { data: driver, error } = await sb.from('drivers')
-        .select('*, teams(name,slug), manufacturers(name)')
+        .select('*, teams!current_team_id(name,slug), manufacturers(name)')
         .eq('user_id', session.user.id).single();
 
     if (error || !driver) { document.getElementById('auth-loading').textContent = 'Could not load driver profile.'; return; }

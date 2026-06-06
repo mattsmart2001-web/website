@@ -442,7 +442,7 @@ function mfrBadge(logoUrl, brandColor, name, opts = {}) {
 async function showListing() {
     document.title = 'Drivers — Gran Turismo GTEC';
     const { data, error } = await sb.from('drivers')
-        .select('id, display_name, slug, nationality, career_number, photo_url, teams(name,slug), manufacturers(name,brand_color,logo_url)')
+        .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
         .order('display_name');
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
@@ -476,7 +476,7 @@ async function showListing() {
 // ============================================================
 async function showProfile() {
     const { data: driver, error } = await sb.from('drivers')
-        .select('*, teams(name,slug), manufacturers(name,brand_color,logo_url)')
+        .select('*, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
         .eq('slug', slug)
         .maybeSingle();
 

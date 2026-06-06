@@ -1533,7 +1533,7 @@ async function deleteTeam(id, name) {
 // ============================================================
 async function renderDrivers() {
     const { data, error } = await sb.from('drivers')
-        .select('*, teams(name), manufacturers(name)')
+        .select('*, teams!current_team_id(name), manufacturers(name)')
         .order('display_name');
     if (error) { toast(error.message, 'error'); return; }
 
