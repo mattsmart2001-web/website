@@ -2055,7 +2055,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
     const [{ data: ts }, { data: existing }, { data: freeAgents }, { data: entryDrivers }] = await Promise.all([
         sb.from('team_seasons').select('team_id, manufacturer_id, manufacturers(name)').eq('season_id', seasonId),
         sb.from('entries').select('id, team_id').eq('event_id', eventId),
-        sb.from('drivers').select('id, display_name').is('current_team_id', null),
+        sb.from('drivers').select('id, display_name, current_manufacturer_id, manufacturers(name)').is('current_team_id', null),
         sb.from('entry_drivers').select('driver_id, entry_id, entries!inner(event_id)').eq('entries.event_id', eventId),
     ]);
 
@@ -2095,8 +2095,8 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
             event_id: eventId,
             team_id:  null,
             status:   'confirmed',
-            car_model: null,
-            manufacturer_id: null,
+            car_model:       d.manufacturers?.name || 'TBC',
+            manufacturer_id: d.current_manufacturer_id || null,
         }));
         const { data: created, error: soloErr } = await sb.from('entries').insert(soloEntries).select('id');
         if (soloErr) { toast(soloErr.message, 'error'); return; }
