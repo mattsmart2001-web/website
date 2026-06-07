@@ -2346,56 +2346,65 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
         (ratings || []).forEach(r => ratingMap.set(r.driver_id, r.rating));
     }
 
-    // Attach team skill (avg of drivers' Elo, falling back to DR-based seed)
+    // Flatten to one row per driver. Two team-mates sharing an entry become
+    // two rows in the same lobby (since lobby_number lives on the entry).
+    const driverRows = [];
     (entries || []).forEach(en => {
-        const drs = (en.entry_drivers || []).map(ed => {
-            const e = ratingMap.get(ed.driver_id);
-            return (e != null) ? e : drToElo(ed.drivers?.gt7_dr_rating);
-        });
-        en._skill = drs.length ? Math.round(drs.reduce((a,b)=>a+b,0) / drs.length) : 1500;
-        en._driverNames = (en.entry_drivers || []).map(ed => ed.drivers?.display_name).filter(Boolean).join(' / ');
+        const drs = (en.entry_drivers || []).map(ed => ed.drivers).filter(Boolean);
+        if (drs.length === 0) {
+            driverRows.push({ entry: en, driver: null, skill: 1500 });
+        } else {
+            drs.forEach(d => {
+                const skill = ratingMap.get(d.id) ?? drToElo(d.gt7_dr_rating);
+                driverRows.push({ entry: en, driver: d, skill });
+            });
+        }
     });
 
-    // Group by lobby
+    // Group by entry's lobby_number
     const groups = {};
-    (entries || []).forEach(en => {
-        const key = en.lobby_number ?? 0;  // 0 = unassigned
-        (groups[key] = groups[key] || []).push(en);
+    driverRows.forEach(row => {
+        const key = row.entry.lobby_number ?? 0;
+        (groups[key] = groups[key] || []).push(row);
     });
     const lobbyNumbers = Object.keys(groups).map(Number).sort((a, b) => {
         if (a === 0) return 1; if (b === 0) return -1; return a - b;
     });
 
-    const totalEntries = (entries || []).length;
+    const totalDrivers = driverRows.length;
 
     const renderLobbyCard = (lobbyNum, list) => {
         const title = lobbyNum === 0 ? 'Unassigned' : `Lobby ${lobbyNum}`;
-        const sorted = list.sort((a, b) => b._skill - a._skill);
-        const rows = sorted.map(en => `<tr>
-            <td>${en.car_number != null ? '<strong>#' + en.car_number + '</strong>' : '<span class="td-muted">—</span>'}</td>
-            <td>${esc(en.teams?.name) || '—'}</td>
-            <td class="td-muted" style="font-size:0.78rem">${esc(en._driverNames) || '—'}</td>
-            <td class="td-muted" style="font-family:'Orbitron',sans-serif;font-size:0.78rem">${en._skill}</td>
-            <td><div class="row-actions" style="gap:0.25rem;justify-content:flex-end">
-                <button class="btn-icon" title="Move to a lower lobby (faster split)"
-                    onclick="moveEntryLobby('${en.id}',-1,'${eventId}','${esc(eventName)}','${seasonId}')">↑</button>
-                <button class="btn-icon" title="Move to a higher lobby (slower split)"
-                    onclick="moveEntryLobby('${en.id}',1,'${eventId}','${esc(eventName)}','${seasonId}')">↓</button>
-                ${lobbyNum !== 0 ? `<button class="btn-icon" title="Unassign"
-                    onclick="setEntryLobby('${en.id}',null,'${eventId}','${esc(eventName)}','${seasonId}')">×</button>` : ''}
-            </div></td>
-        </tr>`).join('');
+        const sorted = list.slice().sort((a, b) => b.skill - a.skill);
+        const rows = sorted.map(({ entry: en, driver: d, skill }) => {
+            const num = d?.career_number ?? en.car_number;
+            const driverName = d ? esc(d.display_name) : '<em class="td-muted">No driver</em>';
+            return `<tr>
+                <td>${num != null ? '<strong>#' + num + '</strong>' : '<span class="td-muted">—</span>'}</td>
+                <td><strong>${driverName}</strong></td>
+                <td class="td-muted" style="font-size:0.78rem">${esc(en.teams?.name) || '<em>Solo</em>'}</td>
+                <td class="td-muted" style="font-family:'Orbitron',sans-serif;font-size:0.78rem">${skill}</td>
+                <td><div class="row-actions" style="gap:0.25rem;justify-content:flex-end">
+                    <button class="btn-icon" title="Move entry to a lower lobby (faster split)"
+                        onclick="moveEntryLobby('${en.id}',-1,'${eventId}','${esc(eventName)}','${seasonId}')">↑</button>
+                    <button class="btn-icon" title="Move entry to a higher lobby (slower split)"
+                        onclick="moveEntryLobby('${en.id}',1,'${eventId}','${esc(eventName)}','${seasonId}')">↓</button>
+                    ${lobbyNum !== 0 ? `<button class="btn-icon" title="Unassign entry"
+                        onclick="setEntryLobby('${en.id}',null,'${eventId}','${esc(eventName)}','${seasonId}')">×</button>` : ''}
+                </div></td>
+            </tr>`;
+        }).join('');
         return `<div class="section-card" style="margin-bottom:1rem">
             <div class="section-card-header">
-                <span class="section-card-title">${title} <span class="td-muted" style="font-weight:normal;font-size:0.78rem">· ${list.length} ${list.length === 1 ? 'entry' : 'entries'}</span></span>
+                <span class="section-card-title">${title} <span class="td-muted" style="font-weight:normal;font-size:0.78rem">· ${list.length} driver${list.length === 1 ? '' : 's'}</span></span>
             </div>
             <table><thead><tr>
-                <th>Car</th><th>Team</th><th>Drivers</th><th>Team Elo</th><th></th>
+                <th>Car</th><th>Driver</th><th>Team</th><th>Elo</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
     };
 
-    const lobbyCardsHTML = totalEntries === 0
+    const lobbyCardsHTML = totalDrivers === 0
         ? `<div class="empty-state">No entries yet — add them in the Entries panel first.</div>`
         : lobbyNumbers.map(n => renderLobbyCard(n, groups[n])).join('');
 
@@ -2413,7 +2422,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn btn-ghost" onclick="clearAllLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Clear All</button>
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
                 <button class="btn-icon danger" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
-                <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Team Elo = avg of drivers' current Elo (DR-seeded if unrated).</div>
+                <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Lobby size counts drivers. Sort uses each driver's Elo (DR-seeded if unrated).</div>
             </div>
         </div>
         ${lobbyCardsHTML}`;
@@ -2448,14 +2457,25 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
 
     entries.sort((a, b) => b._skill - a._skill);
 
-    // Bulk-update each entry's lobby_number sequentially (small N — fine).
-    // Also backfill car_number from the entry's first driver's career_number
-    // when the entry doesn't have one yet (covers bulk-registered entries).
+    // Pack into lobbies by driver count (lobbySize = drivers per lobby).
+    // Team-mates always travel together because lobby_number is per entry;
+    // if an entry would push the running lobby over capacity, it starts
+    // the next lobby instead of splitting the team.
+    let currentLobby = 1;
+    let currentCount = 0;
+    let totalDrivers = 0;
     let failures = 0;
     for (let i = 0; i < entries.length; i++) {
         const en = entries[i];
-        const lobby = Math.floor(i / lobbySize) + 1;
-        const payload = { lobby_number: lobby };
+        const driversInEntry = Math.max(1, (en.entry_drivers || []).length);
+        if (currentCount > 0 && currentCount + driversInEntry > lobbySize) {
+            currentLobby++;
+            currentCount = 0;
+        }
+        currentCount += driversInEntry;
+        totalDrivers += driversInEntry;
+
+        const payload = { lobby_number: currentLobby };
         if (en.car_number == null) {
             const firstDriver = (en.entry_drivers || []).find(ed => ed.drivers?.career_number != null);
             if (firstDriver) payload.car_number = firstDriver.drivers.career_number;
@@ -2463,10 +2483,10 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
         const { error } = await sb.from('entries').update(payload).eq('id', en.id);
         if (error) failures++;
     }
-    const totalLobbies = Math.ceil(entries.length / lobbySize);
+    const totalLobbies = currentLobby;
     toast(failures
         ? `Allocated with ${failures} failure(s).`
-        : `${entries.length} entries split across ${totalLobbies} lobb${totalLobbies === 1 ? 'y' : 'ies'}.`, failures ? 'error' : 'success');
+        : `${totalDrivers} driver${totalDrivers === 1 ? '' : 's'} split across ${totalLobbies} lobb${totalLobbies === 1 ? 'y' : 'ies'}.`, failures ? 'error' : 'success');
     await viewEventLobbies(eventId, eventName, seasonId);
 }
 
