@@ -24,7 +24,7 @@ BEGIN
         rd.driver_id,
         ROW_NUMBER() OVER (
             ORDER BY
-                CASE COALESCE(rd.status, res.status)
+                CASE COALESCE(rd.status, res.status::text)
                     WHEN 'classified' THEN 0
                     WHEN 'dnf'        THEN 1
                     ELSE 2
