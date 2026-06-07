@@ -107,6 +107,7 @@ Always apply in this order:
 25. `25_broadcast_messages.sql` — admin "Message All Drivers" broadcast RPC + is_broadcast flag
 26. `26_lobby_notifications.sql` — per-event lobby-assignment broadcast + delete RPCs
 27. `27_per_driver_qualifying.sql` — per-driver qualifying + per-driver finish columns on result_drivers
+28. `28_per_driver_scoring.sql` — per-driver points + pole auto-derived from quali + solo entries
 
 ---
 

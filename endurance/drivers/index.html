@@ -493,9 +493,8 @@ async function showProfile() {
         sb.from('driver_ratings').select('rating_before, rating_after, delta, event_id, events(round, name)').eq('driver_id', driver.id).order('created_at'),
         sb.from('result_drivers')
         .select(`
-            points_share,
+            finish_position, status, points_awarded, pole_point, fastest_lap_point, laps_driven,
             results(
-                finish_position, status, points_awarded, pole_point, fastest_lap_point, laps_completed,
                 entries(car_number, teams(name)),
                 events(round, name, starts_at, seasons(year, name))
             )
@@ -599,18 +598,18 @@ async function showProfile() {
                     <tbody>
                         ${history.map(r => {
                             const res = r.results;
-                            const ev  = res.events;
-                            const pts = Math.round(res.points_awarded * r.points_share);
-                            const bonuses = [res.pole_point ? 'P' : '', res.fastest_lap_point ? 'FL' : ''].filter(Boolean).join('+');
+                            const ev  = res?.events;
+                            const pts = r.points_awarded || 0;
+                            const bonuses = [r.pole_point ? 'P' : '', r.fastest_lap_point ? 'FL' : ''].filter(Boolean).join('+');
                             return `<tr>
                                 <td>
-                                    <strong>R${ev.round} — ${esc(ev.name)}</strong>
+                                    <strong>R${ev?.round ?? '?'} — ${esc(ev?.name)}</strong>
                                     ${bonuses ? `<span style="font-size:0.7rem;color:var(--gold);margin-left:0.4rem">${bonuses}</span>` : ''}
                                 </td>
-                                <td class="muted">${esc(ev.seasons?.year)}</td>
-                                <td class="muted hide-mob">#${res.entries?.car_number} ${esc(res.entries?.teams?.name || '')}</td>
-                                <td class="right">${posBadge(res.finish_position, res.status)}</td>
-                                <td class="right pts">${pts || 0}</td>
+                                <td class="muted">${esc(ev?.seasons?.year)}</td>
+                                <td class="muted hide-mob">${res?.entries?.car_number ? '#' + res.entries.car_number : ''} ${esc(res?.entries?.teams?.name || 'Solo')}</td>
+                                <td class="right">${posBadge(r.finish_position, r.status)}</td>
+                                <td class="right pts">${pts}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>

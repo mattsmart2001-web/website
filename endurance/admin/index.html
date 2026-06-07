@@ -2000,8 +2000,8 @@ async function viewEventEntries(eventId, eventName, seasonId) {
                 <td class="td-muted" style="font-size:0.82rem">${esc(en.car_model)}</td>
                 <td><div style="display:flex;flex-wrap:wrap;gap:0.2rem;align-items:center">
                     ${driverTags}
-                    <button class="btn-icon" style="padding:0.15rem 0.5rem;font-size:0.7rem"
-                        onclick="openAddDriverModal('${en.id}','${en.team_id}','${en.car_number != null ? '#' + en.car_number + ' ' : ''}${esc(en.teams?.name)}','${eventId}','${esc(eventName)}','${seasonId}')">+ Driver</button>
+                    ${en.team_id ? `<button class="btn-icon" style="padding:0.15rem 0.5rem;font-size:0.7rem"
+                        onclick="openAddDriverModal('${en.id}','${en.team_id}','${en.car_number != null ? '#' + en.car_number + ' ' : ''}${esc(en.teams?.name)}','${eventId}','${esc(eventName)}','${seasonId}')">+ Driver</button>` : '<span style="font-size:0.7rem;color:var(--muted);font-style:italic">Solo</span>'}
                 </div></td>
                 <td>${entrStatusBadge(en.status)}</td>
                 <td><div class="row-actions">
@@ -2014,17 +2014,30 @@ async function viewEventEntries(eventId, eventName, seasonId) {
     const { data: ts } = await sb.from('team_seasons')
         .select('team_id, manufacturer_id, teams(name), manufacturers(name)')
         .eq('season_id', seasonId);
-    const registeredTeamIds = new Set((data || []).map(en => en.team_id));
+    const registeredTeamIds = new Set((data || []).map(en => en.team_id).filter(Boolean));
     const unregisteredTeams = (ts || []).filter(r => !registeredTeamIds.has(r.team_id));
 
-    const headerBtn = unregisteredTeams.length > 0
+    // Drivers without a team who aren't already in any entry for this event
+    const enteredDriverIds = new Set();
+    (data || []).forEach(en => (en.entry_drivers || []).forEach(ed => enteredDriverIds.add(ed.driver_id ?? ed.drivers?.id)));
+    const { data: freeAgents } = await sb.from('drivers')
+        .select('id, display_name')
+        .is('current_team_id', null);
+    const unregisteredFreeAgents = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id));
+
+    const teamsLabel = unregisteredTeams.length > 0 ? `${unregisteredTeams.length} Team${unregisteredTeams.length === 1 ? '' : 's'}` : '';
+    const soloLabel  = unregisteredFreeAgents.length > 0 ? `${unregisteredFreeAgents.length} Solo Driver${unregisteredFreeAgents.length === 1 ? '' : 's'}` : '';
+    const labelParts = [teamsLabel, soloLabel].filter(Boolean);
+    const labelText  = labelParts.length ? `Register ${labelParts.join(' + ')}` : '';
+
+    const headerBtn = labelText
         ? `<button class="btn-add" onclick="registerAllSeasonTeams('${eventId}','${esc(eventName)}','${seasonId}')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                Register ${unregisteredTeams.length} Team${unregisteredTeams.length === 1 ? '' : 's'}
+                ${labelText}
             </button>`
-        : (!ts || ts.length === 0)
+        : (!ts || ts.length === 0) && (!freeAgents || freeAgents.length === 0)
             ? `<button class="btn-icon" onclick="navigate('seasons')">No season teams · Open Seasons</button>`
-            : `<span style="font-size:0.78rem;color:var(--muted)">All season teams registered.</span>`;
+            : `<span style="font-size:0.78rem;color:var(--muted)">All teams and free-agent drivers registered.</span>`;
 
     panel.innerHTML = `
         <div class="section-card">
@@ -2039,18 +2052,17 @@ async function viewEventEntries(eventId, eventName, seasonId) {
 }
 
 async function registerAllSeasonTeams(eventId, eventName, seasonId) {
-    const { data: ts, error: tsErr } = await sb.from('team_seasons')
-        .select('team_id, manufacturer_id, manufacturers(name)')
-        .eq('season_id', seasonId);
-    if (tsErr) { toast(tsErr.message, 'error'); return; }
-    if (!ts?.length) { toast('No teams registered to this season yet.', 'error'); return; }
+    const [{ data: ts }, { data: existing }, { data: freeAgents }, { data: entryDrivers }] = await Promise.all([
+        sb.from('team_seasons').select('team_id, manufacturer_id, manufacturers(name)').eq('season_id', seasonId),
+        sb.from('entries').select('id, team_id').eq('event_id', eventId),
+        sb.from('drivers').select('id, display_name').is('current_team_id', null),
+        sb.from('entry_drivers').select('driver_id, entry_id, entries!inner(event_id)').eq('entries.event_id', eventId),
+    ]);
 
-    const { data: existing } = await sb.from('entries')
-        .select('team_id')
-        .eq('event_id', eventId);
-    const existingIds = new Set((existing || []).map(e => e.team_id));
+    const existingTeamIds  = new Set((existing || []).map(e => e.team_id).filter(Boolean));
+    const enteredDriverIds = new Set((entryDrivers || []).map(ed => ed.driver_id));
 
-    const toInsert = ts.filter(r => !existingIds.has(r.team_id)).map(r => ({
+    const teamsToInsert = (ts || []).filter(r => !existingTeamIds.has(r.team_id)).map(r => ({
         event_id:        eventId,
         team_id:         r.team_id,
         manufacturer_id: r.manufacturer_id,
@@ -2058,12 +2070,48 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
         status:          'confirmed',
     }));
 
-    if (!toInsert.length) { toast('All season teams already registered.', 'success'); return; }
-    if (!confirm(`Register ${toInsert.length} team${toInsert.length === 1 ? '' : 's'} for "${eventName}"?\n\nEach team's locked manufacturer is used as the car model placeholder — you can edit individual entries afterwards.`)) return;
+    const soloToInsert = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id));
 
-    const { error } = await sb.from('entries').insert(toInsert);
-    if (error) { toast(error.message, 'error'); return; }
-    toast(`Registered ${toInsert.length} team${toInsert.length === 1 ? '' : 's'}.`, 'success');
+    if (!teamsToInsert.length && !soloToInsert.length) {
+        toast('All teams and free-agent drivers already registered.', 'success');
+        return;
+    }
+
+    const msg = [
+        teamsToInsert.length ? `${teamsToInsert.length} team${teamsToInsert.length === 1 ? '' : 's'}` : '',
+        soloToInsert.length  ? `${soloToInsert.length} solo driver${soloToInsert.length === 1 ? '' : 's'}` : '',
+    ].filter(Boolean).join(' + ');
+    if (!confirm(`Register ${msg} for "${eventName}"?\n\nTeam entries inherit the team's locked manufacturer.\nSolo driver entries are team-less — when the driver later joins a team, the entry auto-updates.`)) return;
+
+    // 1. Insert team entries
+    if (teamsToInsert.length) {
+        const { error } = await sb.from('entries').insert(teamsToInsert);
+        if (error) { toast(error.message, 'error'); return; }
+    }
+
+    // 2. Insert solo entries (one per driver), then link them in entry_drivers
+    if (soloToInsert.length) {
+        const soloEntries = soloToInsert.map(d => ({
+            event_id: eventId,
+            team_id:  null,
+            status:   'confirmed',
+            car_model: null,
+            manufacturer_id: null,
+        }));
+        const { data: created, error: soloErr } = await sb.from('entries').insert(soloEntries).select('id');
+        if (soloErr) { toast(soloErr.message, 'error'); return; }
+        const links = (created || []).map((row, idx) => ({
+            entry_id:  row.id,
+            driver_id: soloToInsert[idx].id,
+            stint_role: 'starting',
+        }));
+        if (links.length) {
+            const { error: linkErr } = await sb.from('entry_drivers').insert(links);
+            if (linkErr) { toast(`Solo entries inserted, but linking drivers failed: ${linkErr.message}`, 'error'); return; }
+        }
+    }
+
+    toast(`Registered ${msg}.`, 'success');
     await viewEventEntries(eventId, eventName, seasonId);
 }
 
@@ -2574,9 +2622,6 @@ async function saveQualifying(eventId, eventName) {
     const toUpsert = rowsToConsider.filter(r => r.position != null || r.best_lap_ms != null || r.notes);
     const toDelete = rowsToConsider.filter(r => r.position == null && r.best_lap_ms == null && !r.notes);
 
-    // qualifying_results.position is NOT NULL — default unranked rows to 99 so upsert works.
-    toUpsert.forEach(r => { if (r.position == null && r.best_lap_ms != null) r.position = 99; });
-
     // Delete cleared rows
     for (const r of toDelete) {
         await sb.from('qualifying_results')
@@ -2622,7 +2667,7 @@ async function viewEventResults(eventId, eventName) {
     let rdMap = {};
     if (resultIds.length) {
         const { data: rds } = await sb.from('result_drivers')
-            .select('result_id, driver_id, finish_position, classified, status, laps_driven')
+            .select('result_id, driver_id, finish_position, classified, status, laps_driven, points_awarded, pole_point, fastest_lap_point')
             .in('result_id', resultIds);
         (rds || []).forEach(rd => { rdMap[`${rd.result_id}|${rd.driver_id}`] = rd; });
     }
@@ -2660,6 +2705,9 @@ async function viewEventResults(eventId, eventName) {
         const pos     = rd.finish_position ?? '';
         const status  = rd.status || 'classified';
         const laps    = rd.laps_driven ?? '';
+        const points  = rd.points_awarded ?? 0;
+        const isPole  = !!rd.pole_point;
+        const isFL    = !!rd.fastest_lap_point;
         const statusSel = statusOpts.map(s =>
             `<option value="${s}" ${status === s ? 'selected' : ''}>${s}</option>`).join('');
         const carLabel = en.car_number != null ? '#' + en.car_number : '—';
@@ -2668,13 +2716,15 @@ async function viewEventResults(eventId, eventName) {
             : '<em class="td-muted">No drivers</em>';
         const dAttr = d ? `data-driver="${esc(d.id)}"` : '';
         const dis   = d ? '' : 'disabled';
+        const teamCell = en.teams?.name ? esc(en.teams.name) : '<em>Solo</em>';
         return `<tr>
-            <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${esc(en.teams?.name) || ''}</span></td>
+            <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}</span></td>
             <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="finish_position" value="${pos}" style="width:60px;padding:0.4rem 0.5rem" ${dis}></td>
             <td><input type="number" min="0" data-entry="${en.id}" ${dAttr} data-field="laps_driven" value="${laps}" style="width:65px;padding:0.4rem 0.5rem" ${dis}></td>
             <td><select data-entry="${en.id}" ${dAttr} data-field="status" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
-            <td style="text-align:center"><input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="pole_point" ${rd.classified == null && (r.pole_point && (r.pole_driver_id ? r.pole_driver_id === d?.id : true)) ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px" ${dis}></td>
-            <td style="text-align:center"><input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${r.fastest_lap_point && (r.fastest_lap_driver_id ? r.fastest_lap_driver_id === d?.id : true) ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px" ${dis}></td>
+            <td style="text-align:center;font-size:0.78rem;${isPole ? 'color:var(--gold);font-weight:600' : 'color:var(--muted)'}" title="Auto-set from qualifying P1">${isPole ? '★' : '—'}</td>
+            <td style="text-align:center"><input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${isFL ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px" ${dis}></td>
+            <td style="text-align:right;color:var(--gold);font-weight:600">${points}</td>
         </tr>`;
     }).join('');
 
@@ -2689,10 +2739,10 @@ async function viewEventResults(eventId, eventName) {
                 </div>
             </div>
             <table id="results-table"><thead><tr>
-                <th>Driver</th><th>Pos</th><th>Laps</th><th>Status</th><th>Pole</th><th>FL</th>
+                <th>Driver</th><th>Pos</th><th>Laps</th><th>Status</th><th>Pole</th><th>FL</th><th style="text-align:right">Pts</th>
             </tr></thead><tbody>${rows}</tbody></table>
             <div style="padding:0.85rem 1.25rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border)">
-                One row per driver. The car-level result auto-uses the best (lowest-numbered) finish in each entry. Tick Pole/FL on the driver who earned the bonus.
+                One row per driver. Pole is auto-set from qualifying P1 (no need to tick). Points are recomputed per-driver from their finish position + bonuses.
             </div>
         </div>`;
 }
@@ -2719,72 +2769,73 @@ async function saveResults(eventId, eventName) {
 
     const driverRows = Object.values(perDriver);
 
-    // Pole/FL guards across all driver rows
-    const poles = driverRows.filter(r => r.pole_point);
-    if (poles.length > 1) { toast('Only one driver can have the pole point.', 'error'); return; }
+    // FL guard: only one FL per event (pole is now derived from quali)
     const fls = driverRows.filter(r => r.fastest_lap_point);
     if (fls.length > 1) { toast('Only one driver can have the fastest lap point.', 'error'); return; }
 
-    // Group by entry and roll up to the entry-level result row.
+    // 1. Ensure each entry has a results row. Use a barebones upsert with
+    //    just the keys + sensible defaults so an empty form doesn't violate
+    //    NOT NULL constraints. compute_event_points will recompute the rest.
+    const entryIds = [...new Set(driverRows.map(d => d.entry_id))];
+    const entryStubs = entryIds.map(entry_id => ({ event_id: eventId, entry_id }));
+    let resultIdByEntry = {};
+    if (entryStubs.length) {
+        const { data: upserted, error: upErr } = await sb.from('results')
+            .upsert(entryStubs, { onConflict: 'event_id,entry_id', ignoreDuplicates: false })
+            .select('id, entry_id');
+        if (upErr) { toast(upErr.message, 'error'); return; }
+        (upserted || []).forEach(r => { resultIdByEntry[r.entry_id] = r.id; });
+    }
+    // Pull any result_ids we might have missed (upsert that updated rows
+    // already there can return stale data on some Supabase versions).
+    if (entryIds.length) {
+        const { data: existingResults } = await sb.from('results')
+            .select('id, entry_id')
+            .eq('event_id', eventId)
+            .in('entry_id', entryIds);
+        (existingResults || []).forEach(r => { resultIdByEntry[r.entry_id] = r.id; });
+    }
+
+    // 2. Roll per-driver data up to the entry-level row (so team standings
+    //    still aggregate correctly off results.finish_position etc.)
     const entryGroups = {};
     driverRows.forEach(dr => {
         const g = entryGroups[dr.entry_id] = entryGroups[dr.entry_id] || {
-            entry_id: dr.entry_id,
-            event_id: eventId,
-            positions: [],
-            statuses: [],
-            laps: [],
-            pole: false,
-            fl: false,
-            poleDriver: null,
-            flDriver: null,
+            entry_id: dr.entry_id, positions: [], statuses: [], laps: [], fl: false,
         };
         if (dr.finish_position != null) g.positions.push(dr.finish_position);
         if (dr.status)                  g.statuses.push(dr.status);
         if (dr.laps_driven != null)     g.laps.push(dr.laps_driven);
-        if (dr.pole_point)              { g.pole = true; g.poleDriver = dr.driver_id; }
-        if (dr.fastest_lap_point)       { g.fl   = true; g.flDriver   = dr.driver_id; }
+        if (dr.fastest_lap_point)       g.fl = true;
     });
-
-    const entryRows = Object.values(entryGroups).map(g => {
-        const minPos = g.positions.length ? Math.min(...g.positions) : null;
-        const allDnf = g.statuses.length && g.statuses.every(s => s !== 'classified');
-        const someClassified = g.statuses.some(s => s === 'classified');
-        return {
-            event_id: g.event_id,
-            entry_id: g.entry_id,
-            finish_position: minPos,
-            classified: someClassified || g.statuses.length === 0,
-            status: someClassified ? 'classified' : (g.statuses[0] || 'classified'),
-            laps_completed: g.laps.length ? Math.max(...g.laps) : 0,
-            pole_point: g.pole,
-            fastest_lap_point: g.fl,
-        };
-    });
-
-    // 1. Upsert entry-level results
-    let upsertRes;
-    if (entryRows.length) {
-        upsertRes = await sb.from('results').upsert(entryRows, { onConflict: 'event_id,entry_id' }).select('id, entry_id');
-        if (upsertRes.error) { toast(upsertRes.error.message, 'error'); return; }
+    const entryUpdates = Object.values(entryGroups).map(g => ({
+        event_id: eventId,
+        entry_id: g.entry_id,
+        finish_position:    g.positions.length ? Math.min(...g.positions) : null,
+        classified:         g.statuses.some(s => s === 'classified') || g.statuses.length === 0,
+        status:             g.statuses.find(s => s === 'classified') || (g.statuses[0] || 'classified'),
+        laps_completed:     g.laps.length ? Math.max(...g.laps) : 0,
+        fastest_lap_point:  g.fl,
+    }));
+    if (entryUpdates.length) {
+        const { error } = await sb.from('results').upsert(entryUpdates, { onConflict: 'event_id,entry_id' });
+        if (error) { toast(error.message, 'error'); return; }
     }
-    const resultIdByEntry = {};
-    (upsertRes?.data || []).forEach(r => { resultIdByEntry[r.entry_id] = r.id; });
-    // Also pull existing result ids for entries we didn't touch above
-    const { data: allRes } = await sb.from('results').select('id, entry_id').eq('event_id', eventId);
-    (allRes || []).forEach(r => { if (!resultIdByEntry[r.entry_id]) resultIdByEntry[r.entry_id] = r.id; });
 
-    // 2. Upsert per-driver rows
+    // 3. Per-driver upsert
     const driverPayload = driverRows.map(dr => {
         const result_id = resultIdByEntry[dr.entry_id];
         if (!result_id) return null;
         return {
             result_id,
-            driver_id: dr.driver_id,
-            finish_position: dr.finish_position,
-            status: dr.status || null,
-            classified: (dr.status || 'classified') === 'classified',
-            laps_driven: dr.laps_driven ?? null,
+            driver_id:        dr.driver_id,
+            finish_position:  dr.finish_position,
+            status:           dr.status || 'classified',
+            classified:       (dr.status || 'classified') === 'classified',
+            laps_driven:      dr.laps_driven ?? null,
+            fastest_lap_point: !!dr.fastest_lap_point,
+            // points_share defaults to 1.0; per-driver points come from
+            // result_drivers.points_awarded which compute_event_points fills.
         };
     }).filter(Boolean);
     if (driverPayload.length) {
@@ -2792,7 +2843,7 @@ async function saveResults(eventId, eventName) {
         if (rdErr) { toast('Per-driver save failed: ' + rdErr.message, 'error'); return; }
     }
 
-    // 3. Recompute points
+    // 4. Recompute points (also derives pole from quali server-side)
     const { data: cp, error: cpErr } = await sb.rpc('compute_event_points', { p_event_id: eventId });
     if (cpErr) { toast('Saved, but points recompute failed: ' + cpErr.message, 'error'); }
     else if (cp?.error) { toast('Saved, but points recompute failed: ' + cp.error, 'error'); }
