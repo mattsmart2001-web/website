@@ -959,7 +959,7 @@ async function loadCache() {
         sb.from('manufacturers').select('id,name,slug').order('name'),
         sb.from('points_systems').select('id,name').order('name'),
         sb.from('teams').select('id,name,slug,manufacturer_id').order('name'),
-        sb.from('drivers').select('id,display_name,slug,career_number').order('display_name'),
+        sb.from('drivers').select('id,display_name,slug,career_number,current_team_id').order('display_name'),
         sb.from('seasons').select('id,name,year').order('year', { ascending: false }),
     ]);
     _manufacturers = mfr.data  || [];
@@ -2001,7 +2001,7 @@ async function viewEventEntries(eventId, eventName, seasonId) {
                 <td><div style="display:flex;flex-wrap:wrap;gap:0.2rem;align-items:center">
                     ${driverTags}
                     <button class="btn-icon" style="padding:0.15rem 0.5rem;font-size:0.7rem"
-                        onclick="openAddDriverModal('${en.id}','${en.car_number != null ? '#' + en.car_number + ' ' : ''}${esc(en.teams?.name)}','${eventId}','${esc(eventName)}','${seasonId}')">+ Driver</button>
+                        onclick="openAddDriverModal('${en.id}','${en.team_id}','${en.car_number != null ? '#' + en.car_number + ' ' : ''}${esc(en.teams?.name)}','${eventId}','${esc(eventName)}','${seasonId}')">+ Driver</button>
                 </div></td>
                 <td>${entrStatusBadge(en.status)}</td>
                 <td><div class="row-actions">
@@ -2140,11 +2140,33 @@ async function removeEntry(entryId, eventId, eventName, seasonId) {
     await viewEventEntries(eventId, eventName, seasonId);
 }
 
-async function openAddDriverModal(entryId, entryLabel, eventId, eventName, seasonId) {
-    const driverOptsHTML = _drivers.map(d =>
-        `<option value="${esc(d.id)}">${esc(d.display_name)}</option>`
-    ).join('');
+async function openAddDriverModal(entryId, teamId, entryLabel, eventId, eventName, seasonId) {
+    // Already assigned to this entry — don't show them again.
+    const { data: existing } = await sb.from('entry_drivers')
+        .select('driver_id')
+        .eq('entry_id', entryId);
+    const assignedIds = new Set((existing || []).map(r => r.driver_id));
+
+    const eligible = _drivers.filter(d =>
+        d.current_team_id === teamId && !assignedIds.has(d.id)
+    );
+
     const roleOpts = [{ value: 'starting', label: 'Starting' }, { value: 'reserve', label: 'Reserve' }];
+
+    if (!eligible.length) {
+        openModal(`Add Driver — ${esc(entryLabel)}`,
+            `<p style="color:var(--muted);font-size:0.9rem;line-height:1.55">
+                No eligible drivers. Only drivers whose <strong>current team</strong> matches this entry can be added.
+                Assign drivers to the team first under <strong>Drivers</strong> or via team join requests in the driver portal.
+            </p>`,
+            `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`
+        );
+        return;
+    }
+
+    const driverOptsHTML = eligible.map(d =>
+        `<option value="${esc(d.id)}">${esc(d.display_name)}${d.career_number ? ` (#${d.career_number})` : ''}</option>`
+    ).join('');
 
     openModal(`Add Driver — ${esc(entryLabel)}`,
         `<form id="entity-form">
@@ -2154,6 +2176,7 @@ async function openAddDriverModal(entryId, entryLabel, eventId, eventName, seaso
                     <option value="">— Select Driver —</option>
                     ${driverOptsHTML}
                 </select>
+                <div class="form-hint">Only drivers currently assigned to this team are shown.</div>
             </div>
             <div class="form-group">
                 <label>Stint Role</label>
