@@ -2552,26 +2552,55 @@ function fmtLapTime(ms) {
     return min > 0 ? `${min}:${sec}` : sec;
 }
 
-async function viewEventQualifying(eventId, eventName) {
+function buildLobbyFilter(entries, currentLobby, onChangeFn) {
+    const lobbies = [...new Set(entries.map(e => e.lobby_number).filter(n => n != null))].sort((a, b) => a - b);
+    const hasUnassigned = entries.some(e => e.lobby_number == null);
+    const opts = [];
+    opts.push(`<option value="all">All Lobbies (${entries.length})</option>`);
+    lobbies.forEach(n => {
+        const count = entries.filter(e => e.lobby_number === n).length;
+        opts.push(`<option value="${n}" ${currentLobby == n ? 'selected' : ''}>Lobby ${n} (${count})</option>`);
+    });
+    if (hasUnassigned) {
+        const count = entries.filter(e => e.lobby_number == null).length;
+        opts.push(`<option value="unassigned" ${currentLobby === 'unassigned' ? 'selected' : ''}>Unassigned (${count})</option>`);
+    }
+    return `<select id="lobby-filter" onchange="${onChangeFn}" style="padding:0.45rem 0.7rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem;font-family:'Orbitron',sans-serif;letter-spacing:0.05em">${opts.join('')}</select>`;
+}
+
+function filterEntriesByLobby(entries, lobbyFilter) {
+    if (lobbyFilter === 'all' || lobbyFilter == null) return entries;
+    if (lobbyFilter === 'unassigned') return entries.filter(e => e.lobby_number == null);
+    const n = parseInt(lobbyFilter);
+    return entries.filter(e => e.lobby_number === n);
+}
+
+function defaultLobbyFilter(entries) {
+    const lobbies = [...new Set(entries.map(e => e.lobby_number).filter(n => n != null))].sort((a, b) => a - b);
+    if (lobbies.length) return lobbies[0].toString();
+    return 'all';
+}
+
+async function viewEventQualifying(eventId, eventName, lobbyFilter) {
     const panel = document.getElementById('event-entries-panel');
     panel.innerHTML = '<div class="loading-state">Loading qualifying…</div>';
 
     const [entriesRes, quailRes] = await Promise.all([
         sb.from('entries')
-            .select('id, car_number, car_model, teams(name), entry_drivers(driver_id, drivers(id, display_name, career_number))')
+            .select('id, car_number, car_model, lobby_number, teams(name), entry_drivers(driver_id, drivers(id, display_name, career_number))')
             .eq('event_id', eventId)
+            .order('lobby_number')
             .order('car_number'),
         sb.from('qualifying_results').select('*').eq('event_id', eventId),
     ]);
     if (entriesRes.error) { panel.innerHTML = `<div class="loading-state">${esc(entriesRes.error.message)}</div>`; return; }
 
-    const entries = entriesRes.data || [];
-    const quails  = quailRes.data || [];
-    // Map keyed by entry+driver (and an entry-only fallback for legacy rows)
-    const qKey    = (entryId, driverId) => `${entryId}|${driverId || ''}`;
-    const qMap    = Object.fromEntries(quails.map(q => [qKey(q.entry_id, q.driver_id), q]));
+    const allEntries = entriesRes.data || [];
+    const quails     = quailRes.data || [];
+    const qKey       = (entryId, driverId) => `${entryId}|${driverId || ''}`;
+    const qMap       = Object.fromEntries(quails.map(q => [qKey(q.entry_id, q.driver_id), q]));
 
-    if (entries.length === 0) {
+    if (allEntries.length === 0) {
         panel.innerHTML = `
             <div class="section-card">
                 <div class="section-card-header"><span class="section-card-title">Qualifying — ${esc(eventName)}</span></div>
@@ -2580,17 +2609,17 @@ async function viewEventQualifying(eventId, eventName) {
         return;
     }
 
-    // Flatten to one row per driver per entry. Entries without drivers get a placeholder row.
+    const currentLobby = lobbyFilter || defaultLobbyFilter(allEntries);
+    const entries = filterEntriesByLobby(allEntries, currentLobby);
+
     const rowSpecs = entries.flatMap(en => {
         const drvs = (en.entry_drivers || []).map(ed => ed.drivers).filter(Boolean);
-        if (!drvs.length) {
-            return [{ entry: en, driver: null }];
-        }
+        if (!drvs.length) return [{ entry: en, driver: null }];
         return drvs.map(d => ({ entry: en, driver: d }));
     });
 
     const rows = rowSpecs.length === 0
-        ? `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">No drivers assigned yet. Add drivers to entries first.</td></tr>`
+        ? `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">No drivers in this lobby yet.</td></tr>`
         : rowSpecs.map(({ entry: en, driver: d }) => {
             const q = qMap[qKey(en.id, d?.id)] || {};
             const carLabel = en.car_number != null ? '#' + en.car_number : '—';
@@ -2599,24 +2628,30 @@ async function viewEventQualifying(eventId, eventName) {
                 : '<em class="td-muted">No drivers</em>';
             const dAttr = d ? `data-driver="${esc(d.id)}"` : '';
             return `<tr>
-                <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${esc(en.teams?.name) || ''}</span></td>
+                <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${esc(en.teams?.name) || '<em>Solo</em>'}${en.lobby_number != null ? ` · L${en.lobby_number}` : ''}</span></td>
                 <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="position" value="${q.position || ''}" style="width:70px;padding:0.4rem 0.5rem" ${d ? '' : 'disabled'}></td>
                 <td><input type="text" placeholder="1:23.456" data-entry="${en.id}" ${dAttr} data-field="best_lap" value="${q.best_lap_ms ? fmtLapTime(q.best_lap_ms) : ''}" style="width:120px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.82rem" ${d ? '' : 'disabled'}></td>
                 <td><input type="text" data-entry="${en.id}" ${dAttr} data-field="notes" value="${esc(q.notes || '')}" placeholder="—" style="padding:0.4rem 0.5rem" ${d ? '' : 'disabled'}></td>
             </tr>`;
         }).join('');
 
+    const filterSelect = buildLobbyFilter(allEntries, currentLobby,
+        `viewEventQualifying('${eventId}','${esc(eventName)}', this.value)`);
+
     panel.innerHTML = `
         <div class="section-card">
             <div class="section-card-header">
                 <span class="section-card-title">Qualifying — ${esc(eventName)}</span>
-                <button class="btn-add" onclick="saveQualifying('${eventId}','${esc(eventName)}')">Save All</button>
+                <div style="display:flex;gap:0.5rem;align-items:center">
+                    ${filterSelect}
+                    <button class="btn-add" onclick="saveQualifying('${eventId}','${esc(eventName)}')">Save All</button>
+                </div>
             </div>
             <table id="qualifying-table"><thead><tr>
                 <th>Driver</th><th>Pos</th><th>Best Lap</th><th>Notes</th>
             </tr></thead><tbody>${rows}</tbody></table>
             <div style="padding:0.85rem 1.25rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border)">
-                One row per driver. Each driver records their own qualifying lap.
+                Pick a lobby to record qualifying lap by lap. Save All persists the current view.
             </div>
         </div>`;
 }
@@ -2664,34 +2699,32 @@ async function saveQualifying(eventId, eventName) {
         if (error) { toast(error.message, 'error'); return; }
     }
     toast('Qualifying saved.', 'success');
-    await viewEventQualifying(eventId, eventName);
+    const currentLobby = document.getElementById('lobby-filter')?.value;
+    await viewEventQualifying(eventId, eventName, currentLobby);
 }
 
 
 // ============================================================
 // 16. Results (sub-panel of Events) + Points Recompute
 // ============================================================
-async function viewEventResults(eventId, eventName) {
+async function viewEventResults(eventId, eventName, lobbyFilter) {
     const panel = document.getElementById('event-entries-panel');
     panel.innerHTML = '<div class="loading-state">Loading results…</div>';
 
-    const [entriesRes, resultsRes, rdRes] = await Promise.all([
+    const [entriesRes, resultsRes] = await Promise.all([
         sb.from('entries')
-            .select('id, car_number, car_model, teams(name), entry_drivers(driver_id, drivers(id, display_name, career_number))')
+            .select('id, car_number, car_model, lobby_number, teams(name), entry_drivers(driver_id, drivers(id, display_name, career_number))')
             .eq('event_id', eventId)
+            .order('lobby_number')
             .order('car_number'),
         sb.from('results').select('*').eq('event_id', eventId),
-        sb.from('result_drivers')
-            .select('id, result_id, driver_id, finish_position, classified, status, laps_driven')
-            .in('result_id', []),  // placeholder, filled below
     ]);
     if (entriesRes.error) { panel.innerHTML = `<div class="loading-state">${esc(entriesRes.error.message)}</div>`; return; }
 
-    const entries = entriesRes.data || [];
-    const results = resultsRes.data || [];
-    const rMap    = Object.fromEntries(results.map(r => [r.entry_id, r]));
+    const allEntries = entriesRes.data || [];
+    const results    = resultsRes.data || [];
+    const rMap       = Object.fromEntries(results.map(r => [r.entry_id, r]));
 
-    // Fetch result_drivers for these results
     const resultIds = results.map(r => r.id);
     let rdMap = {};
     if (resultIds.length) {
@@ -2701,7 +2734,7 @@ async function viewEventResults(eventId, eventName) {
         (rds || []).forEach(rd => { rdMap[`${rd.result_id}|${rd.driver_id}`] = rd; });
     }
 
-    if (entries.length === 0) {
+    if (allEntries.length === 0) {
         panel.innerHTML = `
             <div class="section-card">
                 <div class="section-card-header"><span class="section-card-title">Results — ${esc(eventName)}</span></div>
@@ -2710,58 +2743,57 @@ async function viewEventResults(eventId, eventName) {
         return;
     }
 
+    const currentLobby = lobbyFilter || defaultLobbyFilter(allEntries);
+    const entries = filterEntriesByLobby(allEntries, currentLobby);
+
     const statusOpts = ['classified', 'dnf', 'dsq', 'dns', 'withdrawn'];
 
-    // Flatten to per-driver rows
     const rowSpecs = entries.flatMap(en => {
         const drvs = (en.entry_drivers || []).map(ed => ed.drivers).filter(Boolean);
         if (!drvs.length) return [{ entry: en, driver: null }];
         return drvs.map(d => ({ entry: en, driver: d }));
     });
 
-    if (rowSpecs.length === 0) {
-        panel.innerHTML = `
-            <div class="section-card">
-                <div class="section-card-header"><span class="section-card-title">Results — ${esc(eventName)}</span></div>
-                <div class="empty-state">No drivers assigned to entries yet.</div>
-            </div>`;
-        return;
-    }
+    const rows = rowSpecs.length === 0
+        ? `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">No drivers in this lobby.</td></tr>`
+        : rowSpecs.map(({ entry: en, driver: d }) => {
+            const r  = rMap[en.id] || {};
+            const rd = (r.id && d) ? (rdMap[`${r.id}|${d.id}`] || {}) : {};
+            const pos     = rd.finish_position ?? '';
+            const status  = rd.status || 'classified';
+            const laps    = rd.laps_driven ?? '';
+            const points  = rd.points_awarded ?? 0;
+            const isPole  = !!rd.pole_point;
+            const isFL    = !!rd.fastest_lap_point;
+            const statusSel = statusOpts.map(s =>
+                `<option value="${s}" ${status === s ? 'selected' : ''}>${s}</option>`).join('');
+            const carLabel = en.car_number != null ? '#' + en.car_number : '—';
+            const driverLabel = d
+                ? `<strong>${esc(d.display_name)}</strong>${d.career_number ? ` <span class="td-muted">#${d.career_number}</span>` : ''}`
+                : '<em class="td-muted">No drivers</em>';
+            const dAttr = d ? `data-driver="${esc(d.id)}"` : '';
+            const dis   = d ? '' : 'disabled';
+            const teamCell = en.teams?.name ? esc(en.teams.name) : '<em>Solo</em>';
+            return `<tr>
+                <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}${en.lobby_number != null ? ` · L${en.lobby_number}` : ''}</span></td>
+                <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="finish_position" value="${pos}" style="width:60px;padding:0.4rem 0.5rem" ${dis}></td>
+                <td><input type="number" min="0" data-entry="${en.id}" ${dAttr} data-field="laps_driven" value="${laps}" style="width:65px;padding:0.4rem 0.5rem" ${dis}></td>
+                <td><select data-entry="${en.id}" ${dAttr} data-field="status" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
+                <td style="text-align:center;font-size:0.78rem;${isPole ? 'color:var(--gold);font-weight:600' : 'color:var(--muted)'}" title="Auto-set from qualifying P1">${isPole ? '★' : '—'}</td>
+                <td style="text-align:center"><input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${isFL ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px" ${dis}></td>
+                <td style="text-align:right;color:var(--gold);font-weight:600">${points}</td>
+            </tr>`;
+        }).join('');
 
-    const rows = rowSpecs.map(({ entry: en, driver: d }) => {
-        const r  = rMap[en.id] || {};
-        const rd = (r.id && d) ? (rdMap[`${r.id}|${d.id}`] || {}) : {};
-        const pos     = rd.finish_position ?? '';
-        const status  = rd.status || 'classified';
-        const laps    = rd.laps_driven ?? '';
-        const points  = rd.points_awarded ?? 0;
-        const isPole  = !!rd.pole_point;
-        const isFL    = !!rd.fastest_lap_point;
-        const statusSel = statusOpts.map(s =>
-            `<option value="${s}" ${status === s ? 'selected' : ''}>${s}</option>`).join('');
-        const carLabel = en.car_number != null ? '#' + en.car_number : '—';
-        const driverLabel = d
-            ? `<strong>${esc(d.display_name)}</strong>${d.career_number ? ` <span class="td-muted">#${d.career_number}</span>` : ''}`
-            : '<em class="td-muted">No drivers</em>';
-        const dAttr = d ? `data-driver="${esc(d.id)}"` : '';
-        const dis   = d ? '' : 'disabled';
-        const teamCell = en.teams?.name ? esc(en.teams.name) : '<em>Solo</em>';
-        return `<tr>
-            <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}</span></td>
-            <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="finish_position" value="${pos}" style="width:60px;padding:0.4rem 0.5rem" ${dis}></td>
-            <td><input type="number" min="0" data-entry="${en.id}" ${dAttr} data-field="laps_driven" value="${laps}" style="width:65px;padding:0.4rem 0.5rem" ${dis}></td>
-            <td><select data-entry="${en.id}" ${dAttr} data-field="status" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
-            <td style="text-align:center;font-size:0.78rem;${isPole ? 'color:var(--gold);font-weight:600' : 'color:var(--muted)'}" title="Auto-set from qualifying P1">${isPole ? '★' : '—'}</td>
-            <td style="text-align:center"><input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${isFL ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px" ${dis}></td>
-            <td style="text-align:right;color:var(--gold);font-weight:600">${points}</td>
-        </tr>`;
-    }).join('');
+    const filterSelect = buildLobbyFilter(allEntries, currentLobby,
+        `viewEventResults('${eventId}','${esc(eventName)}', this.value)`);
 
     panel.innerHTML = `
         <div class="section-card">
             <div class="section-card-header">
                 <span class="section-card-title">Results — ${esc(eventName)}</span>
-                <div style="display:flex;gap:0.5rem">
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+                    ${filterSelect}
                     <button class="btn-icon" onclick="recomputePoints('${eventId}','${esc(eventName)}')">Recompute Points</button>
                     <button class="btn-icon" onclick="computeElo('${eventId}')">Compute Elo</button>
                     <button class="btn-add" onclick="saveResults('${eventId}','${esc(eventName)}')">Save All</button>
@@ -2771,7 +2803,7 @@ async function viewEventResults(eventId, eventName) {
                 <th>Driver</th><th>Pos</th><th>Laps</th><th>Status</th><th>Pole</th><th>FL</th><th style="text-align:right">Pts</th>
             </tr></thead><tbody>${rows}</tbody></table>
             <div style="padding:0.85rem 1.25rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border)">
-                One row per driver. Pole is auto-set from qualifying P1 (no need to tick). Points are recomputed per-driver from their finish position + bonuses.
+                Pick a lobby to record results lobby by lobby. Pole is auto-set from qualifying P1. Points recompute per-driver on save.
             </div>
         </div>`;
 }
@@ -2878,7 +2910,8 @@ async function saveResults(eventId, eventName) {
     else if (cp?.error) { toast('Saved, but points recompute failed: ' + cp.error, 'error'); }
     else toast('Results saved & points recomputed.', 'success');
 
-    await viewEventResults(eventId, eventName);
+    const currentLobby = document.getElementById('lobby-filter')?.value;
+    await viewEventResults(eventId, eventName, currentLobby);
 }
 
 async function refreshHallOfFame() {
@@ -2918,7 +2951,8 @@ async function recomputePoints(eventId, eventName) {
     if (error) { toast(error.message, 'error'); return; }
     if (data?.error) { toast(data.error, 'error'); return; }
     toast('Points recomputed.', 'success');
-    await viewEventResults(eventId, eventName);
+    const currentLobby = document.getElementById('lobby-filter')?.value;
+    await viewEventResults(eventId, eventName, currentLobby);
 }
 
 
