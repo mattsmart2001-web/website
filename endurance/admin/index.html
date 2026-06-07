@@ -2010,19 +2010,61 @@ async function viewEventEntries(eventId, eventName, seasonId) {
             </tr>`;
         }).join('');
 
+    // Compute how many season-registered teams still need an entry on this event
+    const { data: ts } = await sb.from('team_seasons')
+        .select('team_id, manufacturer_id, teams(name), manufacturers(name)')
+        .eq('season_id', seasonId);
+    const registeredTeamIds = new Set((data || []).map(en => en.team_id));
+    const unregisteredTeams = (ts || []).filter(r => !registeredTeamIds.has(r.team_id));
+
+    const headerBtn = unregisteredTeams.length > 0
+        ? `<button class="btn-add" onclick="registerAllSeasonTeams('${eventId}','${esc(eventName)}','${seasonId}')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Register ${unregisteredTeams.length} Team${unregisteredTeams.length === 1 ? '' : 's'}
+            </button>`
+        : (!ts || ts.length === 0)
+            ? `<button class="btn-icon" onclick="navigate('seasons')">No season teams · Open Seasons</button>`
+            : `<span style="font-size:0.78rem;color:var(--muted)">All season teams registered.</span>`;
+
     panel.innerHTML = `
         <div class="section-card">
             <div class="section-card-header">
                 <span class="section-card-title">Entries — ${esc(eventName)}</span>
-                <button class="btn-add" onclick="openAddEntryModal('${eventId}','${esc(eventName)}','${seasonId}')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Add Entry
-                </button>
+                ${headerBtn}
             </div>
             <table><thead><tr>
                 <th>#</th><th>Team</th><th>Manufacturer</th><th>Car Model</th><th>Drivers</th><th>Status</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
+}
+
+async function registerAllSeasonTeams(eventId, eventName, seasonId) {
+    const { data: ts, error: tsErr } = await sb.from('team_seasons')
+        .select('team_id, manufacturer_id, manufacturers(name)')
+        .eq('season_id', seasonId);
+    if (tsErr) { toast(tsErr.message, 'error'); return; }
+    if (!ts?.length) { toast('No teams registered to this season yet.', 'error'); return; }
+
+    const { data: existing } = await sb.from('entries')
+        .select('team_id')
+        .eq('event_id', eventId);
+    const existingIds = new Set((existing || []).map(e => e.team_id));
+
+    const toInsert = ts.filter(r => !existingIds.has(r.team_id)).map(r => ({
+        event_id:        eventId,
+        team_id:         r.team_id,
+        manufacturer_id: r.manufacturer_id,
+        car_model:       r.manufacturers?.name || 'TBC',
+        status:          'confirmed',
+    }));
+
+    if (!toInsert.length) { toast('All season teams already registered.', 'success'); return; }
+    if (!confirm(`Register ${toInsert.length} team${toInsert.length === 1 ? '' : 's'} for "${eventName}"?\n\nEach team's locked manufacturer is used as the car model placeholder — you can edit individual entries afterwards.`)) return;
+
+    const { error } = await sb.from('entries').insert(toInsert);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(`Registered ${toInsert.length} team${toInsert.length === 1 ? '' : 's'}.`, 'success');
+    await viewEventEntries(eventId, eventName, seasonId);
 }
 
 async function openAddEntryModal(eventId, eventName, seasonId) {
