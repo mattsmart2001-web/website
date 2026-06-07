@@ -147,21 +147,26 @@ BEGIN
 
     -- Pole carries from qualifying: reset all pole flags, then set true
     -- for the driver who qualified position 1 (per car).
-    UPDATE result_drivers rd
+    UPDATE result_drivers
        SET pole_point = false
-      FROM results res
-     WHERE rd.result_id = res.id AND res.event_id = p_event_id;
+     WHERE result_id IN (
+        SELECT id FROM results WHERE event_id = p_event_id
+     );
 
-    UPDATE result_drivers rd
+    UPDATE result_drivers
        SET pole_point = true
-      FROM   results res
-      JOIN   qualifying_results qr
-        ON   qr.event_id  = res.event_id
-       AND   qr.entry_id  = res.entry_id
-       AND   qr.driver_id = rd.driver_id
-     WHERE   rd.result_id = res.id
-       AND   res.event_id = p_event_id
-       AND   qr.position  = 1;
+     WHERE id IN (
+        SELECT rd.id
+        FROM   result_drivers rd
+        JOIN   results res
+          ON   res.id = rd.result_id
+        JOIN   qualifying_results qr
+          ON   qr.event_id  = res.event_id
+         AND   qr.entry_id  = res.entry_id
+         AND   qr.driver_id = rd.driver_id
+        WHERE  res.event_id = p_event_id
+          AND  qr.position  = 1
+     );
 
     -- Per-driver points
     FOR r IN
