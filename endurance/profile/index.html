@@ -579,12 +579,17 @@ async function loadStanding(driverId) {
     const { data: season } = await sb.from('seasons').select('id,name,year').eq('is_active', true).maybeSingle();
     if (!season) return;
 
-    const [stRes, ratingRes] = await Promise.all([
-        sb.from('driver_standings').select('*').eq('driver_id', driverId).eq('season_id', season.id).maybeSingle(),
+    const [allStRes, ratingRes] = await Promise.all([
+        sb.from('driver_standings')
+            .select('driver_id, points, races, wins, podiums, fastest_laps')
+            .eq('season_id', season.id),
         sb.from('driver_current_ratings').select('*').eq('driver_id', driverId).maybeSingle(),
     ]);
 
-    const st = stRes.data;
+    const all = (allStRes.data || []).slice().sort((a, b) => Number(b.points) - Number(a.points));
+    const rankIdx = all.findIndex(r => r.driver_id === driverId);
+    const st = rankIdx >= 0 ? all[rankIdx] : null;
+    const driverRank = rankIdx >= 0 ? rankIdx + 1 : null;
     const rt = ratingRes.data;
 
     const card = document.getElementById('card-standing');
@@ -592,8 +597,8 @@ async function loadStanding(driverId) {
 
     if (st) {
         const items = [
-            { label: 'Position', value: st.points > 0 ? `P${st.driver_rank ?? '—'}` : '—', cls: 'si-pos' },
-            { label: 'Points',   value: st.points ?? 0 },
+            { label: 'Position', value: Number(st.points) > 0 && driverRank ? `P${driverRank}` : '—', cls: 'si-pos' },
+            { label: 'Points',   value: Number(st.points ?? 0).toFixed(Number(st.points ?? 0) % 1 === 0 ? 0 : 1) },
             { label: 'Races',    value: st.races  ?? 0 },
             { label: 'Wins',     value: st.wins   ?? 0 },
             { label: 'Podiums',  value: st.podiums ?? 0 },
