@@ -109,6 +109,7 @@ Always apply in this order:
 27. `27_per_driver_qualifying.sql` — per-driver qualifying + per-driver finish columns on result_drivers
 28. `28_per_driver_scoring.sql` — per-driver points + pole auto-derived from quali + solo entries
 29. `29_per_driver_elo.sql` — fix Elo to rank by per-driver finish_position instead of entry-level
+30. `30_points_deduction_standings.sql` — penalties.points_amount + driver/team standings subtract deductions
 
 ---
 

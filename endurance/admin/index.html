@@ -3036,12 +3036,19 @@ async function openAddPenaltyModal(eventId, eventName) {
             <div class="form-row">
                 <div class="form-group">
                     <label>Type <span class="required">*</span></label>
-                    ${selectHTML('penalty_type', penaltyTypes, 'time_add')}
+                    <select name="penalty_type" id="pen-type" onchange="onPenaltyTypeChange(this)">
+                        ${penaltyTypes.map(p => `<option value="${esc(p.value)}" ${p.value === 'time_add' ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Value</label>
                     <input type="text" name="penalty_value" placeholder="+10s, 3 places, etc.">
                 </div>
+            </div>
+            <div class="form-group" id="pen-amount-row" style="display:none">
+                <label>Points to deduct <span class="required">*</span></label>
+                <input type="number" name="points_amount" id="pen-amount" min="1" max="999" placeholder="e.g. 5">
+                <div class="form-hint">Subtracted from the driver's season points (and the team's, if the entry has a team).</div>
             </div>
             <div class="form-group">
                 <label>Reason <span class="required">*</span></label>
@@ -3071,17 +3078,32 @@ function loadEntryDriversForPenalty(sel) {
     });
 }
 
+function onPenaltyTypeChange(sel) {
+    const row = document.getElementById('pen-amount-row');
+    if (!row) return;
+    row.style.display = sel.value === 'points_deduction' ? '' : 'none';
+}
+
 async function savePenalty(eventId, eventName) {
     const d = getFormData('entity-form');
     if (!d.entry_id || !d.penalty_type || !d.reason) {
         toast('Entry, type and reason are required.', 'error'); return;
+    }
+    let pointsAmount = null;
+    if (d.penalty_type === 'points_deduction') {
+        const raw = parseInt(d.points_amount, 10);
+        if (!raw || raw < 1) {
+            toast('Enter the number of points to deduct.', 'error'); return;
+        }
+        pointsAmount = raw;
     }
     const { error } = await sb.from('penalties').insert({
         event_id: eventId,
         entry_id: d.entry_id,
         driver_id: d.driver_id || null,
         penalty_type: d.penalty_type,
-        penalty_value: d.penalty_value || null,
+        penalty_value: d.penalty_value || (pointsAmount ? `-${pointsAmount} pts` : null),
+        points_amount: pointsAmount,
         reason: d.reason,
         issued_by: currentUser.id,
     });
