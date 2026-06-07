@@ -106,6 +106,7 @@ Always apply in this order:
 24. `24_team_leader_update.sql` — RLS policy so team leaders can edit their team from the portal
 25. `25_broadcast_messages.sql` — admin "Message All Drivers" broadcast RPC + is_broadcast flag
 26. `26_lobby_notifications.sql` — per-event lobby-assignment broadcast + delete RPCs
+27. `27_per_driver_qualifying.sql` — per-driver qualifying + per-driver finish columns on result_drivers
 
 ---
 
