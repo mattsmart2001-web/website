@@ -2021,7 +2021,7 @@ async function viewEventEntries(eventId, eventName, seasonId) {
     const enteredDriverIds = new Set();
     (data || []).forEach(en => (en.entry_drivers || []).forEach(ed => enteredDriverIds.add(ed.driver_id ?? ed.drivers?.id)));
     const { data: freeAgents } = await sb.from('drivers')
-        .select('id, display_name')
+        .select('id, display_name, career_number')
         .is('current_team_id', null);
     const unregisteredFreeAgents = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id));
 
@@ -2055,7 +2055,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
     const [{ data: ts }, { data: existing }, { data: freeAgents }, { data: entryDrivers }] = await Promise.all([
         sb.from('team_seasons').select('team_id, manufacturer_id, manufacturers(name)').eq('season_id', seasonId),
         sb.from('entries').select('id, team_id').eq('event_id', eventId),
-        sb.from('drivers').select('id, display_name, current_manufacturer_id, manufacturers(name)').is('current_team_id', null),
+        sb.from('drivers').select('id, display_name, career_number, current_manufacturer_id, manufacturers(name)').is('current_team_id', null),
         sb.from('entry_drivers').select('driver_id, entry_id, entries!inner(event_id)').eq('entries.event_id', eventId),
     ]);
 
@@ -2095,6 +2095,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
             event_id: eventId,
             team_id:  null,
             status:   'confirmed',
+            car_number:      d.career_number || null,
             car_model:       d.manufacturers?.name || 'TBC',
             manufacturer_id: d.current_manufacturer_id || null,
         }));
@@ -2423,7 +2424,7 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const lobbySize = Math.max(2, Math.min(32, parseInt(sizeInput?.value, 10) || 16));
 
     const { data: entries } = await sb.from('entries')
-        .select(`id, entry_drivers(driver_id, drivers(gt7_dr_rating))`)
+        .select(`id, car_number, entry_drivers(driver_id, drivers(career_number, gt7_dr_rating))`)
         .eq('event_id', eventId)
         .neq('status', 'withdrawn');
     if (!entries?.length) { toast('No entries to allocate.', 'error'); return; }
@@ -2447,11 +2448,19 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
 
     entries.sort((a, b) => b._skill - a._skill);
 
-    // Bulk-update each entry's lobby_number sequentially (small N — fine)
+    // Bulk-update each entry's lobby_number sequentially (small N — fine).
+    // Also backfill car_number from the entry's first driver's career_number
+    // when the entry doesn't have one yet (covers bulk-registered entries).
     let failures = 0;
     for (let i = 0; i < entries.length; i++) {
+        const en = entries[i];
         const lobby = Math.floor(i / lobbySize) + 1;
-        const { error } = await sb.from('entries').update({ lobby_number: lobby }).eq('id', entries[i].id);
+        const payload = { lobby_number: lobby };
+        if (en.car_number == null) {
+            const firstDriver = (en.entry_drivers || []).find(ed => ed.drivers?.career_number != null);
+            if (firstDriver) payload.car_number = firstDriver.drivers.career_number;
+        }
+        const { error } = await sb.from('entries').update(payload).eq('id', en.id);
         if (error) failures++;
     }
     const totalLobbies = Math.ceil(entries.length / lobbySize);
