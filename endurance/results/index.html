@@ -57,6 +57,12 @@
 
         /* Section heading */
         .section-heading { font-family: 'Anton', sans-serif; font-size: 1.1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+        .section-subheading { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.32em; text-transform: uppercase; color: var(--muted); margin: 1.5rem 0 0.6rem; }
+        .lobby-section { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 2px solid rgba(255,209,102,0.18); }
+        .lobby-section:first-of-type { margin-top: 2rem; }
+        .lobby-section-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap; }
+        .lobby-section-title { font-family: 'Anton', sans-serif; font-size: clamp(1.4rem, 3vw, 1.8rem); letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); }
+        .lobby-section-count { font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.2em; color: var(--muted); }
 
         /* Lobby grid */
         .lobbies-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; }
@@ -292,27 +298,20 @@ async function loadIndex() {
 
 // ── Single event results ──────────────────────────────────────
 async function loadResults(slug) {
-    const [evtRes, resultsRes, qualyRes, penRes] = await Promise.all([
-        sb.from('events').select('*, seasons(name, year)').eq('slug', slug).maybeSingle(),
-        sb.from('results').select('*').eq('event_id', (await sb.from('events').select('id').eq('slug', slug).maybeSingle()).data?.id || '00000000-0000-0000-0000-000000000000'),
-        sb.from('qualifying_results').select('*').eq('event_id', (await sb.from('events').select('id').eq('slug', slug).maybeSingle()).data?.id || '00000000-0000-0000-0000-000000000000'),
-        sb.from('penalties').select('*, entries(car_number, teams(name))').eq('event_id', (await sb.from('events').select('id').eq('slug', slug).maybeSingle()).data?.id || '00000000-0000-0000-0000-000000000000'),
-    ]);
-
-    // Re-fetch properly with the event id we now know
-    const event = evtRes.data;
+    const { data: event } = await sb.from('events')
+        .select('*, seasons(name, year)')
+        .eq('slug', slug).maybeSingle();
     if (!event) { app.innerHTML = `<div class="page-wrap">${errMsg('Event not found.')}</div>`; return; }
-
     document.title = `${event.name} Results — Gran Turismo GTEC`;
 
     const [entriesRes, rRes, qRes, pRes, sdRes] = await Promise.all([
         sb.from('entries')
-            .select('id, car_number, car_model, lobby_number, teams(name, slug), manufacturers(name, brand_color), entry_drivers(stint_role, drivers(display_name, slug, nationality))')
+            .select('id, car_number, car_model, lobby_number, teams(name, slug), manufacturers(name, brand_color, logo_url), entry_drivers(stint_role, drivers(id, display_name, slug, nationality, career_number))')
             .eq('event_id', event.id)
             .in('status', ['confirmed']),
         sb.from('results').select('*').eq('event_id', event.id),
         sb.from('qualifying_results').select('*').eq('event_id', event.id),
-        sb.from('penalties').select('*, entries(car_number, teams(name))').eq('event_id', event.id),
+        sb.from('penalties').select('*, entries(car_number, teams(name)), drivers(display_name, slug)').eq('event_id', event.id),
         sb.from('steward_decisions')
             .select('*, entries(car_number, teams(name)), drivers(display_name, slug)')
             .eq('event_id', event.id)
@@ -325,34 +324,65 @@ async function loadResults(slug) {
     const pens     = pRes.data || [];
     const steward  = sdRes.data || [];
 
-    // Map results and qualy to entry_id
-    const rMap = {}, qMap = {};
-    results.forEach(r => rMap[r.entry_id] = r);
-    qualy.forEach(q => qMap[q.entry_id] = q);
+    const resultsById = Object.fromEntries(results.map(r => [r.id, r]));
+    const resultByEntry = Object.fromEntries(results.map(r => [r.entry_id, r]));
 
-    // Enrich entries
-    const enriched = entries.map(e => ({ ...e, result: rMap[e.id] || null, qualy: qMap[e.id] || null }));
+    // Per-driver results
+    const resultIds = results.map(r => r.id);
+    let rdRows = [];
+    if (resultIds.length) {
+        const { data: rds } = await sb.from('result_drivers')
+            .select('result_id, driver_id, finish_position, classified, status, laps_driven, points_awarded, pole_point, fastest_lap_point')
+            .in('result_id', resultIds);
+        rdRows = rds || [];
+    }
+    const rdMap = {};
+    rdRows.forEach(rd => { rdMap[`${rd.result_id}|${rd.driver_id}`] = rd; });
 
-    const classified   = enriched.filter(e => e.result?.classified).sort((a,b) => (a.result.finish_position||999) - (b.result.finish_position||999));
-    const unclassified = enriched.filter(e => !e.result?.classified);
+    // Per-driver qualifying
+    const qMap = {};
+    qualy.forEach(q => { qMap[`${q.entry_id}|${q.driver_id || ''}`] = q; });
 
-    // Overall fastest lap
-    const flEntry = classified.reduce((best, e) => {
-        if (!e.result?.fastest_lap_ms) return best;
-        if (!best?.result?.fastest_lap_ms) return e;
-        return e.result.fastest_lap_ms < best.result.fastest_lap_ms ? e : best;
-    }, null);
+    // Flatten every confirmed entry into one record per driver
+    const driverRows = [];
+    entries.forEach(en => {
+        const drvs = (en.entry_drivers || [])
+            .map(ed => ({ stint_role: ed.stint_role, driver: ed.drivers }))
+            .filter(x => x.driver);
+        const result = resultByEntry[en.id] || null;
+        if (!drvs.length) {
+            driverRows.push({ entry: en, driver: null, stint_role: null, result, rd: null, quali: null });
+            return;
+        }
+        drvs.forEach(({ stint_role, driver }) => {
+            const rd = result ? rdMap[`${result.id}|${driver.id}`] || null : null;
+            const quali = qMap[`${en.id}|${driver.id}`] || qMap[`${en.id}|`] || null;
+            driverRows.push({ entry: en, driver, stint_role, result, rd, quali });
+        });
+    });
 
-    const leaderLaps = classified[0]?.result?.laps_completed || 0;
+    // Group by lobby
+    const groups = {};
+    driverRows.forEach(row => {
+        const key = row.entry.lobby_number ?? 0;
+        (groups[key] = groups[key] || []).push(row);
+    });
+    const lobbyKeys = Object.keys(groups).map(Number).sort((a, b) => {
+        if (a === 0) return 1; if (b === 0) return -1; return a - b;
+    });
 
-    // ── Render ────────────────────────────────────────────────
+    const anyResults = driverRows.some(r => r.rd?.finish_position != null || r.rd?.status);
     const statusLabel = { completed:'Completed', in_progress:'Live', scheduled:'Scheduled' };
+
+    const lobbySections = lobbyKeys.map(k => {
+        const title = k === 0 ? 'Unassigned' : `Lobby ${k}`;
+        return renderLobbySection(title, groups[k]);
+    }).join('');
 
     app.innerHTML = `
     <div class="page-wrap">
         <a class="back-link" href="/endurance/results/">← All Results</a>
 
-        <!-- Event Header -->
         <div class="event-header">
             <div class="event-header-left">
                 <div class="event-eyebrow">${esc(event.seasons?.name)} · Round ${event.round}</div>
@@ -367,45 +397,71 @@ async function loadResults(slug) {
             <span class="badge badge-${esc(event.status)}">${esc(statusLabel[event.status] || event.status)}</span>
         </div>
 
-        ${renderLobbiesGrid(entries)}
+        ${!anyResults && driverRows.length === 0 ? `
+            <div class="state-msg"><h3>No Entries Yet</h3><p>Entries will appear here once admins register teams for the event.</p></div>
+        ` : ''}
 
-        ${classified.length === 0 ? `
-            <div class="state-msg"><h3>No Results Yet</h3><p>Race results haven't been posted for this event.</p></div>
-        ` : `
-            <!-- Podium -->
-            ${classified.length >= 3 ? renderPodium(classified, leaderLaps) : ''}
+        ${lobbySections}
 
-            <!-- Fastest Lap callout -->
-            ${flEntry ? renderFLCallout(flEntry) : ''}
-
-            <!-- Race Results -->
-            <div class="section-heading">Race Classification</div>
-            <div class="table-wrap">
-                ${renderResultsTable(classified, unclassified, leaderLaps, flEntry)}
-            </div>
-
-            <!-- Qualifying -->
-            ${qualy.length ? `
-            <div class="section-heading">Qualifying</div>
-            <div class="table-wrap">
-                ${renderQualyTable(enriched, qualy)}
-            </div>` : ''}
-
-            <!-- Penalties -->
-            ${pens.length ? `
+        ${pens.length ? `
             <div class="section-heading">Penalties</div>
             <div class="table-wrap">
                 ${renderPenaltiesTable(pens)}
             </div>` : ''}
 
-            <!-- Steward Decisions -->
-            ${steward.length ? `
+        ${steward.length ? `
             <div class="section-heading">Steward Decisions</div>
             <div class="steward-list">
                 ${renderStewardList(steward)}
             </div>` : ''}
-        `}
     </div>`;
+}
+
+function renderLobbySection(title, rows) {
+    const classified = rows.filter(r => r.rd?.finish_position != null && (r.rd?.status === 'classified' || r.rd?.classified !== false))
+        .sort((a, b) => (a.rd.finish_position || 999) - (b.rd.finish_position || 999));
+    const unclassified = rows.filter(r => r.rd && (r.rd.classified === false || (r.rd.status && r.rd.status !== 'classified')));
+    const qualifying = rows.filter(r => r.quali?.position != null || r.quali?.best_lap_ms != null)
+        .sort((a, b) => {
+            const ap = a.quali.position ?? 999;
+            const bp = b.quali.position ?? 999;
+            if (ap !== bp) return ap - bp;
+            return (a.quali.best_lap_ms ?? Infinity) - (b.quali.best_lap_ms ?? Infinity);
+        });
+
+    const flRow = classified.find(r => r.rd?.fastest_lap_point);
+    const poleRow = qualifying[0] || classified.find(r => r.rd?.pole_point);
+
+    const driverCount = rows.length;
+
+    return `
+        <div class="lobby-section">
+            <div class="lobby-section-header">
+                <div class="lobby-section-title">${esc(title)}</div>
+                <div class="lobby-section-count">${driverCount} driver${driverCount === 1 ? '' : 's'}</div>
+            </div>
+
+            ${classified.length >= 3 ? renderPodium(classified) : ''}
+            ${flRow ? renderFLCallout(flRow) : ''}
+
+            ${classified.length || unclassified.length ? `
+                <div class="section-subheading">Race Classification</div>
+                <div class="table-wrap">
+                    ${renderResultsTable(classified, unclassified, flRow)}
+                </div>
+            ` : ''}
+
+            ${qualifying.length ? `
+                <div class="section-subheading">Qualifying</div>
+                <div class="table-wrap">
+                    ${renderQualyTable(qualifying, poleRow)}
+                </div>
+            ` : ''}
+
+            ${!classified.length && !unclassified.length && !qualifying.length ? `
+                <div class="state-msg" style="padding:2rem"><p style="color:var(--muted)">No results recorded for this lobby yet.</p></div>
+            ` : ''}
+        </div>`;
 }
 
 function renderLobbiesGrid(entries) {
@@ -442,20 +498,32 @@ function renderLobbiesGrid(entries) {
         <div class="lobbies-grid">${cards}</div>`;
 }
 
-function renderPodium(classified, leaderLaps) {
-    const [p1, p2, p3] = [classified[0], classified[1], classified[2]];
-    const stepHTML = (entry, cls, posLabel) => {
-        const drivers = (entry.entry_drivers || []).map(ed => esc(ed.drivers?.display_name)).filter(Boolean).join(', ');
-        const gap = cls === 'p1' ? 'Leader'
-            : fmtGap(entry.result.gap_to_winner_ms, leaderLaps, entry.result.laps_completed);
+function driverCell(r) {
+    const d = r.driver;
+    if (!d) return '<em class="td-muted">No driver</em>';
+    const flagPart = d.nationality ? flag(d.nationality) + ' ' : '';
+    const nameLink = d.slug
+        ? `<a href="/endurance/drivers/?slug=${encodeURIComponent(d.slug)}">${esc(d.display_name)}</a>`
+        : esc(d.display_name);
+    const teamPart = r.entry.teams?.slug
+        ? `<a href="/endurance/teams/?slug=${encodeURIComponent(r.entry.teams.slug)}" style="color:inherit;text-decoration:none">${esc(r.entry.teams.name)}</a>`
+        : (r.entry.teams?.name ? esc(r.entry.teams.name) : '<em>Solo</em>');
+    return `${flagPart}<strong>${nameLink}</strong><div style="font-size:0.72rem;color:var(--muted)">${teamPart}</div>`;
+}
+
+function renderPodium(classified) {
+    const [p1, p2, p3] = classified;
+    const stepHTML = (row, cls, posLabel) => {
+        const d = row.driver;
+        const teamName = row.entry.teams?.name ? esc(row.entry.teams.name) : '<em>Solo</em>';
         return `
         <div class="podium-step ${cls}">
             <div class="podium-card">
                 <div class="podium-pos">${posLabel}</div>
-                <div class="podium-car-num">#${entry.car_number}</div>
-                <div class="podium-team">${esc(entry.teams?.name)}</div>
-                <div class="podium-drivers">${drivers || '—'}</div>
-                <div class="podium-gap">${gap}</div>
+                <div class="podium-car-num">#${d?.career_number ?? row.entry.car_number ?? '—'}</div>
+                <div class="podium-team">${d ? esc(d.display_name) : '—'}</div>
+                <div class="podium-drivers">${teamName}</div>
+                <div class="podium-gap">${row.rd?.points_awarded ?? 0} pts</div>
             </div>
             <div class="podium-plinth">${posLabel}</div>
         </div>`;
@@ -468,88 +536,91 @@ function renderPodium(classified, leaderLaps) {
     </div>`;
 }
 
-function renderFLCallout(flEntry) {
-    const drivers = (flEntry.entry_drivers || []).map(ed => esc(ed.drivers?.display_name)).filter(Boolean).join(' / ');
+function renderFLCallout(row) {
+    const d = row.driver;
     return `
     <div class="fl-callout">
         <div>
             <div class="fl-callout-label">Fastest Lap</div>
-            <div class="fl-callout-time">${fmtMs(flEntry.result.fastest_lap_ms)}</div>
+            <div class="fl-callout-time">${d ? esc(d.display_name) : '—'}</div>
         </div>
         <div>
-            <div style="font-weight:600">#${flEntry.car_number} ${esc(flEntry.teams?.name)}</div>
-            <div class="fl-callout-car">${drivers ? `${drivers} · ` : ''}${esc(flEntry.car_model)}</div>
+            <div style="font-weight:600">${row.entry.teams?.name ? esc(row.entry.teams.name) : 'Solo'}</div>
+            <div class="fl-callout-car">${esc(row.entry.car_model || '')}</div>
         </div>
     </div>`;
 }
 
-function renderResultsTable(classified, unclassified, leaderLaps, flEntry) {
-    const rowHTML = (e, posDisplay, posClass, isDNF) => {
-        const r = e.result;
-        const drivers = (e.entry_drivers || []).sort((a,b) => a.stint_role === 'starting' ? -1 : 1)
-            .map(ed => ed.drivers?.slug
-                ? `<a href="/endurance/drivers/?slug=${encodeURIComponent(ed.drivers.slug)}">${flag(ed.drivers.nationality)} ${esc(ed.drivers.display_name)}</a>`
-                : esc(ed.drivers?.display_name))
-            .filter(Boolean).join('<br>');
-        const isFl = flEntry && e.id === flEntry.id;
-        const gap = r ? fmtGap(r.gap_to_winner_ms, leaderLaps, r.laps_completed) : '—';
-        const color = e.manufacturers?.brand_color;
+function renderResultsTable(classified, unclassified, flRow) {
+    const rowHTML = (row, posDisplay, posClass, isDNF) => {
+        const rd = row.rd || {};
+        const isFL = flRow && row.driver && row.rd?.fastest_lap_point;
+        const isPole = row.rd?.pole_point;
+        const carNum = row.driver?.career_number ?? row.entry.car_number;
+        const color = row.entry.manufacturers?.brand_color;
+        const teamCell = row.entry.teams?.name
+            ? `${color ? `<span class="mfr-dot" style="background:${esc(color)}"></span>` : ''}<strong>${
+                row.entry.teams.slug
+                    ? `<a href="/endurance/teams/?slug=${encodeURIComponent(row.entry.teams.slug)}" style="color:inherit;text-decoration:none">${esc(row.entry.teams.name)}</a>`
+                    : esc(row.entry.teams.name)
+              }</strong>`
+            : '<em class="td-muted">Solo</em>';
         return `
         <tr class="${isDNF ? 'row-dnf' : ''}">
             <td class="pos-cell ${posClass}">${posDisplay}</td>
-            <td class="td-num">${e.car_number}</td>
-            <td>
-                ${color ? `<span class="mfr-dot" style="background:${esc(color)}"></span>` : ''}
-                <strong>${esc(e.teams?.name)}</strong>
-                <div style="font-size:0.72rem;color:var(--muted)">${esc(e.car_model)}</div>
-            </td>
-            <td class="driver-list">${drivers || '—'}</td>
-            <td class="td-muted td-center">${r?.laps_completed ?? '—'}</td>
-            <td class="td-muted">${r ? (r.finish_position === 1 ? fmtMs(r.total_time_ms) : gap) : '—'}</td>
-            <td>${r?.fastest_lap_ms ? `<span class="${isFl ? 'fl-time' : 'td-muted'}">${fmtMs(r.fastest_lap_ms)}${isFl ? '<span class="fl-badge">FL</span>' : ''}</span>` : '<span class="td-muted">—</span>'}</td>
-            <td class="td-center" style="font-weight:600;color:var(--gold)">${r?.points_awarded ?? '—'}</td>
+            <td class="td-num">${carNum != null ? '#' + carNum : '—'}</td>
+            <td>${driverCell(row)}</td>
+            <td>${teamCell}${row.entry.car_model ? `<div style="font-size:0.72rem;color:var(--muted)">${esc(row.entry.car_model)}</div>` : ''}</td>
+            <td class="td-muted td-center">${rd.laps_driven ?? '—'}</td>
+            <td class="td-center" style="font-size:0.72rem">${isPole ? '<span style="color:var(--gold)">★ Pole</span>' : ''}${isPole && isFL ? ' · ' : ''}${isFL ? '<span class="fl-badge">FL</span>' : ''}${!isPole && !isFL ? '<span class="td-muted">—</span>' : ''}</td>
+            <td class="td-center" style="font-weight:600;color:var(--gold)">${rd.points_awarded ?? '—'}</td>
         </tr>`;
     };
 
-    const rows = classified.map((e, i) => {
-        const pos = e.result.finish_position;
+    const rows = classified.map(row => {
+        const pos = row.rd.finish_position;
         const cls = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
-        return rowHTML(e, pos, cls, false);
+        return rowHTML(row, pos, cls, false);
     });
-
-    const dnfRows = unclassified.map(e => {
-        const status = e.result?.status || 'DNF';
-        return rowHTML(e, `<span class="pos-dnf">${esc(status.toUpperCase())}</span>`, '', true);
+    const dnfRows = unclassified.map(row => {
+        const status = (row.rd?.status || 'DNF').toUpperCase();
+        return rowHTML(row, `<span class="pos-dnf">${esc(status)}</span>`, '', true);
     });
 
     return `
     <table>
         <thead><tr>
-            <th>Pos</th><th>Car</th><th>Team / Car</th><th>Drivers</th>
-            <th class="td-center">Laps</th><th>Time / Gap</th><th>Fastest Lap</th><th class="td-center">Pts</th>
+            <th>Pos</th><th>Car</th><th>Driver</th><th>Team / Car</th>
+            <th class="td-center">Laps</th><th class="td-center">Bonus</th><th class="td-center">Pts</th>
         </tr></thead>
         <tbody>${[...rows, ...dnfRows].join('')}</tbody>
     </table>`;
 }
 
-function renderQualyTable(enriched, qualy) {
-    const qMap = {};
-    qualy.forEach(q => qMap[q.entry_id] = q);
-    const sorted = enriched.filter(e => qMap[e.id]).sort((a,b) => (qMap[a.id].position||999) - (qMap[b.id].position||999));
-    const pole = sorted[0];
-    const rows = sorted.map(e => {
-        const q = qMap[e.id];
-        const gap = e === pole ? '—' : (q.gap_ms ? `+${(q.gap_ms/1000).toFixed(3)}s` : '—');
-        const color = e.manufacturers?.brand_color;
+function renderQualyTable(qualifying, poleRow) {
+    const fastest = qualifying.reduce((a, b) => {
+        if (a == null) return b;
+        return (b.quali.best_lap_ms || Infinity) < (a.quali.best_lap_ms || Infinity) ? b : a;
+    }, null);
+    const fastestMs = fastest?.quali.best_lap_ms;
+
+    const rows = qualifying.map(row => {
+        const q = row.quali;
+        const isFastest = q.best_lap_ms != null && q.best_lap_ms === fastestMs;
+        const gap = (!isFastest && q.best_lap_ms != null && fastestMs)
+            ? `+${((q.best_lap_ms - fastestMs)/1000).toFixed(3)}s`
+            : (isFastest ? '—' : '—');
+        const posCls = q.position === 1 ? 'pos-1' : q.position === 2 ? 'pos-2' : q.position === 3 ? 'pos-3' : '';
+        const carNum = row.driver?.career_number ?? row.entry.car_number;
         return `<tr>
-            <td class="pos-cell ${q.position===1?'pos-1':q.position===2?'pos-2':q.position===3?'pos-3':''}">${q.position}</td>
-            <td class="td-num">${e.car_number}</td>
-            <td>${color?`<span class="mfr-dot" style="background:${esc(color)}"></span>`:''}${esc(e.teams?.name)}</td>
-            <td class="td-muted ${q.position===1?'fl-time':''}">${fmtMs(q.best_lap_ms)}</td>
+            <td class="pos-cell ${posCls}">${q.position ?? '—'}</td>
+            <td class="td-num">${carNum != null ? '#' + carNum : '—'}</td>
+            <td>${driverCell(row)}</td>
+            <td class="td-muted ${isFastest ? 'fl-time' : ''}">${q.best_lap_ms ? fmtMs(q.best_lap_ms) : '—'}</td>
             <td class="td-muted">${gap}</td>
         </tr>`;
     }).join('');
-    return `<table class="q-table"><thead><tr><th>Pos</th><th>Car</th><th>Team</th><th>Best Lap</th><th>Gap</th></tr></thead><tbody>${rows}</tbody></table>`;
+    return `<table class="q-table"><thead><tr><th>Pos</th><th>Car</th><th>Driver</th><th>Best Lap</th><th>Gap</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function renderStewardList(decisions) {
@@ -579,14 +650,20 @@ function renderStewardList(decisions) {
 }
 
 function renderPenaltiesTable(pens) {
-    const rows = pens.map(p => `<tr>
-        <td class="td-num">#${esc(p.entries?.car_number)}</td>
-        <td>${esc(p.entries?.teams?.name)}</td>
-        <td class="td-muted">${esc(p.penalty_type?.replace(/_/g,' '))}</td>
-        <td style="color:var(--red);font-weight:600">${p.penalty_value ? `${p.penalty_value}` : '—'}</td>
-        <td class="td-muted">${esc(p.reason) || '—'}</td>
-    </tr>`).join('');
-    return `<table><thead><tr><th>Car</th><th>Team</th><th>Penalty</th><th>Value</th><th>Reason</th></tr></thead><tbody>${rows}</tbody></table>`;
+    const rows = pens.map(p => {
+        const drv = p.drivers?.slug
+            ? `<a href="/endurance/drivers/?slug=${encodeURIComponent(p.drivers.slug)}">${esc(p.drivers.display_name)}</a>`
+            : (p.drivers?.display_name ? esc(p.drivers.display_name) : '<span class="td-muted">Whole team</span>');
+        return `<tr>
+            <td class="td-num">${p.entries?.car_number != null ? '#' + esc(p.entries.car_number) : '—'}</td>
+            <td>${esc(p.entries?.teams?.name) || '<em>Solo</em>'}</td>
+            <td>${drv}</td>
+            <td class="td-muted">${esc(p.penalty_type?.replace(/_/g,' '))}</td>
+            <td style="color:var(--red);font-weight:600">${p.penalty_value ? esc(p.penalty_value) : '—'}</td>
+            <td class="td-muted">${esc(p.reason) || '—'}</td>
+        </tr>`;
+    }).join('');
+    return `<table><thead><tr><th>Car</th><th>Team</th><th>Driver</th><th>Penalty</th><th>Value</th><th>Reason</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function errMsg(msg) {
