@@ -104,6 +104,7 @@ Always apply in this order:
 22. `22_message_replies.sql` — admin reply field + driver-read tracking for the inbox
 23. `23_team_leaders_and_join_requests.sql` — team leaders, join requests, approve RPC
 24. `24_team_leader_update.sql` — RLS policy so team leaders can edit their team from the portal
+25. `25_broadcast_messages.sql` — admin "Message All Drivers" broadcast RPC + is_broadcast flag
 
 ---
 

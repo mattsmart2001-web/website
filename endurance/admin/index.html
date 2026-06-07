@@ -3270,7 +3270,7 @@ async function renderMessages() {
         ? `<tr><td colspan="6"><div class="empty-state">No messages from drivers yet.</div></td></tr>`
         : data.map(m => `
             <tr>
-                <td><strong>${esc(m.drivers?.display_name) || '—'}</strong>${m.drivers?.psn_id ? `<br><small class="td-muted">${esc(m.drivers.psn_id)}</small>` : ''}</td>
+                <td>${m.is_broadcast ? '<span class="badge badge-gold" style="margin-right:0.35rem">Broadcast</span>' : ''}<strong>${esc(m.drivers?.display_name) || '—'}</strong>${m.drivers?.psn_id ? `<br><small class="td-muted">${esc(m.drivers.psn_id)}</small>` : ''}</td>
                 <td class="td-muted" style="font-size:0.84rem">${esc(m.subject) || '<em>No subject</em>'}</td>
                 <td class="td-muted" style="font-size:0.82rem;max-width:340px">${esc((m.message || '').slice(0, 120))}${(m.message || '').length > 120 ? '…' : ''}</td>
                 <td>${statusBadge[m.status] || esc(m.status)}</td>
@@ -3282,6 +3282,10 @@ async function renderMessages() {
             </tr>`).join('');
 
     document.getElementById('content').innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap">
+            <div style="font-size:0.85rem;color:var(--muted)">Drivers can write to admins from their portal; replies show in their inbox. Broadcast to send the same message to every driver.</div>
+            <button class="btn btn-primary" onclick="openBroadcastModal()">Message All Drivers</button>
+        </div>
         <div class="stat-grid" style="margin-bottom:1.5rem">
             <div class="stat-card${counts.new > 0 ? ' stat-card-alert' : ''}"><div class="stat-card-label">New</div><div class="stat-card-value">${counts.new}</div></div>
             <div class="stat-card"><div class="stat-card-label">In Progress</div><div class="stat-card-value">${counts.in_progress}</div></div>
@@ -3293,6 +3297,41 @@ async function renderMessages() {
                 <th>Driver</th><th>Subject</th><th>Message</th><th>Status</th><th>Sent</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
+}
+
+function openBroadcastModal() {
+    openModal('Message All Drivers', `
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">This sends the same message to every driver's portal inbox. There's no undo — write it once, send it once.</p>
+        <form id="entity-form">
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" placeholder="e.g. Round 2 Briefing">
+            </div>
+            <div class="form-group">
+                <label>Message <span class="required">*</span></label>
+                <textarea name="message" rows="8" required placeholder="Type your announcement…"></textarea>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="sendBroadcast()">Send to All Drivers</button>`
+    );
+}
+
+async function sendBroadcast() {
+    const d = getFormData('entity-form');
+    if (!d.message) { toast('Message body is required.', 'error'); return; }
+    const phrase = prompt('Type SEND to confirm broadcasting this message to every driver:');
+    if (phrase !== 'SEND') { toast('Cancelled — phrase did not match.', 'error'); return; }
+    const { data, error } = await sb.rpc('broadcast_message_to_drivers', {
+        p_subject: d.subject || null,
+        p_message: d.message,
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
+    toast(`Broadcast sent to ${data.count} driver${data.count === 1 ? '' : 's'}.`, 'success');
+    closeModal();
+    await renderMessages();
+    await refreshMsgsBadge();
 }
 
 async function viewMessage(id) {

@@ -980,7 +980,7 @@ async function rejectRequest(requestId) {
 
 async function loadInbox(driverId) {
     const { data: messages } = await sb.from('driver_contact_messages')
-        .select('id, subject, message, incident_url, status, created_at, admin_reply, replied_at, driver_read_reply_at')
+        .select('id, subject, message, incident_url, status, created_at, admin_reply, replied_at, driver_read_reply_at, is_broadcast')
         .eq('driver_id', driverId)
         .order('created_at', { ascending: false });
     if (!messages?.length) return;
@@ -990,11 +990,25 @@ async function loadInbox(driverId) {
     const pill     = document.getElementById('inbox-unread-pill');
     const fmtWhen  = iso => new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
+    // A broadcast is "unread" until the driver has opened the inbox — we use
+    // driver_read_reply_at for both broadcasts and reply threads.
     const unreadIds = messages
-        .filter(m => m.admin_reply && !m.driver_read_reply_at)
+        .filter(m => (m.is_broadcast || m.admin_reply) && !m.driver_read_reply_at)
         .map(m => m.id);
 
     list.innerHTML = messages.map(m => {
+        if (m.is_broadcast) {
+            const unread = !m.driver_read_reply_at;
+            return `<div class="inbox-thread ${unread ? 'unread' : ''}">
+                <div class="inbox-head">
+                    <div>
+                        <div class="inbox-subj"><span class="pill pill-gold" style="margin-right:0.4rem">★ Announcement</span>${esc(m.subject) || '<em>Admin announcement</em>'}</div>
+                        <div class="inbox-when">${fmtWhen(m.created_at)}${unread ? ' · NEW' : ''}</div>
+                    </div>
+                </div>
+                <div class="inbox-body" style="color:var(--text);margin-top:0.5rem">${esc(m.message)}</div>
+            </div>`;
+        }
         const unread = m.admin_reply && !m.driver_read_reply_at;
         const reply = m.admin_reply
             ? `<div class="inbox-reply">
