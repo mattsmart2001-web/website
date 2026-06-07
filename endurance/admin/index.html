@@ -2297,6 +2297,8 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 </div>
                 <button class="btn btn-primary" onclick="autoAllocateLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Auto-allocate</button>
                 <button class="btn btn-ghost" onclick="clearAllLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Clear All</button>
+                <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
+                <button class="btn-icon danger" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
                 <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Team Elo = avg of drivers' current Elo (DR-seeded if unrated).</div>
             </div>
         </div>
@@ -2352,6 +2354,24 @@ async function clearAllLobbies(eventId, eventName, seasonId) {
     if (error) { toast(error.message, 'error'); return; }
     toast('Lobby assignments cleared.', 'success');
     await viewEventLobbies(eventId, eventName, seasonId);
+}
+
+async function notifyLobbies(eventId, eventName, seasonId) {
+    if (!confirm(`Send a lobby-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox.`)) return;
+    const { data, error } = await sb.rpc('notify_lobby_assignments', { p_event_id: eventId });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
+    toast(`Sent ${data.count} notification${data.count === 1 ? '' : 's'}.`, 'success');
+    await refreshMsgsBadge();
+}
+
+async function deleteLobbyNotifications(eventId, eventName, seasonId) {
+    if (!confirm(`Delete all lobby-assignment notifications previously sent for "${eventName}"?\n\nDrivers' inboxes will lose those messages.`)) return;
+    const { data, error } = await sb.rpc('delete_lobby_notifications', { p_event_id: eventId });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not delete.', 'error'); return; }
+    toast(`Deleted ${data.count} notification${data.count === 1 ? '' : 's'}.`, 'success');
+    await refreshMsgsBadge();
 }
 
 async function moveEntryLobby(entryId, delta, eventId, eventName, seasonId) {
