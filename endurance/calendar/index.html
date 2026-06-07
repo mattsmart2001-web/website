@@ -232,6 +232,28 @@
             transition: background 0.15s;
         }
         .btn-results:hover { background: rgba(255,209,102,0.16); }
+        button.btn-results { font-family: 'Orbitron', sans-serif; cursor: pointer; font-size: inherit; }
+
+        /* Grid modal */
+        .grid-overlay { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.78); padding: 1.5rem; align-items: center; justify-content: center; }
+        .grid-overlay.open { display: flex; }
+        .grid-modal { background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 920px; max-height: 90vh; display: flex; flex-direction: column; }
+        .grid-modal-head { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }
+        .grid-modal-title { font-family: 'Anton', sans-serif; font-size: 1.15rem; letter-spacing: 0.06em; text-transform: uppercase; }
+        .grid-modal-close { background: none; border: none; color: var(--muted); font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 0.5rem; }
+        .grid-modal-close:hover { color: var(--text); }
+        .grid-modal-body { padding: 1.25rem 1.5rem 1.5rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; }
+        .grid-loading { grid-column: 1 / -1; text-align: center; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.7rem; letter-spacing: 0.3em; text-transform: uppercase; padding: 2.5rem 0; }
+        .grid-lobby { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem 1rem; }
+        .grid-lobby-title { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: baseline; }
+        .grid-lobby-count { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 0.15em; color: var(--muted); font-weight: 700; }
+        .grid-row { display: grid; grid-template-columns: 42px 1fr; column-gap: 0.5rem; padding: 0.4rem 0; border-top: 1px solid var(--border); }
+        .grid-row:first-of-type { border-top: none; padding-top: 0; }
+        .grid-car { font-family: 'Anton', sans-serif; color: var(--gold); font-size: 0.95rem; }
+        .grid-team a { color: inherit; text-decoration: none; font-weight: 600; }
+        .grid-team a:hover { color: var(--gold); }
+        .grid-mfr { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.12em; color: var(--muted); margin-left: 0.35rem; }
+        .grid-drivers { font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem; }
 
         .state-msg {
             text-align: center;
@@ -399,6 +421,9 @@ async function load() {
         const replayBtn = e.replay_url
             ? `<a class="btn-results" href="${esc(e.replay_url)}" target="_blank" rel="noopener">▶ Replay</a>`
             : '';
+        const gridBtn = e.status !== 'cancelled'
+            ? `<button class="btn-results" onclick="openGrid('${esc(e.id)}','${esc(e.name)}')">Grid</button>`
+            : '';
         return `
         <div class="event-card status-${esc(e.status)}">
             <div class="event-round">
@@ -418,15 +443,89 @@ async function load() {
                 </div>
                 <div class="event-actions">
                     <span class="badge badge-${esc(e.status)}">${esc(statusLabel[e.status] || e.status)}</span>
-                    ${resultsBtn}${replayBtn}
+                    ${gridBtn}${resultsBtn}${replayBtn}
                 </div>
             </div>
         </div>`;
     }).join('');
 }
 
+// ─── Grid modal ─────────────────────────────────────────────────
+async function openGrid(eventId, eventName) {
+    const overlay = document.getElementById('grid-overlay');
+    document.getElementById('grid-title').textContent = `${eventName} — Grid`;
+    document.getElementById('grid-body').innerHTML = '<div class="grid-loading">Loading…</div>';
+    overlay.classList.add('open');
+
+    const { data: entries, error } = await sb.from('entries')
+        .select('id, car_number, car_model, lobby_number, status, teams(name, slug), manufacturers(name, brand_color), entry_drivers(stint_role, drivers(display_name, slug, career_number))')
+        .eq('event_id', eventId)
+        .in('status', ['confirmed']);
+
+    if (error) {
+        document.getElementById('grid-body').innerHTML = `<div class="grid-loading">${esc(error.message)}</div>`;
+        return;
+    }
+    if (!entries?.length) {
+        document.getElementById('grid-body').innerHTML = `<div class="grid-loading">No confirmed entries for this event yet.</div>`;
+        return;
+    }
+
+    const groups = {};
+    entries.forEach(en => {
+        const key = en.lobby_number ?? 0;
+        (groups[key] = groups[key] || []).push(en);
+    });
+    const keys = Object.keys(groups).map(Number).sort((a, b) => {
+        if (a === 0) return 1; if (b === 0) return -1; return a - b;
+    });
+
+    document.getElementById('grid-body').innerHTML = keys.map(n => {
+        const title = n === 0 ? 'Unassigned' : `Lobby ${n}`;
+        const rows = groups[n]
+            .sort((a, b) => (a.car_number ?? 999) - (b.car_number ?? 999))
+            .map(en => {
+                const drivers = (en.entry_drivers || [])
+                    .map(ed => ed.drivers?.display_name).filter(Boolean).join(' / ');
+                const teamCell = en.teams?.slug
+                    ? `<a href="/endurance/teams/?slug=${esc(en.teams.slug)}">${esc(en.teams.name)}</a>`
+                    : esc(en.teams?.name || '—');
+                const mfr = en.manufacturers?.name
+                    ? `<span class="grid-mfr"${en.manufacturers.brand_color ? ` style="border-left:3px solid ${esc(en.manufacturers.brand_color)};padding-left:0.4rem"` : ''}>${esc(en.manufacturers.name)}</span>`
+                    : '';
+                return `<div class="grid-row">
+                    <span class="grid-car">${en.car_number != null ? '#' + en.car_number : '—'}</span>
+                    <div class="grid-info">
+                        <div class="grid-team">${teamCell} ${mfr}</div>
+                        <div class="grid-drivers">${esc(drivers) || '<em>No drivers yet</em>'}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        return `<div class="grid-lobby">
+            <div class="grid-lobby-title">${title} <span class="grid-lobby-count">${groups[n].length} ${groups[n].length === 1 ? 'entry' : 'entries'}</span></div>
+            ${rows}
+        </div>`;
+    }).join('');
+}
+
+function closeGrid() {
+    document.getElementById('grid-overlay').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeGrid(); });
+
 load();
 </script>
 <script src="/endurance/assets/gtec-nav.js" defer></script>
+
+<!-- Grid modal -->
+<div class="grid-overlay" id="grid-overlay" onclick="if (event.target === this) closeGrid()">
+    <div class="grid-modal">
+        <div class="grid-modal-head">
+            <div class="grid-modal-title" id="grid-title">Grid</div>
+            <button class="grid-modal-close" onclick="closeGrid()" aria-label="Close">×</button>
+        </div>
+        <div class="grid-modal-body" id="grid-body"></div>
+    </div>
+</div>
 </body>
 </html>
