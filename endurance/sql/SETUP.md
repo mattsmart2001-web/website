@@ -115,6 +115,7 @@ Always apply in this order:
 33. `33_dsq_penalty_zeroes_points.sql` — DSQ penalty trigger now zeroes points_awarded immediately
 34. `34_driver_fastest_lap.sql` — per-driver fastest_lap_ms column on result_drivers
 35. `35_fix_solo_entry_sync.sql` — fix `invalid reference to FROM-clause entry` on driver-team change
+36. `36_auto_register_team_season.sql` — auto-register team to season when a driver joins (avoids team_seasons error)
 
 ---
 
