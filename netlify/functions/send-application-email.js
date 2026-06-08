@@ -51,17 +51,22 @@ function shell(title, bodyHtml) {
     </td></tr></table></body></html>`;
 }
 
-function templateFor(emailType, app) {
+function templateFor(emailType, app, claimUrl) {
     const name = esc(app.name || 'racer');
     switch (emailType) {
         case 'accepted':
             return {
-                subject: 'You\'re in — Gran Turismo ',
+                subject: 'You\'re in — Gran Turismo GTEC',
                 html: shell('Application Accepted', `
                     <h2 style="font-family:Impact,'Anton',sans-serif;font-size:26px;letter-spacing:0.04em;text-transform:uppercase;color:#ffd166;margin:0 0 18px">Welcome to the grid, ${name}.</h2>
                     <p>Your application to Gran Turismo GTEC has been <strong style="color:#4ade80">accepted</strong>. Congrats.</p>
-                    <p>Next up, your team admin will be in touch via PSN and Discord with team assignment and round details. In the meantime, jump into the Discord to meet the rest of the grid.</p>
-                    <p style="margin:24px 0"><a href="${DISCORD_URL}" style="display:inline-block;background:#ffd166;color:#1a1300;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;font-size:12px">Join the SparksTheory Discord</a></p>
+                    ${claimUrl ? `
+                    <p>To set up your driver portal — where you'll see your standings, race history, lobby allocations and admin messages — open the secure link below and pick a password. It's valid for 24 hours.</p>
+                    <p style="margin:20px 0"><a href="${claimUrl}" style="display:inline-block;background:#ffd166;color:#1a1300;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;font-size:12px">Activate Your Profile</a></p>
+                    <p style="font-size:12px;color:#94a3b8;word-break:break-all">If the button doesn't work, paste this into your browser:<br><a href="${claimUrl}" style="color:#ffd166">${claimUrl}</a></p>
+                    ` : ''}
+                    <p>Jump into the Discord to meet the rest of the grid.</p>
+                    <p style="margin:24px 0"><a href="${DISCORD_URL}" style="display:inline-block;background:rgba(255,255,255,0.06);color:#f1f5f9;border:1px solid rgba(255,255,255,0.15);text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;font-size:12px">Join the SparksTheory Discord</a></p>
                     <p style="font-size:13px;color:#94a3b8">See you on track.</p>`),
             };
         case 'waitlisted':
@@ -146,7 +151,42 @@ exports.handler = async (event) => {
         return { statusCode: 400, body: 'This application has no email address.' };
     }
 
-    const tpl = templateFor(email_type, app);
+    // For acceptance: if the application has a linked driver who hasn't
+    // claimed their account yet, mint a single-use claim token and bake
+    // the URL into the email.
+    let claimUrl = null;
+    if (email_type === 'accepted' && app.linked_driver_id) {
+        try {
+            const drvRes = await fetch(
+                `${SUPABASE_URL}/rest/v1/drivers?select=user_id&id=eq.${app.linked_driver_id}`,
+                { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${userToken}` } }
+            );
+            const drvRows = await drvRes.json();
+            const driver = Array.isArray(drvRows) ? drvRows[0] : null;
+            if (driver && !driver.user_id) {
+                const tokRes = await fetch(`${SUPABASE_URL}/rest/v1/driver_claim_tokens`, {
+                    method: 'POST',
+                    headers: {
+                        apikey: SUPABASE_ANON_KEY,
+                        Authorization: `Bearer ${userToken}`,
+                        'Content-Type': 'application/json',
+                        Prefer: 'return=representation',
+                    },
+                    body: JSON.stringify({ driver_id: app.linked_driver_id }),
+                });
+                if (tokRes.ok) {
+                    const rows = await tokRes.json();
+                    const token = Array.isArray(rows) ? rows[0]?.token : rows?.token;
+                    if (token) claimUrl = `${SITE_URL}/endurance/profile/claim/?token=${token}`;
+                }
+            }
+        } catch (err) {
+            // Non-fatal — we'll still send the email without the claim link.
+            console.warn('Claim-token mint failed:', err.message);
+        }
+    }
+
+    const tpl = templateFor(email_type, app, claimUrl);
     if (!tpl) return { statusCode: 400, body: 'Unknown email_type' };
 
     // Send via Resend

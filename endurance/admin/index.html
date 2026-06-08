@@ -1424,12 +1424,41 @@ async function removeTeamSeason(id) {
 // ============================================================
 async function renderTeams() {
     const { data, error } = await sb.from('teams')
-        .select('*, manufacturers(name,brand_color)')
+        .select('*, manufacturers(name,brand_color), leader:drivers!leader_driver_id(id, display_name)')
         .order('name');
     if (error) { toast(error.message, 'error'); return; }
 
-    const rows = data.length === 0 ? `<tr><td colspan="5"><div class="empty-state">No teams yet.</div></td></tr>` :
-        data.map(t => `
+    // Fetch every current-team driver in one go so we can show leader status
+    // and offer the leader-picker for teams without one.
+    const { data: allDrivers } = await sb.from('drivers')
+        .select('id, display_name, current_team_id')
+        .not('current_team_id', 'is', null);
+    const byTeam = new Map();
+    (allDrivers || []).forEach(d => {
+        const list = byTeam.get(d.current_team_id) || [];
+        list.push(d);
+        byTeam.set(d.current_team_id, list);
+    });
+
+    const rows = data.length === 0 ? `<tr><td colspan="6"><div class="empty-state">No teams yet.</div></td></tr>` :
+        data.map(t => {
+            const driversOnTeam = byTeam.get(t.id) || [];
+            let leaderCell;
+            if (t.leader?.display_name) {
+                leaderCell = `<span class="badge badge-gold">★ ${esc(t.leader.display_name)}</span>
+                    <button class="btn-icon" style="margin-left:0.4rem" onclick="clearTeamLeader('${t.id}','${esc(t.name)}')">Clear</button>`;
+            } else if (driversOnTeam.length === 0) {
+                leaderCell = '<span class="td-muted">No drivers yet</span>';
+            } else {
+                const opts = driversOnTeam
+                    .map(d => `<option value="${esc(d.id)}">${esc(d.display_name)}</option>`)
+                    .join('');
+                leaderCell = `<select id="leader-${t.id}" style="padding:0.35rem 0.55rem;font-size:0.78rem;background:var(--bg-2);border:1px solid var(--border);border-radius:5px;color:var(--text)">
+                        <option value="">— pick driver —</option>${opts}
+                    </select>
+                    <button class="btn-icon" style="margin-left:0.4rem" onclick="setTeamLeader('${t.id}','${esc(t.name)}')">Set Leader</button>`;
+            }
+            return `
             <tr>
                 <td><strong>${esc(t.name)}</strong></td>
                 <td class="td-muted">${esc(t.slug)}</td>
@@ -1438,11 +1467,13 @@ async function renderTeams() {
                     ${esc(t.manufacturers?.name) || '<span class="td-muted">—</span>'}
                 </td>
                 <td class="td-muted">${esc(t.home_country) || '—'}</td>
+                <td>${leaderCell}</td>
                 <td><div class="row-actions">
                     <button class="btn-icon" onclick="editTeam('${t.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteTeam('${t.id}','${esc(t.name)}')">Delete</button>
                 </div></td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
 
     document.getElementById('content').innerHTML = `
         <div class="table-wrap">
@@ -1450,9 +1481,27 @@ async function renderTeams() {
                 <input class="table-search" type="search" placeholder="Search teams…" oninput="filterTable(this,'teams-table')">
             </div>
             <table id="teams-table"><thead><tr>
-                <th>Name</th><th>Slug</th><th>Manufacturer</th><th>Country</th><th></th>
+                <th>Name</th><th>Slug</th><th>Manufacturer</th><th>Country</th><th>Leader</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
+}
+
+async function setTeamLeader(teamId, teamName) {
+    const sel = document.getElementById('leader-' + teamId);
+    const driverId = sel?.value;
+    if (!driverId) { toast('Pick a driver first.', 'error'); return; }
+    const { error } = await sb.from('teams').update({ leader_driver_id: driverId }).eq('id', teamId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(`Leader set for ${teamName}.`, 'success');
+    await renderTeams();
+}
+
+async function clearTeamLeader(teamId, teamName) {
+    if (!confirm(`Clear team leader for "${teamName}"?`)) return;
+    const { error } = await sb.from('teams').update({ leader_driver_id: null }).eq('id', teamId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(`Leader cleared for ${teamName}.`, 'success');
+    await renderTeams();
 }
 
 function teamForm(t = {}) {
