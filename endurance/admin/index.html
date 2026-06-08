@@ -2130,12 +2130,47 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
         teamsToInsert.length ? `${teamsToInsert.length} team${teamsToInsert.length === 1 ? '' : 's'}` : '',
         soloToInsert.length  ? `${soloToInsert.length} solo driver${soloToInsert.length === 1 ? '' : 's'}` : '',
     ].filter(Boolean).join(' + ');
-    if (!confirm(`Register ${msg} for "${eventName}"?\n\nTeam entries inherit the team's locked manufacturer.\nSolo driver entries are team-less — when the driver later joins a team, the entry auto-updates.`)) return;
+    if (!confirm(`Register ${msg} for "${eventName}"?\n\nTeam entries inherit the team's locked manufacturer and auto-link every driver currently assigned to the team (1, 2 or more).\nSolo driver entries are team-less — when the driver later joins a team, the entry auto-updates.`)) return;
 
-    // 1. Insert team entries
+    // 1. Insert team entries + auto-link the team's current drivers
+    let totalTeamDrivers = 0;
     if (teamsToInsert.length) {
-        const { error } = await sb.from('entries').insert(teamsToInsert);
+        const { data: createdTeamEntries, error } = await sb.from('entries').insert(teamsToInsert).select('id, team_id');
         if (error) { toast(error.message, 'error'); return; }
+
+        const newTeamIds = (createdTeamEntries || []).map(e => e.team_id).filter(Boolean);
+        if (newTeamIds.length) {
+            const { data: teamDrivers } = await sb.from('drivers')
+                .select('id, current_team_id, career_number')
+                .in('current_team_id', newTeamIds);
+            const byTeam = new Map();
+            (teamDrivers || []).forEach(d => {
+                const list = byTeam.get(d.current_team_id) || [];
+                list.push(d);
+                byTeam.set(d.current_team_id, list);
+            });
+
+            const driverLinks = [];
+            const carNumberUpdates = [];
+            for (const en of createdTeamEntries) {
+                const drivers = byTeam.get(en.team_id) || [];
+                drivers.forEach(d => {
+                    driverLinks.push({ entry_id: en.id, driver_id: d.id, stint_role: 'starting' });
+                });
+                totalTeamDrivers += drivers.length;
+                const firstWithNum = drivers.find(d => d.career_number != null);
+                if (firstWithNum) {
+                    carNumberUpdates.push({ id: en.id, car_number: firstWithNum.career_number });
+                }
+            }
+            if (driverLinks.length) {
+                const { error: linkErr } = await sb.from('entry_drivers').insert(driverLinks);
+                if (linkErr) toast(`Team entries inserted, but auto-linking drivers failed: ${linkErr.message}`, 'error');
+            }
+            for (const u of carNumberUpdates) {
+                await sb.from('entries').update({ car_number: u.car_number }).eq('id', u.id);
+            }
+        }
     }
 
     // 2. Insert solo entries (one per driver), then link them in entry_drivers
@@ -2161,7 +2196,11 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
         }
     }
 
-    toast(`Registered ${msg}.`, 'success');
+    const summary = [
+        teamsToInsert.length ? `${teamsToInsert.length} team${teamsToInsert.length === 1 ? '' : 's'} (${totalTeamDrivers} driver${totalTeamDrivers === 1 ? '' : 's'})` : '',
+        soloToInsert.length  ? `${soloToInsert.length} solo` : '',
+    ].filter(Boolean).join(' + ');
+    toast(`Registered ${summary}.`, 'success');
     await viewEventEntries(eventId, eventName, seasonId);
 }
 
