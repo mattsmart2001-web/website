@@ -112,6 +112,7 @@ Always apply in this order:
 30. `30_points_deduction_standings.sql` — penalties.points_amount + driver/team standings subtract deductions
 31. `31_dsq_zero_points.sql` — DSQ status zeroes points + DSQ penalty auto-flips result status
 32. `32_team_deductions_cascade.sql` — whole-team points-deductions cascade to each driver on the entry
+33. `33_dsq_penalty_zeroes_points.sql` — DSQ penalty trigger now zeroes points_awarded immediately
 
 ---
 
