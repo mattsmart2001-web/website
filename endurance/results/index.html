@@ -363,6 +363,25 @@ async function loadResults(slug) {
     const qMap = {};
     qualy.forEach(q => { qMap[`${q.entry_id}|${q.driver_id || ''}`] = q; });
 
+    // Aggregate points_deduction penalties per driver for this event.
+    // Driver-specific penalty (driver_id set) → that driver only.
+    // Whole-team penalty (driver_id NULL) → every entry_driver on that entry.
+    const deductByDriverEntry = {};
+    pens.forEach(p => {
+        if (p.penalty_type !== 'points_deduction' || !p.points_amount) return;
+        if (p.driver_id) {
+            const k = `${p.entry_id}|${p.driver_id}`;
+            deductByDriverEntry[k] = (deductByDriverEntry[k] || 0) + p.points_amount;
+        } else {
+            const en = entries.find(e => e.id === p.entry_id);
+            (en?.entry_drivers || []).forEach(ed => {
+                if (!ed.drivers) return;
+                const k = `${p.entry_id}|${ed.drivers.id}`;
+                deductByDriverEntry[k] = (deductByDriverEntry[k] || 0) + p.points_amount;
+            });
+        }
+    });
+
     // Flatten every confirmed entry into one record per driver
     const driverRows = [];
     entries.forEach(en => {
@@ -371,13 +390,14 @@ async function loadResults(slug) {
             .filter(x => x.driver);
         const result = resultByEntry[en.id] || null;
         if (!drvs.length) {
-            driverRows.push({ entry: en, driver: null, stint_role: null, result, rd: null, quali: null });
+            driverRows.push({ entry: en, driver: null, stint_role: null, result, rd: null, quali: null, deducted: 0 });
             return;
         }
         drvs.forEach(({ stint_role, driver }) => {
             const rd = result ? rdMap[`${result.id}|${driver.id}`] || null : null;
             const quali = qMap[`${en.id}|${driver.id}`] || qMap[`${en.id}|`] || null;
-            driverRows.push({ entry: en, driver, stint_role, result, rd, quali });
+            const deducted = deductByDriverEntry[`${en.id}|${driver.id}`] || 0;
+            driverRows.push({ entry: en, driver, stint_role, result, rd, quali, deducted });
         });
     });
 
@@ -589,6 +609,18 @@ function renderResultsTable(classified, unclassified, flRow) {
         const flTime = rd.fastest_lap_ms
             ? `<span class="${isFL ? 'fl-time' : 'td-muted'}">${fmtMs(rd.fastest_lap_ms)}${isFL ? '<span class="fl-badge">FL</span>' : ''}</span>`
             : (isFL ? '<span class="fl-badge">FL</span>' : '<span class="td-muted">—</span>');
+        const earned = rd.points_awarded;
+        const deduct = row.deducted || 0;
+        let ptsCell;
+        if (earned == null && !deduct) {
+            ptsCell = '—';
+        } else {
+            const net = (earned || 0) - deduct;
+            ptsCell = `<span style="color:var(--gold)">${net}</span>`;
+            if (deduct) {
+                ptsCell += `<div style="font-size:0.65rem;color:#f87171;font-weight:600;font-family:'Orbitron',sans-serif" title="${earned} earned − ${deduct} deducted">−${deduct}</div>`;
+            }
+        }
         return `
         <tr class="${isDNF ? 'row-dnf' : ''}">
             <td class="pos-cell ${posClass}">${posDisplay}</td>
@@ -598,7 +630,7 @@ function renderResultsTable(classified, unclassified, flRow) {
             <td class="td-muted td-center">${rd.laps_driven ?? '—'}</td>
             <td>${flTime}</td>
             <td class="td-center" style="font-size:0.72rem">${isPole ? '<span style="color:var(--gold)">★</span>' : '<span class="td-muted">—</span>'}</td>
-            <td class="td-center" style="font-weight:600;color:var(--gold)">${rd.points_awarded ?? '—'}</td>
+            <td class="td-center" style="font-weight:600">${ptsCell}</td>
         </tr>`;
     };
 
