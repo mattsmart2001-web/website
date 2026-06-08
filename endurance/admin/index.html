@@ -2729,7 +2729,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
     let rdMap = {};
     if (resultIds.length) {
         const { data: rds } = await sb.from('result_drivers')
-            .select('result_id, driver_id, finish_position, classified, status, laps_driven, points_awarded, pole_point, fastest_lap_point')
+            .select('result_id, driver_id, finish_position, classified, status, laps_driven, points_awarded, pole_point, fastest_lap_point, fastest_lap_ms')
             .in('result_id', resultIds);
         (rds || []).forEach(rd => { rdMap[`${rd.result_id}|${rd.driver_id}`] = rd; });
     }
@@ -2755,7 +2755,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
     });
 
     const rows = rowSpecs.length === 0
-        ? `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:2rem">No drivers in this lobby.</td></tr>`
+        ? `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No drivers in this lobby.</td></tr>`
         : rowSpecs.map(({ entry: en, driver: d }) => {
             const r  = rMap[en.id] || {};
             const rd = (r.id && d) ? (rdMap[`${r.id}|${d.id}`] || {}) : {};
@@ -2765,6 +2765,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
             const points  = rd.points_awarded ?? 0;
             const isPole  = !!rd.pole_point;
             const isFL    = !!rd.fastest_lap_point;
+            const flTime  = rd.fastest_lap_ms ? fmtLapTime(rd.fastest_lap_ms) : '';
             const statusSel = statusOpts.map(s =>
                 `<option value="${s}" ${status === s ? 'selected' : ''}>${s}</option>`).join('');
             const carLabel = en.car_number != null ? '#' + en.car_number : '—';
@@ -2780,7 +2781,10 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
                 <td><input type="number" min="0" data-entry="${en.id}" ${dAttr} data-field="laps_driven" value="${laps}" style="width:65px;padding:0.4rem 0.5rem" ${dis}></td>
                 <td><select data-entry="${en.id}" ${dAttr} data-field="status" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
                 <td style="text-align:center;font-size:0.78rem;${isPole ? 'color:var(--gold);font-weight:600' : 'color:var(--muted)'}" title="Auto-set from qualifying P1">${isPole ? '★' : '—'}</td>
-                <td style="text-align:center"><input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${isFL ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px" ${dis}></td>
+                <td style="white-space:nowrap">
+                    <input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${isFL ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px;vertical-align:middle" ${dis}>
+                    <input type="text" placeholder="1:23.456" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_time" value="${flTime}" style="width:100px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.78rem;margin-left:0.35rem" ${dis}>
+                </td>
                 <td style="text-align:right;color:var(--gold);font-weight:600">${points}</td>
             </tr>`;
         }).join('');
@@ -2800,7 +2804,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
                 </div>
             </div>
             <table id="results-table"><thead><tr>
-                <th>Driver</th><th>Pos</th><th>Laps</th><th>Status</th><th>Pole</th><th>FL</th><th style="text-align:right">Pts</th>
+                <th>Driver</th><th>Pos</th><th>Laps</th><th>Status</th><th>Pole</th><th>FL · Time</th><th style="text-align:right">Pts</th>
             </tr></thead><tbody>${rows}</tbody></table>
             <div style="padding:0.85rem 1.25rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border)">
                 Pick a lobby to record results lobby by lobby. Pole is auto-set from qualifying P1. Points recompute per-driver on save.
@@ -2811,6 +2815,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
 async function saveResults(eventId, eventName) {
     const rowInputs = document.querySelectorAll('#results-table [data-entry][data-driver]');
     const perDriver = {};
+    let badTime = false;
     rowInputs.forEach(inp => {
         const entryId  = inp.dataset.entry;
         const driverId = inp.dataset.driver;
@@ -2823,10 +2828,19 @@ async function saveResults(eventId, eventName) {
             perDriver[key][f] = inp.value ? parseInt(inp.value) : null;
         } else if (f === 'laps_driven') {
             perDriver[key][f] = inp.value ? parseInt(inp.value) : 0;
+        } else if (f === 'fastest_lap_time') {
+            const v = inp.value.trim();
+            if (!v) { perDriver[key].fastest_lap_ms = null; }
+            else {
+                const ms = parseLapTime(v);
+                if (ms == null) { toast(`Invalid lap time: "${v}"`, 'error'); badTime = true; }
+                perDriver[key].fastest_lap_ms = ms;
+            }
         } else {
             perDriver[key][f] = inp.value || null;
         }
     });
+    if (badTime) return;
 
     const driverRows = Object.values(perDriver);
 
@@ -2895,6 +2909,7 @@ async function saveResults(eventId, eventName) {
             classified:       (dr.status || 'classified') === 'classified',
             laps_driven:      dr.laps_driven ?? null,
             fastest_lap_point: !!dr.fastest_lap_point,
+            fastest_lap_ms:   dr.fastest_lap_ms ?? null,
             // points_share defaults to 1.0; per-driver points come from
             // result_drivers.points_awarded which compute_event_points fills.
         };

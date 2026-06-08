@@ -352,7 +352,7 @@ async function loadResults(slug) {
     let rdRows = [];
     if (resultIds.length) {
         const { data: rds } = await sb.from('result_drivers')
-            .select('result_id, driver_id, finish_position, classified, status, laps_driven, points_awarded, pole_point, fastest_lap_point')
+            .select('result_id, driver_id, finish_position, classified, status, laps_driven, points_awarded, pole_point, fastest_lap_point, fastest_lap_ms')
             .in('result_id', resultIds);
         rdRows = rds || [];
     }
@@ -558,15 +558,16 @@ function renderPodium(classified) {
 
 function renderFLCallout(row) {
     const d = row.driver;
+    const time = row.rd?.fastest_lap_ms ? fmtMs(row.rd.fastest_lap_ms) : '—';
     return `
     <div class="fl-callout">
         <div>
             <div class="fl-callout-label">Fastest Lap</div>
-            <div class="fl-callout-time">${d ? esc(d.display_name) : '—'}</div>
+            <div class="fl-callout-time">${time}</div>
         </div>
         <div>
-            <div style="font-weight:600">${row.entry.teams?.name ? esc(row.entry.teams.name) : 'Solo'}</div>
-            <div class="fl-callout-car">${esc(row.entry.car_model || '')}</div>
+            <div style="font-weight:600">${d ? esc(d.display_name) : '—'}</div>
+            <div class="fl-callout-car">${row.entry.teams?.name ? esc(row.entry.teams.name) : 'Solo'}${row.entry.car_model ? ' · ' + esc(row.entry.car_model) : ''}</div>
         </div>
     </div>`;
 }
@@ -585,6 +586,9 @@ function renderResultsTable(classified, unclassified, flRow) {
                     : esc(row.entry.teams.name)
               }</strong>`
             : '<em class="td-muted">Solo</em>';
+        const flTime = rd.fastest_lap_ms
+            ? `<span class="${isFL ? 'fl-time' : 'td-muted'}">${fmtMs(rd.fastest_lap_ms)}${isFL ? '<span class="fl-badge">FL</span>' : ''}</span>`
+            : (isFL ? '<span class="fl-badge">FL</span>' : '<span class="td-muted">—</span>');
         return `
         <tr class="${isDNF ? 'row-dnf' : ''}">
             <td class="pos-cell ${posClass}">${posDisplay}</td>
@@ -592,7 +596,8 @@ function renderResultsTable(classified, unclassified, flRow) {
             <td>${driverCell(row)}</td>
             <td>${teamCell}${row.entry.car_model ? `<div style="font-size:0.72rem;color:var(--muted)">${esc(row.entry.car_model)}</div>` : ''}</td>
             <td class="td-muted td-center">${rd.laps_driven ?? '—'}</td>
-            <td class="td-center" style="font-size:0.72rem">${isPole ? '<span style="color:var(--gold)">★ Pole</span>' : ''}${isPole && isFL ? ' · ' : ''}${isFL ? '<span class="fl-badge">FL</span>' : ''}${!isPole && !isFL ? '<span class="td-muted">—</span>' : ''}</td>
+            <td>${flTime}</td>
+            <td class="td-center" style="font-size:0.72rem">${isPole ? '<span style="color:var(--gold)">★</span>' : '<span class="td-muted">—</span>'}</td>
             <td class="td-center" style="font-weight:600;color:var(--gold)">${rd.points_awarded ?? '—'}</td>
         </tr>`;
     };
@@ -611,7 +616,7 @@ function renderResultsTable(classified, unclassified, flRow) {
     <table>
         <thead><tr>
             <th>Pos</th><th>Car</th><th>Driver</th><th>Team / Car</th>
-            <th class="td-center">Laps</th><th class="td-center">Bonus</th><th class="td-center">Pts</th>
+            <th class="td-center">Laps</th><th>Best Lap</th><th class="td-center">Pole</th><th class="td-center">Pts</th>
         </tr></thead>
         <tbody>${[...rows, ...dnfRows].join('')}</tbody>
     </table>`;
