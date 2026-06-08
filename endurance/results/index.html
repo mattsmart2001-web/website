@@ -263,8 +263,8 @@ slug ? loadResults(slug) : loadIndex();
 // ── Index: list all completed events ─────────────────────────
 async function loadIndex() {
     const { data: events, error } = await sb.from('events')
-        .select('id, name, slug, circuit_name, circuit_country, starts_at, round, seasons(name, year)')
-        .eq('status', 'completed')
+        .select('id, name, slug, circuit_name, circuit_country, starts_at, status, round, seasons(name, year)')
+        .neq('status', 'cancelled')
         .order('starts_at', { ascending: false });
 
     if (error) { app.innerHTML = errMsg(error.message); return; }
@@ -272,16 +272,35 @@ async function loadIndex() {
     if (!events?.length) {
         app.innerHTML = `
         <div class="page-wrap">
-            <div class="state-msg"><h3>No Results Yet</h3><p>Race results will appear here once events are completed.</p></div>
+            <div class="state-msg"><h3>No Events Yet</h3><p>Race results will appear here once events are scheduled.</p></div>
         </div>`;
         return;
     }
 
-    const items = events.map(e => `
+    // Only show events that have at least one result row, OR are completed.
+    const eventIds = events.map(e => e.id);
+    const { data: resultEvents } = await sb.from('results')
+        .select('event_id')
+        .in('event_id', eventIds);
+    const withResults = new Set((resultEvents || []).map(r => r.event_id));
+
+    const visible = events.filter(e => e.status === 'completed' || withResults.has(e.id));
+
+    if (!visible.length) {
+        app.innerHTML = `
+        <div class="page-wrap">
+            <div class="state-msg"><h3>No Results Yet</h3><p>Race results will appear here once an event has its first results saved.</p></div>
+        </div>`;
+        return;
+    }
+
+    const statusLabel = { completed:'Completed', in_progress:'Live', scheduled:'Scheduled' };
+
+    const items = visible.map(e => `
         <a class="results-item" href="/endurance/results/?slug=${encodeURIComponent(e.slug)}">
             <div class="results-item-round">${e.round}</div>
             <div class="results-item-info">
-                <div class="results-item-name">${esc(e.name)}</div>
+                <div class="results-item-name">${esc(e.name)} <span class="badge badge-${esc(e.status)}" style="margin-left:0.5rem;font-size:0.65rem">${esc(statusLabel[e.status] || e.status)}</span></div>
                 <div class="results-item-meta">${flag(e.circuit_country)} ${esc(e.circuit_name)} · ${fmtDate(e.starts_at)} · ${esc(e.seasons?.name)}</div>
             </div>
             <div class="results-item-arrow">→</div>
