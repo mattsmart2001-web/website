@@ -449,8 +449,8 @@ function renderLobbySection(title, rows) {
             return (a.quali.best_lap_ms ?? Infinity) - (b.quali.best_lap_ms ?? Infinity);
         });
 
-    const flRow = classified.find(r => r.rd?.fastest_lap_point);
-    const poleRow = qualifying[0] || classified.find(r => r.rd?.pole_point);
+    const flRow = rows.find(r => r.rd?.fastest_lap_point);
+    const poleRow = qualifying[0] || rows.find(r => r.rd?.pole_point);
 
     const driverCount = rows.length;
 

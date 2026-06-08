@@ -111,6 +111,7 @@ Always apply in this order:
 29. `29_per_driver_elo.sql` — fix Elo to rank by per-driver finish_position instead of entry-level
 30. `30_points_deduction_standings.sql` — penalties.points_amount + driver/team standings subtract deductions
 31. `31_dsq_zero_points.sql` — DSQ status zeroes points + DSQ penalty auto-flips result status
+32. `32_team_deductions_cascade.sql` — whole-team points-deductions cascade to each driver on the entry
 
 ---
 
