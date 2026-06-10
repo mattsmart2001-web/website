@@ -1639,7 +1639,9 @@ function driverForm(d = {}) {
             </div>
             <div class="form-group">
                 <label>Career Number</label>
-                <input type="number" name="career_number" value="${d.career_number || ''}" placeholder="44" min="1" max="999">
+                <input type="number" name="career_number" id="career_number" value="${d.career_number || ''}" placeholder="next: ${nextAvailableCareerNumber(d.id) ?? '?'}" min="1" max="999"
+                    oninput="onCareerNumberInput(this, '${d.id || ''}')">
+                <div class="form-hint" id="career-number-hint" style="color:var(--muted)">${nextAvailableCareerNumber(d.id) ? `Next available: #${nextAvailableCareerNumber(d.id)}` : ''}</div>
             </div>
         </div>
         <div class="form-row">
@@ -1718,6 +1720,40 @@ function openDriverModal(d = {}) {
 async function editDriver(id) {
     const { data } = await sb.from('drivers').select('*').eq('id', id).single();
     openDriverModal(data);
+}
+
+function nextAvailableCareerNumber(ignoreDriverId) {
+    const used = new Set();
+    (_drivers || []).forEach(d => {
+        if (d.career_number != null && d.id !== ignoreDriverId) used.add(d.career_number);
+    });
+    for (let n = 1; n <= 999; n++) {
+        if (!used.has(n)) return n;
+    }
+    return null;
+}
+
+function onCareerNumberInput(input, ignoreDriverId) {
+    const hint = document.getElementById('career-number-hint');
+    if (!hint) return;
+    const raw = input.value.trim();
+    if (!raw) {
+        const next = nextAvailableCareerNumber(ignoreDriverId);
+        hint.textContent = next ? `Next available: #${next}` : '';
+        hint.style.color = 'var(--muted)';
+        input.style.borderColor = '';
+        return;
+    }
+    const res = checkCareerNumber(raw, ignoreDriverId || null);
+    if (res.ok) {
+        hint.textContent = `#${res.value} is available`;
+        hint.style.color = '#4ade80';
+        input.style.borderColor = 'rgba(34,197,94,0.45)';
+    } else {
+        hint.textContent = res.error;
+        hint.style.color = '#fca5a5';
+        input.style.borderColor = 'rgba(239,68,68,0.55)';
+    }
 }
 
 function checkCareerNumber(raw, ignoreDriverId) {

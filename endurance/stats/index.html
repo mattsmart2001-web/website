@@ -337,12 +337,14 @@ async function load() {
     const ratings  = (ratingsRes.data || []).filter(r => r.last_rated_at);
     const circuits = circuitsRes.data || [];
 
-    // Hall of Fame
-    const hofHTML = hof.length ? `
+    // Hall of Fame (skip Most Race Hours — derived from event duration,
+    // not actual driving time, so it can mislead)
+    const hofFiltered = (hof || []).filter(r => r.category !== 'most_race_hours');
+    const hofHTML = hofFiltered.length ? `
         <div class="section">
             <div class="section-title">Hall of Fame</div>
             <div class="hof-grid">
-                ${hof.map(r => {
+                ${hofFiltered.map(r => {
                     const drv = r.drivers;
                     const ctx = drv?.slug
                         ? `<a href="/endurance/drivers/?slug=${esc(drv.slug)}">${esc(r.context || drv.display_name)}</a>`
@@ -374,7 +376,6 @@ async function load() {
                 ${leaderboardHTML('Most Fastest Laps', lb('fastest_laps'))}
                 ${leaderboardHTML('Most Starts',       lb('starts'))}
                 ${leaderboardHTML('Career Points',     lb('career_points', v => Number(v)), v => Number(v).toFixed(v % 1 === 0 ? 0 : 1))}
-                ${leaderboardHTML('Race Hours',        lb('race_hours',    v => Number(v)), v => Number(v).toFixed(1) + 'h')}
                 ${leaderboardHTML('Highest Rating',    lbRatings('rating'))}
                 ${leaderboardHTML('Peak Rating',       lbRatings('peak_rating'))}
             </div>
