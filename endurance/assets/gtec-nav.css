@@ -6,6 +6,26 @@
    over the inline .gtec-nav declarations at the matching breakpoint.
    ============================================================ */
 
+/* Unread-message badge next to the "My Profile" nav link */
+.nav-badge {
+    display: none;
+    margin-left: 0.45em;
+    min-width: 1.1em;
+    padding: 0.05em 0.45em;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 999px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+    text-align: center;
+    vertical-align: middle;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 0 6px rgba(239,68,68,0.55);
+}
+.nav-badge.show { display: inline-block; }
+
 /* Logo image used in the nav brand */
 .gtec-nav .brand-logo {
     height: 22px;
