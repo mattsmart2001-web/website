@@ -1597,6 +1597,7 @@ async function renderDrivers() {
                 <td>${d.user_id ? '<span class="badge badge-green">Claimed</span>' : '<span class="badge badge-muted">Unclaimed</span>'}</td>
                 <td><div class="row-actions">
                     ${!d.user_id ? `<button class="btn-icon" onclick="generateClaimLink('${d.id}','${esc(d.display_name)}')">Claim Link</button>` : ''}
+                    <button class="btn-icon" onclick="openDirectMessageModal('${d.id}','${esc(d.display_name)}')">Message</button>
                     <button class="btn-icon" onclick="editDriver('${d.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteDriver('${d.id}','${esc(d.display_name)}')">Delete</button>
                 </div></td>
@@ -3969,7 +3970,7 @@ async function renderMessages() {
         ? `<tr><td colspan="6"><div class="empty-state">No messages from drivers yet.</div></td></tr>`
         : data.map(m => `
             <tr>
-                <td>${m.is_broadcast ? '<span class="badge badge-gold" style="margin-right:0.35rem">Broadcast</span>' : ''}<strong>${esc(m.drivers?.display_name) || '—'}</strong>${m.drivers?.psn_id ? `<br><small class="td-muted">${esc(m.drivers.psn_id)}</small>` : ''}</td>
+                <td>${m.is_broadcast ? '<span class="badge badge-gold" style="margin-right:0.35rem">Admin → Driver</span>' : ''}<strong>${esc(m.drivers?.display_name) || '—'}</strong>${m.drivers?.psn_id ? `<br><small class="td-muted">${esc(m.drivers.psn_id)}</small>` : ''}</td>
                 <td class="td-muted" style="font-size:0.84rem">${esc(m.subject) || '<em>No subject</em>'}</td>
                 <td class="td-muted" style="font-size:0.82rem;max-width:340px">${esc((m.message || '').slice(0, 120))}${(m.message || '').length > 120 ? '…' : ''}</td>
                 <td>${statusBadge[m.status] || esc(m.status)}</td>
@@ -3982,8 +3983,11 @@ async function renderMessages() {
 
     document.getElementById('content').innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap">
-            <div style="font-size:0.85rem;color:var(--muted)">Drivers can write to admins from their portal; replies show in their inbox. Broadcast to send the same message to every driver.</div>
-            <button class="btn btn-primary" onclick="openBroadcastModal()">Message All Drivers</button>
+            <div style="font-size:0.85rem;color:var(--muted)">Drivers can write to admins from their portal; replies show in their inbox. Message one driver or broadcast to all.</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                <button class="btn btn-ghost" onclick="openDirectMessageModal()">Message Driver</button>
+                <button class="btn btn-primary" onclick="openBroadcastModal()">Message All Drivers</button>
+            </div>
         </div>
         <div class="stat-grid" style="margin-bottom:1.5rem">
             <div class="stat-card${counts.new > 0 ? ' stat-card-alert' : ''}"><div class="stat-card-label">New</div><div class="stat-card-value">${counts.new}</div></div>
@@ -4030,6 +4034,59 @@ async function sendBroadcast() {
     toast(`Broadcast sent to ${data.count} driver${data.count === 1 ? '' : 's'}.`, 'success');
     closeModal();
     await renderMessages();
+    await refreshMsgsBadge();
+}
+
+async function openDirectMessageModal(preselectDriverId, preselectDriverName) {
+    const { data: drivers } = await sb.from('drivers')
+        .select('id, display_name, psn_id, user_id')
+        .order('display_name');
+    const options = (drivers || []).map(d => {
+        const claimed = d.user_id ? '' : ' · unclaimed';
+        const psn = d.psn_id ? ' (' + d.psn_id + ')' : '';
+        const sel = preselectDriverId && d.id === preselectDriverId ? ' selected' : '';
+        return `<option value="${d.id}"${sel}>${esc(d.display_name)}${esc(psn)}${claimed}</option>`;
+    }).join('');
+    const title = preselectDriverName ? `Message ${preselectDriverName}` : 'Message Driver';
+    openModal(title, `
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">The driver sees this in their portal inbox as an admin message. Their nav badge updates live.</p>
+        <form id="entity-form">
+            <div class="form-group">
+                <label>Driver <span class="required">*</span></label>
+                <select name="driver_id" required ${preselectDriverId ? '' : ''}>
+                    ${preselectDriverId ? '' : '<option value="">— Select driver —</option>'}
+                    ${options}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" placeholder="e.g. About your last race">
+            </div>
+            <div class="form-group">
+                <label>Message <span class="required">*</span></label>
+                <textarea name="message" rows="7" required placeholder="Type your message…"></textarea>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="sendDirectMessage()">Send Message</button>`
+    );
+}
+
+async function sendDirectMessage() {
+    const d = getFormData('entity-form');
+    if (!d.driver_id) { toast('Pick a driver first.', 'error'); return; }
+    if (!d.message)   { toast('Message body is required.', 'error'); return; }
+    const { data, error } = await sb.rpc('message_driver', {
+        p_driver_id: d.driver_id,
+        p_subject:   d.subject || null,
+        p_message:   d.message,
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
+    toast('Message sent.', 'success');
+    closeModal();
+    // Refresh the messages table if it's the current view.
+    if (currentSection === 'messages') await renderMessages();
     await refreshMsgsBadge();
 }
 

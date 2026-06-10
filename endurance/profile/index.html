@@ -1008,7 +1008,7 @@ async function loadInbox(driverId) {
             return `<div class="inbox-thread ${unread ? 'unread' : ''}">
                 <div class="inbox-head">
                     <div>
-                        <div class="inbox-subj"><span class="pill pill-gold" style="margin-right:0.4rem">★ Announcement</span>${esc(m.subject) || '<em>Admin announcement</em>'}</div>
+                        <div class="inbox-subj"><span class="pill pill-gold" style="margin-right:0.4rem">★ From Admin</span>${esc(m.subject) || '<em>Admin message</em>'}</div>
                         <div class="inbox-when">${fmtWhen(m.created_at)}${unread ? ' · NEW' : ''}</div>
                     </div>
                 </div>

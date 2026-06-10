@@ -120,6 +120,7 @@ Always apply in this order:
 38. `38_classified_only_counters.sql` — wins/podiums/poles/FLs only count when status='classified' (DNFs ignored)
 39. `39_team_capacity_trigger.sql` — DB-level trigger enforcing teams.max_drivers (default 2)
 40. `40_refresh_hof_no_race_hours.sql` — drop the race_hours reference from refresh_hall_of_fame
+41. `41_admin_direct_message.sql` — admin can send a message to a single driver (reuses broadcast storage)
 
 ---
 
