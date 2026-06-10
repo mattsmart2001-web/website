@@ -2110,10 +2110,17 @@ async function viewEventEntries(eventId, eventName, seasonId) {
         .is('current_team_id', null);
     const unregisteredFreeAgents = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id));
 
-    const teamsLabel = unregisteredTeams.length > 0 ? `${unregisteredTeams.length} Team${unregisteredTeams.length === 1 ? '' : 's'}` : '';
-    const soloLabel  = unregisteredFreeAgents.length > 0 ? `${unregisteredFreeAgents.length} Solo Driver${unregisteredFreeAgents.length === 1 ? '' : 's'}` : '';
-    const labelParts = [teamsLabel, soloLabel].filter(Boolean);
-    const labelText  = labelParts.length ? `Register ${labelParts.join(' + ')}` : '';
+    // Existing team entries with zero drivers — left from earlier bulk
+    // registers when auto-link didn't run yet.
+    const emptyTeamEntries = (data || []).filter(en =>
+        en.team_id && (en.entry_drivers || []).length === 0
+    );
+
+    const teamsLabel    = unregisteredTeams.length > 0 ? `${unregisteredTeams.length} Team${unregisteredTeams.length === 1 ? '' : 's'}` : '';
+    const backfillLabel = emptyTeamEntries.length > 0 ? `Backfill ${emptyTeamEntries.length} Empty Entr${emptyTeamEntries.length === 1 ? 'y' : 'ies'}` : '';
+    const soloLabel     = unregisteredFreeAgents.length > 0 ? `${unregisteredFreeAgents.length} Solo Driver${unregisteredFreeAgents.length === 1 ? '' : 's'}` : '';
+    const labelParts = [teamsLabel, backfillLabel, soloLabel].filter(Boolean);
+    const labelText  = labelParts.length ? labelParts.join(' + ') : '';
 
     const headerBtn = labelText
         ? `<button class="btn-add" onclick="registerAllSeasonTeams('${eventId}','${esc(eventName)}','${seasonId}')">
@@ -2139,13 +2146,23 @@ async function viewEventEntries(eventId, eventName, seasonId) {
 async function registerAllSeasonTeams(eventId, eventName, seasonId) {
     const [{ data: ts }, { data: existing }, { data: freeAgents }, { data: entryDrivers }] = await Promise.all([
         sb.from('team_seasons').select('team_id, manufacturer_id, manufacturers(name)').eq('season_id', seasonId),
-        sb.from('entries').select('id, team_id').eq('event_id', eventId),
+        sb.from('entries').select('id, team_id, car_number').eq('event_id', eventId),
         sb.from('drivers').select('id, display_name, career_number, current_manufacturer_id, manufacturers(name)').is('current_team_id', null),
         sb.from('entry_drivers').select('driver_id, entry_id, entries!inner(event_id)').eq('entries.event_id', eventId),
     ]);
 
     const existingTeamIds  = new Set((existing || []).map(e => e.team_id).filter(Boolean));
     const enteredDriverIds = new Set((entryDrivers || []).map(ed => ed.driver_id));
+
+    // Existing team entries that have no drivers yet — left over from a
+    // pre-auto-link bulk register or a manually-created empty entry.
+    const driversPerEntry = new Map();
+    (entryDrivers || []).forEach(ed => {
+        driversPerEntry.set(ed.entry_id, (driversPerEntry.get(ed.entry_id) || 0) + 1);
+    });
+    const emptyTeamEntries = (existing || []).filter(en =>
+        en.team_id && (driversPerEntry.get(en.id) || 0) === 0
+    );
 
     const teamsToInsert = (ts || []).filter(r => !existingTeamIds.has(r.team_id)).map(r => ({
         event_id:        eventId,
@@ -2157,13 +2174,14 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
 
     const soloToInsert = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id));
 
-    if (!teamsToInsert.length && !soloToInsert.length) {
+    if (!teamsToInsert.length && !soloToInsert.length && !emptyTeamEntries.length) {
         toast('All teams and free-agent drivers already registered.', 'success');
         return;
     }
 
     const msg = [
         teamsToInsert.length ? `${teamsToInsert.length} team${teamsToInsert.length === 1 ? '' : 's'}` : '',
+        emptyTeamEntries.length ? `backfill ${emptyTeamEntries.length} existing team entr${emptyTeamEntries.length === 1 ? 'y' : 'ies'}` : '',
         soloToInsert.length  ? `${soloToInsert.length} solo driver${soloToInsert.length === 1 ? '' : 's'}` : '',
     ].filter(Boolean).join(' + ');
     if (!confirm(`Register ${msg} for "${eventName}"?\n\nTeam entries inherit the team's locked manufacturer and auto-link every driver currently assigned to the team (1, 2 or more).\nSolo driver entries are team-less — when the driver later joins a team, the entry auto-updates.`)) return;
@@ -2209,6 +2227,39 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
         }
     }
 
+    // 1b. Backfill drivers on existing team entries that have none yet.
+    let backfilledDrivers = 0;
+    if (emptyTeamEntries.length) {
+        const teamIds = [...new Set(emptyTeamEntries.map(en => en.team_id))];
+        const { data: existingTeamDrivers } = await sb.from('drivers')
+            .select('id, current_team_id, career_number')
+            .in('current_team_id', teamIds);
+        const byTeam2 = new Map();
+        (existingTeamDrivers || []).forEach(d => {
+            const list = byTeam2.get(d.current_team_id) || [];
+            list.push(d);
+            byTeam2.set(d.current_team_id, list);
+        });
+        const links2 = [];
+        const carUpdates2 = [];
+        for (const en of emptyTeamEntries) {
+            const drivers = byTeam2.get(en.team_id) || [];
+            drivers.forEach(d => links2.push({ entry_id: en.id, driver_id: d.id, stint_role: 'starting' }));
+            backfilledDrivers += drivers.length;
+            if (en.car_number == null) {
+                const firstWithNum = drivers.find(d => d.career_number != null);
+                if (firstWithNum) carUpdates2.push({ id: en.id, car_number: firstWithNum.career_number });
+            }
+        }
+        if (links2.length) {
+            const { error: linkErr } = await sb.from('entry_drivers').insert(links2);
+            if (linkErr) toast(`Backfill failed: ${linkErr.message}`, 'error');
+        }
+        for (const u of carUpdates2) {
+            await sb.from('entries').update({ car_number: u.car_number }).eq('id', u.id);
+        }
+    }
+
     // 2. Insert solo entries (one per driver), then link them in entry_drivers
     if (soloToInsert.length) {
         const soloEntries = soloToInsert.map(d => ({
@@ -2234,6 +2285,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
 
     const summary = [
         teamsToInsert.length ? `${teamsToInsert.length} team${teamsToInsert.length === 1 ? '' : 's'} (${totalTeamDrivers} driver${totalTeamDrivers === 1 ? '' : 's'})` : '',
+        backfilledDrivers ? `${backfilledDrivers} backfilled driver${backfilledDrivers === 1 ? '' : 's'}` : '',
         soloToInsert.length  ? `${soloToInsert.length} solo` : '',
     ].filter(Boolean).join(' + ');
     toast(`Registered ${summary}.`, 'success');
