@@ -2899,15 +2899,16 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
             const dAttr = d ? `data-driver="${esc(d.id)}"` : '';
             const dis   = d ? '' : 'disabled';
             const teamCell = en.teams?.name ? esc(en.teams.name) : '<em>Solo</em>';
+            const isClassified = status === 'classified';
             return `<tr>
                 <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}${en.lobby_number != null ? ` · L${en.lobby_number}` : ''}</span></td>
-                <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="finish_position" value="${pos}" style="width:60px;padding:0.4rem 0.5rem" ${dis}></td>
+                <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="finish_position" value="${isClassified ? pos : ''}" style="width:60px;padding:0.4rem 0.5rem" ${dis || !isClassified ? 'disabled' : ''}></td>
                 <td><input type="number" min="0" data-entry="${en.id}" ${dAttr} data-field="laps_driven" value="${laps}" style="width:65px;padding:0.4rem 0.5rem" ${dis}></td>
-                <td><select data-entry="${en.id}" ${dAttr} data-field="status" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
-                <td style="text-align:center;font-size:0.78rem;${isPole ? 'color:var(--gold);font-weight:600' : 'color:var(--muted)'}" title="Auto-set from qualifying P1">${isPole ? '★' : '—'}</td>
+                <td><select data-entry="${en.id}" ${dAttr} data-field="status" onchange="onResultStatusChange(this)" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
+                <td style="text-align:center;font-size:0.78rem;${isPole && isClassified ? 'color:var(--gold);font-weight:600' : 'color:var(--muted)'}" title="Auto-set from qualifying P1">${isPole && isClassified ? '★' : '—'}</td>
                 <td style="white-space:nowrap">
-                    <input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${isFL ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px;vertical-align:middle" ${dis}>
-                    <input type="text" placeholder="1:23.456" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_time" value="${flTime}" style="width:100px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.78rem;margin-left:0.35rem" ${dis}>
+                    <input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${isFL && isClassified ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px;vertical-align:middle" ${dis || !isClassified ? 'disabled' : ''}>
+                    <input type="text" placeholder="1:23.456" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_time" value="${isClassified ? flTime : ''}" style="width:100px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.78rem;margin-left:0.35rem" ${dis || !isClassified ? 'disabled' : ''}>
                 </td>
                 <td style="text-align:right;color:var(--gold);font-weight:600">${points}</td>
             </tr>`;
@@ -3025,15 +3026,18 @@ async function saveResults(eventId, eventName) {
     const driverPayload = driverRows.map(dr => {
         const result_id = resultIdByEntry[dr.entry_id];
         if (!result_id) return null;
+        const status = dr.status || 'classified';
+        const isClassified = status === 'classified';
         return {
             result_id,
             driver_id:        dr.driver_id,
-            finish_position:  dr.finish_position,
-            status:           dr.status || 'classified',
-            classified:       (dr.status || 'classified') === 'classified',
+            // Non-classified rows can't earn positions / pole / FL credit.
+            finish_position:  isClassified ? dr.finish_position : null,
+            status,
+            classified:       isClassified,
             laps_driven:      dr.laps_driven ?? null,
-            fastest_lap_point: !!dr.fastest_lap_point,
-            fastest_lap_ms:   dr.fastest_lap_ms ?? null,
+            fastest_lap_point: isClassified && !!dr.fastest_lap_point,
+            fastest_lap_ms:   isClassified ? (dr.fastest_lap_ms ?? null) : null,
             // points_share defaults to 1.0; per-driver points come from
             // result_drivers.points_awarded which compute_event_points fills.
         };
@@ -3214,6 +3218,21 @@ function loadEntryDriversForPenalty(sel) {
         opt.value = ed.driver_id;
         opt.textContent = ed.drivers.display_name;
         driverSel.appendChild(opt);
+    });
+}
+
+function onResultStatusChange(sel) {
+    const row = sel.closest('tr');
+    if (!row) return;
+    const classified = sel.value === 'classified';
+    row.querySelectorAll('[data-field="finish_position"], [data-field="fastest_lap_point"], [data-field="fastest_lap_time"]').forEach(el => {
+        if (classified) {
+            el.disabled = false;
+        } else {
+            if (el.type === 'checkbox') el.checked = false;
+            else el.value = '';
+            el.disabled = true;
+        }
     });
 }
 
