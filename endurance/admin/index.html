@@ -958,7 +958,7 @@ async function loadCache() {
     const [mfr, ps, tm, dr, seas] = await Promise.all([
         sb.from('manufacturers').select('id,name,slug').order('name'),
         sb.from('points_systems').select('id,name').order('name'),
-        sb.from('teams').select('id,name,slug,manufacturer_id').order('name'),
+        sb.from('teams').select('id,name,slug,manufacturer_id,max_drivers').order('name'),
         sb.from('drivers').select('id,display_name,slug,career_number,current_team_id').order('display_name'),
         sb.from('seasons').select('id,name,year').order('year', { ascending: false }),
     ]);
@@ -1615,10 +1615,20 @@ async function renderDrivers() {
 
 function driverForm(d = {}) {
     const mfrName  = id => _manufacturers.find(m => m.id === id)?.name;
-    const teamOpts = _teams.map(t => ({
-        value: t.id,
-        label: mfrName(t.manufacturer_id) ? `${t.name} (${mfrName(t.manufacturer_id)})` : t.name,
-    }));
+    // Count current drivers per team so we can flag full teams.
+    const teamCounts = new Map();
+    (_drivers || []).forEach(dr => {
+        if (dr.current_team_id) teamCounts.set(dr.current_team_id, (teamCounts.get(dr.current_team_id) || 0) + 1);
+    });
+    const teamOpts = _teams.map(t => {
+        const used     = teamCounts.get(t.id) || 0;
+        const max      = t.max_drivers ?? 2;
+        const onThisTeam = d.current_team_id === t.id;
+        const full     = used >= max && !onThisTeam;
+        const mfrLabel = mfrName(t.manufacturer_id) ? ` (${mfrName(t.manufacturer_id)})` : '';
+        const cap      = ` · ${used}/${max}${full ? ' · FULL' : ''}`;
+        return { value: t.id, label: `${t.name}${mfrLabel}${cap}`, disabled: full };
+    });
     const mfrOpts  = _manufacturers.map(m => ({ value: m.id, label: m.name }));
     const hasTeam  = !!d.current_team_id;
     return `<form id="entity-form">
@@ -1675,7 +1685,7 @@ function driverForm(d = {}) {
                 <label>Current Team</label>
                 <select id="current_team_id" name="current_team_id" onchange="syncDriverMfrToTeam()">
                     <option value="">— Free agent —</option>
-                    ${teamOpts.map(o => `<option value="${esc(o.value)}" ${o.value === d.current_team_id ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+                    ${teamOpts.map(o => `<option value="${esc(o.value)}" ${o.value === d.current_team_id ? 'selected' : ''} ${o.disabled ? 'disabled' : ''}>${esc(o.label)}</option>`).join('')}
                 </select>
             </div>
             <div class="form-group">
@@ -1794,6 +1804,16 @@ async function saveDriver(id) {
     if (dupName) { toast(dupName, 'error'); return; }
     const num = checkCareerNumber(d.career_number, id);
     if (!num.ok) { toast(num.error, 'error'); return; }
+    // Team capacity check (mirrors the DB trigger in migration 39).
+    if (d.current_team_id) {
+        const team = _teams.find(t => t.id === d.current_team_id);
+        const max  = team?.max_drivers ?? 2;
+        const used = (_drivers || []).filter(x => x.current_team_id === d.current_team_id && x.id !== id).length;
+        if (used >= max) {
+            toast(`Team ${team?.name || ''} is already at capacity (${used}/${max} drivers).`, 'error');
+            return;
+        }
+    }
     const payload = {
         display_name: d.display_name, slug: d.slug, psn_id: d.psn_id,
         nationality: d.nationality, career_number: num.value,
