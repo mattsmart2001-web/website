@@ -3933,10 +3933,12 @@ async function saveTeamFromApplication(appId) {
             if (existing) {
                 leaderDriverId = existing.id;
                 leaderReused   = true;
-                // Only move them onto this team if they're not already on one.
-                if (!existing.current_team_id) {
-                    await sb.from('drivers').update({ current_team_id: createdTeam.id }).eq('id', existing.id);
-                }
+                // They applied as a team, so they want to be on this team —
+                // move them regardless of where they were before. The trigger
+                // from migration 42 cleans up any pending join requests, and
+                // migration 39's capacity trigger lets us through since the
+                // brand-new team has zero drivers.
+                await sb.from('drivers').update({ current_team_id: createdTeam.id }).eq('id', existing.id);
                 await sb.from('teams').update({ leader_driver_id: leaderDriverId }).eq('id', createdTeam.id);
                 await sb.from('applications').update({ linked_driver_id: leaderDriverId }).eq('id', appId);
             }
