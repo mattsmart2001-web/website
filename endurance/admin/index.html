@@ -2099,8 +2099,32 @@ async function viewEventEntries(eventId, eventName, seasonId) {
     const { data: ts } = await sb.from('team_seasons')
         .select('team_id, manufacturer_id, teams(name), manufacturers(name)')
         .eq('season_id', seasonId);
+    const seasonRegisteredTeamIds = new Set((ts || []).map(r => r.team_id));
     const registeredTeamIds = new Set((data || []).map(en => en.team_id).filter(Boolean));
     const unregisteredTeams = (ts || []).filter(r => !registeredTeamIds.has(r.team_id));
+
+    // Teams that have drivers but aren't yet in team_seasons for this season.
+    // Pull them in too so admin doesn't have to detour into the Seasons section.
+    const { data: anyDrivers } = await sb.from('drivers')
+        .select('current_team_id, teams!current_team_id(id, name, manufacturer_id, manufacturers(name))')
+        .not('current_team_id', 'is', null);
+    const orphanTeams = [];
+    const seenOrphan = new Set();
+    (anyDrivers || []).forEach(d => {
+        const team = d.teams;
+        if (!team || !team.id) return;
+        if (seasonRegisteredTeamIds.has(team.id)) return;
+        if (registeredTeamIds.has(team.id)) return;
+        if (seenOrphan.has(team.id)) return;
+        if (!team.manufacturer_id) return;  // can't register without a mfr
+        seenOrphan.add(team.id);
+        orphanTeams.push({
+            team_id:        team.id,
+            team_name:      team.name,
+            manufacturer_id: team.manufacturer_id,
+            manufacturer_name: team.manufacturers?.name,
+        });
+    });
 
     // Drivers without a team who aren't already in any entry for this event
     const enteredDriverIds = new Set();
@@ -2116,7 +2140,8 @@ async function viewEventEntries(eventId, eventName, seasonId) {
         en.team_id && (en.entry_drivers || []).length === 0
     );
 
-    const teamsLabel    = unregisteredTeams.length > 0 ? `${unregisteredTeams.length} Team${unregisteredTeams.length === 1 ? '' : 's'}` : '';
+    const totalNewTeams = unregisteredTeams.length + orphanTeams.length;
+    const teamsLabel    = totalNewTeams > 0 ? `${totalNewTeams} Team${totalNewTeams === 1 ? '' : 's'}` : '';
     const backfillLabel = emptyTeamEntries.length > 0 ? `Backfill ${emptyTeamEntries.length} Empty Entr${emptyTeamEntries.length === 1 ? 'y' : 'ies'}` : '';
     const soloLabel     = unregisteredFreeAgents.length > 0 ? `${unregisteredFreeAgents.length} Solo Driver${unregisteredFreeAgents.length === 1 ? '' : 's'}` : '';
     const labelParts = [teamsLabel, backfillLabel, soloLabel].filter(Boolean);
@@ -2144,15 +2169,53 @@ async function viewEventEntries(eventId, eventName, seasonId) {
 }
 
 async function registerAllSeasonTeams(eventId, eventName, seasonId) {
-    const [{ data: ts }, { data: existing }, { data: freeAgents }, { data: entryDrivers }] = await Promise.all([
+    const [{ data: ts }, { data: existing }, { data: freeAgents }, { data: entryDrivers }, { data: anyDrivers }] = await Promise.all([
         sb.from('team_seasons').select('team_id, manufacturer_id, manufacturers(name)').eq('season_id', seasonId),
         sb.from('entries').select('id, team_id, car_number').eq('event_id', eventId),
         sb.from('drivers').select('id, display_name, career_number, current_manufacturer_id, manufacturers(name)').is('current_team_id', null),
         sb.from('entry_drivers').select('driver_id, entry_id, entries!inner(event_id)').eq('entries.event_id', eventId),
+        sb.from('drivers').select('current_team_id, teams!current_team_id(id, name, manufacturer_id, manufacturers(name))').not('current_team_id', 'is', null),
     ]);
 
     const existingTeamIds  = new Set((existing || []).map(e => e.team_id).filter(Boolean));
     const enteredDriverIds = new Set((entryDrivers || []).map(ed => ed.driver_id));
+    const seasonRegisteredTeamIds = new Set((ts || []).map(r => r.team_id));
+
+    // Auto-register any team that has drivers but isn't yet in team_seasons,
+    // using the team's own manufacturer. Skip teams with no manufacturer set.
+    const orphans = [];
+    const seenOrphan = new Set();
+    (anyDrivers || []).forEach(d => {
+        const team = d.teams;
+        if (!team?.id || !team.manufacturer_id) return;
+        if (seasonRegisteredTeamIds.has(team.id)) return;
+        if (existingTeamIds.has(team.id)) return;
+        if (seenOrphan.has(team.id)) return;
+        seenOrphan.add(team.id);
+        orphans.push({
+            team_id: team.id,
+            manufacturer_id: team.manufacturer_id,
+            manufacturer_name: team.manufacturers?.name,
+        });
+    });
+
+    if (orphans.length) {
+        const tsRows = orphans.map(o => ({
+            team_id: o.team_id,
+            season_id: seasonId,
+            manufacturer_id: o.manufacturer_id,
+        }));
+        const { error: tsErr } = await sb.from('team_seasons').upsert(tsRows, { onConflict: 'team_id,season_id' });
+        if (tsErr) { toast(`Auto-register team_seasons failed: ${tsErr.message}`, 'error'); return; }
+        // Treat them as registered for the rest of this run.
+        orphans.forEach(o => seasonRegisteredTeamIds.add(o.team_id));
+        // Append to the ts list so they get entries below.
+        orphans.forEach(o => (ts || []).push({
+            team_id: o.team_id,
+            manufacturer_id: o.manufacturer_id,
+            manufacturers: { name: o.manufacturer_name },
+        }));
+    }
 
     // Existing team entries that have no drivers yet — left over from a
     // pre-auto-link bulk register or a manually-created empty entry.
