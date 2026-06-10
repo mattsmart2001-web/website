@@ -2747,9 +2747,15 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
         return drSrSeed(ed.drivers?.gt7_dr_rating, ed.drivers?.gt7_sr_rating);
     };
 
+    // Rank each entry by its strongest driver, not the average. Team-mates
+    // travel together (lobby_number is per entry), so averaging would push
+    // a team whose star is A+ down behind a solo C if their team-mate is D.
+    // Using max keeps the rule "no individual in Lobby N+1 is higher-rated
+    // than anyone in Lobby N" — the only exception is the dragged-along
+    // team-mate, which is unavoidable.
     entries.forEach(en => {
         const drs = (en.entry_drivers || []).map(skillFor);
-        en._skill = drs.length ? drs.reduce((a,b)=>a+b,0) / drs.length : 1500;
+        en._skill = drs.length ? Math.max(...drs) : 1500;
     });
 
     entries.sort((a, b) => b._skill - a._skill);
