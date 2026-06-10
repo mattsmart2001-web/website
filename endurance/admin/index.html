@@ -2575,10 +2575,17 @@ async function removeEntryDriver(entryDriverId, eventId, eventName, seasonId) {
 // ============================================================
 // 14b. Lobbies (sub-panel of Events)
 // ============================================================
-const DR_TO_ELO = { 'E': 800, 'D': 1100, 'C': 1300, 'B': 1500, 'A': 1700, 'A+': 1850, 'S': 2000 };
+const DR_TO_ELO  = { 'E': 800, 'D': 1100, 'C': 1300, 'B': 1500, 'A': 1700, 'A+': 1850, 'S': 2000 };
+const SR_TO_BONUS = { 'E': -75, 'D': -45, 'C': -15, 'B': 15, 'A': 45, 'S': 75 };
 
 function drToElo(letter) {
     return DR_TO_ELO[letter] ?? 1500;
+}
+
+// DR is the primary skill signal; SR nudges within a letter so an A/S driver
+// ranks above an A/B driver before any race history exists.
+function drSrSeed(drLetter, srLetter) {
+    return (DR_TO_ELO[drLetter] ?? 1500) + (SR_TO_BONUS[srLetter] ?? 0);
 }
 
 async function viewEventLobbies(eventId, eventName, seasonId) {
@@ -2590,32 +2597,42 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
             id, lobby_number, car_number, car_model, status,
             teams(name),
             manufacturers(name, brand_color),
-            entry_drivers(driver_id, drivers(id, display_name, career_number, gt7_dr_rating))
+            entry_drivers(driver_id, drivers(id, display_name, career_number, gt7_dr_rating, gt7_sr_rating))
         `)
         .eq('event_id', eventId);
     if (error) { panel.innerHTML = `<div class="loading-state">${esc(error.message)}</div>`; return; }
 
-    // Fetch current Elo for any driver in any entry
+    // Fetch the actual race-rated drivers (any row in driver_ratings means
+    // they've been rated for real). driver_current_ratings.rating defaults to
+    // 1500 even when there's no race history, so we can't trust that alone.
     const driverIds = Array.from(new Set((entries || []).flatMap(en => (en.entry_drivers || []).map(ed => ed.driver_id)))).filter(Boolean);
     const ratingMap = new Map();
+    const ratedSet  = new Set();
     if (driverIds.length) {
-        const { data: ratings } = await sb.from('driver_current_ratings')
-            .select('driver_id, rating')
-            .in('driver_id', driverIds);
+        const [{ data: ratings }, { data: rated }] = await Promise.all([
+            sb.from('driver_current_ratings').select('driver_id, rating').in('driver_id', driverIds),
+            sb.from('driver_ratings').select('driver_id').in('driver_id', driverIds),
+        ]);
         (ratings || []).forEach(r => ratingMap.set(r.driver_id, r.rating));
+        (rated   || []).forEach(r => ratedSet.add(r.driver_id));
     }
+
+    // Each driver's "skill" = real Elo if they've been rated, else DR+SR seed.
+    const driverSkill = ed => {
+        if (ratedSet.has(ed.driver_id)) return ratingMap.get(ed.driver_id) ?? 1500;
+        return drSrSeed(ed.drivers?.gt7_dr_rating, ed.drivers?.gt7_sr_rating);
+    };
 
     // Flatten to one row per driver. Two team-mates sharing an entry become
     // two rows in the same lobby (since lobby_number lives on the entry).
     const driverRows = [];
     (entries || []).forEach(en => {
-        const drs = (en.entry_drivers || []).map(ed => ed.drivers).filter(Boolean);
-        if (drs.length === 0) {
+        const eds = (en.entry_drivers || []).filter(ed => ed.drivers);
+        if (eds.length === 0) {
             driverRows.push({ entry: en, driver: null, skill: 1500 });
         } else {
-            drs.forEach(d => {
-                const skill = ratingMap.get(d.id) ?? drToElo(d.gt7_dr_rating);
-                driverRows.push({ entry: en, driver: d, skill });
+            eds.forEach(ed => {
+                driverRows.push({ entry: en, driver: ed.drivers, skill: driverSkill(ed) });
             });
         }
     });
@@ -2692,25 +2709,33 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const lobbySize = Math.max(2, Math.min(32, parseInt(sizeInput?.value, 10) || 16));
 
     const { data: entries } = await sb.from('entries')
-        .select(`id, car_number, entry_drivers(driver_id, drivers(career_number, gt7_dr_rating))`)
+        .select(`id, car_number, entry_drivers(driver_id, drivers(career_number, gt7_dr_rating, gt7_sr_rating))`)
         .eq('event_id', eventId)
         .neq('status', 'withdrawn');
     if (!entries?.length) { toast('No entries to allocate.', 'error'); return; }
 
+    // Only treat drivers as "rated" if they actually have a race history row;
+    // driver_current_ratings defaults everyone to 1500 otherwise, which would
+    // make pre-season DR/SR seeding pointless.
     const driverIds = Array.from(new Set(entries.flatMap(en => (en.entry_drivers || []).map(ed => ed.driver_id)))).filter(Boolean);
     const ratingMap = new Map();
+    const ratedSet  = new Set();
     if (driverIds.length) {
-        const { data: ratings } = await sb.from('driver_current_ratings')
-            .select('driver_id, rating')
-            .in('driver_id', driverIds);
+        const [{ data: ratings }, { data: rated }] = await Promise.all([
+            sb.from('driver_current_ratings').select('driver_id, rating').in('driver_id', driverIds),
+            sb.from('driver_ratings').select('driver_id').in('driver_id', driverIds),
+        ]);
         (ratings || []).forEach(r => ratingMap.set(r.driver_id, r.rating));
+        (rated   || []).forEach(r => ratedSet.add(r.driver_id));
     }
 
+    const skillFor = ed => {
+        if (ratedSet.has(ed.driver_id)) return ratingMap.get(ed.driver_id) ?? 1500;
+        return drSrSeed(ed.drivers?.gt7_dr_rating, ed.drivers?.gt7_sr_rating);
+    };
+
     entries.forEach(en => {
-        const drs = (en.entry_drivers || []).map(ed => {
-            const e = ratingMap.get(ed.driver_id);
-            return (e != null) ? e : drToElo(ed.drivers?.gt7_dr_rating);
-        });
+        const drs = (en.entry_drivers || []).map(skillFor);
         en._skill = drs.length ? drs.reduce((a,b)=>a+b,0) / drs.length : 1500;
     });
 
