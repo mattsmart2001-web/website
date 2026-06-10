@@ -2652,14 +2652,27 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
     const renderLobbyCard = (lobbyNum, list) => {
         const title = lobbyNum === 0 ? 'Unassigned' : `Lobby ${lobbyNum}`;
         const sorted = list.slice().sort((a, b) => b.skill - a.skill);
-        const rows = sorted.map(({ entry: en, driver: d, skill }) => {
+        const rows = sorted.map(({ entry: en, driver: d }) => {
             const num = d?.career_number ?? en.car_number;
             const driverName = d ? esc(d.display_name) : '<em class="td-muted">No driver</em>';
+            // Show the real Elo only for drivers who've actually raced. Everyone
+            // else gets their DR/SR letters (which is what we're sorting on).
+            let skillCell = '<span class="td-muted">—</span>';
+            if (d) {
+                if (ratedSet.has(d.id)) {
+                    const elo = ratingMap.get(d.id);
+                    skillCell = `<span style="font-family:'Orbitron',sans-serif">${elo ?? '—'}</span> <span class="td-muted" style="font-size:0.7rem">Elo</span>`;
+                } else {
+                    const dr = d.gt7_dr_rating || '—';
+                    const sr = d.gt7_sr_rating || '—';
+                    skillCell = `<span style="font-family:'Orbitron',sans-serif">${esc(dr)}</span> <span class="td-muted">/</span> <span style="font-family:'Orbitron',sans-serif">${esc(sr)}</span> <span class="td-muted" style="font-size:0.7rem">DR/SR</span>`;
+                }
+            }
             return `<tr>
                 <td>${num != null ? '<strong>#' + num + '</strong>' : '<span class="td-muted">—</span>'}</td>
                 <td><strong>${driverName}</strong></td>
                 <td class="td-muted" style="font-size:0.78rem">${esc(en.teams?.name) || '<em>Solo</em>'}</td>
-                <td class="td-muted" style="font-family:'Orbitron',sans-serif;font-size:0.78rem">${skill}</td>
+                <td style="font-size:0.78rem">${skillCell}</td>
                 <td><div class="row-actions" style="gap:0.25rem;justify-content:flex-end">
                     <button class="btn-icon" title="Move entry to a lower lobby (faster split)"
                         onclick="moveEntryLobby('${en.id}',-1,'${eventId}','${esc(eventName)}','${seasonId}')">↑</button>
@@ -2675,7 +2688,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <span class="section-card-title">${title} <span class="td-muted" style="font-weight:normal;font-size:0.78rem">· ${list.length} driver${list.length === 1 ? '' : 's'}</span></span>
             </div>
             <table><thead><tr>
-                <th>Car</th><th>Driver</th><th>Team</th><th>Elo</th><th></th>
+                <th>Car</th><th>Driver</th><th>Team</th><th>Skill</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
     };
@@ -2698,7 +2711,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn btn-ghost" onclick="clearAllLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Clear All</button>
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
                 <button class="btn-icon danger" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
-                <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Lobby size counts drivers. Sort uses each driver's Elo (DR-seeded if unrated).</div>
+                <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Lobby size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
             </div>
         </div>
         ${lobbyCardsHTML}`;
