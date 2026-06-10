@@ -118,6 +118,8 @@ Always apply in this order:
 36. `36_auto_register_team_season.sql` — auto-register team to season when a driver joins (avoids team_seasons error)
 37. `37_team_standings_sum_drivers.sql` — team points = sum of driver points; per-event wins/podiums counted once
 38. `38_classified_only_counters.sql` — wins/podiums/poles/FLs only count when status='classified' (DNFs ignored)
+39. `39_team_capacity_trigger.sql` — DB-level trigger enforcing teams.max_drivers (default 2)
+40. `40_refresh_hof_no_race_hours.sql` — drop the race_hours reference from refresh_hall_of_fame
 
 ---
 
