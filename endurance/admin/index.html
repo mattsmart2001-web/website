@@ -1798,11 +1798,22 @@ function checkTeamNameUnique(name, ignoreId) {
     return clash ? `Team name "${name}" is already taken.` : null;
 }
 
+function checkPsnUnique(psn, ignoreId) {
+    const t = (psn || '').trim().toLowerCase();
+    if (!t) return null;
+    const clash = _drivers.find(d =>
+        (d.psn_id || '').trim().toLowerCase() === t && d.id !== ignoreId
+    );
+    return clash ? `PSN "${psn}" is already on driver "${clash.display_name}".` : null;
+}
+
 async function saveDriver(id) {
     const d = getFormData('entity-form');
     if (!d.display_name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
     const dupName = checkDriverNameUnique(d.display_name, id);
     if (dupName) { toast(dupName, 'error'); return; }
+    const dupPsn = checkPsnUnique(d.psn_id, id);
+    if (dupPsn) { toast(dupPsn, 'error'); return; }
     const num = checkCareerNumber(d.career_number, id);
     if (!num.ok) { toast(num.error, 'error'); return; }
     // Team capacity check (mirrors the DB trigger in migration 39).
@@ -3853,6 +3864,26 @@ async function saveDriverFromApplication(appId) {
     if (dupName) { toast(dupName, 'error'); return; }
     const num = checkCareerNumber(d.career_number, null);
     if (!num.ok) { toast(num.error, 'error'); return; }
+
+    // If a driver with this PSN already exists, link the application to
+    // them instead of creating a duplicate. PSN match is case-insensitive,
+    // trimmed — same as the DB unique index in migration 43.
+    const psnKey = (d.psn_id || '').trim().toLowerCase();
+    if (psnKey) {
+        const { data: existing } = await sb.from('drivers')
+            .select('id, display_name')
+            .ilike('psn_id', d.psn_id.trim())
+            .maybeSingle();
+        if (existing) {
+            await sb.from('applications').update({ linked_driver_id: existing.id }).eq('id', appId);
+            toast(`PSN "${d.psn_id}" already belongs to ${existing.display_name} — linked to them instead.`, 'success');
+            closeModal();
+            await loadCache();
+            await renderApplications();
+            return;
+        }
+    }
+
     const payload = {
         display_name: d.display_name, slug: d.slug, psn_id: d.psn_id,
         nationality: d.nationality, career_number: num.value,
@@ -3886,28 +3917,51 @@ async function saveTeamFromApplication(appId) {
     const { data: createdTeam, error: teamErr } = await sb.from('teams').insert(teamPayload).select('id').single();
     if (teamErr) { toast(teamErr.message, 'error'); return; }
 
-    // 2. Try to create the team leader driver from the application's PSN/name
+    // 2. Try to make the applicant the team leader. If they already exist
+    //    as a driver (matched by PSN, case-insensitive), reuse them rather
+    //    than creating a duplicate — the DB unique index in migration 43
+    //    would reject it anyway, and we want the existing user account /
+    //    career number / history to stay intact.
     let leaderDriverId = null;
+    let leaderReused   = false;
     if (app?.name) {
-        const slugify = s => (s || '').toLowerCase().trim()
-            .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-        const driverPayload = {
-            display_name: app.name,
-            slug: slugify(app.name),
-            psn_id: app.psn_id || null,
-            nationality: app.nationality || null,
-            gt7_dr_rating: app.gt7_dr_rating || null,
-            gt7_sr_rating: app.gt7_sr_rating || null,
-            current_team_id: createdTeam.id,
-            joined_at: new Date().toISOString().slice(0, 10),
-        };
-        const { data: createdDriver, error: drvErr } = await sb.from('drivers').insert(driverPayload).select('id').single();
-        if (!drvErr && createdDriver) {
-            leaderDriverId = createdDriver.id;
-            await sb.from('teams').update({ leader_driver_id: leaderDriverId }).eq('id', createdTeam.id);
-            await sb.from('applications').update({ linked_driver_id: leaderDriverId }).eq('id', appId);
-        } else if (drvErr) {
-            console.warn('Driver creation skipped:', drvErr.message);
+        if (app.psn_id && app.psn_id.trim()) {
+            const { data: existing } = await sb.from('drivers')
+                .select('id, current_team_id')
+                .ilike('psn_id', app.psn_id.trim())
+                .maybeSingle();
+            if (existing) {
+                leaderDriverId = existing.id;
+                leaderReused   = true;
+                // Only move them onto this team if they're not already on one.
+                if (!existing.current_team_id) {
+                    await sb.from('drivers').update({ current_team_id: createdTeam.id }).eq('id', existing.id);
+                }
+                await sb.from('teams').update({ leader_driver_id: leaderDriverId }).eq('id', createdTeam.id);
+                await sb.from('applications').update({ linked_driver_id: leaderDriverId }).eq('id', appId);
+            }
+        }
+        if (!leaderDriverId) {
+            const slugify = s => (s || '').toLowerCase().trim()
+                .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            const driverPayload = {
+                display_name: app.name,
+                slug: slugify(app.name),
+                psn_id: app.psn_id || null,
+                nationality: app.nationality || null,
+                gt7_dr_rating: app.gt7_dr_rating || null,
+                gt7_sr_rating: app.gt7_sr_rating || null,
+                current_team_id: createdTeam.id,
+                joined_at: new Date().toISOString().slice(0, 10),
+            };
+            const { data: createdDriver, error: drvErr } = await sb.from('drivers').insert(driverPayload).select('id').single();
+            if (!drvErr && createdDriver) {
+                leaderDriverId = createdDriver.id;
+                await sb.from('teams').update({ leader_driver_id: leaderDriverId }).eq('id', createdTeam.id);
+                await sb.from('applications').update({ linked_driver_id: leaderDriverId }).eq('id', appId);
+            } else if (drvErr) {
+                console.warn('Driver creation skipped:', drvErr.message);
+            }
         }
     }
 
@@ -3916,7 +3970,12 @@ async function saveTeamFromApplication(appId) {
         .update({ linked_team_id: createdTeam.id })
         .eq('id', appId);
     if (linkErr) { toast(`Team created, but link failed: ${linkErr.message}`, 'error'); }
-    else { toast(leaderDriverId ? 'Team created — applicant added as team leader.' : 'Team created.', 'success'); }
+    else {
+        const msg = !leaderDriverId          ? 'Team created.'
+                   : leaderReused             ? 'Team created — existing driver set as team leader.'
+                                              : 'Team created — applicant added as team leader.';
+        toast(msg, 'success');
+    }
     closeModal();
     await loadCache();
     await renderApplications();

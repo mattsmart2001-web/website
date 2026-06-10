@@ -122,6 +122,7 @@ Always apply in this order:
 40. `40_refresh_hof_no_race_hours.sql` — drop the race_hours reference from refresh_hall_of_fame
 41. `41_admin_direct_message.sql` — admin can send a message to a single driver (reuses broadcast storage)
 42. `42_sync_join_requests_to_team.sql` — auto-approve pending join requests when a driver gets added to that team by any path
+43. `43_unique_psn.sql` — case-insensitive unique PSN on drivers + auto-delete safe duplicates
 
 ---
 
