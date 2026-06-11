@@ -2069,6 +2069,12 @@ function eventForm(e = {}) {
                 </div>
             </div>
             <div class="form-group">
+                <label style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer">
+                    <input type="checkbox" name="bop_enabled" ${e.bop_enabled ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px">
+                    <span>BoP (Balance of Performance) enabled</span>
+                </label>
+            </div>
+            <div class="form-group">
                 <label>Required Tyres <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(tick every compound drivers must use)</span></label>
                 <div style="display:flex;flex-wrap:wrap;gap:0.5rem 1rem;padding:0.55rem 0.65rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px">
                     ${(() => {
@@ -2136,6 +2142,7 @@ async function saveEvent(id) {
         time_of_day:        d.time_of_day || null,
         starting_procedure: d.starting_procedure || null,
         mandatory_pit_stops: d.mandatory_pit_stops ? parseInt(d.mandatory_pit_stops) : null,
+        bop_enabled:        !!d.bop_enabled,
         required_tyres:     requiredTyres.length ? requiredTyres : null,
         race_details:       d.race_details || null,
     };

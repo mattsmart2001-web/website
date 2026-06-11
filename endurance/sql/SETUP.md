@@ -126,6 +126,7 @@ Always apply in this order:
 44. `44_admin_activity_log.sql` — auto-logged admin action history via triggers, viewable / deletable from admin UI
 45. `45_event_race_details.sql` — per-event briefing fields (tyre wear, fuel, weather, starting procedure, etc.)
 46. `46_event_required_tyres.sql` — per-event required tyre compounds (text[])
+47. `47_event_bop.sql` — per-event BoP on/off flag
 
 ---
 
