@@ -4296,8 +4296,8 @@ async function renderMessages() {
             <div class="stat-card"><div class="stat-card-label">Resolved</div><div class="stat-card-value">${counts.resolved}</div></div>
             <div class="stat-card"><div class="stat-card-label">Dismissed</div><div class="stat-card-value">${counts.dismissed}</div></div>
         </div>
-        <div class="table-wrap">
-            <table><thead><tr>
+        <div class="table-wrap" style="max-height:62vh;overflow-y:auto">
+            <table><thead style="position:sticky;top:0;background:var(--bg-1);z-index:2"><tr>
                 <th>Driver</th><th>Subject</th><th>Message</th><th>Status</th><th>Sent</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;

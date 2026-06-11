@@ -78,7 +78,17 @@
         .result-row:hover { background: rgba(255,255,255,0.04); }
 
         /* Inbox */
-        .inbox-list { display: flex; flex-direction: column; gap: 0.85rem; }
+        .inbox-list {
+            display: flex; flex-direction: column; gap: 0.85rem;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 0.45rem;
+        }
+        /* Subtle scrollbar — keeps the thread list scannable on long inboxes */
+        .inbox-list::-webkit-scrollbar { width: 8px; }
+        .inbox-list::-webkit-scrollbar-track { background: transparent; }
+        .inbox-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+        .inbox-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
         .inbox-thread { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.95rem 1.1rem; }
         .inbox-thread.unread { border-color: rgba(255,209,102,0.45); }
         .inbox-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.35rem; }
