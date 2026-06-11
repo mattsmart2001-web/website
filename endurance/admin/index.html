@@ -998,9 +998,8 @@ function closeModal() {
     if (window._pageMDE) { try { window._pageMDE.toTextArea(); } catch {} window._pageMDE = null; }
 }
 document.getElementById('modal-close').addEventListener('click', closeModal);
-document.getElementById('modal-overlay').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('modal-overlay')) closeModal();
-});
+// Click-outside-to-close was easy to trigger by accident mid-edit, so we
+// only close via the X button (or Cancel / Save in the footer).
 
 function slugify(str) {
     return str.toLowerCase()

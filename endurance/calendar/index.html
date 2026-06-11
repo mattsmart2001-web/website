@@ -268,7 +268,25 @@
         .details-val { font-size: 0.95rem; font-weight: 600; color: var(--text); }
         .details-briefing { margin-top: 0.85rem; background: var(--bg-2); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 8px; padding: 0.85rem 1rem; }
         .details-briefing-body { font-size: 0.9rem; line-height: 1.55; white-space: pre-wrap; color: var(--text); margin-top: 0.3rem; }
-        .details-tyre { display: inline-block; padding: 0.2rem 0.55rem; margin-right: 0.25rem; background: rgba(255,209,102,0.12); border: 1px solid rgba(255,209,102,0.35); border-radius: 999px; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; color: var(--gold); }
+        /* Tyre badges — each compound gets its real-world colourway, with
+           a white inner ring (the sidewall stripe) and a coloured fill. */
+        .details-tyre {
+            display: inline-block;
+            padding: 0.25rem 0.65rem;
+            margin-right: 0.3rem;
+            border-radius: 999px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.45);
+        }
+        .details-tyre.tyre-rs { background: #d62828; color: #fff; }            /* Racing Soft */
+        .details-tyre.tyre-rm { background: #f4c20d; color: #1a1300; }         /* Racing Medium */
+        .details-tyre.tyre-rh { background: #111;    color: #fff; }            /* Racing Hard */
+        .details-tyre.tyre-ri { background: #2563eb; color: #fff; }            /* Racing Inter */
+        .details-tyre.tyre-rw { background: #38bdf8; color: #08203a; }         /* Racing Wet */
 
         .state-msg {
             text-align: center;
@@ -557,7 +575,7 @@ function openRaceDetails(eventId, eventName) {
     if (!e) return;
     document.getElementById('details-title').textContent = `${eventName} — Race Details`;
     const tyrePills = Array.isArray(e.required_tyres) && e.required_tyres.length
-        ? e.required_tyres.map(t => `<span class="details-tyre">${esc(t)}</span>`).join(' ')
+        ? e.required_tyres.map(t => `<span class="details-tyre tyre-${esc(String(t).toLowerCase())}">${esc(t)}</span>`).join(' ')
         : null;
     const rows = [
         ['Tyre Wear',          e.tyre_wear],
