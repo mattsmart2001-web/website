@@ -682,7 +682,7 @@ async function showProfile() {
             </div>
 
             <div class="stat-bar">
-                <div class="stat-item"><div class="stat-label">Elo Rating${isProvisional ? ' <span style="color:var(--muted);font-size:0.55rem;letter-spacing:0.15em">· Provisional</span>' : ''}</div><div class="stat-value gold">${currentRating}${!isProvisional ? (window.eloTierBadge ? window.eloTierBadge(currentRating) : '') : ''}</div></div>
+                <div class="stat-item"><div class="stat-label">Elo Rating${isProvisional ? ' <span style="color:var(--muted);font-size:0.55rem;letter-spacing:0.15em">· Provisional</span>' : ''}</div><div class="stat-value gold">${currentRating}</div>${!isProvisional && window.eloTierBadge ? `<div style="margin-top:0.35rem">${window.eloTierBadge(currentRating)}</div>` : ''}</div>
                 <div class="stat-item"><div class="stat-label">Points</div><div class="stat-value">${totals.points.toFixed(totals.points % 1 === 0 ? 0 : 1)}</div></div>
                 <div class="stat-item"><div class="stat-label">Races</div><div class="stat-value">${totals.races}</div></div>
                 <div class="stat-item"><div class="stat-label">Wins</div><div class="stat-value">${totals.wins}</div></div>

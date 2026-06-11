@@ -296,6 +296,7 @@
         <div class="elo-bar-wrap">
             <div class="elo-label">Elo Rating</div>
             <div class="elo-value" id="elo-value">—</div>
+            <div id="elo-tier-el"></div>
             <div id="elo-delta-el"></div>
         </div>
     </div>
@@ -623,8 +624,8 @@ async function loadStanding(driverId) {
 
     if (rt) {
         const elo = Math.round(rt.rating ?? 1500);
-        const tierHTML = window.eloTierBadge ? window.eloTierBadge(elo) : '';
-        document.getElementById('elo-value').innerHTML = `${elo}${tierHTML}`;
+        document.getElementById('elo-value').textContent = elo;
+        document.getElementById('elo-tier-el').innerHTML = window.eloTierBadge ? window.eloTierBadge(elo) : '';
         const delta = rt.last_delta;
         if (delta != null) {
             const sign = delta >= 0 ? '+' : '';
