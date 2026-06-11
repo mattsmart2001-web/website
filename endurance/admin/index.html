@@ -2873,6 +2873,35 @@ function fmtLapTime(ms) {
     return min > 0 ? `${min}:${sec}` : sec;
 }
 
+// Highlight any duplicate position numbers in a results / qualifying
+// table. Inputs only — they're already scoped to the active lobby by
+// the view, so duplicates are illegal regardless of context.
+function highlightPositionDuplicates(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return [];
+    const inputs = table.querySelectorAll('input[data-field="finish_position"], input[data-field="position"]');
+    const counts = {};
+    inputs.forEach(inp => {
+        const v = (inp.value || '').trim();
+        if (!v || inp.disabled) return;
+        counts[v] = (counts[v] || 0) + 1;
+    });
+    const dupes = [];
+    inputs.forEach(inp => {
+        const v = (inp.value || '').trim();
+        const isDup = v && counts[v] > 1;
+        inp.style.borderColor = isDup ? '#ef4444' : '';
+        inp.style.boxShadow   = isDup ? '0 0 0 1px #ef4444' : '';
+        inp.title             = isDup ? `Position ${v} is used by another driver in this lobby.` : '';
+        if (isDup) dupes.push(parseInt(v));
+    });
+    return [...new Set(dupes)];
+}
+
+function onPositionChange(input, tableId) {
+    highlightPositionDuplicates(tableId);
+}
+
 function buildLobbyFilter(entries, currentLobby, onChangeFn) {
     const lobbies = [...new Set(entries.map(e => e.lobby_number).filter(n => n != null))].sort((a, b) => a - b);
     const hasUnassigned = entries.some(e => e.lobby_number == null);
@@ -2950,7 +2979,7 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
             const dAttr = d ? `data-driver="${esc(d.id)}"` : '';
             return `<tr>
                 <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${esc(en.teams?.name) || '<em>Solo</em>'}${en.lobby_number != null ? ` · L${en.lobby_number}` : ''}</span></td>
-                <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="position" value="${q.position || ''}" style="width:70px;padding:0.4rem 0.5rem" ${d ? '' : 'disabled'}></td>
+                <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="position" value="${q.position || ''}" oninput="onPositionChange(this,'qualifying-table')" style="width:70px;padding:0.4rem 0.5rem" ${d ? '' : 'disabled'}></td>
                 <td><input type="text" placeholder="1:23.456" data-entry="${en.id}" ${dAttr} data-field="best_lap" value="${q.best_lap_ms ? fmtLapTime(q.best_lap_ms) : ''}" style="width:120px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.82rem" ${d ? '' : 'disabled'}></td>
                 <td><input type="text" data-entry="${en.id}" ${dAttr} data-field="notes" value="${esc(q.notes || '')}" placeholder="—" style="padding:0.4rem 0.5rem" ${d ? '' : 'disabled'}></td>
             </tr>`;
@@ -2978,6 +3007,11 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
 }
 
 async function saveQualifying(eventId, eventName) {
+    const dupes = highlightPositionDuplicates('qualifying-table');
+    if (dupes.length) {
+        toast(`Two drivers can't share the same qualifying position. Fix P${dupes.join(', P')} first.`, 'error');
+        return;
+    }
     const inputs = document.querySelectorAll('#qualifying-table input[data-entry][data-driver]');
     const map = {};
     let bad = false;
@@ -3099,7 +3133,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
             const isClassified = status === 'classified';
             return `<tr>
                 <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}${en.lobby_number != null ? ` · L${en.lobby_number}` : ''}</span></td>
-                <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="finish_position" value="${isClassified ? pos : ''}" style="width:60px;padding:0.4rem 0.5rem" ${dis || !isClassified ? 'disabled' : ''}></td>
+                <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="finish_position" value="${isClassified ? pos : ''}" oninput="onPositionChange(this,'results-table')" style="width:60px;padding:0.4rem 0.5rem" ${dis || !isClassified ? 'disabled' : ''}></td>
                 <td><input type="number" min="0" data-entry="${en.id}" ${dAttr} data-field="laps_driven" value="${laps}" style="width:65px;padding:0.4rem 0.5rem" ${dis}></td>
                 <td><select data-entry="${en.id}" ${dAttr} data-field="status" onchange="onResultStatusChange(this)" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
                 <td style="text-align:center;font-size:0.78rem;${isPole && isClassified ? 'color:var(--gold);font-weight:600' : 'color:var(--muted)'}" title="Auto-set from qualifying P1">${isPole && isClassified ? '★' : '—'}</td>
@@ -3135,6 +3169,11 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
 }
 
 async function saveResults(eventId, eventName) {
+    const dupes = highlightPositionDuplicates('results-table');
+    if (dupes.length) {
+        toast(`Two drivers can't share the same position. Fix P${dupes.join(', P')} first.`, 'error');
+        return;
+    }
     const rowInputs = document.querySelectorAll('#results-table [data-entry][data-driver]');
     const perDriver = {};
     let badTime = false;
