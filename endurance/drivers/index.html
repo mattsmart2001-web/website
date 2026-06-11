@@ -447,23 +447,33 @@ async function showListing() {
     document.title = 'Drivers — Gran Turismo GTEC';
     const [{ data, error }, { data: ratings }] = await Promise.all([
         sb.from('drivers')
-            .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
+            .select('id, display_name, slug, nationality, career_number, photo_url, gt7_dr_rating, gt7_sr_rating, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
             .order('display_name'),
         sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
     ]);
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
 
-    // Only show a tier on drivers who have actually been rated — the view
-    // hands back 1500 for everyone, but pre-race drivers haven't earned it.
-    const ratingByDriver = {};
+    // Real Elo only counts if the driver has actually raced (last_rated_at
+    // not null). Otherwise fall back to a DR/SR seed so unrated drivers
+    // still get a tier badge — same logic admin uses for pre-season lobby
+    // allocation.
+    const ratedDriver = {};
     (ratings || []).forEach(r => {
-        if (r.last_rated_at) ratingByDriver[r.driver_id] = r.rating;
+        if (r.last_rated_at) ratedDriver[r.driver_id] = r.rating;
     });
 
     const cards = (data || []).map(d => {
-        const elo  = ratingByDriver[d.id];
-        const tier = (elo != null && window.eloTierBadge) ? window.eloTierBadge(elo) : '';
+        let tier = '';
+        if (window.eloTierBadge) {
+            const realElo = ratedDriver[d.id];
+            if (realElo != null) {
+                tier = window.eloTierBadge(realElo);
+            } else if (window.eloDrSrSeed) {
+                const seed = window.eloDrSrSeed(d.gt7_dr_rating, d.gt7_sr_rating);
+                if (seed != null) tier = window.eloTierBadge(seed, { provisional: true });
+            }
+        }
         return `
         <div class="driver-card" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'">
             <div class="driver-card-photo">${avatarHTML(d.photo_url, d.display_name, 'card')}</div>

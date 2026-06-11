@@ -27,10 +27,23 @@
         return TIERS.find(t => r >= t.min) || TIERS[TIERS.length - 1];
     }
 
-    function badge(rating) {
+    // DR / SR seed for drivers who haven't earned an Elo from races yet.
+    // Same numbers admin uses for pre-season lobby allocation so the badge
+    // on the public site reflects the same skill order.
+    const DR_TO_ELO   = { 'E': 800, 'D': 1100, 'C': 1300, 'B': 1500, 'A': 1700, 'A+': 1850, 'S': 2000 };
+    const SR_TO_BONUS = { 'E': -75, 'D': -45, 'C': -15, 'B': 15,  'A': 45,  'S': 75 };
+    function drSrSeed(dr, sr) {
+        if (!dr && !sr) return null;
+        return (DR_TO_ELO[dr] ?? 1500) + (SR_TO_BONUS[sr] ?? 0);
+    }
+    window.eloDrSrSeed = drSrSeed;
+
+    function badge(rating, opts = {}) {
         const t = tierFor(rating);
         if (!t) return '';
-        return `<span class="elo-tier elo-tier-${t.key}" title="${t.name} · ${t.min}–${t.max} Elo">${t.name}</span>`;
+        const provisional = !!opts.provisional;
+        const title = `${t.name} · ${t.min}–${t.max} ${provisional ? '(provisional — DR / SR seed)' : 'Elo'}`;
+        return `<span class="elo-tier elo-tier-${t.key}${provisional ? ' elo-tier-provisional' : ''}" title="${title}">${t.name}${provisional ? ' *' : ''}</span>`;
     }
 
     function fullChip(rating) {
@@ -96,6 +109,9 @@
             .elo-tier-diamond,  .elo-tier-chip.elo-tier-diamond  { background: linear-gradient(135deg, #b9f2ff, #5dd3ff) !important; color: #062436 !important; }
             .elo-tier-master,   .elo-tier-chip.elo-tier-master   { background: linear-gradient(135deg, #ff4500, #ff6f00) !important; color: #fff !important; }
             .elo-tier-legend,   .elo-tier-chip.elo-tier-legend   { background: linear-gradient(135deg, #ff0080, #8b00ff) !important; color: #fff !important; box-shadow: 0 0 12px rgba(255,0,128,0.4); }
+            /* Provisional pills (DR/SR seed before any race history) get a
+               subtle dashed border so they read as "estimated, not earned". */
+            .elo-tier-provisional { border-style: dashed !important; border-color: rgba(255,255,255,0.55) !important; opacity: 0.92; }
         `;
         document.head.appendChild(style);
     }
