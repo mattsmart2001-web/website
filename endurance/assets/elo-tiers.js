@@ -50,19 +50,25 @@
         const style = document.createElement('style');
         style.id = 'elo-tier-styles';
         style.textContent = `
+            /* Parent containers (e.g. .stat-value.gold) often set their own
+               text colour and text-shadow that would bleed into the badge.
+               !important on the visual props keeps every tier readable
+               regardless of where the badge is injected. */
             .elo-tier {
                 display: inline-block;
-                padding: 0.15rem 0.55rem;
-                margin-left: 0.4rem;
+                padding: 0.18rem 0.6rem;
+                margin-left: 0.5rem;
                 border-radius: 999px;
-                font-family: 'Orbitron', sans-serif;
-                font-size: 0.6rem;
-                font-weight: 700;
-                letter-spacing: 0.12em;
+                font-family: 'Orbitron', sans-serif !important;
+                font-size: 0.62rem !important;
+                font-weight: 800 !important;
+                letter-spacing: 0.14em !important;
                 text-transform: uppercase;
                 vertical-align: middle;
-                border: 1px solid rgba(0,0,0,0.3);
-                box-shadow: 0 0 0 1px rgba(255,255,255,0.04);
+                line-height: 1.2;
+                border: 1px solid rgba(0,0,0,0.45);
+                text-shadow: none !important;
+                white-space: nowrap;
             }
             .elo-tier-chip {
                 display: inline-flex;
@@ -70,25 +76,26 @@
                 gap: 0.5rem;
                 padding: 0.25rem 0.65rem;
                 border-radius: 999px;
-                font-family: 'Orbitron', sans-serif;
+                font-family: 'Orbitron', sans-serif !important;
                 font-weight: 700;
                 letter-spacing: 0.1em;
                 font-size: 0.78rem;
-                border: 1px solid rgba(0,0,0,0.3);
+                border: 1px solid rgba(0,0,0,0.45);
+                text-shadow: none !important;
             }
             .elo-tier-chip .elo-tier-name { text-transform: uppercase; font-size: 0.65rem; }
             .elo-tier-chip .elo-tier-elo  { font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.04em; }
 
-            .elo-tier-bronze3  { background: #6b4226; color: #ffd9b3; }
-            .elo-tier-bronze2  { background: #8a5a2b; color: #ffe0b3; }
-            .elo-tier-bronze1  { background: #cd7f32; color: #2a1300; }
-            .elo-tier-silver   { background: linear-gradient(135deg, #c0c0c0, #e6e6e6); color: #1a1a1a; }
-            .elo-tier-gold     { background: linear-gradient(135deg, #ffd700, #ffb700); color: #2a1a00; }
-            .elo-tier-platinum { background: linear-gradient(135deg, #e5e4e2, #b0c4de); color: #1a1a1a; }
-            .elo-tier-sapphire { background: linear-gradient(135deg, #0f52ba, #1e90ff); color: #fff; }
-            .elo-tier-diamond  { background: linear-gradient(135deg, #b9f2ff, #5dd3ff); color: #062436; }
-            .elo-tier-master   { background: linear-gradient(135deg, #ff4500, #ff6f00); color: #fff; }
-            .elo-tier-legend   { background: linear-gradient(135deg, #ff0080, #8b00ff); color: #fff; box-shadow: 0 0 12px rgba(255,0,128,0.4); }
+            .elo-tier-bronze3,  .elo-tier-chip.elo-tier-bronze3  { background: #6b4226 !important; color: #ffd9b3 !important; }
+            .elo-tier-bronze2,  .elo-tier-chip.elo-tier-bronze2  { background: #8a5a2b !important; color: #ffe0b3 !important; }
+            .elo-tier-bronze1,  .elo-tier-chip.elo-tier-bronze1  { background: #cd7f32 !important; color: #2a1300 !important; }
+            .elo-tier-silver,   .elo-tier-chip.elo-tier-silver   { background: linear-gradient(135deg, #c0c0c0, #e6e6e6) !important; color: #1a1a1a !important; }
+            .elo-tier-gold,     .elo-tier-chip.elo-tier-gold     { background: linear-gradient(135deg, #ffd700, #ffb700) !important; color: #2a1a00 !important; }
+            .elo-tier-platinum, .elo-tier-chip.elo-tier-platinum { background: linear-gradient(135deg, #e5e4e2, #b0c4de) !important; color: #1a1a1a !important; }
+            .elo-tier-sapphire, .elo-tier-chip.elo-tier-sapphire { background: linear-gradient(135deg, #0f52ba, #1e90ff) !important; color: #fff !important; }
+            .elo-tier-diamond,  .elo-tier-chip.elo-tier-diamond  { background: linear-gradient(135deg, #b9f2ff, #5dd3ff) !important; color: #062436 !important; }
+            .elo-tier-master,   .elo-tier-chip.elo-tier-master   { background: linear-gradient(135deg, #ff4500, #ff6f00) !important; color: #fff !important; }
+            .elo-tier-legend,   .elo-tier-chip.elo-tier-legend   { background: linear-gradient(135deg, #ff0080, #8b00ff) !important; color: #fff !important; box-shadow: 0 0 12px rgba(255,0,128,0.4); }
         `;
         document.head.appendChild(style);
     }
