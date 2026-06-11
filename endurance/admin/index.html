@@ -2036,6 +2036,44 @@ function eventForm(e = {}) {
             <label>Notes</label>
             <textarea name="notes" placeholder="Admin notes…">${esc(e.notes)}</textarea>
         </div>
+
+        <div style="margin-top:1rem;padding-top:0.85rem;border-top:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.15em;color:var(--gold);text-transform:uppercase;margin-bottom:0.85rem">Race Details (shown to drivers)</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tyre Wear</label>
+                    <input type="text" name="tyre_wear" value="${esc(e.tyre_wear)}" placeholder="e.g. 5x">
+                </div>
+                <div class="form-group">
+                    <label>Fuel Consumption</label>
+                    <input type="text" name="fuel_consumption" value="${esc(e.fuel_consumption)}" placeholder="e.g. 4x">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Weather</label>
+                    <input type="text" name="weather" value="${esc(e.weather)}" placeholder="e.g. Variable, 60% rain">
+                </div>
+                <div class="form-group">
+                    <label>Time of Day</label>
+                    <input type="text" name="time_of_day" value="${esc(e.time_of_day)}" placeholder="e.g. Dusk to night">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Starting Procedure</label>
+                    <input type="text" name="starting_procedure" value="${esc(e.starting_procedure)}" placeholder="e.g. Rolling start">
+                </div>
+                <div class="form-group">
+                    <label>Mandatory Pit Stops</label>
+                    <input type="number" name="mandatory_pit_stops" value="${e.mandatory_pit_stops ?? ''}" placeholder="e.g. 2" min="0" max="20">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Additional Briefing</label>
+                <textarea name="race_details" rows="4" placeholder="Anything else drivers need to know — track limits, BoP, formation lap, etc.">${esc(e.race_details)}</textarea>
+            </div>
+        </div>
     </form>`;
 }
 
@@ -2070,6 +2108,13 @@ async function saveEvent(id) {
         status: d.status || 'scheduled',
         replay_url: d.replay_url || null,
         notes: d.notes || null,
+        tyre_wear:          d.tyre_wear || null,
+        fuel_consumption:   d.fuel_consumption || null,
+        weather:            d.weather || null,
+        time_of_day:        d.time_of_day || null,
+        starting_procedure: d.starting_procedure || null,
+        mandatory_pit_stops: d.mandatory_pit_stops ? parseInt(d.mandatory_pit_stops) : null,
+        race_details:       d.race_details || null,
     };
     const { error } = id
         ? await sb.from('events').update(payload).eq('id', id)

@@ -124,6 +124,7 @@ Always apply in this order:
 42. `42_sync_join_requests_to_team.sql` — auto-approve pending join requests when a driver gets added to that team by any path
 43. `43_unique_psn.sql` — case-insensitive unique PSN on drivers + auto-delete safe duplicates
 44. `44_admin_activity_log.sql` — auto-logged admin action history via triggers, viewable / deletable from admin UI
+45. `45_event_race_details.sql` — per-event briefing fields (tyre wear, fuel, weather, starting procedure, etc.)
 
 ---
 
