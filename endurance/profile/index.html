@@ -437,6 +437,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
+<script src="/endurance/assets/elo-tiers.js"></script>
 <script src="../assets/countries.js"></script>
 <script>
 'use strict';
@@ -621,7 +622,9 @@ async function loadStanding(driverId) {
     }
 
     if (rt) {
-        document.getElementById('elo-value').textContent = Math.round(rt.rating ?? 1500);
+        const elo = Math.round(rt.rating ?? 1500);
+        const tierHTML = window.eloTierBadge ? window.eloTierBadge(elo) : '';
+        document.getElementById('elo-value').innerHTML = `${elo}${tierHTML}`;
         const delta = rt.last_delta;
         if (delta != null) {
             const sign = delta >= 0 ? '+' : '';

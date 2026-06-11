@@ -274,6 +274,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
+<script src="/endurance/assets/elo-tiers.js"></script>
 <script>
 'use strict';
 const { createClient } = window.supabase;
@@ -376,8 +377,8 @@ async function load() {
                 ${leaderboardHTML('Most Fastest Laps', lb('fastest_laps'))}
                 ${leaderboardHTML('Most Starts',       lb('starts'))}
                 ${leaderboardHTML('Career Points',     lb('career_points', v => Number(v)), v => Number(v).toFixed(v % 1 === 0 ? 0 : 1))}
-                ${leaderboardHTML('Highest Rating',    lbRatings('rating'))}
-                ${leaderboardHTML('Peak Rating',       lbRatings('peak_rating'))}
+                ${leaderboardHTML('Highest Rating',    lbRatings('rating'),      v => `${v}${window.eloTierBadge ? window.eloTierBadge(v) : ''}`)}
+                ${leaderboardHTML('Peak Rating',       lbRatings('peak_rating'), v => `${v}${window.eloTierBadge ? window.eloTierBadge(v) : ''}`)}
             </div>
         </div>`;
 
