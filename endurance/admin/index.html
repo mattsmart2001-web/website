@@ -1849,7 +1849,16 @@ async function saveDriver(id) {
 }
 
 async function deleteDriver(id, name) {
-    if (!confirm(`Delete "${name}"?`)) return;
+    // Quick scan so admins know whether they're nuking race history.
+    const [{ count: entryCount }, { count: resultCount }] = await Promise.all([
+        sb.from('entry_drivers').select('id', { count: 'exact', head: true }).eq('driver_id', id),
+        sb.from('result_drivers').select('id', { count: 'exact', head: true }).eq('driver_id', id),
+    ]);
+    const history = (entryCount || 0) + (resultCount || 0);
+    const warn = history > 0
+        ? `Delete "${name}"?\n\nThis driver has ${entryCount || 0} event entry row(s) and ${resultCount || 0} result row(s) — these will be removed too. Standings will recompute without them. Entries and results for other drivers in the same team / lobby stay intact.\n\nThis cannot be undone.`
+        : `Delete "${name}"?`;
+    if (!confirm(warn)) return;
     const { error } = await sb.from('drivers').delete().eq('id', id);
     if (error) { toast(error.message, 'error'); return; }
     toast('Driver deleted.', 'success');
