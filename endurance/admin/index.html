@@ -4266,18 +4266,51 @@ async function renderMessages() {
 
     const fmtWhen = iso => iso ? new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
 
-    const rows = !data?.length
-        ? `<tr><td colspan="6"><div class="empty-state">No messages from drivers yet.</div></td></tr>`
-        : data.map(m => {
-            const kindBadge = m.is_broadcast
-                ? '<span class="badge badge-gold" style="margin-right:0.35rem">Broadcast</span>'
-                : m.is_direct
-                ? '<span class="badge badge-gold" style="margin-right:0.35rem">Admin → Driver</span>'
-                : '';
-            const replyChip = m.driver_reply
-                ? ' <span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;margin-left:0.35rem">Reply</span>'
-                : '';
-            return `
+    // Collapse broadcasts: one row per (broadcast_by, created_at second, subject)
+    // — otherwise a single "Message All Drivers" send fills the list with one
+    // row per recipient and reads as if those drivers were the senders.
+    const broadcastGroups = {};
+    const visibleRows = [];
+    (data || []).forEach(m => {
+        if (m.is_broadcast) {
+            const key = `${m.broadcast_by || ''}|${(m.created_at || '').slice(0, 19)}|${m.subject || ''}`;
+            (broadcastGroups[key] = broadcastGroups[key] || []).push(m);
+        } else {
+            visibleRows.push(m);
+        }
+    });
+    const broadcastRowKeys = Object.keys(broadcastGroups).sort((a, b) => {
+        const ta = broadcastGroups[a][0].created_at;
+        const tb = broadcastGroups[b][0].created_at;
+        return tb.localeCompare(ta);
+    });
+
+    const broadcastTableRows = broadcastRowKeys.map(k => {
+        const groupRows = broadcastGroups[k];
+        const m = groupRows[0];
+        const ids = groupRows.map(g => g.id).join(',');
+        return `
+            <tr>
+                <td><span class="badge badge-gold" style="margin-right:0.35rem">Broadcast</span><strong>${groupRows.length} driver${groupRows.length === 1 ? '' : 's'}</strong></td>
+                <td class="td-muted" style="font-size:0.84rem">${esc(m.subject) || '<em>No subject</em>'}</td>
+                <td class="td-muted" style="font-size:0.82rem;max-width:340px">${esc((m.message || '').slice(0, 120))}${(m.message || '').length > 120 ? '…' : ''}</td>
+                <td><span class="badge badge-gold">Broadcast</span></td>
+                <td class="td-muted" style="font-size:0.78rem;white-space:nowrap">${fmtWhen(m.created_at)}</td>
+                <td><div class="row-actions">
+                    <button class="btn-icon" onclick="viewMessage('${m.id}')">View</button>
+                    <button class="btn-icon danger" onclick="deleteBroadcastGroup('${ids}', ${groupRows.length})">Delete All</button>
+                </div></td>
+            </tr>`;
+    }).join('');
+
+    const otherRows = visibleRows.map(m => {
+        const kindBadge = m.is_direct
+            ? '<span class="badge badge-gold" style="margin-right:0.35rem">Admin → Driver</span>'
+            : '';
+        const replyChip = m.driver_reply
+            ? ' <span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;margin-left:0.35rem">Reply</span>'
+            : '';
+        return `
             <tr>
                 <td>${kindBadge}<strong>${esc(m.drivers?.display_name) || '—'}</strong>${replyChip}${m.drivers?.psn_id ? `<br><small class="td-muted">${esc(m.drivers.psn_id)}</small>` : ''}</td>
                 <td class="td-muted" style="font-size:0.84rem">${esc(m.subject) || '<em>No subject</em>'}</td>
@@ -4289,7 +4322,9 @@ async function renderMessages() {
                     <button class="btn-icon danger" onclick="deleteMessage('${m.id}')">Delete</button>
                 </div></td>
             </tr>`;
-        }).join('');
+    }).join('');
+
+    const rows = (broadcastTableRows + otherRows) || `<tr><td colspan="6"><div class="empty-state">No messages from drivers yet.</div></td></tr>`;
 
     document.getElementById('content').innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap">
@@ -4501,6 +4536,16 @@ async function deleteMessage(id) {
     const { error } = await sb.from('driver_contact_messages').delete().eq('id', id);
     if (error) { toast(error.message, 'error'); return; }
     toast('Deleted.', 'success');
+    await renderMessages();
+    await refreshMsgsBadge();
+}
+
+async function deleteBroadcastGroup(idsCsv, count) {
+    if (!confirm(`Delete this broadcast and all ${count} recipient copies? This cannot be undone.`)) return;
+    const ids = idsCsv.split(',').filter(Boolean);
+    const { error } = await sb.from('driver_contact_messages').delete().in('id', ids);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(`${count} broadcast copies deleted.`, 'success');
     await renderMessages();
     await refreshMsgsBadge();
 }
