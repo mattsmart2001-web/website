@@ -123,6 +123,7 @@ Always apply in this order:
 41. `41_admin_direct_message.sql` — admin can send a message to a single driver (reuses broadcast storage)
 42. `42_sync_join_requests_to_team.sql` — auto-approve pending join requests when a driver gets added to that team by any path
 43. `43_unique_psn.sql` — case-insensitive unique PSN on drivers + auto-delete safe duplicates
+44. `44_admin_activity_log.sql` — auto-logged admin action history via triggers, viewable / deletable from admin UI
 
 ---
 

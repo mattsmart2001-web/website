@@ -728,6 +728,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             Admins
         </button>
+        <button class="nav-link" data-section="activity">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Activity Log
+        </button>
     </nav>
     <div class="sidebar-bottom">
         <div class="user-chip" id="user-email">—</div>
@@ -918,11 +922,12 @@ async function navigate(section, pushHash = true) {
         media: 'Media',
         pages: 'Pages',
         admins: 'Admins',
+        activity: 'Activity Log',
     };
     document.getElementById('page-title').textContent = titles[section] || section;
 
     const addBtn = document.getElementById('btn-add');
-    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins' || section === 'messages') {
+    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins' || section === 'messages' || section === 'activity') {
         addBtn.style.display = 'none';
     } else {
         addBtn.style.display = '';
@@ -947,6 +952,7 @@ async function navigate(section, pushHash = true) {
         case 'pages':        await renderPages(); break;
         case 'admins':       await renderAdmins(); break;
         case 'messages':     await renderMessages(); break;
+        case 'activity':     await renderActivityLog(); break;
     }
 }
 
@@ -4004,6 +4010,74 @@ async function deleteApplication(id, name) {
     toast('Deleted.', 'success');
     await renderApplications();
     await refreshAppsBadge();
+}
+
+
+// ============================================================
+// 11d. Admin Activity Log
+// ============================================================
+async function renderActivityLog() {
+    const { data, error } = await sb.from('admin_activity_log')
+        .select('id, admin_email, table_name, operation, entity_id, summary, created_at')
+        .order('created_at', { ascending: false })
+        .limit(500);
+    if (error) { toast(error.message, 'error'); return; }
+
+    const fmtWhen = iso => iso ? new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+    const opBadge = op => {
+        const cls = op === 'INSERT' ? 'badge-green' : op === 'DELETE' ? 'badge-muted' : 'badge-gold';
+        const label = op === 'INSERT' ? 'Added' : op === 'DELETE' ? 'Deleted' : 'Updated';
+        return `<span class="badge ${cls}">${label}</span>`;
+    };
+    const friendly = {
+        drivers: 'Driver', teams: 'Team', manufacturers: 'Manufacturer',
+        events: 'Event', seasons: 'Season', applications: 'Application',
+        penalties: 'Penalty', driver_contact_messages: 'Message',
+        news_articles: 'News', media_items: 'Media', rules_pages: 'Rules page',
+        entries: 'Entry', results: 'Result', result_drivers: 'Driver result',
+        user_roles: 'Role',
+    };
+
+    const rows = !data?.length
+        ? `<tr><td colspan="6"><div class="empty-state">No activity yet — admin actions will appear here.</div></td></tr>`
+        : data.map(a => `
+            <tr>
+                <td class="td-muted" style="font-size:0.78rem;white-space:nowrap">${fmtWhen(a.created_at)}</td>
+                <td><strong>${esc(a.admin_email) || '<em>—</em>'}</strong></td>
+                <td>${opBadge(a.operation)} <span class="td-muted" style="font-size:0.82rem">${esc(friendly[a.table_name] || a.table_name)}</span></td>
+                <td class="td-muted" style="font-size:0.84rem;max-width:340px">${esc(a.summary) || '<em>—</em>'}</td>
+                <td><div class="row-actions">
+                    <button class="btn-icon danger" onclick="deleteActivityRow(${a.id})">Delete</button>
+                </div></td>
+            </tr>`).join('');
+
+    document.getElementById('content').innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap">
+            <div style="font-size:0.85rem;color:var(--muted)">Everything admins create, edit, or delete is logged here. Showing the most recent 500.</div>
+            <button class="btn btn-ghost" onclick="clearActivityLog()">Clear All</button>
+        </div>
+        <div class="table-wrap">
+            <table><thead><tr>
+                <th>When</th><th>Admin</th><th>Action</th><th>Summary</th><th></th>
+            </tr></thead><tbody>${rows}</tbody></table>
+        </div>`;
+}
+
+async function deleteActivityRow(id) {
+    if (!confirm('Delete this log entry?')) return;
+    const { error } = await sb.from('admin_activity_log').delete().eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Deleted.', 'success');
+    await renderActivityLog();
+}
+
+async function clearActivityLog() {
+    if (!confirm('Clear the entire admin activity log? This cannot be undone.')) return;
+    const { data, error } = await sb.rpc('clear_admin_activity_log');
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not clear.', 'error'); return; }
+    toast('Activity log cleared.', 'success');
+    await renderActivityLog();
 }
 
 
