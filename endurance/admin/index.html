@@ -2068,11 +2068,22 @@ function eventForm(e = {}) {
                     <input type="number" name="mandatory_pit_stops" value="${e.mandatory_pit_stops ?? ''}" placeholder="e.g. 2" min="0" max="20">
                 </div>
             </div>
-            <div class="form-group">
-                <label style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer">
-                    <input type="checkbox" name="bop_enabled" ${e.bop_enabled ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px">
-                    <span>BoP (Balance of Performance) enabled</span>
-                </label>
+            <div class="form-row">
+                <div class="form-group">
+                    <label style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer;margin-top:1.7rem">
+                        <input type="checkbox" name="bop_enabled" ${e.bop_enabled ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px">
+                        <span>BoP (Balance of Performance) enabled</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Damage</label>
+                    <select name="damage_level">
+                        <option value="">—</option>
+                        <option value="off"   ${e.damage_level === 'off'   ? 'selected' : ''}>Off</option>
+                        <option value="light" ${e.damage_level === 'light' ? 'selected' : ''}>Light</option>
+                        <option value="heavy" ${e.damage_level === 'heavy' ? 'selected' : ''}>Heavy</option>
+                    </select>
+                </div>
             </div>
             <div class="form-group">
                 <label>Required Tyres <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(tick every compound drivers must use)</span></label>
@@ -2143,6 +2154,7 @@ async function saveEvent(id) {
         starting_procedure: d.starting_procedure || null,
         mandatory_pit_stops: d.mandatory_pit_stops ? parseInt(d.mandatory_pit_stops) : null,
         bop_enabled:        !!d.bop_enabled,
+        damage_level:       d.damage_level || null,
         required_tyres:     requiredTyres.length ? requiredTyres : null,
         race_details:       d.race_details || null,
     };

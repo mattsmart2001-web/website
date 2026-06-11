@@ -127,6 +127,7 @@ Always apply in this order:
 45. `45_event_race_details.sql` — per-event briefing fields (tyre wear, fuel, weather, starting procedure, etc.)
 46. `46_event_required_tyres.sql` — per-event required tyre compounds (text[])
 47. `47_event_bop.sql` — per-event BoP on/off flag
+48. `48_event_damage.sql` — per-event damage level (off / light / heavy)
 
 ---
 
