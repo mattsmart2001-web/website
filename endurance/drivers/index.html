@@ -134,6 +134,8 @@
         }
         .driver-card-name { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.03em; text-transform: uppercase; line-height: 1.1; margin-bottom: 0.3rem; }
         .driver-card-meta { font-size: 0.74rem; color: var(--muted); }
+        .driver-card-tier { margin-top: 0.55rem; }
+        .driver-card-tier .elo-tier { margin-left: 0 !important; }
 
         /* ===== PROFILE ===== */
         .profile-header {
@@ -443,13 +445,26 @@ function mfrBadge(logoUrl, brandColor, name, opts = {}) {
 // ============================================================
 async function showListing() {
     document.title = 'Drivers — Gran Turismo GTEC';
-    const { data, error } = await sb.from('drivers')
-        .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
-        .order('display_name');
+    const [{ data, error }, { data: ratings }] = await Promise.all([
+        sb.from('drivers')
+            .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
+            .order('display_name'),
+        sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
+    ]);
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
 
-    const cards = (data || []).map(d => `
+    // Only show a tier on drivers who have actually been rated — the view
+    // hands back 1500 for everyone, but pre-race drivers haven't earned it.
+    const ratingByDriver = {};
+    (ratings || []).forEach(r => {
+        if (r.last_rated_at) ratingByDriver[r.driver_id] = r.rating;
+    });
+
+    const cards = (data || []).map(d => {
+        const elo  = ratingByDriver[d.id];
+        const tier = (elo != null && window.eloTierBadge) ? window.eloTierBadge(elo) : '';
+        return `
         <div class="driver-card" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'">
             <div class="driver-card-photo">${avatarHTML(d.photo_url, d.display_name, 'card')}</div>
             <div class="driver-card-body">
@@ -459,8 +474,10 @@ async function showListing() {
                     ${d.nationality ? flag(d.nationality) + ' ' + esc(d.nationality) : ''}
                     ${d.teams?.name ? `<br>${esc(d.teams.name)}` : ''}
                 </div>
+                ${tier ? `<div class="driver-card-tier">${tier}</div>` : ''}
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 
     app.innerHTML = `
         <div class="hero">
