@@ -2070,6 +2070,26 @@ function eventForm(e = {}) {
                 </div>
             </div>
             <div class="form-group">
+                <label>Required Tyres <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(tick every compound drivers must use)</span></label>
+                <div style="display:flex;flex-wrap:wrap;gap:0.5rem 1rem;padding:0.55rem 0.65rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px">
+                    ${(() => {
+                        const compounds = [
+                            { code: 'RS', label: 'Racing Soft' },
+                            { code: 'RM', label: 'Racing Medium' },
+                            { code: 'RH', label: 'Racing Hard' },
+                            { code: 'RI', label: 'Racing Inter' },
+                            { code: 'RW', label: 'Racing Wet' },
+                        ];
+                        const selected = new Set(Array.isArray(e.required_tyres) ? e.required_tyres : []);
+                        return compounds.map(c => `
+                            <label style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.84rem;cursor:pointer">
+                                <input type="checkbox" name="required_tyres" value="${c.code}" ${selected.has(c.code) ? 'checked' : ''} style="accent-color:var(--gold);width:15px;height:15px">
+                                <span><strong>${c.code}</strong> <span style="color:var(--muted);font-size:0.78rem">${c.label}</span></span>
+                            </label>`).join('');
+                    })()}
+                </div>
+            </div>
+            <div class="form-group">
                 <label>Additional Briefing</label>
                 <textarea name="race_details" rows="4" placeholder="Anything else drivers need to know — track limits, BoP, formation lap, etc.">${esc(e.race_details)}</textarea>
             </div>
@@ -2091,6 +2111,9 @@ async function editEvent(id) {
 
 async function saveEvent(id) {
     const d = getFormData('entity-form');
+    // Multi-value checkbox group: getFormData collapses these to a single
+    // boolean. Read them directly so we capture every ticked compound.
+    const requiredTyres = Array.from(document.querySelectorAll('#entity-form input[name="required_tyres"]:checked')).map(el => el.value);
     if (!d.season_id || !d.round || !d.name || !d.slug || !d.circuit_name || !d.duration_hours || !d.starts_at || !d.ends_at) {
         toast('Fill in all required fields.', 'error'); return;
     }
@@ -2114,6 +2137,7 @@ async function saveEvent(id) {
         time_of_day:        d.time_of_day || null,
         starting_procedure: d.starting_procedure || null,
         mandatory_pit_stops: d.mandatory_pit_stops ? parseInt(d.mandatory_pit_stops) : null,
+        required_tyres:     requiredTyres.length ? requiredTyres : null,
         race_details:       d.race_details || null,
     };
     const { error } = id

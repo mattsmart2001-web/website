@@ -125,6 +125,7 @@ Always apply in this order:
 43. `43_unique_psn.sql` — case-insensitive unique PSN on drivers + auto-delete safe duplicates
 44. `44_admin_activity_log.sql` — auto-logged admin action history via triggers, viewable / deletable from admin UI
 45. `45_event_race_details.sql` — per-event briefing fields (tyre wear, fuel, weather, starting procedure, etc.)
+46. `46_event_required_tyres.sql` — per-event required tyre compounds (text[])
 
 ---
 

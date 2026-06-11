@@ -268,6 +268,7 @@
         .details-val { font-size: 0.95rem; font-weight: 600; color: var(--text); }
         .details-briefing { margin-top: 0.85rem; background: var(--bg-2); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 8px; padding: 0.85rem 1rem; }
         .details-briefing-body { font-size: 0.9rem; line-height: 1.55; white-space: pre-wrap; color: var(--text); margin-top: 0.3rem; }
+        .details-tyre { display: inline-block; padding: 0.2rem 0.55rem; margin-right: 0.25rem; background: rgba(255,209,102,0.12); border: 1px solid rgba(255,209,102,0.35); border-radius: 999px; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; color: var(--gold); }
 
         .state-msg {
             text-align: center;
@@ -441,7 +442,8 @@ async function load() {
             ? `<button class="btn-results" onclick="openGrid('${esc(e.id)}','${esc(e.name)}')">Grid</button>`
             : '';
         const hasDetails = e.tyre_wear || e.fuel_consumption || e.weather || e.time_of_day ||
-                           e.starting_procedure || e.mandatory_pit_stops != null || e.race_details;
+                           e.starting_procedure || e.mandatory_pit_stops != null || e.race_details ||
+                           (Array.isArray(e.required_tyres) && e.required_tyres.length);
         const detailsBtn = hasDetails
             ? `<button class="btn-results" onclick="openRaceDetails('${esc(e.id)}','${esc(e.name)}')">Race Details</button>`
             : '';
@@ -554,6 +556,9 @@ function openRaceDetails(eventId, eventName) {
     const e = _eventsById[eventId];
     if (!e) return;
     document.getElementById('details-title').textContent = `${eventName} — Race Details`;
+    const tyrePills = Array.isArray(e.required_tyres) && e.required_tyres.length
+        ? e.required_tyres.map(t => `<span class="details-tyre">${esc(t)}</span>`).join(' ')
+        : null;
     const rows = [
         ['Tyre Wear',          e.tyre_wear],
         ['Fuel Consumption',   e.fuel_consumption],
@@ -561,12 +566,13 @@ function openRaceDetails(eventId, eventName) {
         ['Time of Day',        e.time_of_day],
         ['Starting Procedure', e.starting_procedure],
         ['Mandatory Pit Stops', e.mandatory_pit_stops != null ? String(e.mandatory_pit_stops) : null],
+        ['Required Tyres',     tyrePills],
     ].filter(([, v]) => v && String(v).trim());
     const fieldHTML = rows.length
         ? `<div class="details-grid">${rows.map(([k, v]) => `
               <div class="details-row">
                   <div class="details-key">${k}</div>
-                  <div class="details-val">${esc(v)}</div>
+                  <div class="details-val">${k === 'Required Tyres' ? v : esc(v)}</div>
               </div>`).join('')}</div>`
         : '';
     const briefingHTML = e.race_details
