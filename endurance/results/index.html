@@ -174,6 +174,13 @@
         .driver-list a { color: inherit; text-decoration: none; }
         .driver-list a:hover { color: var(--text); }
 
+        /* All driver / team links inherit text colour and only underline on
+           hover — matches the standings page so the page reads as one set. */
+        .entity-link { color: inherit; text-decoration: none; }
+        .entity-link:hover { text-decoration: underline; }
+        .results-table a, .steward-card a, table a { color: inherit; text-decoration: none; }
+        .results-table a:hover, .steward-card a:hover, table a:hover { text-decoration: underline; }
+
         /* FL highlight */
         .fl-time { color: #c4b5fd; font-weight: 600; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; letter-spacing: 0.02em; }
         .fl-badge {
@@ -615,10 +622,10 @@ function driverCell(r) {
     if (!d) return '<em class="td-muted">No driver</em>';
     const flagPart = d.nationality ? flag(d.nationality) + ' ' : '';
     const nameLink = d.slug
-        ? `<a href="/endurance/drivers/?slug=${encodeURIComponent(d.slug)}">${esc(d.display_name)}</a>`
+        ? `<a class="entity-link" href="/endurance/drivers/?slug=${encodeURIComponent(d.slug)}">${esc(d.display_name)}</a>`
         : esc(d.display_name);
     const teamPart = r.entry.teams?.slug
-        ? `<a href="/endurance/teams/?slug=${encodeURIComponent(r.entry.teams.slug)}" style="color:inherit;text-decoration:none">${esc(r.entry.teams.name)}</a>`
+        ? `<a class="entity-link" href="/endurance/teams/?slug=${encodeURIComponent(r.entry.teams.slug)}">${esc(r.entry.teams.name)}</a>`
         : (r.entry.teams?.name ? esc(r.entry.teams.name) : '<em>Solo</em>');
     return `${flagPart}<strong>${nameLink}</strong><div style="font-size:0.72rem;color:var(--muted)">${teamPart}</div>`;
 }
@@ -674,7 +681,7 @@ function renderResultsTable(classified, unclassified, flRow) {
         const teamCell = row.entry.teams?.name
             ? `${color ? `<span class="mfr-dot" style="background:${esc(color)}"></span>` : ''}<strong>${
                 row.entry.teams.slug
-                    ? `<a href="/endurance/teams/?slug=${encodeURIComponent(row.entry.teams.slug)}" style="color:inherit;text-decoration:none">${esc(row.entry.teams.name)}</a>`
+                    ? `<a class="entity-link" href="/endurance/teams/?slug=${encodeURIComponent(row.entry.teams.slug)}">${esc(row.entry.teams.name)}</a>`
                     : esc(row.entry.teams.name)
               }</strong>`
             : '<em class="td-muted">Solo</em>';
@@ -762,7 +769,7 @@ function renderStewardList(decisions) {
             ? `#${d.entries.car_number} ${esc(d.entries.teams?.name || '')}`
             : '';
         const driver = d.drivers?.slug
-            ? `<a href="/endurance/drivers/?slug=${encodeURIComponent(d.drivers.slug)}">${esc(d.drivers.display_name)}</a>`
+            ? `<a class="entity-link" href="/endurance/drivers/?slug=${encodeURIComponent(d.drivers.slug)}">${esc(d.drivers.display_name)}</a>`
             : (d.drivers?.display_name ? esc(d.drivers.display_name) : '');
         const metaParts = [subject, driver].filter(Boolean);
         return `
@@ -783,7 +790,7 @@ function renderStewardList(decisions) {
 function renderPenaltiesTable(pens) {
     const rows = pens.map(p => {
         const drv = p.drivers?.slug
-            ? `<a href="/endurance/drivers/?slug=${encodeURIComponent(p.drivers.slug)}">${esc(p.drivers.display_name)}</a>`
+            ? `<a class="entity-link" href="/endurance/drivers/?slug=${encodeURIComponent(p.drivers.slug)}">${esc(p.drivers.display_name)}</a>`
             : (p.drivers?.display_name ? esc(p.drivers.display_name) : '<span class="td-muted">Whole team</span>');
         return `<tr>
             <td class="td-num">${p.entries?.car_number != null ? '#' + esc(p.entries.car_number) : '—'}</td>
