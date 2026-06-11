@@ -2873,33 +2873,58 @@ function fmtLapTime(ms) {
     return min > 0 ? `${min}:${sec}` : sec;
 }
 
-// Highlight any duplicate position numbers in a results / qualifying
-// table. Inputs only — they're already scoped to the active lobby by
-// the view, so duplicates are illegal regardless of context.
-function highlightPositionDuplicates(tableId) {
+// Build a <option> list for a position dropdown. `max` is the number of
+// drivers in the current lobby, `selected` is the current value (string
+// or number). Always includes a blank "—" so positions can be cleared.
+function buildPositionOptions(max, selected) {
+    const sel = String(selected ?? '');
+    let html = `<option value="">—</option>`;
+    for (let i = 1; i <= max; i++) {
+        const isSel = String(i) === sel;
+        html += `<option value="${i}"${isSel ? ' selected' : ''}>${i}</option>`;
+    }
+    return html;
+}
+
+// Walk every position dropdown in the table and grey out values that
+// another row has already claimed. The dropdown's own selected value
+// stays enabled so the user can keep / re-pick it.
+function refreshPositionAvailability(tableId) {
     const table = document.getElementById(tableId);
     if (!table) return [];
-    const inputs = table.querySelectorAll('input[data-field="finish_position"], input[data-field="position"]');
-    const counts = {};
-    inputs.forEach(inp => {
-        const v = (inp.value || '').trim();
-        if (!v || inp.disabled) return;
-        counts[v] = (counts[v] || 0) + 1;
+    const selects = table.querySelectorAll('select[data-field="finish_position"], select[data-field="position"]');
+    const taken = {};
+    selects.forEach(sel => {
+        const v = (sel.value || '').trim();
+        if (!v || sel.disabled) return;
+        taken[v] = (taken[v] || 0) + 1;
     });
     const dupes = [];
-    inputs.forEach(inp => {
-        const v = (inp.value || '').trim();
-        const isDup = v && counts[v] > 1;
-        inp.style.borderColor = isDup ? '#ef4444' : '';
-        inp.style.boxShadow   = isDup ? '0 0 0 1px #ef4444' : '';
-        inp.title             = isDup ? `Position ${v} is used by another driver in this lobby.` : '';
-        if (isDup) dupes.push(parseInt(v));
+    selects.forEach(sel => {
+        const myVal = (sel.value || '').trim();
+        Array.from(sel.options).forEach(opt => {
+            if (!opt.value) { opt.disabled = false; opt.textContent = '—'; return; }
+            const isTaken = (taken[opt.value] || 0) > 0 && opt.value !== myVal;
+            opt.disabled = isTaken;
+            opt.textContent = isTaken ? `${opt.value} (taken)` : opt.value;
+        });
+        const isDup = myVal && (taken[myVal] || 0) > 1;
+        sel.style.borderColor = isDup ? '#ef4444' : '';
+        sel.style.boxShadow   = isDup ? '0 0 0 1px #ef4444' : '';
+        sel.title             = isDup ? `Position ${myVal} is used by another driver in this lobby.` : '';
+        if (isDup) dupes.push(parseInt(myVal));
     });
     return [...new Set(dupes)];
 }
 
-function onPositionChange(input, tableId) {
-    highlightPositionDuplicates(tableId);
+// Kept as an alias so the saveResults / saveQualifying call sites stay
+// readable — they care about the dup list, not the refresh side-effect.
+function highlightPositionDuplicates(tableId) {
+    return refreshPositionAvailability(tableId);
+}
+
+function onPositionChange(selectEl, tableId) {
+    refreshPositionAvailability(tableId);
 }
 
 function buildLobbyFilter(entries, currentLobby, onChangeFn) {
@@ -2968,6 +2993,8 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
         return drvs.map(d => ({ entry: en, driver: d }));
     });
 
+    const lobbyDriverCount = rowSpecs.filter(s => s.driver).length;
+
     const rows = rowSpecs.length === 0
         ? `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">No drivers in this lobby yet.</td></tr>`
         : rowSpecs.map(({ entry: en, driver: d }) => {
@@ -2979,7 +3006,7 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
             const dAttr = d ? `data-driver="${esc(d.id)}"` : '';
             return `<tr>
                 <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${esc(en.teams?.name) || '<em>Solo</em>'}${en.lobby_number != null ? ` · L${en.lobby_number}` : ''}</span></td>
-                <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="position" value="${q.position || ''}" oninput="onPositionChange(this,'qualifying-table')" style="width:70px;padding:0.4rem 0.5rem" ${d ? '' : 'disabled'}></td>
+                <td><select data-entry="${en.id}" ${dAttr} data-field="position" data-max="${lobbyDriverCount}" onchange="onPositionChange(this,'qualifying-table')" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${d ? '' : 'disabled'}>${buildPositionOptions(lobbyDriverCount, q.position || '')}</select></td>
                 <td><input type="text" placeholder="1:23.456" data-entry="${en.id}" ${dAttr} data-field="best_lap" value="${q.best_lap_ms ? fmtLapTime(q.best_lap_ms) : ''}" style="width:120px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.82rem" ${d ? '' : 'disabled'}></td>
                 <td><input type="text" data-entry="${en.id}" ${dAttr} data-field="notes" value="${esc(q.notes || '')}" placeholder="—" style="padding:0.4rem 0.5rem" ${d ? '' : 'disabled'}></td>
             </tr>`;
@@ -3004,6 +3031,7 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
                 Pick a lobby to record qualifying lap by lap. Save All persists the current view.
             </div>
         </div>`;
+    refreshPositionAvailability('qualifying-table');
 }
 
 async function saveQualifying(eventId, eventName) {
@@ -3012,7 +3040,7 @@ async function saveQualifying(eventId, eventName) {
         toast(`Two drivers can't share the same qualifying position. Fix P${dupes.join(', P')} first.`, 'error');
         return;
     }
-    const inputs = document.querySelectorAll('#qualifying-table input[data-entry][data-driver]');
+    const inputs = document.querySelectorAll('#qualifying-table [data-entry][data-driver]');
     const map = {};
     let bad = false;
     inputs.forEach(inp => {
@@ -3109,6 +3137,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
         return drvs.map(d => ({ entry: en, driver: d }));
     });
 
+    const lobbyDriverCount = rowSpecs.filter(s => s.driver).length;
     const rows = rowSpecs.length === 0
         ? `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No drivers in this lobby.</td></tr>`
         : rowSpecs.map(({ entry: en, driver: d }) => {
@@ -3133,7 +3162,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
             const isClassified = status === 'classified';
             return `<tr>
                 <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}${en.lobby_number != null ? ` · L${en.lobby_number}` : ''}</span></td>
-                <td><input type="number" min="1" max="99" data-entry="${en.id}" ${dAttr} data-field="finish_position" value="${isClassified ? pos : ''}" oninput="onPositionChange(this,'results-table')" style="width:60px;padding:0.4rem 0.5rem" ${dis || !isClassified ? 'disabled' : ''}></td>
+                <td><select data-entry="${en.id}" ${dAttr} data-field="finish_position" data-max="${lobbyDriverCount}" onchange="onPositionChange(this,'results-table')" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis || !isClassified ? 'disabled' : ''}>${buildPositionOptions(lobbyDriverCount, isClassified ? pos : '')}</select></td>
                 <td><input type="number" min="0" data-entry="${en.id}" ${dAttr} data-field="laps_driven" value="${laps}" style="width:65px;padding:0.4rem 0.5rem" ${dis}></td>
                 <td><select data-entry="${en.id}" ${dAttr} data-field="status" onchange="onResultStatusChange(this)" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
                 <td style="text-align:center;font-size:0.78rem;${isPole && isClassified ? 'color:var(--gold);font-weight:600' : 'color:var(--muted)'}" title="Auto-set from qualifying P1">${isPole && isClassified ? '★' : '—'}</td>
@@ -3166,6 +3195,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
                 Pick a lobby to record results lobby by lobby. Pole is auto-set from qualifying P1. Points recompute per-driver on save.
             </div>
         </div>`;
+    refreshPositionAvailability('results-table');
 }
 
 async function saveResults(eventId, eventName) {
