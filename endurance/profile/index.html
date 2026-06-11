@@ -986,7 +986,7 @@ async function rejectRequest(requestId) {
 
 async function loadInbox(driverId) {
     const { data: messages } = await sb.from('driver_contact_messages')
-        .select('id, subject, message, incident_url, status, created_at, admin_reply, replied_at, driver_read_reply_at, is_broadcast')
+        .select('id, subject, message, incident_url, status, created_at, admin_reply, replied_at, driver_read_reply_at, is_broadcast, is_direct, driver_reply, driver_replied_at')
         .eq('driver_id', driverId)
         .order('created_at', { ascending: false });
     if (!messages?.length) return;
@@ -1003,12 +1003,41 @@ async function loadInbox(driverId) {
         .map(m => m.id);
 
     list.innerHTML = messages.map(m => {
+        if (m.is_direct) {
+            // Admin → this driver, replyable. Unread until they open the
+            // inbox; the reply box stays available even after reading so
+            // they can come back and respond.
+            const unread = !m.driver_read_reply_at;
+            const yourReply = m.driver_reply
+                ? `<div class="inbox-reply" style="background:rgba(56,189,248,0.06);border-color:rgba(56,189,248,0.22);border-left-color:#38bdf8">
+                       <div class="inbox-reply-head" style="color:#38bdf8">Your reply${m.driver_replied_at ? ' · ' + fmtWhen(m.driver_replied_at) : ''}</div>
+                       <div class="inbox-reply-body">${esc(m.driver_reply)}</div>
+                   </div>`
+                : '';
+            const replyForm = `<form class="inbox-reply-form" onsubmit="event.preventDefault(); submitDriverReply('${m.id}', this)" style="margin-top:0.85rem">
+                    <textarea name="reply" rows="3" placeholder="${m.driver_reply ? 'Update your reply…' : 'Reply to admin…'}" required style="width:100%;background:var(--bg-1);border:1px solid var(--border);border-radius:6px;padding:0.6rem 0.75rem;color:var(--text);font-size:0.86rem;resize:vertical">${esc(m.driver_reply)}</textarea>
+                    <div style="margin-top:0.5rem;text-align:right">
+                        <button type="submit" class="btn-sm" style="background:var(--gold);color:#1a1300;border:none;padding:0.4rem 0.9rem;border-radius:5px;font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer">${m.driver_reply ? 'Update Reply' : 'Send Reply'}</button>
+                    </div>
+                </form>`;
+            return `<div class="inbox-thread ${unread ? 'unread' : ''}">
+                <div class="inbox-head">
+                    <div>
+                        <div class="inbox-subj"><span class="pill pill-gold" style="margin-right:0.4rem">★ From Admin</span>${esc(m.subject) || '<em>Admin message</em>'}</div>
+                        <div class="inbox-when">${fmtWhen(m.created_at)}${unread ? ' · NEW' : ''}</div>
+                    </div>
+                </div>
+                <div class="inbox-body" style="color:var(--text);margin-top:0.5rem">${esc(m.message)}</div>
+                ${yourReply}
+                ${replyForm}
+            </div>`;
+        }
         if (m.is_broadcast) {
             const unread = !m.driver_read_reply_at;
             return `<div class="inbox-thread ${unread ? 'unread' : ''}">
                 <div class="inbox-head">
                     <div>
-                        <div class="inbox-subj"><span class="pill pill-gold" style="margin-right:0.4rem">★ From Admin</span>${esc(m.subject) || '<em>Admin message</em>'}</div>
+                        <div class="inbox-subj"><span class="pill pill-gold" style="margin-right:0.4rem">★ Announcement</span>${esc(m.subject) || '<em>Admin announcement</em>'}</div>
                         <div class="inbox-when">${fmtWhen(m.created_at)}${unread ? ' · NEW' : ''}</div>
                     </div>
                 </div>
@@ -1051,6 +1080,19 @@ async function loadInbox(driverId) {
     }
 
     card.style.display = '';
+}
+
+async function submitDriverReply(messageId, formEl) {
+    const reply = (formEl.reply.value || '').trim();
+    if (!reply) return;
+    const btn = formEl.querySelector('button[type="submit"]');
+    const orig = btn.textContent; btn.textContent = 'Sending…'; btn.disabled = true;
+    const { data, error } = await sb.rpc('reply_to_admin_message', { p_message_id: messageId, p_reply: reply });
+    btn.textContent = orig; btn.disabled = false;
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
+    toast('Reply sent.', 'success');
+    await loadInbox(_currentDriver.id);
 }
 
 init();

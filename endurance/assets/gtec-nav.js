@@ -53,10 +53,10 @@
         // Matches the profile inbox's own "unread" rule so the badge clears
         // the next time the user opens the inbox card.
         const { data } = await sb.from('driver_contact_messages')
-            .select('id, is_broadcast, admin_reply, driver_read_reply_at')
+            .select('id, is_broadcast, is_direct, admin_reply, driver_read_reply_at')
             .eq('driver_id', driverId)
             .is('driver_read_reply_at', null);
-        const n = (data || []).filter(m => m.is_broadcast || m.admin_reply).length;
+        const n = (data || []).filter(m => m.is_broadcast || m.is_direct || m.admin_reply).length;
         setBadge(n);
     };
 

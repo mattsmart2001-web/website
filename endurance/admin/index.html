@@ -4259,9 +4259,18 @@ async function renderMessages() {
 
     const rows = !data?.length
         ? `<tr><td colspan="6"><div class="empty-state">No messages from drivers yet.</div></td></tr>`
-        : data.map(m => `
+        : data.map(m => {
+            const kindBadge = m.is_broadcast
+                ? '<span class="badge badge-gold" style="margin-right:0.35rem">Broadcast</span>'
+                : m.is_direct
+                ? '<span class="badge badge-gold" style="margin-right:0.35rem">Admin → Driver</span>'
+                : '';
+            const replyChip = m.driver_reply
+                ? ' <span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;margin-left:0.35rem">Reply</span>'
+                : '';
+            return `
             <tr>
-                <td>${m.is_broadcast ? '<span class="badge badge-gold" style="margin-right:0.35rem">Admin → Driver</span>' : ''}<strong>${esc(m.drivers?.display_name) || '—'}</strong>${m.drivers?.psn_id ? `<br><small class="td-muted">${esc(m.drivers.psn_id)}</small>` : ''}</td>
+                <td>${kindBadge}<strong>${esc(m.drivers?.display_name) || '—'}</strong>${replyChip}${m.drivers?.psn_id ? `<br><small class="td-muted">${esc(m.drivers.psn_id)}</small>` : ''}</td>
                 <td class="td-muted" style="font-size:0.84rem">${esc(m.subject) || '<em>No subject</em>'}</td>
                 <td class="td-muted" style="font-size:0.82rem;max-width:340px">${esc((m.message || '').slice(0, 120))}${(m.message || '').length > 120 ? '…' : ''}</td>
                 <td>${statusBadge[m.status] || esc(m.status)}</td>
@@ -4270,7 +4279,8 @@ async function renderMessages() {
                     <button class="btn-icon" onclick="viewMessage('${m.id}')">View</button>
                     <button class="btn-icon danger" onclick="deleteMessage('${m.id}')">Delete</button>
                 </div></td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
 
     document.getElementById('content').innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:0.75rem;flex-wrap:wrap">
@@ -4410,6 +4420,13 @@ async function viewMessage(id) {
            </div>`
         : '';
 
+    const driverReply = m.driver_reply
+        ? `<div style="margin-bottom:1rem;padding:0.85rem 1rem;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.22);border-left:3px solid #38bdf8;border-radius:6px">
+              <div style="font-size:0.7rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#38bdf8;margin-bottom:0.35rem">Driver's reply${m.driver_replied_at ? ' · ' + new Date(m.driver_replied_at).toLocaleString('en-GB') : ''}</div>
+              <div style="font-size:0.86rem;white-space:pre-wrap;line-height:1.5">${esc(m.driver_reply)}</div>
+           </div>`
+        : '';
+
     openModal(`Message from ${esc(m.drivers?.display_name) || 'Driver'}`, `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1.5rem;font-size:0.84rem;margin-bottom:1.25rem">
             <div><span style="color:var(--muted)">Driver</span><br><strong>${esc(m.drivers?.display_name) || '—'}</strong> ${profileLink}</div>
@@ -4420,6 +4437,7 @@ async function viewMessage(id) {
         <div style="font-size:0.88rem;margin-bottom:1rem;padding:0.85rem 1rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;white-space:pre-wrap;line-height:1.55">${esc(m.message)}</div>
         ${incidentLink}
         ${replyHistory}
+        ${driverReply}
         <form id="entity-form">
             <div class="form-group">
                 <label>Reply to driver <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(visible in their portal inbox)</span></label>

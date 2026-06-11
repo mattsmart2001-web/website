@@ -128,6 +128,7 @@ Always apply in this order:
 46. `46_event_required_tyres.sql` — per-event required tyre compounds (text[])
 47. `47_event_bop.sql` — per-event BoP on/off flag
 48. `48_event_damage.sql` — per-event damage level (off / light / heavy)
+49. `49_driver_replies_to_direct.sql` — drivers can reply to direct admin messages (not broadcasts); reply re-opens the thread for admin
 
 ---
 
