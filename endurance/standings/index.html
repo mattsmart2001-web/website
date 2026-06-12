@@ -175,12 +175,33 @@
             padding: 0.95rem 1.25rem;
             border-bottom: 1px solid var(--border);
             vertical-align: middle;
+            position: relative;
         }
         tbody tr:last-child td { border-bottom: none; }
-        tbody tr:hover td { background: rgba(255,255,255,0.02); }
+        tbody tr:hover td { background: rgba(255,255,255,0.025); }
         td.right { text-align: right; }
         td.center { text-align: center; }
         td.muted { color: var(--muted); font-size: 0.85rem; }
+
+        /* Subtle gradient sweep on every row — adds depth without shouting. */
+        tbody tr td {
+            background-image: linear-gradient(90deg, rgba(255,255,255,0.012) 0%, rgba(255,255,255,0) 60%);
+        }
+
+        /* Podium rows get a metallic-tinted gradient + left accent stripe.
+           Box-shadow inset on the first cell paints the stripe without
+           breaking the row's flexible width. */
+        tbody tr.rank-1 td { background-image: linear-gradient(90deg, rgba(255,209,102,0.10) 0%, rgba(255,209,102,0.03) 45%, rgba(255,255,255,0) 100%); }
+        tbody tr.rank-1 td:first-child { box-shadow: inset 3px 0 0 0 var(--gold); }
+        tbody tr.rank-1:hover td { background-color: rgba(255,209,102,0.04); }
+
+        tbody tr.rank-2 td { background-image: linear-gradient(90deg, rgba(199,201,201,0.08) 0%, rgba(199,201,201,0.02) 45%, rgba(255,255,255,0) 100%); }
+        tbody tr.rank-2 td:first-child { box-shadow: inset 3px 0 0 0 var(--silver); }
+        tbody tr.rank-2:hover td { background-color: rgba(199,201,201,0.035); }
+
+        tbody tr.rank-3 td { background-image: linear-gradient(90deg, rgba(205,127,50,0.09) 0%, rgba(205,127,50,0.025) 45%, rgba(255,255,255,0) 100%); }
+        tbody tr.rank-3 td:first-child { box-shadow: inset 3px 0 0 0 var(--bronze); }
+        tbody tr.rank-3:hover td { background-color: rgba(205,127,50,0.035); }
 
         /* Position cell */
         .pos {
@@ -353,6 +374,12 @@ function posCls(p) {
     if (p === 3) return 'pos p3';
     return 'pos';
 }
+function rankCls(p) {
+    if (p === 1) return 'rank-1';
+    if (p === 2) return 'rank-2';
+    if (p === 3) return 'rank-3';
+    return '';
+}
 
 // Manufacturer logo (preferred) or coloured swatch fallback
 function mfrBadge(logoUrl, brandColor, name) {
@@ -401,7 +428,7 @@ function renderDrivers(panel) {
         const teamLine = d.team_name
             ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name)}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.color='#fff'" onmouseout="this.style.color=''">${esc(d.team_name)}</a>` : esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</div>`
             : '';
-        return `<tr class="driver-row">
+        return `<tr class="driver-row ${rankCls(pos)}">
             <td class="${posCls(pos)}">${pos}</td>
             <td>
                 <div class="name">${num}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a></div>
@@ -444,7 +471,7 @@ function renderTeams(panel) {
         const mfrLine = t.manufacturer_name
             ? `<div class="meta-line">${mfrBadge(t.manufacturer_logo_url, t.brand_color, t.manufacturer_name)}${esc(t.manufacturer_name)}</div>`
             : '';
-        return `<tr>
+        return `<tr class="${rankCls(pos)}">
             <td class="${posCls(pos)}">${pos}</td>
             <td>
                 <div class="name"><a href="/endurance/teams/?slug=${esc(t.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(t.team_name)}</a></div>
@@ -491,7 +518,7 @@ function renderRatings(panel) {
         const teamLine = d.team_name
             ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name)}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
             : '';
-        return `<tr>
+        return `<tr class="${rankCls(pos)}">
             <td class="${posCls(pos)}">${pos}</td>
             <td>
                 <div class="name"><a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a></div>
