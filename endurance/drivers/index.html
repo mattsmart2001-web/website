@@ -134,7 +134,33 @@
         }
         .driver-card-name { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.03em; text-transform: uppercase; line-height: 1.1; margin-bottom: 0.3rem; }
         .driver-card-meta { font-size: 0.74rem; color: var(--muted); }
-        .driver-card-tier { margin-top: 0.55rem; }
+        .driver-card-elo {
+            margin-top: 0.65rem;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.35rem;
+            padding: 0.18rem 0.6rem;
+            background: rgba(255,209,102,0.08);
+            border: 1px solid rgba(255,209,102,0.25);
+            border-radius: 4px;
+        }
+        .driver-card-elo.is-provisional { border-style: dashed; opacity: 0.85; }
+        .driver-card-elo-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .driver-card-elo-value {
+            font-family: 'Anton', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 0.03em;
+            color: var(--gold);
+            line-height: 1;
+        }
+        .driver-card-tier { margin-top: 0.5rem; }
         .driver-card-tier .elo-tier { margin-left: 0 !important; }
 
         /* ===== PROFILE ===== */
@@ -467,14 +493,23 @@ async function showListing() {
     });
 
     const cards = (data || []).map(d => {
+        let elo = null;
         let tier = '';
+        let provisional = false;
         if (window.eloTierBadge) {
-            const elo = ratingMap[d.id];
-            if (elo != null) {
-                const provisional = ratedDriver[d.id] == null;
-                tier = window.eloTierBadge(elo, { provisional });
+            const r = ratingMap[d.id];
+            if (r != null) {
+                elo = Math.round(r);
+                provisional = ratedDriver[d.id] == null;
+                tier = window.eloTierBadge(r, { provisional });
             }
         }
+        const eloRow = elo != null
+            ? `<div class="driver-card-elo${provisional ? ' is-provisional' : ''}">
+                   <span class="driver-card-elo-label">Elo</span>
+                   <span class="driver-card-elo-value">${elo}</span>
+               </div>`
+            : '';
         return `
         <div class="driver-card" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'">
             <div class="driver-card-photo">${avatarHTML(d.photo_url, d.display_name, 'card')}</div>
@@ -485,6 +520,7 @@ async function showListing() {
                     ${d.nationality ? flag(d.nationality) + ' ' + esc(d.nationality) : ''}
                     ${d.teams?.name ? `<br>${esc(d.teams.name)}` : ''}
                 </div>
+                ${eloRow}
                 ${tier ? `<div class="driver-card-tier">${tier}</div>` : ''}
             </div>
         </div>`;
