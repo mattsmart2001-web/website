@@ -624,8 +624,9 @@ async function loadStanding(driverId) {
 
     if (rt) {
         const elo = Math.round(rt.rating ?? 1500);
+        const provisional = !rt.last_rated_at;
         document.getElementById('elo-value').textContent = elo;
-        document.getElementById('elo-tier-el').innerHTML = window.eloTierBadge ? window.eloTierBadge(elo) : '';
+        document.getElementById('elo-tier-el').innerHTML = window.eloTierBadge ? window.eloTierBadge(elo, { provisional }) : '';
         const delta = rt.last_delta;
         if (delta != null) {
             const sign = delta >= 0 ? '+' : '';
@@ -633,6 +634,7 @@ async function loadStanding(driverId) {
         }
     } else {
         document.getElementById('elo-value').textContent = '1500';
+        document.getElementById('elo-tier-el').innerHTML = window.eloTierBadge ? window.eloTierBadge(1500, { provisional: true }) : '';
     }
 
     card.style.display = '';
