@@ -196,6 +196,20 @@
             font-size: 0.76rem; color: var(--muted);
         }
         .profile-tag .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+        .pill-leader {
+            display: inline-block;
+            margin-left: 0.3rem;
+            padding: 0.1rem 0.45rem;
+            background: rgba(255,209,102,0.15);
+            border: 1px solid rgba(255,209,102,0.4);
+            border-radius: 999px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--gold);
+        }
         .rating-chip {
             display: inline-flex; align-items: stretch; overflow: hidden;
             border-radius: 6px; border: 1px solid var(--border);
@@ -542,7 +556,7 @@ async function showListing() {
 // ============================================================
 async function showProfile() {
     const { data: driver, error } = await sb.from('drivers')
-        .select('*, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
+        .select('*, teams!current_team_id(name,slug,leader_driver_id), manufacturers(name,brand_color,logo_url)')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -608,7 +622,10 @@ async function showProfile() {
     if (driver.psn_id)      tags.push(`PSN: ${esc(driver.psn_id)}`);
     if (driver.teams?.name) {
         const badge = mfrBadge(driver.manufacturers?.logo_url, driver.manufacturers?.brand_color, driver.manufacturers?.name);
-        tags.push(`${badge}${esc(driver.teams.name)}`);
+        const leaderPill = driver.teams.leader_driver_id === driver.id
+            ? ' <span class="pill-leader" title="Team Leader">★ Leader</span>'
+            : '';
+        tags.push(`${badge}${esc(driver.teams.name)}${leaderPill}`);
     }
     if (driver.manufacturers?.name && !driver.teams?.name) tags.push(esc(driver.manufacturers.name));
     if (driver.joined_at) tags.push(`Since ${esc(driver.joined_at.slice(0,4))}`);
