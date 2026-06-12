@@ -445,41 +445,34 @@ function mfrBadge(logoUrl, brandColor, name, opts = {}) {
 // ============================================================
 async function showListing() {
     document.title = 'Drivers — Gran Turismo GTEC';
-    const [{ data, error }, { data: ratings }, { data: raced }] = await Promise.all([
+    const [{ data, error }, { data: ratings }] = await Promise.all([
         sb.from('drivers')
-            .select('id, display_name, slug, nationality, career_number, photo_url, gt7_dr_rating, gt7_sr_rating, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
+            .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
             .order('display_name'),
         sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
-        sb.from('entry_drivers').select('driver_id'),
     ]);
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
 
-    // Three states:
-    //   1. Driver has a current rating row (last_rated_at set)  → real Elo
-    //   2. Driver has been entered into an event but their ratings were
-    //      wiped (Reset Stats) → show the view's 1500 default, NOT the
-    //      stale DR/SR seed they'd have shown before they ever raced.
-    //   3. Driver has never been on an entry → DR/SR seed (provisional).
-    const ratedDriver = {};
+    // One source of truth: driver_current_ratings.rating. The view returns
+    // 1500 for drivers with no driver_ratings rows (fresh or reset), so the
+    // badge always agrees with what shows on the driver's profile. Drivers
+    // who actually have race history (last_rated_at) get a solid pill;
+    // everyone else gets a provisional dashed pill at the same rating.
     const ratingMap   = {};
+    const ratedDriver = {};
     (ratings || []).forEach(r => {
         ratingMap[r.driver_id] = r.rating;
         if (r.last_rated_at) ratedDriver[r.driver_id] = r.rating;
     });
-    const hasEverRaced = new Set((raced || []).map(r => r.driver_id));
 
     const cards = (data || []).map(d => {
         let tier = '';
         if (window.eloTierBadge) {
-            const realElo = ratedDriver[d.id];
-            if (realElo != null) {
-                tier = window.eloTierBadge(realElo);
-            } else if (hasEverRaced.has(d.id) && ratingMap[d.id] != null) {
-                tier = window.eloTierBadge(ratingMap[d.id]);
-            } else if (window.eloDrSrSeed) {
-                const seed = window.eloDrSrSeed(d.gt7_dr_rating, d.gt7_sr_rating);
-                if (seed != null) tier = window.eloTierBadge(seed, { provisional: true });
+            const elo = ratingMap[d.id];
+            if (elo != null) {
+                const provisional = ratedDriver[d.id] == null;
+                tier = window.eloTierBadge(elo, { provisional });
             }
         }
         return `
