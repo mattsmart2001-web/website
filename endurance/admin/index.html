@@ -2982,9 +2982,10 @@ function buildPositionOptions(max, selected) {
     return html;
 }
 
-// Walk every position dropdown in the table and grey out values that
-// another row has already claimed. The dropdown's own selected value
-// stays enabled so the user can keep / re-pick it.
+// Walk every position dropdown in the table, refresh the option labels
+// to show which values are already taken, and flag any duplicates. Taken
+// options stay *enabled* so admins can fix a wrong allocation in place
+// (onPositionChange auto-swaps with whoever previously had the value).
 function refreshPositionAvailability(tableId) {
     const table = document.getElementById(tableId);
     if (!table) return [];
@@ -2998,11 +2999,14 @@ function refreshPositionAvailability(tableId) {
     const dupes = [];
     selects.forEach(sel => {
         const myVal = (sel.value || '').trim();
+        // First pass through after render → record baseline for swap logic.
+        if (sel.dataset.prevValue == null) sel.dataset.prevValue = myVal;
         Array.from(sel.options).forEach(opt => {
             if (!opt.value) { opt.disabled = false; opt.textContent = '—'; return; }
+            // Stay selectable even when taken — picking it auto-swaps.
+            opt.disabled = false;
             const isTaken = (taken[opt.value] || 0) > 0 && opt.value !== myVal;
-            opt.disabled = isTaken;
-            opt.textContent = isTaken ? `${opt.value} (taken)` : opt.value;
+            opt.textContent = isTaken ? `${opt.value} (swap)` : opt.value;
         });
         const isDup = myVal && (taken[myVal] || 0) > 1;
         sel.style.borderColor = isDup ? '#ef4444' : '';
@@ -3013,14 +3017,33 @@ function refreshPositionAvailability(tableId) {
     return [...new Set(dupes)];
 }
 
-// Kept as an alias so the saveResults / saveQualifying call sites stay
+// Track the previous value on each select so onChange knows what to give
+// the swap partner when a "taken" position gets picked.
+function onPositionChange(selectEl, tableId) {
+    const table     = document.getElementById(tableId);
+    const newVal    = (selectEl.value || '').trim();
+    const prevVal   = selectEl.dataset.prevValue || '';
+    if (newVal && newVal !== prevVal) {
+        // Find any *other* row in the same table that currently holds the
+        // value we just picked, and donate them our previous value (empty
+        // if we had none — leaves them blank to refill).
+        const peers = table.querySelectorAll('select[data-field="finish_position"], select[data-field="position"]');
+        peers.forEach(other => {
+            if (other === selectEl) return;
+            if ((other.value || '').trim() === newVal) {
+                other.value = prevVal;
+                other.dataset.prevValue = prevVal;
+            }
+        });
+    }
+    selectEl.dataset.prevValue = newVal;
+    refreshPositionAvailability(tableId);
+}
+
+// Kept as an alias so saveResults / saveQualifying call sites stay
 // readable — they care about the dup list, not the refresh side-effect.
 function highlightPositionDuplicates(tableId) {
     return refreshPositionAvailability(tableId);
-}
-
-function onPositionChange(selectEl, tableId) {
-    refreshPositionAvailability(tableId);
 }
 
 function buildLobbyFilter(entries, currentLobby, onChangeFn) {
