@@ -54,6 +54,21 @@
         .profile-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; margin-bottom: 0.6rem; transition: color 0.15s; }
         .profile-link:hover { color: var(--gold); }
         .profile-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .pill-leader-inline {
+            display: inline-block;
+            margin-left: 0.35rem;
+            padding: 0.1rem 0.45rem;
+            background: rgba(255,209,102,0.15);
+            border: 1px solid rgba(255,209,102,0.4);
+            border-radius: 999px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--gold);
+            vertical-align: middle;
+        }
         .tag { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; padding: 0.22rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--muted); }
 
         /* Cards */
@@ -718,7 +733,7 @@ async function init() {
     }
 
     const { data: driver, error } = await sb.from('drivers')
-        .select('*, teams!current_team_id(name,slug), manufacturers(name)')
+        .select('*, teams!current_team_id(name,slug,leader_driver_id), manufacturers(name)')
         .eq('user_id', session.user.id).single();
 
     if (error || !driver) { document.getElementById('auth-loading').textContent = 'Could not load driver profile.'; return; }
@@ -751,14 +766,15 @@ async function init() {
     }
 
     // Tags
+    const isTeamLeader = driver.teams?.leader_driver_id && driver.teams.leader_driver_id === driver.id;
     const tagData = [
         driver.career_number ? { text: `#${driver.career_number}`, key: 'num' } : null,
         driver.nationality   ? { text: `${flag(driver.nationality)} ${driver.nationality}`, key: 'nat', attr: 'data-nat' } : null,
-        driver.teams?.name   ? { text: driver.teams.name, key: 'team' } : null,
+        driver.teams?.name   ? { text: `${driver.teams.name}${isTeamLeader ? ' <span class="pill-leader-inline">★ Leader</span>' : ''}`, key: 'team', raw: true } : null,
         driver.manufacturers?.name ? { text: driver.manufacturers.name, key: 'mfr' } : null,
     ].filter(Boolean);
     document.getElementById('profile-tags').innerHTML = tagData.map(t =>
-        `<span class="tag" ${t.attr ? t.attr + '=""' : ''}>${esc(t.text)}</span>`
+        `<span class="tag" ${t.attr ? t.attr + '=""' : ''}>${t.raw ? t.text : esc(t.text)}</span>`
     ).join('');
 
     // Editable fields
