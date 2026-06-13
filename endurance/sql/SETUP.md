@@ -131,6 +131,7 @@ Always apply in this order:
 49. `49_driver_replies_to_direct.sql` — drivers can reply to direct admin messages (not broadcasts); reply re-opens the thread for admin
 50. `50_driver_delete_cascade.sql` — driver deletes cascade through entry_drivers / result_drivers (and SET NULL on penalties)
 51. `51_lock_driver_message_inserts.sql` — driver INSERT on driver_contact_messages can't spoof is_broadcast / is_direct / admin_reply anymore
+52. `52_elo_idempotent_recompute.sql` — compute_elo wipes the event's existing ratings before recomputing so re-runs don't compound the deltas
 
 ---
 
