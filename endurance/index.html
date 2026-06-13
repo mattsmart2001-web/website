@@ -238,6 +238,35 @@
             margin: 2rem auto 0;
             font-size: 1.05rem;
             line-height: 1.7;
+            text-align: left;
+        }
+        .gtec-lead p { margin: 0 0 1rem; }
+        .gtec-lead p:last-child { margin-bottom: 0; }
+        .gtec-stinger {
+            list-style: none;
+            padding: 1rem 0 0.5rem;
+            margin: 1.25rem 0;
+            border-top: 1px solid rgba(255,209,102,0.18);
+            border-bottom: 1px solid rgba(255,209,102,0.18);
+            text-align: center;
+        }
+        .gtec-stinger li {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--gold);
+            padding: 0.35rem 0;
+        }
+        .gtec-welcome {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.6rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text);
+            text-align: center;
+            margin-top: 1.25rem !important;
         }
 
         /* ---------- Countdown ---------- */
@@ -672,11 +701,27 @@
     <div class="gtec-kicker">Gran Turismo 7</div>
     <img class="gtec-title" src="/endurance/assets/gtec-logo.png" alt="Gran Turismo GTEC">
     <div class="gtec-tagline">Endurance racing, properly</div>
-    <p class="gtec-lead">
-        A multi-season, Gr.3-only endurance championship.
-        Teams of two drivers. Cars locked to a manufacturer for the year.
-        Every race a minimum of six hours.
-    </p>
+    <div class="gtec-lead">
+        <p><strong style="color:var(--text)">GTEC isn't just an endurance championship.</strong></p>
+
+        <p>It's a complete competitive ecosystem built specifically for Gran Turismo 7.</p>
+
+        <p>Every team commits to a manufacturer for the season. Every driver competes for both individual and team honours. Every result contributes to a bespoke driver rating system designed to measure performance beyond a single championship.</p>
+
+        <p>With full stewarding across every lobby, integrated driver communications and a championship structure designed around long-term competition, GTEC rewards consistency, teamwork and commitment over an entire season.</p>
+
+        <p>This isn't about turning up for a race.</p>
+
+        <p><em style="color:var(--text)">It's about building a campaign.</em></p>
+
+        <ul class="gtec-stinger">
+            <li>Every point matters.</li>
+            <li>Every result matters.</li>
+            <li>Every decision matters.</li>
+        </ul>
+
+        <p class="gtec-welcome">Welcome to GTEC.</p>
+    </div>
 
     <div class="gtec-countdown" id="countdown">
         <div class="cd-unit">
