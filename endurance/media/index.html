@@ -47,9 +47,33 @@
         .eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; text-indent: 0.45em; }
         .page-title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: 0.04em; text-transform: uppercase; }
 
+        /* Category filter chips */
+        .media-filters {
+            display: flex; flex-wrap: wrap; gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .media-filter {
+            padding: 0.4rem 0.85rem;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s, background 0.15s;
+        }
+        .media-filter:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .media-filter.active { background: var(--gold); color: #1a1300; border-color: var(--gold); }
+        .media-filter-count { margin-left: 0.35rem; opacity: 0.6; }
+
         /* Masonry grid */
         .media-grid { columns: 4 200px; gap: 1rem; }
         .media-item {
+            position: relative;
             break-inside: avoid;
             margin-bottom: 1rem;
             cursor: pointer;
@@ -65,6 +89,34 @@
         .media-item-title { font-size: 0.78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .media-item-caption { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .media-item-event { font-size: 0.68rem; color: var(--gold); margin-top: 0.2rem; }
+        .media-item-cat {
+            display: inline-block; margin-top: 0.25rem;
+            font-family: 'Orbitron', sans-serif; font-size: 0.55rem;
+            letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+        }
+        /* Play overlay for video tiles */
+        .media-item-play {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(to top, rgba(0,0,0,0.35), rgba(0,0,0,0));
+            pointer-events: none;
+        }
+        .media-item-play svg { width: 56px; height: 56px; color: rgba(255,255,255,0.95); filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)); }
+        .media-item-badge {
+            position: absolute; top: 0.45rem; left: 0.45rem;
+            padding: 0.15rem 0.5rem;
+            background: rgba(0,0,0,0.78);
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem; font-weight: 700; letter-spacing: 0.15em;
+            text-transform: uppercase; color: var(--gold);
+        }
+        .media-video-tile {
+            aspect-ratio: 16/9;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg,#1a1300,#0a0a0a);
+            color: var(--gold);
+        }
 
         /* Lightbox */
         .lightbox {
@@ -75,9 +127,21 @@
         }
         .lightbox.open { display: flex; }
         .lightbox-img { max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; pointer-events: none; }
+        .lightbox-embed { width: min(90vw, 1280px); aspect-ratio: 16/9; max-height: 90vh; border: 0; border-radius: 8px; background: #000; pointer-events: auto; }
         .lightbox-caption { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.82rem; color: var(--muted); white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
-        .lightbox-close { position: fixed; top: 1rem; right: 1rem; width: 36px; height: 36px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; color: var(--text); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+        .lightbox-close { position: fixed; top: 1rem; right: 1rem; width: 36px; height: 36px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; color: var(--text); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; z-index: 2; }
         .lightbox-close:hover { background: rgba(255,255,255,0.2); }
+        .lightbox-nav {
+            position: fixed; top: 50%; transform: translateY(-50%);
+            width: 48px; height: 48px;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+            color: var(--text); border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; transition: background 0.15s; z-index: 2;
+        }
+        .lightbox-nav:hover { background: rgba(255,255,255,0.18); }
+        .lightbox-prev { left: 1rem; }
+        .lightbox-next { right: 1rem; }
 
         /* States */
         .state-msg { text-align: center; padding: 5rem 2rem; }
@@ -123,13 +187,16 @@
         <div class="eyebrow">Championship</div>
         <div class="page-title">Media</div>
     </div>
+    <div class="media-filters" id="media-filters"></div>
     <div id="media-grid"><div class="loading">Loading…</div></div>
 </div>
 
 <!-- Lightbox -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+<div class="lightbox" id="lightbox" onclick="if (event.target === this) closeLightbox()">
     <button class="lightbox-close" onclick="closeLightbox()">✕</button>
-    <img class="lightbox-img" id="lightbox-img" src="" alt="">
+    <button class="lightbox-nav lightbox-prev" onclick="navLightbox(-1)" aria-label="Previous">‹</button>
+    <button class="lightbox-nav lightbox-next" onclick="navLightbox(1)" aria-label="Next">›</button>
+    <div id="lightbox-content"></div>
     <div class="lightbox-caption" id="lightbox-caption"></div>
 </div>
 
@@ -151,6 +218,68 @@ function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+const CATEGORIES = [
+    { value: 'race_highlights',    label: 'Race Highlights' },
+    { value: 'podiums',            label: 'Podiums' },
+    { value: 'liveries',           label: 'Liveries' },
+    { value: 'onboards',           label: 'Onboards' },
+    { value: 'behind_the_scenes',  label: 'Behind the Scenes' },
+    { value: 'stewarding',         label: 'Stewarding' },
+];
+function catLabel(v) {
+    const c = CATEGORIES.find(x => x.value === v);
+    return c ? c.label : v;
+}
+
+// Embed helpers — pull out the video id from common URL shapes so we
+// can render a thumb + iframe ourselves rather than relying on oEmbed.
+function ytId(url) {
+    const m = (url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/);
+    return m ? m[1] : null;
+}
+function vimeoId(url) {
+    const m = (url || '').match(/vimeo\.com\/(?:video\/)?(\d{6,})/);
+    return m ? m[1] : null;
+}
+function twitchEmbed(url) {
+    // Channel page → live channel embed; video / clip URLs → embedded player.
+    if (!url) return null;
+    const parentParam = '&parent=' + encodeURIComponent(location.hostname);
+    let m = url.match(/twitch\.tv\/videos\/(\d+)/);
+    if (m) return `https://player.twitch.tv/?video=v${m[1]}${parentParam}`;
+    m = url.match(/clips\.twitch\.tv\/([A-Za-z0-9_-]+)/) || url.match(/twitch\.tv\/[^/]+\/clip\/([A-Za-z0-9_-]+)/);
+    if (m) return `https://clips.twitch.tv/embed?clip=${m[1]}${parentParam}`;
+    m = url.match(/twitch\.tv\/([^/?#]+)/);
+    if (m) return `https://player.twitch.tv/?channel=${m[1]}${parentParam}`;
+    return null;
+}
+function embedThumb(m) {
+    if (m.embed_provider === 'youtube') {
+        const id = ytId(m.url);
+        if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+    }
+    return null;
+}
+function embedIframeSrc(m) {
+    if (m.embed_provider === 'youtube') {
+        const id = ytId(m.url);
+        return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : null;
+    }
+    if (m.embed_provider === 'vimeo') {
+        const id = vimeoId(m.url);
+        return id ? `https://player.vimeo.com/video/${id}?autoplay=1` : null;
+    }
+    if (m.embed_provider === 'twitch') {
+        return twitchEmbed(m.url);
+    }
+    return null;
+}
+
+let _items   = [];   // all media rows (unfiltered)
+let _view    = [];   // currently filtered list (drives the lightbox nav)
+let _activeCat = 'all';
+let _lbIndex = 0;
+
 async function load() {
     const grid = document.getElementById('media-grid');
     const { data, error } = await sb.from('media_items')
@@ -163,35 +292,109 @@ async function load() {
     }
 
     if (!data?.length) {
-        grid.innerHTML = `<div class="state-msg"><h3>No Photos Yet</h3><p>Race photos and highlights will appear here.</p></div>`;
+        grid.innerHTML = `<div class="state-msg"><h3>Nothing here yet</h3><p>Race photos, highlights and videos will appear here as the season unfolds.</p></div>`;
+        return;
+    }
+
+    _items = data;
+    renderFilters();
+    renderGrid();
+}
+
+function renderFilters() {
+    const counts = { all: _items.length };
+    _items.forEach(m => { if (m.category) counts[m.category] = (counts[m.category] || 0) + 1; });
+    const visibleCats = CATEGORIES.filter(c => counts[c.value]);
+    const chips = [{ value: 'all', label: 'All' }, ...visibleCats];
+    const html = chips.map(c => `
+        <button class="media-filter ${_activeCat === c.value ? 'active' : ''}"
+                onclick="setCategory('${c.value}')">
+            ${esc(c.label)}<span class="media-filter-count">${counts[c.value] || 0}</span>
+        </button>`).join('');
+    document.getElementById('media-filters').innerHTML = html;
+}
+
+function setCategory(c) {
+    _activeCat = c;
+    renderFilters();
+    renderGrid();
+}
+
+function renderGrid() {
+    const grid = document.getElementById('media-grid');
+    _view = _activeCat === 'all' ? _items : _items.filter(m => m.category === _activeCat);
+
+    if (!_view.length) {
+        grid.className = '';
+        grid.innerHTML = `<div class="state-msg"><h3>Nothing in this category yet</h3><p>Pick another tab or check back later.</p></div>`;
         return;
     }
 
     grid.className = 'media-grid';
-    grid.innerHTML = data.map(m => `
-        <div class="media-item" onclick="openLightbox('${esc(m.url)}','${esc(m.caption || m.title || '')}')">
-            <img src="${esc(m.url)}" alt="${esc(m.title || '')}" loading="lazy">
-            ${(m.title || m.caption || m.events?.name) ? `
-            <div class="media-item-info">
-                ${m.title ? `<div class="media-item-title">${esc(m.title)}</div>` : ''}
-                ${m.caption ? `<div class="media-item-caption">${esc(m.caption)}</div>` : ''}
-                ${m.events?.name ? `<div class="media-item-event">${esc(m.events.name)}</div>` : ''}
-            </div>` : ''}
-        </div>`).join('');
+    grid.innerHTML = _view.map((m, i) => {
+        const isEmbed = !!m.embed_provider;
+        const thumb = embedThumb(m);
+        const visual = isEmbed
+            ? (thumb
+                ? `<img src="${esc(thumb)}" alt="${esc(m.title || '')}" loading="lazy">
+                   <div class="media-item-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="7,4 21,12 7,20"/></svg></div>`
+                : `<div class="media-video-tile"><svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor"><polygon points="7,4 21,12 7,20"/></svg></div>`)
+            : `<img src="${esc(m.url)}" alt="${esc(m.title || '')}" loading="lazy">`;
+        const info = (m.title || m.caption || m.events?.name || m.category)
+            ? `<div class="media-item-info">
+                  ${m.title ? `<div class="media-item-title">${esc(m.title)}</div>` : ''}
+                  ${m.caption ? `<div class="media-item-caption">${esc(m.caption)}</div>` : ''}
+                  ${m.events?.name ? `<div class="media-item-event">${esc(m.events.name)}</div>` : ''}
+                  ${m.category ? `<div class="media-item-cat">${esc(catLabel(m.category))}</div>` : ''}
+               </div>`
+            : '';
+        const badge = isEmbed ? `<span class="media-item-badge">${esc(m.embed_provider)}</span>` : '';
+        return `<div class="media-item" onclick="openLightbox(${i})">${badge}${visual}${info}</div>`;
+    }).join('');
 }
 
-function openLightbox(url, caption) {
-    document.getElementById('lightbox-img').src = url;
-    document.getElementById('lightbox-caption').textContent = caption;
-    document.getElementById('lightbox-caption').style.display = caption ? '' : 'none';
+function openLightbox(index) {
+    _lbIndex = index;
+    showLightbox();
     document.getElementById('lightbox').classList.add('open');
+}
+
+function navLightbox(delta) {
+    if (!_view.length) return;
+    _lbIndex = (_lbIndex + delta + _view.length) % _view.length;
+    showLightbox();
+}
+
+function showLightbox() {
+    const m = _view[_lbIndex];
+    if (!m) return;
+    const content = document.getElementById('lightbox-content');
+    if (m.embed_provider) {
+        const src = embedIframeSrc(m);
+        content.innerHTML = src
+            ? `<iframe class="lightbox-embed" src="${esc(src)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`
+            : `<div style="color:var(--muted)">Could not embed this video.</div>`;
+    } else {
+        content.innerHTML = `<img class="lightbox-img" src="${esc(m.url)}" alt="${esc(m.title || '')}">`;
+    }
+    const cap = [m.title, m.caption, m.events?.name].filter(Boolean).join(' · ');
+    const capEl = document.getElementById('lightbox-caption');
+    capEl.textContent = cap;
+    capEl.style.display = cap ? '' : 'none';
 }
 
 function closeLightbox() {
     document.getElementById('lightbox').classList.remove('open');
+    // Stop any playing video by detaching its iframe.
+    document.getElementById('lightbox-content').innerHTML = '';
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+document.addEventListener('keydown', e => {
+    if (!document.getElementById('lightbox').classList.contains('open')) return;
+    if (e.key === 'Escape')     closeLightbox();
+    if (e.key === 'ArrowLeft')  navLightbox(-1);
+    if (e.key === 'ArrowRight') navLightbox(1);
+});
 
 load();
 </script>

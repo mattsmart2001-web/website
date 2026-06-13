@@ -4710,16 +4710,36 @@ async function renderMedia() {
         .order('created_at', { ascending: false });
     if (error) { toast(error.message, 'error'); return; }
 
+    const catLabel = (k) => {
+        const m = MEDIA_CATEGORIES.find(c => c.value === k);
+        return m ? m.label : k;
+    };
+
+    const thumbFor = (m) => {
+        // YouTube thumbs are predictable from the video id; everything else
+        // falls back to a play-icon tile.
+        if (m.embed_provider === 'youtube') {
+            const id = ytId(m.url);
+            if (id) return `<img src="https://img.youtube.com/vi/${esc(id)}/hqdefault.jpg" alt="${esc(m.title) || 'Video'}" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block">`;
+        }
+        if (m.embed_provider) {
+            return `<div style="aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1300,#0a0a0a);color:var(--gold)">
+                        <svg viewBox="0 0 24 24" width="42" height="42" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+                    </div>`;
+        }
+        return `<img src="${esc(m.url)}" alt="${esc(m.title) || 'Media'}" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block" onerror="this.style.minHeight='80px';this.alt='(load failed)'">`;
+    };
+
     const grid = !data?.length
-        ? `<div class="empty-state" style="grid-column:1/-1">No media yet. Upload the first image with the Add button.</div>`
+        ? `<div class="empty-state" style="grid-column:1/-1">No media yet. Add the first item with the Add button.</div>`
         : data.map(m => `
             <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:8px;overflow:hidden;position:relative">
-                <img src="${esc(m.url)}" alt="${esc(m.title) || 'Media'}"
-                    style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block"
-                    onerror="this.style.minHeight='80px';this.alt='(load failed)'">
+                ${thumbFor(m)}
+                ${m.embed_provider ? `<span style="position:absolute;top:0.4rem;left:0.4rem;background:rgba(0,0,0,0.78);padding:0.15rem 0.45rem;border-radius:4px;font-family:'Orbitron',sans-serif;font-size:0.55rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold)">${esc(m.embed_provider)}</span>` : ''}
                 <div style="padding:0.55rem 0.75rem">
                     <div style="font-size:0.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.title) || '—'}</div>
                     ${m.caption ? `<div style="font-size:0.7rem;color:var(--muted);margin-top:0.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.caption)}</div>` : ''}
+                    ${m.category ? `<div style="font-size:0.65rem;color:var(--muted);margin-top:0.2rem;text-transform:uppercase;letter-spacing:0.1em">${esc(catLabel(m.category))}</div>` : ''}
                     ${m.events?.name ? `<div style="font-size:0.68rem;color:var(--gold);margin-top:0.2rem">${esc(m.events.name)}</div>` : ''}
                 </div>
                 <button class="btn-icon danger" style="position:absolute;top:0.4rem;right:0.4rem;background:rgba(0,0,0,0.75);border-radius:4px;padding:0.2rem 0.4rem;font-size:0.7rem"
@@ -4732,15 +4752,65 @@ async function renderMedia() {
         </div>`;
 }
 
+// Pull the YouTube video id out of any common URL shape.
+function ytId(url) {
+    if (!url) return null;
+    const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/);
+    return m ? m[1] : null;
+}
+
+const MEDIA_CATEGORIES = [
+    { value: 'race_highlights',    label: 'Race Highlights' },
+    { value: 'podiums',            label: 'Podiums' },
+    { value: 'liveries',           label: 'Liveries' },
+    { value: 'onboards',           label: 'Onboards' },
+    { value: 'behind_the_scenes',  label: 'Behind the Scenes' },
+    { value: 'stewarding',         label: 'Stewarding' },
+];
+
+// Detect YouTube / Twitch / Vimeo from a pasted URL so admins don't
+// have to pick a provider manually. Returns { provider, normalisedUrl }
+// or null if it doesn't look like an embed-friendly video URL.
+function detectEmbedProvider(raw) {
+    if (!raw) return null;
+    const url = raw.trim();
+    if (/(?:youtube\.com|youtu\.be)/i.test(url))            return { provider: 'youtube', url };
+    if (/(?:twitch\.tv|clips\.twitch\.tv)/i.test(url))      return { provider: 'twitch', url };
+    if (/(?:vimeo\.com)/i.test(url))                        return { provider: 'vimeo', url };
+    return null;
+}
+
 function openMediaModal() {
-    const evtOpts = '<option value="">— No event —</option>' +
-        _seasons.map(s => `<option disabled style="color:var(--muted)">── ${esc(s.name)} ──</option>`).join('');
-    openModal('Upload Media', `
+    const catOpts = '<option value="">— Uncategorised —</option>' +
+        MEDIA_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('');
+    openModal('Add Media', `
         <form id="entity-form">
             <div class="form-group">
+                <label>Type</label>
+                <div style="display:flex;gap:1.25rem;align-items:center;font-size:0.84rem">
+                    <label style="display:inline-flex;align-items:center;gap:0.35rem;cursor:pointer">
+                        <input type="radio" name="media_kind" value="image" checked onchange="onMediaKindChange(this)">
+                        Image upload
+                    </label>
+                    <label style="display:inline-flex;align-items:center;gap:0.35rem;cursor:pointer">
+                        <input type="radio" name="media_kind" value="embed" onchange="onMediaKindChange(this)">
+                        Video embed (YouTube / Twitch / Vimeo)
+                    </label>
+                </div>
+            </div>
+            <div class="form-group" id="media-image-group">
                 <label>Image File <span class="required">*</span></label>
-                <input type="file" id="media-file" accept="image/*" required style="padding:0.4rem 0">
+                <input type="file" id="media-file" accept="image/*" style="padding:0.4rem 0">
                 <div class="form-hint">Uploads to Supabase Storage (gtec-media bucket). Max 50 MB.</div>
+            </div>
+            <div class="form-group" id="media-embed-group" style="display:none">
+                <label>Video URL <span class="required">*</span></label>
+                <input type="url" name="embed_url" placeholder="https://youtu.be/… or https://twitch.tv/videos/…">
+                <div class="form-hint">YouTube, Twitch and Vimeo links are detected automatically.</div>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select name="category">${catOpts}</select>
             </div>
             <div class="form-group">
                 <label>Title</label>
@@ -4752,13 +4822,38 @@ function openMediaModal() {
             </div>
         </form>`,
         `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-         <button class="btn btn-primary" onclick="saveMedia()">Upload</button>`
+         <button class="btn btn-primary" onclick="saveMedia()">Save</button>`
     );
 }
 
+function onMediaKindChange(input) {
+    const isEmbed = input.value === 'embed';
+    document.getElementById('media-image-group').style.display = isEmbed ? 'none' : '';
+    document.getElementById('media-embed-group').style.display = isEmbed ? '' : 'none';
+}
+
 async function saveMedia() {
-    const fileInput = document.getElementById('media-file');
     const d = getFormData('entity-form');
+    const kind = document.querySelector('input[name="media_kind"]:checked')?.value || 'image';
+
+    if (kind === 'embed') {
+        const detected = detectEmbedProvider(d.embed_url);
+        if (!detected) { toast('Paste a YouTube, Twitch or Vimeo URL.', 'error'); return; }
+        const { error } = await sb.from('media_items').insert({
+            title:    d.title    || null,
+            caption:  d.caption  || null,
+            url:      detected.url,
+            category: d.category || null,
+            embed_provider: detected.provider,
+        });
+        if (error) { toast(error.message, 'error'); return; }
+        toast('Video added.', 'success');
+        closeModal();
+        await renderMedia();
+        return;
+    }
+
+    const fileInput = document.getElementById('media-file');
     if (!fileInput?.files?.[0]) { toast('Select an image file.', 'error'); return; }
     const file = fileInput.files[0];
     const ext = file.name.split('.').pop().toLowerCase();
@@ -4768,9 +4863,10 @@ async function saveMedia() {
     if (upErr) { toast(upErr.message, 'error'); return; }
     const { data: { publicUrl } } = sb.storage.from('gtec-media').getPublicUrl(path);
     const { error } = await sb.from('media_items').insert({
-        title:   d.title   || null,
-        caption: d.caption || null,
-        url:     publicUrl,
+        title:    d.title   || null,
+        caption:  d.caption || null,
+        url:      publicUrl,
+        category: d.category || null,
     });
     if (error) { toast(error.message, 'error'); return; }
     toast('Media uploaded.', 'success');
