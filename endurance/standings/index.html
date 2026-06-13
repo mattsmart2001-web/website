@@ -145,6 +145,14 @@
             padding: 1.5rem 2rem 4rem;
         }
 
+        /* Force every link in the standings to inherit the row's colour,
+           overriding the browser's :visited purple. */
+        .standings a,
+        .standings a:link,
+        .standings a:visited,
+        .standings a:active { color: inherit; text-decoration: none; }
+        .standings a:hover { text-decoration: underline; }
+
         /* Standings table */
         .standings {
             background: var(--bg-1);
@@ -507,7 +515,7 @@ function renderDrivers(panel) {
         const pos = i + 1;
         const num = d.career_number ? `<span class="career-num">#${d.career_number}</span>` : '';
         const teamLine = d.team_name
-            ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name, { size: 'lg' })}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.color='#fff'" onmouseout="this.style.color=''">${esc(d.team_name)}</a>` : esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</div>`
+            ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name, { size: 'lg' })}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='inherit'">${esc(d.team_name)}</a>` : esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</div>`
             : '';
         const movement = movementHTML(pos, _prevDriverRank[d.driver_id]);
         const leaderTag = pos === 1
