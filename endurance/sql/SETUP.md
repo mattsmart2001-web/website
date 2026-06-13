@@ -132,6 +132,7 @@ Always apply in this order:
 50. `50_driver_delete_cascade.sql` — driver deletes cascade through entry_drivers / result_drivers (and SET NULL on penalties)
 51. `51_lock_driver_message_inserts.sql` — driver INSERT on driver_contact_messages can't spoof is_broadcast / is_direct / admin_reply anymore
 52. `52_elo_idempotent_recompute.sql` — compute_elo wipes the event's existing ratings before recomputing so re-runs don't compound the deltas
+53. `53_circuit_records_include_race_fl.sql` — circuit_records picks the lower of qualifying and race fastest lap per circuit
 
 ---
 
