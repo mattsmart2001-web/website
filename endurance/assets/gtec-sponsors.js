@@ -91,8 +91,7 @@
             #gtec-sponsors .gtec-sponsor-yfood:hover img {
                 filter: invert(1) brightness(1.15) drop-shadow(0 0 6px rgba(255,209,102,0.35));
             }
-            /* Small "AFFILIATE" eyebrow tag at the top of the rail so users
-               know these are partner / affiliate links. */
+            /* Small "SPONSORS" eyebrow tag at the top of the rail. */
             #gtec-sponsors .gtec-sponsor-eyebrow {
                 font-family: 'Orbitron', sans-serif;
                 font-size: 0.5rem;
@@ -128,9 +127,9 @@
 
     const rail = document.createElement('div');
     rail.id = 'gtec-sponsors';
-    rail.setAttribute('aria-label', 'Affiliate partners');
+    rail.setAttribute('aria-label', 'Sponsors');
     rail.innerHTML = `
-        <div class="gtec-sponsor-eyebrow">Affiliates</div>
+        <div class="gtec-sponsor-eyebrow">Sponsors</div>
         ${SPONSORS.map(s => `
             <a class="gtec-sponsor ${s.className}" href="${s.href}" target="_blank" rel="noopener sponsored" title="${s.name}">
                 <img src="${s.img}" alt="${s.name}" loading="lazy">
