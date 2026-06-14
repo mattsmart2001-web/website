@@ -6,6 +6,32 @@
    over the inline .gtec-nav declarations at the matching breakpoint.
    ============================================================ */
 
+/* ---------- Desktop centring ----------
+   Default per-page inline rule is justify-content: space-between with
+   the brand chip on the left and nav-links bunched on the right, which
+   reads right-heavy. Above the mobile breakpoint we anchor the brand
+   and the back-link to the corners and let the nav-links sit dead
+   centre. nav.gtec-nav has higher specificity than the inline
+   .gtec-nav rule so this wins without per-page edits. */
+@media (min-width: 721px) {
+    nav.gtec-nav {
+        position: relative;
+        justify-content: center !important;
+    }
+    nav.gtec-nav .brand {
+        position: absolute;
+        left: 2rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    nav.gtec-nav .nav-links .back {
+        position: absolute;
+        right: 2rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+}
+
 /* "Back to SparksTheory" pill when it contains the logo image — tighten
    the padding so it sits as a compact round chip instead of a wide pill. */
 nav.gtec-nav .back:has(img) {
