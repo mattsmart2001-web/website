@@ -205,6 +205,11 @@
                         <select id="field-nationality" name="nationality"></select>
                     </div>
                     <div class="form-group">
+                        <label for="field-career-num">Preferred Career Number</label>
+                        <input type="number" id="field-career-num" name="preferred_career_number" placeholder="e.g. 7" min="1" max="999">
+                        <div class="hint">Optional. We'll honour it if it's still available.</div>
+                    </div>
+                    <div class="form-group">
                         <label for="field-timezone">Timezone <span class="req">*</span></label>
                         <select id="field-timezone" name="timezone" required>
                             <option value="">— Select timezone —</option>
@@ -342,6 +347,7 @@ async function submitForm(e) {
         psn_id:                    f.get('psn_id') || null,
         discord_username:          f.get('discord_username') || null,
         nationality:               f.get('nationality') || null,
+        preferred_career_number:   f.get('preferred_career_number') ? parseInt(f.get('preferred_career_number'), 10) : null,
         timezone:                  f.get('timezone') || null,
         gt7_dr_rating:             f.get('gt7_dr_rating') || null,
         gt7_sr_rating:             f.get('gt7_sr_rating') || null,

@@ -3956,6 +3956,7 @@ async function viewApplication(id) {
             <div><span style="color:var(--muted)">Email</span><br><strong>${a.email ? `<a href="mailto:${esc(a.email)}" style="color:inherit">${esc(a.email)}</a>` : '—'}</strong></div>
             <div><span style="color:var(--muted)">Pref. Manufacturer</span><br><strong>${esc(a.manufacturers?.name)||'—'}</strong></div>
             <div><span style="color:var(--muted)">Discord</span><br><strong>${esc(a.discord_username)||'—'}</strong></div>
+            <div><span style="color:var(--muted)">Pref. Career #</span><br><strong>${a.preferred_career_number != null ? '#' + a.preferred_career_number : '—'}</strong></div>
             <div><span style="color:var(--muted)">DR / SR</span><br><strong>${esc(a.gt7_dr_rating)||'—'} / ${esc(a.gt7_sr_rating)||'—'}</strong></div>
             <div><span style="color:var(--muted)">Applied</span><br><strong>${a.created_at?.slice(0,10)}</strong></div>
             ${a.type==='team'?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Team Name</span><br><strong>${esc(a.team_name)||'—'}</strong></div>`:''}
@@ -4029,6 +4030,9 @@ async function createRecordFromApplication(appId) {
             joined_at: new Date().toISOString().slice(0, 10),
             gt7_dr_rating: a.gt7_dr_rating || '',
             gt7_sr_rating: a.gt7_sr_rating || '',
+            // Pre-fill the applicant's preferred number — admin can still
+            // pick a different one if it's already taken or unsuitable.
+            career_number: a.preferred_career_number || '',
             bio: '',
         };
         openModal('Add Driver (from application)', driverForm(prefill), `

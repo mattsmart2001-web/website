@@ -419,7 +419,11 @@
                 <label class="field-label">Date of Birth</label>
                 <input type="date" id="field-dob">
             </div>
-            <div class="form-group"><!-- spacer --></div>
+            <div class="form-group">
+                <label class="field-label">Career Number</label>
+                <input type="number" id="field-career-num" min="1" max="999" placeholder="e.g. 7" oninput="checkCareerNumber()">
+                <div class="field-hint" id="career-num-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem">1–999. Must not be taken by another driver.</div>
+            </div>
             <div class="form-group full">
                 <label class="field-label">Bio</label>
                 <textarea id="field-bio" placeholder="Tell the championship about yourself…"></textarea>
@@ -582,14 +586,76 @@ async function changePassword() {
     toast('Password updated.', 'success');
 }
 
+// Live availability check on the career-number input. Greens up when
+// the number is free, reds when another driver already has it. Save
+// will still hard-block a taken number via a refetch on submit.
+let _careerNumCheckTimer = null;
+async function checkCareerNumber() {
+    const hint = document.getElementById('career-num-hint');
+    const inp  = document.getElementById('field-career-num');
+    const raw  = inp.value.trim();
+    if (!raw) {
+        hint.textContent = '1–999. Must not be taken by another driver.';
+        hint.style.color = 'var(--muted)';
+        return;
+    }
+    const num = parseInt(raw, 10);
+    if (!Number.isFinite(num) || num < 1 || num > 999) {
+        hint.textContent = 'Pick a number between 1 and 999.';
+        hint.style.color = '#f87171';
+        return;
+    }
+    clearTimeout(_careerNumCheckTimer);
+    _careerNumCheckTimer = setTimeout(async () => {
+        const { data: clash } = await sb.from('drivers')
+            .select('id, display_name')
+            .eq('career_number', num)
+            .neq('id', driverId)
+            .maybeSingle();
+        if (clash) {
+            hint.textContent = `#${num} is already taken by ${clash.display_name}.`;
+            hint.style.color = '#f87171';
+        } else {
+            hint.textContent = `#${num} is available.`;
+            hint.style.color = '#4ade80';
+        }
+    }, 250);
+}
+
 async function saveProfile() {
     const btn = document.getElementById('btn-save');
     btn.disabled = true; btn.textContent = 'Saving…';
+
+    const rawNum = document.getElementById('field-career-num').value.trim();
+    let careerNumber = null;
+    if (rawNum) {
+        const n = parseInt(rawNum, 10);
+        if (!Number.isFinite(n) || n < 1 || n > 999) {
+            btn.disabled = false; btn.textContent = 'Save Changes';
+            toast('Career number must be 1–999.', 'error');
+            return;
+        }
+        careerNumber = n;
+        // Final uniqueness check before update — guards against races
+        // between input keystrokes and submit.
+        const { data: clash } = await sb.from('drivers')
+            .select('id, display_name')
+            .eq('career_number', n)
+            .neq('id', driverId)
+            .maybeSingle();
+        if (clash) {
+            btn.disabled = false; btn.textContent = 'Save Changes';
+            toast(`#${n} is already taken by ${clash.display_name}.`, 'error');
+            return;
+        }
+    }
+
     const payload = {
-        bio:          document.getElementById('field-bio').value || null,
-        psn_id:       document.getElementById('field-psn').value.trim() || null,
-        nationality:  document.getElementById('field-nationality').value.trim().toUpperCase() || null,
+        bio:           document.getElementById('field-bio').value || null,
+        psn_id:        document.getElementById('field-psn').value.trim() || null,
+        nationality:   document.getElementById('field-nationality').value.trim().toUpperCase() || null,
         date_of_birth: document.getElementById('field-dob').value || null,
+        career_number: careerNumber,
     };
     const { error } = await sb.from('drivers').update(payload).eq('id', driverId);
     btn.disabled = false; btn.textContent = 'Save Changes';
@@ -780,9 +846,10 @@ async function init() {
 
     // Editable fields
     document.getElementById('field-nationality').innerHTML = window.gtecCountryOptions(driver.nationality);
-    if (driver.bio)           document.getElementById('field-bio').value = driver.bio;
-    if (driver.psn_id)        document.getElementById('field-psn').value = driver.psn_id;
-    if (driver.date_of_birth) document.getElementById('field-dob').value = driver.date_of_birth;
+    if (driver.bio)            document.getElementById('field-bio').value = driver.bio;
+    if (driver.psn_id)         document.getElementById('field-psn').value = driver.psn_id;
+    if (driver.date_of_birth)  document.getElementById('field-dob').value = driver.date_of_birth;
+    if (driver.career_number)  document.getElementById('field-career-num').value = driver.career_number;
 
     // Show page
     document.getElementById('auth-loading').style.display = 'none';

@@ -134,6 +134,7 @@ Always apply in this order:
 52. `52_elo_idempotent_recompute.sql` — compute_elo wipes the event's existing ratings before recomputing so re-runs don't compound the deltas
 53. `53_circuit_records_include_race_fl.sql` — circuit_records picks the lower of qualifying and race fastest lap per circuit
 54. `54_media_categories_and_embeds.sql` — adds category + embed_provider columns to media_items for filtered gallery + YouTube/Twitch/Vimeo embeds
+55. `55_application_preferred_number.sql` — applicants can nominate a preferred career number on the apply form
 
 ---
 
