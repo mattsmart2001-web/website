@@ -6,6 +6,17 @@
    over the inline .gtec-nav declarations at the matching breakpoint.
    ============================================================ */
 
+/* "Back to SparksTheory" pill when it contains the logo image — tighten
+   the padding so it sits as a compact round chip instead of a wide pill. */
+nav.gtec-nav .back:has(img) {
+    padding: 0.3rem !important;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Unread-message badge next to the "My Profile" nav link */
 .nav-badge {
     display: none;
