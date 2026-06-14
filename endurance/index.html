@@ -10,6 +10,20 @@
     <title>GTEC — A Gran Turismo 7 Endurance Championship</title>
 
     <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+
+    <!-- Open Graph / Twitter card — uses /endurance/assets/og-card.png
+         (currently a copy of the GTEC logo as placeholder; overwrite the
+         file with a proper 1200×630 card when ready). -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC — A Gran Turismo 7 Endurance Championship">
+    <meta property="og:description" content="A multi-season, team-based endurance championship for Gran Turismo 7. Run by SparksTheory.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC — A Gran Turismo 7 Endurance Championship">
+    <meta name="twitter:description" content="A multi-season, team-based endurance championship for Gran Turismo 7.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;600;700;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -268,6 +282,22 @@
             text-align: center;
             margin-top: 1.25rem !important;
         }
+        .gtec-runby {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: rgba(148, 163, 184, 0.75);
+            text-align: center;
+            margin-top: 0.5rem !important;
+        }
+        .gtec-runby a {
+            color: var(--gold);
+            text-decoration: none;
+            transition: color 0.15s ease;
+        }
+        .gtec-runby a:hover { color: #fff; }
 
         /* ---------- Countdown ---------- */
         .gtec-countdown {
@@ -722,6 +752,7 @@
         </ul>
 
         <p class="gtec-welcome">Welcome to GTEC.</p>
+        <p class="gtec-runby">Run by <a href="/">SparksTheory</a></p>
     </div>
 
     <div class="gtec-countdown" id="countdown">
