@@ -9,16 +9,16 @@
 
     // Highest threshold first so .find() picks the right tier on the first hit.
     const TIERS = [
-        { min: 2700, max: 3000, name: 'Legend',     short: 'LEG', key: 'legend'   },
-        { min: 2400, max: 2699, name: 'Master',     short: 'M',   key: 'master'   },
-        { min: 2200, max: 2399, name: 'Diamond',    short: 'D',   key: 'diamond'  },
-        { min: 2000, max: 2199, name: 'Sapphire',   short: 'S',   key: 'sapphire' },
-        { min: 1800, max: 1999, name: 'Platinum',   short: 'P',   key: 'platinum' },
-        { min: 1600, max: 1799, name: 'Gold',       short: 'G',   key: 'gold'     },
-        { min: 1400, max: 1599, name: 'Silver',     short: 'S',   key: 'silver'   },
-        { min: 1200, max: 1399, name: 'Bronze I',   short: 'B1',  key: 'bronze1'  },
-        { min: 1000, max: 1199, name: 'Bronze II',  short: 'B2',  key: 'bronze2'  },
-        { min:    0, max:  999, name: 'Bronze III', short: 'B3',  key: 'bronze3'  },
+        { min: 2800, max: 3000, name: 'Legend',       short: 'LEG', key: 'legend'      },
+        { min: 2600, max: 2799, name: 'Hall of Fame', short: 'HOF', key: 'hall_of_fame'},
+        { min: 2400, max: 2599, name: 'Champion',     short: 'C',   key: 'champion'    },
+        { min: 2200, max: 2399, name: 'Master',       short: 'M',   key: 'master'      },
+        { min: 2000, max: 2199, name: 'Elite',        short: 'E',   key: 'elite'       },
+        { min: 1800, max: 1999, name: 'Diamond',      short: 'D',   key: 'diamond'     },
+        { min: 1600, max: 1799, name: 'Platinum',     short: 'P',   key: 'platinum'    },
+        { min: 1400, max: 1599, name: 'Gold',         short: 'G',   key: 'gold'        },
+        { min: 1200, max: 1399, name: 'Silver',       short: 'S',   key: 'silver'      },
+        { min:    0, max: 1199, name: 'Bronze',       short: 'B',   key: 'bronze'      },
     ];
 
     function tierFor(rating) {
@@ -99,16 +99,16 @@
             .elo-tier-chip .elo-tier-name { text-transform: uppercase; font-size: 0.65rem; }
             .elo-tier-chip .elo-tier-elo  { font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.04em; }
 
-            .elo-tier-bronze3,  .elo-tier-chip.elo-tier-bronze3  { background: #6b4226 !important; color: #ffd9b3 !important; }
-            .elo-tier-bronze2,  .elo-tier-chip.elo-tier-bronze2  { background: #8a5a2b !important; color: #ffe0b3 !important; }
-            .elo-tier-bronze1,  .elo-tier-chip.elo-tier-bronze1  { background: #cd7f32 !important; color: #2a1300 !important; }
-            .elo-tier-silver,   .elo-tier-chip.elo-tier-silver   { background: linear-gradient(135deg, #c0c0c0, #e6e6e6) !important; color: #1a1a1a !important; }
-            .elo-tier-gold,     .elo-tier-chip.elo-tier-gold     { background: linear-gradient(135deg, #ffd700, #ffb700) !important; color: #2a1a00 !important; }
-            .elo-tier-platinum, .elo-tier-chip.elo-tier-platinum { background: linear-gradient(135deg, #e5e4e2, #b0c4de) !important; color: #1a1a1a !important; }
-            .elo-tier-sapphire, .elo-tier-chip.elo-tier-sapphire { background: linear-gradient(135deg, #0f52ba, #1e90ff) !important; color: #fff !important; }
-            .elo-tier-diamond,  .elo-tier-chip.elo-tier-diamond  { background: linear-gradient(135deg, #b9f2ff, #5dd3ff) !important; color: #062436 !important; }
-            .elo-tier-master,   .elo-tier-chip.elo-tier-master   { background: linear-gradient(135deg, #ff4500, #ff6f00) !important; color: #fff !important; }
-            .elo-tier-legend,   .elo-tier-chip.elo-tier-legend   { background: linear-gradient(135deg, #ff0080, #8b00ff) !important; color: #fff !important; box-shadow: 0 0 12px rgba(255,0,128,0.4); }
+            .elo-tier-bronze,       .elo-tier-chip.elo-tier-bronze       { background: linear-gradient(135deg, #cd7f32, #8a5a2b) !important; color: #2a1300 !important; }
+            .elo-tier-silver,       .elo-tier-chip.elo-tier-silver       { background: linear-gradient(135deg, #c0c0c0, #e6e6e6) !important; color: #1a1a1a !important; }
+            .elo-tier-gold,         .elo-tier-chip.elo-tier-gold         { background: linear-gradient(135deg, #ffd700, #ffb700) !important; color: #2a1a00 !important; }
+            .elo-tier-platinum,     .elo-tier-chip.elo-tier-platinum     { background: linear-gradient(135deg, #e5e4e2, #b0c4de) !important; color: #1a1a1a !important; }
+            .elo-tier-diamond,      .elo-tier-chip.elo-tier-diamond      { background: linear-gradient(135deg, #b9f2ff, #5dd3ff) !important; color: #062436 !important; }
+            .elo-tier-elite,        .elo-tier-chip.elo-tier-elite        { background: linear-gradient(135deg, #10b981, #047857) !important; color: #fff !important; }
+            .elo-tier-master,       .elo-tier-chip.elo-tier-master       { background: linear-gradient(135deg, #ff4500, #ff6f00) !important; color: #fff !important; }
+            .elo-tier-champion,     .elo-tier-chip.elo-tier-champion      { background: linear-gradient(135deg, #dc2626, #7f1d1d) !important; color: #fff !important; }
+            .elo-tier-hall_of_fame, .elo-tier-chip.elo-tier-hall_of_fame { background: linear-gradient(135deg, #8b5cf6, #4c1d95) !important; color: #fff !important; box-shadow: 0 0 10px rgba(139,92,246,0.35); }
+            .elo-tier-legend,       .elo-tier-chip.elo-tier-legend       { background: linear-gradient(135deg, #ff0080, #8b00ff) !important; color: #fff !important; box-shadow: 0 0 12px rgba(255,0,128,0.4); }
             /* Provisional pills (DR/SR seed before any race history) get a
                subtle dashed border so they read as "estimated, not earned". */
             .elo-tier-provisional { border-style: dashed !important; border-color: rgba(255,255,255,0.55) !important; opacity: 0.92; }
