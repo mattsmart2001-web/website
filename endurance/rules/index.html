@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Rules — Gran Turismo GTEC</title>
+    <title>Rules — GTEC</title>
     <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -84,7 +84,7 @@
 <body>
 
 <nav class="gtec-nav">
-    <a class="brand" href="/endurance/">Gran Turismo<img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
     <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
         <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
@@ -109,7 +109,7 @@
 <div class="hero">
     <div class="hero-eyebrow">Championship</div>
     <div class="hero-title" id="page-title">Rules</div>
-    <div class="hero-sub" id="page-sub">Gran Turismo GTEC Sporting Regulations</div>
+    <div class="hero-sub" id="page-sub">GTEC Sporting Regulations</div>
 </div>
 
 <div class="content">
@@ -150,7 +150,7 @@ async function load() {
     }
 
     document.getElementById('page-title').textContent = data.title;
-    document.title = `${data.title} — Gran Turismo GTEC`;
+    document.title = `${data.title} — GTEC`;
 
     const updatedStr = data.updated_at
         ? new Date(data.updated_at).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })

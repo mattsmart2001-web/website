@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Drivers — Gran Turismo GTEC</title>
+    <title>Drivers — GTEC</title>
     <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -386,7 +386,7 @@
 <body>
 
 <nav class="gtec-nav">
-    <a class="brand" href="/endurance/">Gran Turismo<img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
     <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
         <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
@@ -485,7 +485,7 @@ function mfrBadge(logoUrl, brandColor, name, opts = {}) {
 // LISTING
 // ============================================================
 async function showListing() {
-    document.title = 'Drivers — Gran Turismo GTEC';
+    document.title = 'Drivers — GTEC';
     const [{ data, error }, { data: ratings }] = await Promise.all([
         sb.from('drivers')
             .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
@@ -566,7 +566,7 @@ async function showProfile() {
             <div class="content"><a class="back-link" href="/endurance/drivers/">← All Drivers</a></div>`;
         return;
     }
-    document.title = `${driver.display_name} — Gran Turismo GTEC`;
+    document.title = `${driver.display_name} — GTEC`;
 
     // Season career stats + rating history in parallel with race history
     const [seasonsRes, ratingRes, historyRes, penaltiesRes, stewardRes] = await Promise.all([

@@ -10,7 +10,7 @@
 //   GTEC_SUPABASE_URL       (falls back to SUPABASE_URL if unset)
 //   GTEC_SUPABASE_ANON_KEY  (falls back to SUPABASE_ANON_KEY if unset)
 //   RESEND_API_KEY
-//   GTEC_FROM_EMAIL         (e.g. "Gran Turismo GTEC <noreply@yourdomain.com>")
+//   GTEC_FROM_EMAIL         (e.g. "GTEC <noreply@yourdomain.com>")
 // ============================================================
 
 const fetch = require('node-fetch');
@@ -22,7 +22,7 @@ const SUPABASE_URL      = process.env.GTEC_SUPABASE_URL      || process.env.SUPA
 const SUPABASE_ANON_KEY = process.env.GTEC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 const RESEND_API_KEY    = process.env.RESEND_API_KEY;
 const FROM_EMAIL        = process.env.GTEC_FROM_EMAIL
-    || 'Gran Turismo GTEC <GTEC@sparkstheory.co.uk>';
+    || 'GTEC <GTEC@sparkstheory.co.uk>';
 
 function esc(s) {
     if (s == null) return '';
@@ -56,10 +56,10 @@ function templateFor(emailType, app, claimUrl) {
     switch (emailType) {
         case 'accepted':
             return {
-                subject: 'You\'re in — Gran Turismo GTEC',
+                subject: 'You\'re in — GTEC',
                 html: shell('Application Accepted', `
                     <h2 style="font-family:Impact,'Anton',sans-serif;font-size:26px;letter-spacing:0.04em;text-transform:uppercase;color:#ffd166;margin:0 0 18px">Welcome to the grid, ${name}.</h2>
-                    <p>Your application to Gran Turismo GTEC has been <strong style="color:#4ade80">accepted</strong>. Congrats.</p>
+                    <p>Your application to GTEC has been <strong style="color:#4ade80">accepted</strong>. Congrats.</p>
                     ${claimUrl ? `
                     <p>To set up your driver portal — where you'll see your standings, race history, lobby allocations and admin messages — open the secure link below and pick a password. It's valid for 24 hours.</p>
                     <p style="margin:20px 0"><a href="${claimUrl}" style="display:inline-block;background:#ffd166;color:#1a1300;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;font-size:12px">Activate Your Profile</a></p>
@@ -71,7 +71,7 @@ function templateFor(emailType, app, claimUrl) {
             };
         case 'waitlisted':
             return {
-                subject: 'Waitlisted — Gran Turismo GTEC',
+                subject: 'Waitlisted — GTEC',
                 html: shell('Application Waitlisted', `
                     <h2 style="font-family:Impact,'Anton',sans-serif;font-size:24px;letter-spacing:0.04em;text-transform:uppercase;color:#ffd166;margin:0 0 18px">Thanks for applying, ${name}.</h2>
                     <p>The grid is full for now, but we'd like to keep you on the <strong>waitlist</strong>. If a seat opens up before the season starts, we'll be in touch.</p>
@@ -80,10 +80,10 @@ function templateFor(emailType, app, claimUrl) {
             };
         case 'rejected':
             return {
-                subject: 'Application update — Gran Turismo GTEC',
+                subject: 'Application update — GTEC',
                 html: shell('Application Update', `
                     <h2 style="font-family:Impact,'Anton',sans-serif;font-size:24px;letter-spacing:0.04em;text-transform:uppercase;color:#ffd166;margin:0 0 18px">Thanks for applying, ${name}.</h2>
-                    <p>Unfortunately we're unable to offer you a seat in this season of Gran Turismo GTEC. The grid filled up faster than we expected and we had to make some tough calls.</p>
+                    <p>Unfortunately we're unable to offer you a seat in this season of GTEC. The grid filled up faster than we expected and we had to make some tough calls.</p>
                     <p>You're welcome to apply again next season — and to follow this one from the sidelines.</p>
                     <p style="margin:24px 0;font-size:13px;color:#94a3b8">Thanks for your interest.</p>`),
             };
