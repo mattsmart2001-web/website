@@ -135,6 +135,7 @@ Always apply in this order:
 53. `53_circuit_records_include_race_fl.sql` — circuit_records picks the lower of qualifying and race fastest lap per circuit
 54. `54_media_categories_and_embeds.sql` — adds category + embed_provider columns to media_items for filtered gallery + YouTube/Twitch/Vimeo embeds
 55. `55_application_preferred_number.sql` — applicants can nominate a preferred career number on the apply form
+56. `56_drivers_discord_username.sql` — promote discord_username onto drivers (backfilled from linked applications) so drivers can self-edit it from the portal and admin can edit on the driver row
 
 ---
 

@@ -1662,13 +1662,20 @@ function driverForm(d = {}) {
         </div>
         <div class="form-row">
             <div class="form-group">
+                <label>Discord Username</label>
+                <input type="text" name="discord_username" value="${esc(d.discord_username)}" placeholder="yourhandle">
+            </div>
+            <div class="form-group">
                 <label>Nationality</label>
                 <select name="nationality">${window.gtecCountryOptions(d.nationality)}</select>
             </div>
+        </div>
+        <div class="form-row">
             <div class="form-group">
                 <label>Joined At</label>
                 <input type="date" name="joined_at" value="${d.joined_at ? d.joined_at.slice(0,10) : ''}">
             </div>
+            <div class="form-group"><!-- spacer --></div>
         </div>
         <div class="form-row">
             <div class="form-group">
@@ -1833,6 +1840,7 @@ async function saveDriver(id) {
     }
     const payload = {
         display_name: d.display_name, slug: d.slug, psn_id: d.psn_id,
+        discord_username: d.discord_username || null,
         nationality: d.nationality, career_number: num.value,
         current_team_id: d.current_team_id || null, current_manufacturer_id: d.current_manufacturer_id || null,
         joined_at: d.joined_at || null, bio: d.bio,
@@ -4025,6 +4033,7 @@ async function createRecordFromApplication(appId) {
             display_name: a.name,
             slug: slugify(a.name),
             psn_id: a.psn_id || '',
+            discord_username: a.discord_username || '',
             nationality: a.nationality || '',
             current_manufacturer_id: a.preferred_manufacturer_id || '',
             joined_at: new Date().toISOString().slice(0, 10),
@@ -4084,6 +4093,7 @@ async function saveDriverFromApplication(appId) {
 
     const payload = {
         display_name: d.display_name, slug: d.slug, psn_id: d.psn_id,
+        discord_username: d.discord_username || null,
         nationality: d.nationality, career_number: num.value,
         current_team_id: d.current_team_id || null, current_manufacturer_id: d.current_manufacturer_id || null,
         joined_at: d.joined_at || null, bio: d.bio,
@@ -4148,6 +4158,7 @@ async function saveTeamFromApplication(appId) {
                 display_name: app.name,
                 slug: slugify(app.name),
                 psn_id: app.psn_id || null,
+                discord_username: app.discord_username || null,
                 nationality: app.nationality || null,
                 gt7_dr_rating: app.gt7_dr_rating || null,
                 gt7_sr_rating: app.gt7_sr_rating || null,

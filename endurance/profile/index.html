@@ -412,6 +412,11 @@
                 <input type="text" id="field-psn" placeholder="YourPSNHandle">
             </div>
             <div class="form-group">
+                <label class="field-label">Discord Username</label>
+                <input type="text" id="field-discord" placeholder="yourhandle">
+                <div class="field-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem">Used for championship DMs &amp; claim links.</div>
+            </div>
+            <div class="form-group">
                 <label class="field-label">Nationality</label>
                 <select id="field-nationality"></select>
             </div>
@@ -651,11 +656,12 @@ async function saveProfile() {
     }
 
     const payload = {
-        bio:           document.getElementById('field-bio').value || null,
-        psn_id:        document.getElementById('field-psn').value.trim() || null,
-        nationality:   document.getElementById('field-nationality').value.trim().toUpperCase() || null,
-        date_of_birth: document.getElementById('field-dob').value || null,
-        career_number: careerNumber,
+        bio:              document.getElementById('field-bio').value || null,
+        psn_id:           document.getElementById('field-psn').value.trim() || null,
+        discord_username: document.getElementById('field-discord').value.trim() || null,
+        nationality:      document.getElementById('field-nationality').value.trim().toUpperCase() || null,
+        date_of_birth:    document.getElementById('field-dob').value || null,
+        career_number:    careerNumber,
     };
     const { error } = await sb.from('drivers').update(payload).eq('id', driverId);
     btn.disabled = false; btn.textContent = 'Save Changes';
@@ -847,9 +853,10 @@ async function init() {
     // Editable fields
     document.getElementById('field-nationality').innerHTML = window.gtecCountryOptions(driver.nationality);
     if (driver.bio)            document.getElementById('field-bio').value = driver.bio;
-    if (driver.psn_id)         document.getElementById('field-psn').value = driver.psn_id;
-    if (driver.date_of_birth)  document.getElementById('field-dob').value = driver.date_of_birth;
-    if (driver.career_number)  document.getElementById('field-career-num').value = driver.career_number;
+    if (driver.psn_id)            document.getElementById('field-psn').value = driver.psn_id;
+    if (driver.discord_username)  document.getElementById('field-discord').value = driver.discord_username;
+    if (driver.date_of_birth)     document.getElementById('field-dob').value = driver.date_of_birth;
+    if (driver.career_number)     document.getElementById('field-career-num').value = driver.career_number;
 
     // Show page
     document.getElementById('auth-loading').style.display = 'none';
