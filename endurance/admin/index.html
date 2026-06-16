@@ -166,6 +166,47 @@
             border-bottom: 1px solid var(--border);
             min-height: 60px;
         }
+        /* Centred "GTEC ADMIN PORTAL" badge — pinned dead-middle so it's
+           unmissable on a promo video / screen recording. Absolute so it
+           doesn't disturb the existing left/right flex layout. */
+        .admin-portal-badge {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.45rem 1.1rem;
+            background: linear-gradient(135deg, rgba(255,209,102,0.18), rgba(255,209,102,0.06));
+            border: 1px solid rgba(255,209,102,0.5);
+            border-radius: 999px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--gold);
+            box-shadow: 0 0 18px rgba(255,209,102,0.18);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .admin-portal-badge img { height: 18px; width: auto; display: block; }
+        .admin-portal-badge .admin-dot {
+            width: 8px; height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            box-shadow: 0 0 6px rgba(239,68,68,0.7);
+            animation: admin-pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes admin-pulse {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.35; }
+        }
+        @media (max-width: 720px) {
+            .admin-portal-badge { font-size: 0.6rem; letter-spacing: 0.22em; padding: 0.35rem 0.7rem; }
+            .admin-portal-badge img { height: 14px; }
+        }
         .topbar-left {
             display: flex;
             align-items: center;
@@ -749,6 +790,11 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
             <div class="page-title" id="page-title">Dashboard</div>
+        </div>
+        <div class="admin-portal-badge" aria-hidden="true">
+            <span class="admin-dot"></span>
+            <img src="/endurance/assets/gtec-logo.png" alt="">
+            <span>Admin Portal</span>
         </div>
         <button class="btn-add" id="btn-add" style="display:none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
