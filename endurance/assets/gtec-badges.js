@@ -8,12 +8,12 @@
     // Threshold ladder. Highest threshold first so earnedCareer() can
     // pick the top-most badge a driver has unlocked.
     const CAREER_BADGES = [
-        { key: 'living_legend',  name: 'Living Legend',         monogram: 'LL', threshold: 100, blurb: 'Complete 100 races' },
-        { key: 'ironman',        name: 'Ironman',               monogram: 'IM', threshold:  50, blurb: 'Complete 50 races'  },
-        { key: 'endurance_spec', name: 'Endurance Specialist',  monogram: 'ES', threshold:  20, blurb: 'Complete 20 races'  },
-        { key: 'veteran',        name: 'Veteran',               monogram: 'V',  threshold:  10, blurb: 'Complete 10 races'  },
-        { key: 'regular',        name: 'Regular',               monogram: 'R',  threshold:   5, blurb: 'Complete 5 races'   },
-        { key: 'debut',          name: 'Debut',                 monogram: 'D',  threshold:   1, blurb: 'Complete first race'},
+        { key: 'living_legend',  name: 'Living Legend',         icon: '👑', threshold: 100, blurb: 'Complete 100 races' },
+        { key: 'ironman',        name: 'Ironman',               icon: '🛡️', threshold:  50, blurb: 'Complete 50 races'  },
+        { key: 'endurance_spec', name: 'Endurance Specialist',  icon: '⏱️', threshold:  20, blurb: 'Complete 20 races'  },
+        { key: 'veteran',        name: 'Veteran',               icon: '🪖', threshold:  10, blurb: 'Complete 10 races'  },
+        { key: 'regular',        name: 'Regular',               icon: '🎫', threshold:   5, blurb: 'Complete 5 races'   },
+        { key: 'debut',          name: 'Debut',                 icon: '🏁', threshold:   1, blurb: 'Complete first race'},
     ];
 
     function earnedCareer(starts) {
@@ -47,7 +47,7 @@
         return `
             <div class="${cls}" title="${title}">
                 ${ring}
-                <span class="gtec-badge-mono">${b.monogram}</span>
+                <span class="gtec-badge-icon" aria-hidden="true">${b.icon}</span>
                 ${locked ? '<span class="gtec-badge-lock">🔒</span>' : ''}
                 <span class="gtec-badge-label">${b.name}</span>
             </div>`;
@@ -124,26 +124,26 @@
                 border-color: rgba(255,255,255,0.1);
                 opacity: 0.75;
             }
-            .gtec-badge-locked .gtec-badge-mono { color: rgba(148,163,184,0.5); }
             .gtec-badge-locked .gtec-badge-label { color: rgba(148,163,184,0.55); }
             .gtec-badge-locked:hover { transform: none; box-shadow: none; }
 
-            .gtec-badge-mono {
-                font-family: 'Anton', sans-serif;
-                font-size: 1.4rem;
-                letter-spacing: 0.02em;
-                color: var(--gold, #ffd166);
+            .gtec-badge-icon {
+                font-size: 1.5rem;
+                line-height: 1;
                 width: 46px; height: 46px;
                 display: flex; align-items: center; justify-content: center;
                 border-radius: 50%;
                 background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.25), rgba(0,0,0,0.5) 75%);
                 border: 2px solid rgba(255,209,102,0.55);
                 box-shadow: inset 0 0 12px rgba(255,209,102,0.18);
+                /* Stop emoji baseline drift across systems */
+                font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
             }
-            .gtec-badge-locked .gtec-badge-mono {
+            .gtec-badge-locked .gtec-badge-icon {
                 background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.05), rgba(0,0,0,0.4) 75%);
                 border-color: rgba(255,255,255,0.15);
                 box-shadow: none;
+                filter: grayscale(1) brightness(0.65);
             }
             .gtec-badge-label {
                 font-family: 'Orbitron', sans-serif;
