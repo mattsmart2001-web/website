@@ -317,6 +317,12 @@
         </div>
     </div>
 
+    <!-- Career badges -->
+    <div class="card" id="card-badges" style="display:none">
+        <div class="card-title">Career Badges</div>
+        <div id="badges-grid"></div>
+    </div>
+
     <!-- Upcoming events -->
     <div class="card" id="card-upcoming" style="display:none">
         <div class="card-title">Upcoming Events</div>
@@ -464,6 +470,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
+<script src="/endurance/assets/gtec-badges.js?v=1"></script>
 <script src="../assets/countries.js"></script>
 <script>
 'use strict';
@@ -749,6 +756,17 @@ async function loadUpcoming(driverId) {
         </div>`).join('');
 }
 
+async function loadBadges(driverId) {
+    const { data: stats } = await sb.from('driver_career_stats')
+        .select('starts')
+        .eq('driver_id', driverId)
+        .maybeSingle();
+    const starts = Number(stats?.starts) || 0;
+    if (!window.renderBadgeGrid) return;
+    document.getElementById('badges-grid').innerHTML = window.renderBadgeGrid(starts);
+    document.getElementById('card-badges').style.display = '';
+}
+
 async function loadRecentResults(driverId) {
     const { data: eds } = await sb.from('entry_drivers')
         .select('entry_id')
@@ -867,6 +885,7 @@ async function init() {
     loadUpcoming(driver.id);
     loadRecentResults(driver.id);
     loadInbox(driver.id);
+    loadBadges(driver.id);
     loadTeamingSections(driver);
     loadTeamCard(driver);
 }

@@ -424,6 +424,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
+<script src="/endurance/assets/gtec-badges.js?v=1"></script>
 <script>
 'use strict';
 const { createClient } = window.supabase;
@@ -771,6 +772,7 @@ async function showProfile() {
                     ${driver.career_number ? `<div class="profile-number">#${driver.career_number}</div>` : ''}
                     <div class="profile-name">${esc(driver.display_name)}</div>
                     <div class="profile-tags">${tagsHTML}</div>
+                    ${window.renderBadgeStrip ? window.renderBadgeStrip(totals.races) : ''}
                 </div>
             </div>
 
