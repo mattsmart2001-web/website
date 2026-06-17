@@ -2928,20 +2928,49 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
 
     entries.sort((a, b) => b._skill - a._skill);
 
-    // Pack into lobbies by driver count (lobbySize = drivers per lobby).
-    // Team-mates always travel together because lobby_number is per entry;
-    // if an entry would push the running lobby over capacity, it starts
-    // the next lobby instead of splitting the team.
-    let currentLobby = 1;
-    let currentCount = 0;
+    // ------------------------------------------------------------------
+    // Pack into lobbies, aiming for *even* sizes instead of cap-first.
+    //
+    // Old behaviour: filled each lobby up to lobbySize, started a new one
+    // once the cap was hit. With 50 drivers / 25 teams of 2 / cap 16, that
+    // gives 16+16+16+2 — the last lobby is two team-mates racing
+    // themselves. Terrible.
+    //
+    // New behaviour: decide up-front how many lobbies we'll have
+    //   targetLobbies = ceil(totalDrivers / lobbySize)
+    // then distribute roughly evenly, recomputing the per-lobby target on
+    // each lobby boundary so rounding drift collects in the last lobby
+    // instead of leaving it sparse. Team-mates still stay together; the
+    // cap is still a hard upper limit so we can't blow past GT7's 16.
+    //
+    // For 50 drivers in 25 teams of 2 → 12/12/12/14, never 16/16/16/2.
+    // ------------------------------------------------------------------
+    const totalDriversAll = entries.reduce(
+        (sum, en) => sum + Math.max(1, (en.entry_drivers || []).length),
+        0,
+    );
+    const targetLobbies = Math.max(1, Math.ceil(totalDriversAll / lobbySize));
+
+    let currentLobby      = 1;
+    let currentCount      = 0;
+    let remainingDrivers  = totalDriversAll;
+    let remainingLobbies  = targetLobbies;
+    let currentTarget     = Math.ceil(remainingDrivers / remainingLobbies);
+
     let totalDrivers = 0;
     let failures = 0;
     for (let i = 0; i < entries.length; i++) {
         const en = entries[i];
         const driversInEntry = Math.max(1, (en.entry_drivers || []).length);
-        if (currentCount > 0 && currentCount + driversInEntry > lobbySize) {
+        const wouldExceedTarget = currentCount > 0 && currentCount + driversInEntry > currentTarget;
+        const wouldExceedCap    = currentCount + driversInEntry > lobbySize;
+        const canBump = currentLobby < targetLobbies;
+        if ((wouldExceedTarget || wouldExceedCap) && canBump) {
+            remainingDrivers -= currentCount;
+            remainingLobbies--;
             currentLobby++;
             currentCount = 0;
+            currentTarget = Math.ceil(remainingDrivers / Math.max(1, remainingLobbies));
         }
         currentCount += driversInEntry;
         totalDrivers += driversInEntry;
@@ -2954,10 +2983,10 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
         const { error } = await sb.from('entries').update(payload).eq('id', en.id);
         if (error) failures++;
     }
-    const totalLobbies = currentLobby;
+    const totalLobbiesUsed = currentLobby;
     toast(failures
         ? `Allocated with ${failures} failure(s).`
-        : `${totalDrivers} driver${totalDrivers === 1 ? '' : 's'} split across ${totalLobbies} lobb${totalLobbies === 1 ? 'y' : 'ies'}.`, failures ? 'error' : 'success');
+        : `${totalDrivers} driver${totalDrivers === 1 ? '' : 's'} split across ${totalLobbiesUsed} lobb${totalLobbiesUsed === 1 ? 'y' : 'ies'}.`, failures ? 'error' : 'success');
     await viewEventLobbies(eventId, eventName, seasonId);
 }
 
