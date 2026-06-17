@@ -137,6 +137,7 @@ Always apply in this order:
 55. `55_application_preferred_number.sql` — applicants can nominate a preferred career number on the apply form
 56. `56_drivers_discord_username.sql` — promote discord_username onto drivers (backfilled from linked applications) so drivers can self-edit it from the portal and admin can edit on the driver row
 57. `57_elo_per_lobby.sql` — Elo pairwise comparisons now restricted to drivers who shared a lobby (was pooling everyone in the event, inflating P1 deltas in multi-lobby events)
+58. `58_team_standings_per_driver_counters.sql` — team wins/podiums/poles/FLs counted per driver again (multi-lobby reality means a 1-2 split or P3-in-each-lobby is two separate top-3 finishes)
 
 ---
 
