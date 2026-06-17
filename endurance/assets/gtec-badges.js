@@ -1,34 +1,54 @@
-/* GTEC career badges — shared helper used on the public driver profile
-   and the My Profile portal. Self-contained CSS injection + render
-   helpers. No schema changes; everything derives from a driver's
-   lifetime race count. */
+/* GTEC career + victory badges — shared helper used on the public
+   driver profile and the My Profile portal. Categories are defined
+   below; both renderers take a single { starts, wins } stats object
+   and the helper figures out who's earned what. */
 (function () {
     'use strict';
 
-    // Threshold ladder. Highest threshold first so earnedCareer() can
-    // pick the top-most badge a driver has unlocked.
-    const CAREER_BADGES = [
-        { key: 'living_legend',  name: 'Living Legend',         icon: '👑', threshold: 100, blurb: 'Complete 100 races' },
-        { key: 'ironman',        name: 'Ironman',               icon: '🛡️', threshold:  50, blurb: 'Complete 50 races'  },
-        { key: 'endurance_spec', name: 'Endurance Specialist',  icon: '⏱️', threshold:  20, blurb: 'Complete 20 races'  },
-        { key: 'veteran',        name: 'Veteran',               icon: '🪖', threshold:  10, blurb: 'Complete 10 races'  },
-        { key: 'regular',        name: 'Regular',               icon: '🎫', threshold:   5, blurb: 'Complete 5 races'   },
-        { key: 'debut',          name: 'Debut',                 icon: '🏁', threshold:   1, blurb: 'Complete first race'},
+    // Tier ladders. Highest threshold first so earnedFor() can pick
+    // the top-most badge a driver has unlocked within a category.
+    const CATEGORIES = [
+        {
+            key: 'career',
+            title: 'Career',
+            stat: 'starts',
+            statLabel: 'races',
+            badges: [
+                { key: 'living_legend',  name: 'Living Legend',         icon: '👑', threshold: 100, blurb: 'Complete 100 races' },
+                { key: 'ironman',        name: 'Ironman',               icon: '🛡️', threshold:  50, blurb: 'Complete 50 races'  },
+                { key: 'endurance_spec', name: 'Endurance Specialist',  icon: '⏱️', threshold:  20, blurb: 'Complete 20 races'  },
+                { key: 'veteran',        name: 'Veteran',               icon: '🪖', threshold:  10, blurb: 'Complete 10 races'  },
+                { key: 'regular',        name: 'Regular',               icon: '🎫', threshold:   5, blurb: 'Complete 5 races'   },
+                { key: 'debut',          name: 'Debut',                 icon: '🏁', threshold:   1, blurb: 'Complete first race'},
+            ],
+        },
+        {
+            key: 'victories',
+            title: 'Victories',
+            stat: 'wins',
+            statLabel: 'wins',
+            badges: [
+                { key: 'legend_of_gtec', name: 'Legend of GTEC', icon: '🌟', threshold: 50, blurb: 'Win 50 races' },
+                { key: 'dominator',      name: 'Dominator',      icon: '🔥', threshold: 25, blurb: 'Win 25 races' },
+                { key: 'elite_winner',   name: 'Elite Winner',   icon: '💎', threshold: 10, blurb: 'Win 10 races' },
+                { key: 'proven_winner',  name: 'Proven Winner',  icon: '🏆', threshold:  5, blurb: 'Win 5 races'  },
+                { key: 'race_winner',    name: 'Race Winner',    icon: '🥇', threshold:  3, blurb: 'Win 3 races'  },
+                { key: 'first_victory',  name: 'First Victory',  icon: '🎉', threshold:  1, blurb: 'Win your first race' },
+            ],
+        },
     ];
 
-    function earnedCareer(starts) {
-        const n = Number(starts) || 0;
-        // Lowest threshold first for display order (Debut → Living Legend).
-        return CAREER_BADGES
+    function earnedFor(cat, value) {
+        const n = Number(value) || 0;
+        return cat.badges
             .filter(b => n >= b.threshold)
             .slice()
-            .reverse();
+            .reverse(); // ascending difficulty for display
     }
 
-    function nextCareer(starts) {
-        const n = Number(starts) || 0;
-        // Find the lowest threshold the driver hasn't hit yet.
-        const remaining = CAREER_BADGES
+    function nextFor(cat, value) {
+        const n = Number(value) || 0;
+        const remaining = cat.badges
             .filter(b => n < b.threshold)
             .sort((a, b) => a.threshold - b.threshold);
         return remaining[0] || null;
@@ -36,7 +56,7 @@
 
     function badgeIcon(b, opts = {}) {
         const locked   = !!opts.locked;
-        const progress = opts.progress;  // 0..1 ring fill on locked badges
+        const progress = opts.progress;
         const cls      = 'gtec-badge' + (locked ? ' gtec-badge-locked' : '');
         const title    = locked
             ? `${b.name} — ${b.blurb}${progress != null ? ` · ${Math.round(progress * 100)}%` : ''}`
@@ -53,42 +73,55 @@
             </div>`;
     }
 
-    // Public-style strip — only earned badges, compact horizontal scroll.
-    function renderBadgeStrip(starts) {
-        const earned = earnedCareer(starts);
-        if (!earned.length) return '';
-        return `<div class="gtec-badge-strip">${earned.map(b => badgeIcon(b)).join('')}</div>`;
+    // Public-style strip — every earned badge across every category,
+    // grouped by category for readability. Nothing rendered for drivers
+    // with no earned badges in any category.
+    function renderBadgeStrip(stats) {
+        stats = stats || {};
+        const sections = CATEGORIES.map(cat => {
+            const earned = earnedFor(cat, stats[cat.stat]);
+            if (!earned.length) return '';
+            return earned.map(b => badgeIcon(b)).join('');
+        }).filter(Boolean);
+        if (!sections.length) return '';
+        return `<div class="gtec-badge-strip">${sections.join('')}</div>`;
     }
 
-    // Portal-style grid — every badge with locked ones greyed out + a
-    // "next badge" progress hint underneath.
-    function renderBadgeGrid(starts) {
-        const n = Number(starts) || 0;
-        // Show in difficulty order Debut → Living Legend.
-        const ordered = CAREER_BADGES.slice().reverse();
-        const next = nextCareer(n);
-        const cards = ordered.map(b => {
-            const locked = n < b.threshold;
-            if (!locked) return badgeIcon(b);
-            const prev = b.threshold === 1 ? 0
-                : CAREER_BADGES.find(x => x.threshold < b.threshold).threshold;
-            const range = b.threshold - prev;
-            const intoRange = Math.max(0, n - prev);
-            const progress = Math.max(0, Math.min(1, intoRange / range));
-            return badgeIcon(b, { locked: true, progress });
+    // Portal-style full grid — every category, every badge, with locked
+    // ones desaturated + a conic progress ring filling 0 → 100% as the
+    // driver approaches the threshold. Each category gets its own
+    // sub-heading and a "X / Y to NEXT" footer line.
+    function renderBadgeGrid(stats) {
+        stats = stats || {};
+        return CATEGORIES.map(cat => {
+            const n = Number(stats[cat.stat]) || 0;
+            const ordered = cat.badges.slice().reverse(); // Debut → Legend, easiest first
+            const cards = ordered.map(b => {
+                const locked = n < b.threshold;
+                if (!locked) return badgeIcon(b);
+                const prev = b.threshold === ordered[0].threshold ? 0
+                    : cat.badges.find(x => x.threshold < b.threshold).threshold;
+                const range = b.threshold - prev;
+                const intoRange = Math.max(0, n - prev);
+                const progress = Math.max(0, Math.min(1, intoRange / range));
+                return badgeIcon(b, { locked: true, progress });
+            }).join('');
+
+            const next = nextFor(cat, n);
+            const footer = next
+                ? `<div class="gtec-badge-next">🏁 <strong>${n} / ${next.threshold}</strong> ${cat.statLabel} to <strong>${next.name}</strong></div>`
+                : `<div class="gtec-badge-next">Every ${cat.title.toLowerCase()} badge earned.</div>`;
+
+            return `
+                <div class="gtec-badge-section">
+                    <div class="gtec-badge-section-title">${cat.title}</div>
+                    <div class="gtec-badge-grid">${cards}</div>
+                    ${footer}
+                </div>`;
         }).join('');
-
-        const nextLine = next
-            ? `<div class="gtec-badge-next">🏁 <strong>${n} / ${next.threshold}</strong> races to <strong>${next.name}</strong></div>`
-            : `<div class="gtec-badge-next">All career badges earned. Living the dream.</div>`;
-
-        return `
-            <div class="gtec-badge-grid">${cards}</div>
-            ${nextLine}`;
     }
 
-    // Inject CSS once. Tier badges everywhere else already use Orbitron;
-    // we match that for monogram + label.
+    // Inject CSS once.
     if (!document.getElementById('gtec-badge-styles')) {
         const style = document.createElement('style');
         style.id = 'gtec-badge-styles';
@@ -99,11 +132,21 @@
                 gap: 0.55rem;
                 margin: 0.85rem 0 0.5rem;
             }
+            .gtec-badge-section + .gtec-badge-section { margin-top: 1.5rem; }
+            .gtec-badge-section-title {
+                font-family: 'Orbitron', sans-serif;
+                font-size: 0.62rem;
+                font-weight: 700;
+                letter-spacing: 0.3em;
+                text-transform: uppercase;
+                color: var(--gold, #ffd166);
+                margin-bottom: 0.5rem;
+            }
             .gtec-badge-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
                 gap: 0.85rem 0.65rem;
-                margin: 1rem 0 0.4rem;
+                margin: 0.25rem 0 0.4rem;
             }
             .gtec-badge {
                 position: relative;
@@ -126,7 +169,6 @@
             }
             .gtec-badge-locked .gtec-badge-label { color: rgba(148,163,184,0.55); }
             .gtec-badge-locked:hover { transform: none; box-shadow: none; }
-
             .gtec-badge-icon {
                 font-size: 1.5rem;
                 line-height: 1;
@@ -136,7 +178,6 @@
                 background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.25), rgba(0,0,0,0.5) 75%);
                 border: 2px solid rgba(255,209,102,0.55);
                 box-shadow: inset 0 0 12px rgba(255,209,102,0.18);
-                /* Stop emoji baseline drift across systems */
                 font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
             }
             .gtec-badge-locked .gtec-badge-icon {
@@ -161,8 +202,6 @@
                 font-size: 0.65rem;
                 opacity: 0.6;
             }
-            /* Conic progress ring on locked badges showing how close they
-               are to unlocking it. --p comes from inline style. */
             .gtec-badge-progress {
                 position: absolute;
                 top: 0.4rem; left: 50%;
@@ -188,9 +227,7 @@
         document.head.appendChild(style);
     }
 
-    window.CAREER_BADGES    = CAREER_BADGES;
-    window.earnedCareer     = earnedCareer;
-    window.nextCareer       = nextCareer;
+    window.BADGE_CATEGORIES = CATEGORIES;
     window.renderBadgeStrip = renderBadgeStrip;
     window.renderBadgeGrid  = renderBadgeGrid;
 })();
