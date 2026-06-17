@@ -100,6 +100,39 @@
         /* Content */
         .content { max-width: 1100px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
 
+        /* Search bar — shared between Drivers and Teams listings */
+        .gtec-search-wrap {
+            position: relative;
+            max-width: 480px;
+            margin: 0 auto 1.75rem;
+        }
+        .gtec-search-icon {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px; height: 16px;
+            color: var(--muted);
+            pointer-events: none;
+        }
+        .gtec-search-input {
+            width: 100%;
+            padding: 0.7rem 1rem 0.7rem 2.4rem;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92rem;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .gtec-search-input::placeholder { color: var(--muted); }
+        .gtec-search-input:focus {
+            border-color: rgba(255,209,102,0.55);
+            box-shadow: 0 0 0 3px rgba(255,209,102,0.12);
+        }
+
         /* ===== LISTING ===== */
         .driver-grid {
             display: grid;
@@ -537,8 +570,18 @@ async function showListing() {
                    <span class="driver-card-elo-value">${elo}</span>
                </div>`
             : '';
+        // Pre-compute a lowercase search bag on the card so the filter
+        // doesn't have to dig through the DOM on every keystroke.
+        const search = [
+            d.display_name,
+            d.career_number ? '#' + d.career_number : '',
+            d.career_number,
+            d.teams?.name,
+            d.manufacturers?.name,
+            d.nationality,
+        ].filter(Boolean).join(' ').toLowerCase();
         return `
-        <div class="driver-card" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'">
+        <div class="driver-card" data-search="${esc(search)}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'">
             <div class="driver-card-photo">${avatarHTML(d.photo_url, d.display_name, 'card')}</div>
             <div class="driver-card-body">
                 ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
@@ -557,11 +600,45 @@ async function showListing() {
         <div class="hero">
             <div class="hero-eyebrow">Championship</div>
             <div class="hero-title">Drivers</div>
-            <div class="hero-sub">${data.length} registered driver${data.length !== 1 ? 's' : ''}</div>
+            <div class="hero-sub" id="drivers-count-sub">${data.length} registered driver${data.length !== 1 ? 's' : ''}</div>
         </div>
         <div class="content">
-            ${data.length ? `<div class="driver-grid">${cards}</div>` : `<div class="empty-msg">No drivers registered yet.</div>`}
+            ${data.length ? `
+                <div class="gtec-search-wrap">
+                    <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input class="gtec-search-input" id="drivers-search" type="search" autocomplete="off"
+                           placeholder="Search driver, team, nationality or #number" oninput="filterCards(this,'driver-card','drivers-count-sub','driver','drivers')">
+                </div>
+                <div class="driver-grid">${cards}</div>
+                <div class="empty-msg" id="drivers-empty" style="display:none">No drivers match your search.</div>
+            ` : `<div class="empty-msg">No drivers registered yet.</div>`}
         </div>`;
+}
+
+// Generic card filter — reads data-search attributes and toggles
+// display:none on non-matching cards. Updates the count line + empty
+// state so it doesn't look broken when nothing matches.
+function filterCards(input, cardClass, countId, singular, plural) {
+    const q = (input.value || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('.' + cardClass);
+    let shown = 0;
+    cards.forEach(card => {
+        const bag = card.getAttribute('data-search') || '';
+        const match = !q || bag.includes(q);
+        card.style.display = match ? '' : 'none';
+        if (match) shown++;
+    });
+    const countEl = countId && document.getElementById(countId);
+    if (countEl) {
+        countEl.textContent = q
+            ? `${shown} match${shown === 1 ? '' : 'es'} of ${cards.length}`
+            : `${cards.length} registered ${shown === 1 ? singular : plural}`;
+    }
+    const emptyId = (countId || '').replace('-count-sub', '-empty');
+    const emptyEl = emptyId && document.getElementById(emptyId);
+    if (emptyEl) emptyEl.style.display = (q && shown === 0) ? '' : 'none';
 }
 
 // ============================================================

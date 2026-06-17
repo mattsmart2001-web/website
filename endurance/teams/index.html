@@ -94,6 +94,39 @@
 
         .content { max-width: 1100px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
 
+        /* Search bar — shared treatment with the Drivers listing */
+        .gtec-search-wrap {
+            position: relative;
+            max-width: 480px;
+            margin: 0 auto 1.75rem;
+        }
+        .gtec-search-icon {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px; height: 16px;
+            color: var(--muted);
+            pointer-events: none;
+        }
+        .gtec-search-input {
+            width: 100%;
+            padding: 0.7rem 1rem 0.7rem 2.4rem;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92rem;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .gtec-search-input::placeholder { color: var(--muted); }
+        .gtec-search-input:focus {
+            border-color: rgba(255,209,102,0.55);
+            box-shadow: 0 0 0 3px rgba(255,209,102,0.12);
+        }
+
         /* ===== LISTING ===== */
         .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
         .team-card {
@@ -252,8 +285,13 @@ async function showListing() {
     const cards = (data || []).map(t => {
         const mfr = t.manufacturers;
         const dCount = countMap[t.id] || 0;
+        const search = [
+            t.name,
+            t.home_country,
+            mfr?.name,
+        ].filter(Boolean).join(' ').toLowerCase();
         return `
-        <div class="team-card" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'">
+        <div class="team-card" data-search="${esc(search)}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'">
             ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}</div>` : ''}
             <div class="team-card-name">${esc(t.name)}</div>
             <div class="team-card-meta">
@@ -267,11 +305,42 @@ async function showListing() {
         <div class="hero">
             <div class="hero-eyebrow">Championship</div>
             <div class="hero-title">Teams</div>
-            <div class="hero-sub">${data.length} registered team${data.length !== 1 ? 's' : ''}</div>
+            <div class="hero-sub" id="teams-count-sub">${data.length} registered team${data.length !== 1 ? 's' : ''}</div>
         </div>
         <div class="content">
-            ${data.length ? `<div class="team-grid">${cards}</div>` : `<div class="empty-msg">No teams registered yet.</div>`}
+            ${data.length ? `
+                <div class="gtec-search-wrap">
+                    <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input class="gtec-search-input" id="teams-search" type="search" autocomplete="off"
+                           placeholder="Search team, manufacturer or nationality" oninput="filterCards(this,'team-card','teams-count-sub','team','teams')">
+                </div>
+                <div class="team-grid">${cards}</div>
+                <div class="empty-msg" id="teams-empty" style="display:none">No teams match your search.</div>
+            ` : `<div class="empty-msg">No teams registered yet.</div>`}
         </div>`;
+}
+
+function filterCards(input, cardClass, countId, singular, plural) {
+    const q = (input.value || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('.' + cardClass);
+    let shown = 0;
+    cards.forEach(card => {
+        const bag = card.getAttribute('data-search') || '';
+        const match = !q || bag.includes(q);
+        card.style.display = match ? '' : 'none';
+        if (match) shown++;
+    });
+    const countEl = countId && document.getElementById(countId);
+    if (countEl) {
+        countEl.textContent = q
+            ? `${shown} match${shown === 1 ? '' : 'es'} of ${cards.length}`
+            : `${cards.length} registered ${shown === 1 ? singular : plural}`;
+    }
+    const emptyId = (countId || '').replace('-count-sub', '-empty');
+    const emptyEl = emptyId && document.getElementById(emptyId);
+    if (emptyEl) emptyEl.style.display = (q && shown === 0) ? '' : 'none';
 }
 
 // ============================================================
