@@ -1,0 +1,57 @@
+{
+    "name": "GTEC — Gran Turismo 7 Endurance Championship",
+    "short_name": "GTEC",
+    "description": "A Gran Turismo 7 endurance championship. Run by SparksTheory.",
+    "start_url": "/endurance/",
+    "scope": "/endurance/",
+    "id": "/endurance/",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#050608",
+    "theme_color": "#0a0e15",
+    "categories": ["sports", "games"],
+    "lang": "en-GB",
+    "dir": "ltr",
+    "icons": [
+        {
+            "src": "/endurance/assets/gtec-icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "/endurance/assets/gtec-icon-maskable.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/endurance/assets/gtec-logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Standings",
+            "short_name": "Standings",
+            "url": "/endurance/standings/"
+        },
+        {
+            "name": "Calendar",
+            "short_name": "Calendar",
+            "url": "/endurance/calendar/"
+        },
+        {
+            "name": "Results",
+            "short_name": "Results",
+            "url": "/endurance/results/"
+        },
+        {
+            "name": "My Profile",
+            "short_name": "Profile",
+            "url": "/endurance/profile/"
+        }
+    ]
+}

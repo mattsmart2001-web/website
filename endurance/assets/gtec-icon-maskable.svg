@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GTEC">
+    <!-- Maskable: Android may crop to a circle / squircle. All meaningful
+         content must sit inside the central 80% safe-zone (40px → 472px).
+         The full canvas is filled with the brand background so the crop
+         never reveals a transparent corner. -->
+    <defs>
+        <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0a0e15"/>
+            <stop offset="100%" stop-color="#050608"/>
+        </linearGradient>
+        <linearGradient id="gold2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffe28a"/>
+            <stop offset="55%" stop-color="#ffd166"/>
+            <stop offset="100%" stop-color="#c8901a"/>
+        </linearGradient>
+    </defs>
+    <rect width="512" height="512" fill="url(#bg2)"/>
+    <!-- Wordmark kept inside the safe zone -->
+    <text x="256" y="305" text-anchor="middle" fill="url(#gold2)"
+          font-family="Impact, 'Anton', 'Arial Black', sans-serif"
+          font-size="140" font-weight="900" letter-spacing="5">GTEC</text>
+</svg>

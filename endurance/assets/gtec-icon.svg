@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GTEC">
+    <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0a0e15"/>
+            <stop offset="100%" stop-color="#050608"/>
+        </linearGradient>
+        <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffe28a"/>
+            <stop offset="55%" stop-color="#ffd166"/>
+            <stop offset="100%" stop-color="#c8901a"/>
+        </linearGradient>
+    </defs>
+    <!-- Rounded base -->
+    <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+    <!-- Inner gold rim -->
+    <rect x="36" y="36" width="440" height="440" rx="76" fill="none" stroke="rgba(255,209,102,0.28)" stroke-width="2"/>
+    <!-- Bottom-left corner accent slash -->
+    <path d="M40 348 L240 472 Z" stroke="rgba(255,209,102,0.18)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M40 308 L200 412 Z" stroke="rgba(255,209,102,0.12)" stroke-width="2" stroke-linecap="round"/>
+    <!-- GTEC wordmark -->
+    <text x="256" y="320" text-anchor="middle" fill="url(#gold)"
+          font-family="Impact, 'Anton', 'Arial Black', sans-serif"
+          font-size="180" font-weight="900" letter-spacing="6">GTEC</text>
+    <!-- Eyebrow caps mark -->
+    <text x="256" y="170" text-anchor="middle" fill="rgba(255,209,102,0.55)"
+          font-family="Verdana, sans-serif"
+          font-size="34" font-weight="700" letter-spacing="12">ENDURANCE</text>
+</svg>

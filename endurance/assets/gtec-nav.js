@@ -4,6 +4,19 @@
 (function () {
     'use strict';
 
+    /* -----------------------------------------------------------------
+       PWA service worker registration. Scope is /endurance/ so the
+       worker only ever controls GTEC routes — never the main site.
+       Soft-fails on unsupported browsers / dev environments without
+       making any noise.
+    ------------------------------------------------------------------ */
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/endurance/sw.js', { scope: '/endurance/' })
+                .catch(() => {/* ignore */});
+        });
+    }
+
     document.addEventListener('click', function (e) {
         // Toggle drawer
         if (e.target.closest('.gtec-nav-toggle')) {
