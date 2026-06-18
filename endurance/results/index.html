@@ -512,7 +512,7 @@ async function loadResults(slug) {
     const statusLabel = { completed:'Completed', in_progress:'Live', scheduled:'Scheduled' };
 
     const lobbySections = lobbyKeys.map(k => {
-        const title = k === 0 ? 'Unassigned' : `Lobby ${k}`;
+        const title = k === 0 ? 'Unassigned' : `Split ${k}`;
         return renderLobbySection(title, groups[k]);
     }).join('');
 
@@ -596,7 +596,7 @@ function renderLobbySection(title, rows) {
             ` : ''}
 
             ${!classified.length && !unclassified.length && !qualifying.length ? `
-                <div class="state-msg" style="padding:2rem"><p style="color:var(--muted)">No results recorded for this lobby yet.</p></div>
+                <div class="state-msg" style="padding:2rem"><p style="color:var(--muted)">No results recorded for this split yet.</p></div>
             ` : ''}
         </div>`;
 }
@@ -627,11 +627,11 @@ function renderLobbiesGrid(entries) {
                 </div>`;
             }).join('');
         return `<div class="lobby-card">
-            <div class="lobby-title">Lobby ${n} <span class="lobby-count">${groups[n].length} ${groups[n].length === 1 ? 'entry' : 'entries'}</span></div>
+            <div class="lobby-title">Split ${n} <span class="lobby-count">${groups[n].length} ${groups[n].length === 1 ? 'entry' : 'entries'}</span></div>
             ${rows}
         </div>`;
     }).join('');
-    return `<div class="section-heading">Lobby Allocations</div>
+    return `<div class="section-heading">Split Allocations</div>
         <div class="lobbies-grid">${cards}</div>`;
 }
 

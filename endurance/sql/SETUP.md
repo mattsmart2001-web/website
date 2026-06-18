@@ -139,6 +139,7 @@ Always apply in this order:
 57. `57_elo_per_lobby.sql` — Elo pairwise comparisons now restricted to drivers who shared a lobby (was pooling everyone in the event, inflating P1 deltas in multi-lobby events)
 58. `58_team_standings_per_driver_counters.sql` — team wins/podiums/poles/FLs counted per driver again (multi-lobby reality means a 1-2 split or P3-in-each-lobby is two separate top-3 finishes)
 59. `59_event_refuel_and_slipstream.sql` — two more per-event briefing fields: refuel rate (1–10 L/s) and slipstream (off / weak / real / strong)
+60. `60_rename_lobby_to_split_in_notifications.sql` — notification subject + body now say "Split N" instead of "Lobby N" to match the rebranded UI vocabulary
 
 ---
 

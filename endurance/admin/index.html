@@ -1910,7 +1910,7 @@ async function deleteDriver(id, name) {
     ]);
     const history = (entryCount || 0) + (resultCount || 0);
     const warn = history > 0
-        ? `Delete "${name}"?\n\nThis driver has ${entryCount || 0} event entry row(s) and ${resultCount || 0} result row(s) — these will be removed too. Standings will recompute without them. Entries and results for other drivers in the same team / lobby stay intact.\n\nThis cannot be undone.`
+        ? `Delete "${name}"?\n\nThis driver has ${entryCount || 0} event entry row(s) and ${resultCount || 0} result row(s) — these will be removed too. Standings will recompute without them. Entries and results for other drivers in the same team / split stay intact.\n\nThis cannot be undone.`
         : `Delete "${name}"?`;
     if (!confirm(warn)) return;
     const { error } = await sb.from('drivers').delete().eq('id', id);
@@ -1980,7 +1980,7 @@ async function renderEvents() {
                 <td>${evtStatusBadge(e.status)}</td>
                 <td><div class="row-actions">
                     <button class="btn-icon" onclick="viewEventEntries('${e.id}','${esc(e.name)}','${e.season_id}')">Entries</button>
-                    <button class="btn-icon" onclick="viewEventLobbies('${e.id}','${esc(e.name)}','${e.season_id}')">Lobbies</button>
+                    <button class="btn-icon" onclick="viewEventLobbies('${e.id}','${esc(e.name)}','${e.season_id}')">Splits</button>
                     <button class="btn-icon" onclick="viewEventQualifying('${e.id}','${esc(e.name)}')">Qualifying</button>
                     <button class="btn-icon" onclick="viewEventResults('${e.id}','${esc(e.name)}')">Results</button>
                     <button class="btn-icon" onclick="viewEventPenalties('${e.id}','${esc(e.name)}')">Penalties</button>
@@ -2779,7 +2779,7 @@ function drSrSeed(drLetter, srLetter) {
 
 async function viewEventLobbies(eventId, eventName, seasonId) {
     const panel = document.getElementById('event-entries-panel');
-    panel.innerHTML = '<div class="loading-state">Loading lobbies…</div>';
+    panel.innerHTML = '<div class="loading-state">Loading splits…</div>';
 
     const { data: entries, error } = await sb.from('entries')
         .select(`
@@ -2839,7 +2839,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
     const totalDrivers = driverRows.length;
 
     const renderLobbyCard = (lobbyNum, list) => {
-        const title = lobbyNum === 0 ? 'Unassigned' : `Lobby ${lobbyNum}`;
+        const title = lobbyNum === 0 ? 'Unassigned' : `Split ${lobbyNum}`;
         const sorted = list.slice().sort((a, b) => b.skill - a.skill);
         const rows = sorted.map(({ entry: en, driver: d }) => {
             const num = d?.career_number ?? en.car_number;
@@ -2863,9 +2863,9 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <td class="td-muted" style="font-size:0.78rem">${esc(en.teams?.name) || '<em>Solo</em>'}</td>
                 <td style="font-size:0.78rem">${skillCell}</td>
                 <td><div class="row-actions" style="gap:0.25rem;justify-content:flex-end">
-                    <button class="btn-icon" title="Move entry to a lower lobby (faster split)"
+                    <button class="btn-icon" title="Move entry to a faster split"
                         onclick="moveEntryLobby('${en.id}',-1,'${eventId}','${esc(eventName)}','${seasonId}')">↑</button>
-                    <button class="btn-icon" title="Move entry to a higher lobby (slower split)"
+                    <button class="btn-icon" title="Move entry to a slower split"
                         onclick="moveEntryLobby('${en.id}',1,'${eventId}','${esc(eventName)}','${seasonId}')">↓</button>
                     ${lobbyNum !== 0 ? `<button class="btn-icon" title="Unassign entry"
                         onclick="setEntryLobby('${en.id}',null,'${eventId}','${esc(eventName)}','${seasonId}')">×</button>` : ''}
@@ -2889,18 +2889,18 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
     panel.innerHTML = `
         <div class="section-card" style="margin-bottom:1rem">
             <div class="section-card-header">
-                <span class="section-card-title">Lobbies — ${esc(eventName)}</span>
+                <span class="section-card-title">Splits — ${esc(eventName)}</span>
             </div>
             <div style="padding:1rem 1.25rem;display:flex;gap:0.85rem;align-items:flex-end;flex-wrap:wrap">
                 <div class="form-group" style="margin:0;min-width:130px">
-                    <label style="display:block;font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.35rem">Lobby size</label>
+                    <label style="display:block;font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.35rem">Split size</label>
                     <input type="number" id="lobby-size" value="16" min="2" max="32" style="width:100%;padding:0.55rem 0.75rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem">
                 </div>
                 <button class="btn btn-primary" onclick="autoAllocateLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Auto-allocate</button>
                 <button class="btn btn-ghost" onclick="clearAllLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Clear All</button>
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
                 <button class="btn-icon danger" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
-                <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Lobby size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
+                <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Split size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
             </div>
         </div>
         ${lobbyCardsHTML}`;
@@ -3007,20 +3007,20 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const totalLobbiesUsed = currentLobby;
     toast(failures
         ? `Allocated with ${failures} failure(s).`
-        : `${totalDrivers} driver${totalDrivers === 1 ? '' : 's'} split across ${totalLobbiesUsed} lobb${totalLobbiesUsed === 1 ? 'y' : 'ies'}.`, failures ? 'error' : 'success');
+        : `${totalDrivers} driver${totalDrivers === 1 ? '' : 's'} across ${totalLobbiesUsed} split${totalLobbiesUsed === 1 ? '' : 's'}.`, failures ? 'error' : 'success');
     await viewEventLobbies(eventId, eventName, seasonId);
 }
 
 async function clearAllLobbies(eventId, eventName, seasonId) {
-    if (!confirm('Clear all lobby assignments for this event?')) return;
+    if (!confirm('Clear all split assignments for this event?')) return;
     const { error } = await sb.from('entries').update({ lobby_number: null }).eq('event_id', eventId);
     if (error) { toast(error.message, 'error'); return; }
-    toast('Lobby assignments cleared.', 'success');
+    toast('Split assignments cleared.', 'success');
     await viewEventLobbies(eventId, eventName, seasonId);
 }
 
 async function notifyLobbies(eventId, eventName, seasonId) {
-    if (!confirm(`Send a lobby-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox.`)) return;
+    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox.`)) return;
     const { data, error } = await sb.rpc('notify_lobby_assignments', { p_event_id: eventId });
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
@@ -3029,7 +3029,7 @@ async function notifyLobbies(eventId, eventName, seasonId) {
 }
 
 async function deleteLobbyNotifications(eventId, eventName, seasonId) {
-    if (!confirm(`Delete all lobby-assignment notifications previously sent for "${eventName}"?\n\nDrivers' inboxes will lose those messages.`)) return;
+    if (!confirm(`Delete all split-assignment notifications previously sent for "${eventName}"?\n\nDrivers' inboxes will lose those messages.`)) return;
     const { data, error } = await sb.rpc('delete_lobby_notifications', { p_event_id: eventId });
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not delete.', 'error'); return; }
@@ -3115,7 +3115,7 @@ function refreshPositionAvailability(tableId) {
         const isDup = myVal && (taken[myVal] || 0) > 1;
         sel.style.borderColor = isDup ? '#ef4444' : '';
         sel.style.boxShadow   = isDup ? '0 0 0 1px #ef4444' : '';
-        sel.title             = isDup ? `Position ${myVal} is used by another driver in this lobby.` : '';
+        sel.title             = isDup ? `Position ${myVal} is used by another driver in this split.` : '';
         if (isDup) dupes.push(parseInt(myVal));
     });
     return [...new Set(dupes)];
@@ -3154,10 +3154,10 @@ function buildLobbyFilter(entries, currentLobby, onChangeFn) {
     const lobbies = [...new Set(entries.map(e => e.lobby_number).filter(n => n != null))].sort((a, b) => a - b);
     const hasUnassigned = entries.some(e => e.lobby_number == null);
     const opts = [];
-    opts.push(`<option value="all">All Lobbies (${entries.length})</option>`);
+    opts.push(`<option value="all">All Splits (${entries.length})</option>`);
     lobbies.forEach(n => {
         const count = entries.filter(e => e.lobby_number === n).length;
-        opts.push(`<option value="${n}" ${currentLobby == n ? 'selected' : ''}>Lobby ${n} (${count})</option>`);
+        opts.push(`<option value="${n}" ${currentLobby == n ? 'selected' : ''}>Split ${n} (${count})</option>`);
     });
     if (hasUnassigned) {
         const count = entries.filter(e => e.lobby_number == null).length;
@@ -3219,7 +3219,7 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
     const lobbyDriverCount = rowSpecs.filter(s => s.driver).length;
 
     const rows = rowSpecs.length === 0
-        ? `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">No drivers in this lobby yet.</td></tr>`
+        ? `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">No drivers in this split yet.</td></tr>`
         : rowSpecs.map(({ entry: en, driver: d }) => {
             const q = qMap[qKey(en.id, d?.id)] || {};
             const carLabel = en.car_number != null ? '#' + en.car_number : '—';
@@ -3228,7 +3228,7 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
                 : '<em class="td-muted">No drivers</em>';
             const dAttr = d ? `data-driver="${esc(d.id)}"` : '';
             return `<tr>
-                <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${esc(en.teams?.name) || '<em>Solo</em>'}${en.lobby_number != null ? ` · L${en.lobby_number}` : ''}</span></td>
+                <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${esc(en.teams?.name) || '<em>Solo</em>'}${en.lobby_number != null ? ` · S${en.lobby_number}` : ''}</span></td>
                 <td><select data-entry="${en.id}" ${dAttr} data-field="position" data-max="${lobbyDriverCount}" onchange="onPositionChange(this,'qualifying-table')" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${d ? '' : 'disabled'}>${buildPositionOptions(lobbyDriverCount, q.position || '')}</select></td>
                 <td><input type="text" placeholder="1:23.456" data-entry="${en.id}" ${dAttr} data-field="best_lap" value="${q.best_lap_ms ? fmtLapTime(q.best_lap_ms) : ''}" style="width:120px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.82rem" ${d ? '' : 'disabled'}></td>
                 <td><input type="text" data-entry="${en.id}" ${dAttr} data-field="notes" value="${esc(q.notes || '')}" placeholder="—" style="padding:0.4rem 0.5rem" ${d ? '' : 'disabled'}></td>
@@ -3251,7 +3251,7 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
                 <th>Driver</th><th>Pos</th><th>Best Lap</th><th>Notes</th>
             </tr></thead><tbody>${rows}</tbody></table>
             <div style="padding:0.85rem 1.25rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border)">
-                Pick a lobby to record qualifying lap by lap. Save All persists the current view.
+                Pick a split to record qualifying lap by lap. Save All persists the current view.
             </div>
         </div>`;
     refreshPositionAvailability('qualifying-table');
@@ -3362,7 +3362,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
 
     const lobbyDriverCount = rowSpecs.filter(s => s.driver).length;
     const rows = rowSpecs.length === 0
-        ? `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No drivers in this lobby.</td></tr>`
+        ? `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">No drivers in this split.</td></tr>`
         : rowSpecs.map(({ entry: en, driver: d }) => {
             const r  = rMap[en.id] || {};
             const rd = (r.id && d) ? (rdMap[`${r.id}|${d.id}`] || {}) : {};
@@ -3384,7 +3384,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
             const teamCell = en.teams?.name ? esc(en.teams.name) : '<em>Solo</em>';
             const isClassified = status === 'classified';
             return `<tr>
-                <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}${en.lobby_number != null ? ` · L${en.lobby_number}` : ''}</span></td>
+                <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}${en.lobby_number != null ? ` · S${en.lobby_number}` : ''}</span></td>
                 <td><select data-entry="${en.id}" ${dAttr} data-field="finish_position" data-max="${lobbyDriverCount}" onchange="onPositionChange(this,'results-table')" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis || !isClassified ? 'disabled' : ''}>${buildPositionOptions(lobbyDriverCount, isClassified ? pos : '')}</select></td>
                 <td><input type="number" min="0" data-entry="${en.id}" ${dAttr} data-field="laps_driven" value="${laps}" style="width:65px;padding:0.4rem 0.5rem" ${dis}></td>
                 <td><select data-entry="${en.id}" ${dAttr} data-field="status" onchange="onResultStatusChange(this)" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
@@ -3415,7 +3415,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
                 <th>Driver</th><th>Pos</th><th>Laps</th><th>Status</th><th>Pole</th><th>FL · Time</th><th style="text-align:right">Pts</th>
             </tr></thead><tbody>${rows}</tbody></table>
             <div style="padding:0.85rem 1.25rem;font-size:0.78rem;color:var(--muted);border-top:1px solid var(--border)">
-                Pick a lobby to record results lobby by lobby. Pole is auto-set from qualifying P1. Points recompute per-driver on save.
+                Pick a split to record results split by split. Pole is auto-set from qualifying P1. Points recompute per-driver on save.
             </div>
         </div>`;
     refreshPositionAvailability('results-table');

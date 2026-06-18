@@ -3,7 +3,7 @@
 'use strict';
 
 // Bump this string to force every client to refetch their shell.
-const CACHE_NAME = 'gtec-shell-v2';
+const CACHE_NAME = 'gtec-shell-v3';
 
 // Assets to pre-cache on install. Keep this short — fonts and Supabase
 // data are intentionally omitted so they always come fresh. The list is
