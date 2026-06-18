@@ -2148,6 +2148,25 @@ function eventForm(e = {}) {
                     </select>
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Refuel Rate <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(litres / second)</span></label>
+                    <select name="refuel_rate_lps">
+                        <option value="">—</option>
+                        ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${Number(e.refuel_rate_lps) === n ? 'selected' : ''}>${n} L/s</option>`).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Slipstream</label>
+                    <select name="slipstream">
+                        <option value="">—</option>
+                        <option value="off"    ${e.slipstream === 'off'    ? 'selected' : ''}>Off</option>
+                        <option value="weak"   ${e.slipstream === 'weak'   ? 'selected' : ''}>Weak</option>
+                        <option value="real"   ${e.slipstream === 'real'   ? 'selected' : ''}>Real</option>
+                        <option value="strong" ${e.slipstream === 'strong' ? 'selected' : ''}>Strong</option>
+                    </select>
+                </div>
+            </div>
             <div class="form-group">
                 <label>Required Tyres <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(tick every compound drivers must use)</span></label>
                 <div style="display:flex;flex-wrap:wrap;gap:0.5rem 1rem;padding:0.55rem 0.65rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px">
@@ -2218,6 +2237,8 @@ async function saveEvent(id) {
         mandatory_pit_stops: d.mandatory_pit_stops ? parseInt(d.mandatory_pit_stops) : null,
         bop_enabled:        !!d.bop_enabled,
         damage_level:       d.damage_level || null,
+        refuel_rate_lps:    d.refuel_rate_lps ? parseInt(d.refuel_rate_lps, 10) : null,
+        slipstream:         d.slipstream || null,
         required_tyres:     requiredTyres.length ? requiredTyres : null,
         race_details:       d.race_details || null,
     };
