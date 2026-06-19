@@ -239,6 +239,29 @@
         .profile-number { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; color: var(--gold); letter-spacing: 0.2em; margin-bottom: 0.35rem; }
         .profile-name { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.5rem; }
         .profile-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+        .share-btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.55rem 1rem;
+            margin-top: 0.85rem;
+            background: linear-gradient(135deg, rgba(255,209,102,0.18), rgba(255,209,102,0.06));
+            border: 1px solid rgba(255,209,102,0.45);
+            border-radius: 999px;
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .share-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(255,209,102,0.3), rgba(255,209,102,0.12));
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(255,209,102,0.18);
+        }
+        .share-btn:disabled { opacity: 0.7; cursor: progress; }
+        .share-btn svg { width: 14px; height: 14px; }
         .profile-tag {
             display: inline-flex; align-items: center; gap: 0.35rem;
             padding: 0.3rem 0.75rem;
@@ -464,6 +487,7 @@
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
 <script src="/endurance/assets/gtec-badges.js?v=6"></script>
+<script src="/endurance/assets/gtec-share-card.js?v=1"></script>
 <script>
 'use strict';
 const { createClient } = window.supabase;
@@ -865,6 +889,14 @@ async function showProfile() {
                     <div class="profile-name">${esc(driver.display_name)}</div>
                     <div class="profile-tags">${tagsHTML}</div>
                     ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits }) : ''}
+                    <button class="share-btn" id="share-profile-btn" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                            <polyline points="16 6 12 2 8 6"/>
+                            <line x1="12" y1="2" x2="12" y2="15"/>
+                        </svg>
+                        <span>Share Card</span>
+                    </button>
                 </div>
             </div>
 
@@ -885,6 +917,33 @@ async function showProfile() {
 
             ${!seasons.length && !history.length && !discItems.length ? `<div class="empty-msg" style="margin-top:1rem">No race history yet — check back after the first event.</div>` : ''}
         </div>`;
+
+    // Share-card button — needs closure access to the freshly-computed
+    // driver + totals so the painter doesn't have to re-fetch anything.
+    const shareBtn = document.getElementById('share-profile-btn');
+    if (shareBtn && window.gtecShareCard) {
+        const tier = window.eloTier ? (window.eloTier(currentRating)?.name || null) : null;
+        shareBtn.addEventListener('click', () => window.gtecShareCard({
+            driver: {
+                display_name:      driver.display_name,
+                slug:              driver.slug,
+                career_number:     driver.career_number,
+                nationality:       driver.nationality,
+                photo_url:         driver.photo_url,
+                team_name:         driver.teams?.name || null,
+                manufacturer_name: driver.manufacturers?.name || null,
+            },
+            stats: {
+                elo:     Number.isFinite(currentRating) ? currentRating : null,
+                tier:    isProvisional ? null : tier,
+                points:  Number(totals.points || 0).toFixed(totals.points % 1 === 0 ? 0 : 1),
+                wins:    totals.wins,
+                podiums: totals.podiums,
+                races:   totals.races,
+            },
+            buttonEl: shareBtn,
+        }));
+    }
 }
 
 // ============================================================

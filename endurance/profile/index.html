@@ -58,6 +58,28 @@
         .profile-meta { flex: 1; min-width: 200px; }
         .profile-meta h1 { font-family: 'Anton', sans-serif; font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.05; margin-bottom: 0.4rem; }
         .profile-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; margin-bottom: 0.6rem; transition: color 0.15s; }
+        .profile-share-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            margin-bottom: 0.6rem;
+            padding: 0.4rem 0.85rem;
+            background: linear-gradient(135deg, rgba(255,209,102,0.18), rgba(255,209,102,0.05));
+            border: 1px solid rgba(255,209,102,0.45);
+            border-radius: 999px;
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .profile-share-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(255,209,102,0.3), rgba(255,209,102,0.1));
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(255,209,102,0.15);
+        }
+        .profile-share-btn:disabled { opacity: 0.7; cursor: progress; }
         .profile-link:hover { color: var(--gold); }
         .profile-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
         .pill-leader-inline {
@@ -275,7 +297,17 @@
         <div class="avatar" id="avatar-el">?</div>
         <div class="profile-meta">
             <h1 id="driver-name">—</h1>
-            <a class="profile-link" id="public-link" href="#">View public profile →</a>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem 0.75rem;align-items:center">
+                <a class="profile-link" id="public-link" href="#">View public profile →</a>
+                <button class="profile-share-btn" id="share-profile-btn" type="button" style="display:none">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                        <polyline points="16 6 12 2 8 6"/>
+                        <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                    <span>Share Card</span>
+                </button>
+            </div>
             <div class="profile-tags" id="profile-tags"></div>
         </div>
         <button class="btn-contact" onclick="openContactModal()">
@@ -477,6 +509,7 @@
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
 <script src="/endurance/assets/gtec-badges.js?v=6"></script>
+<script src="/endurance/assets/gtec-share-card.js?v=1"></script>
 <script src="../assets/countries.js"></script>
 <script>
 'use strict';
@@ -733,12 +766,47 @@ async function loadStanding(driverId) {
             const sign = delta >= 0 ? '+' : '';
             document.getElementById('elo-delta-el').innerHTML = `<span class="elo-delta ${delta >= 0 ? 'elo-up' : 'elo-dn'}">(${sign}${delta})</span>`;
         }
+        _shareStats.elo  = elo;
+        _shareStats.tier = !provisional && window.eloTier ? (window.eloTier(elo)?.name || null) : null;
     } else {
         document.getElementById('elo-value').textContent = '1500';
         document.getElementById('elo-tier-el').innerHTML = window.eloTierBadge ? window.eloTierBadge(1500, { provisional: true }) : '';
+        _shareStats.elo  = 1500;
+        _shareStats.tier = null;
     }
 
+    if (st) {
+        _shareStats.points  = Number(st.points ?? 0).toFixed(Number(st.points ?? 0) % 1 === 0 ? 0 : 1);
+        _shareStats.wins    = st.wins    ?? 0;
+        _shareStats.podiums = st.podiums ?? 0;
+        _shareStats.races   = st.races   ?? 0;
+    }
+
+    // Now that we have driver + stats wired, reveal the Share Card button
+    // (was hidden in markup until the data was loaded).
+    armShareButton();
+
     card.style.display = '';
+}
+
+function armShareButton() {
+    const btn = document.getElementById('share-profile-btn');
+    if (!btn || btn.dataset.armed === '1' || !_shareDriver || !window.gtecShareCard) return;
+    btn.dataset.armed = '1';
+    btn.style.display = '';
+    btn.addEventListener('click', () => window.gtecShareCard({
+        driver: {
+            display_name:      _shareDriver.display_name,
+            slug:              _shareDriver.slug,
+            career_number:     _shareDriver.career_number,
+            nationality:       _shareDriver.nationality,
+            photo_url:         _shareDriver.photo_url,
+            team_name:         _shareDriver.teams?.name || null,
+            manufacturer_name: _shareDriver.manufacturers?.name || null,
+        },
+        stats: _shareStats,
+        buttonEl: btn,
+    }));
 }
 
 async function loadUpcoming(driverId) {
@@ -879,6 +947,10 @@ async function init() {
         link.style.display = '';
     }
 
+    // Stash a slim copy of the driver row for the share-card button so
+    // we don't refetch when the click handler fires.
+    _shareDriver = driver;
+
     // Tags
     const isTeamLeader = driver.teams?.leader_driver_id && driver.teams.leader_driver_id === driver.id;
     const tagData = [
@@ -914,6 +986,8 @@ async function init() {
 }
 
 let _editableTeam = null;
+let _shareDriver  = null;  // populated in init(), consumed by the share-card click handler
+let _shareStats   = { elo: null, tier: null, points: 0, wins: 0, podiums: 0, races: 0 };
 
 async function loadTeamCard(driver) {
     if (!driver.current_team_id) return;
