@@ -17,11 +17,24 @@
             return `<div class="gtec-elo-empty">No race history yet — your Elo journey starts at the first event.</div>`;
         }
 
-        // Vals + min/max with 5% headroom either side so peaks and
-        // troughs don't kiss the chart edges.
-        const vals    = history.map(h => Number(h.rating_after));
-        const realLo  = Math.min(...vals);
-        const realHi  = Math.max(...vals);
+        // Prepend a synthetic baseline anchor so the trend line starts
+        // from the driver's pre-race rating (1500 for fresh drivers, or
+        // whatever rating_before of the first real event is). Without
+        // this the line would only start *after* the first race, so a
+        // single-event driver gets a flat dot with no movement to look
+        // at. With the anchor, race one is always a visible step.
+        const seasonStart = Number(history[0].rating_before);
+        const enriched = Number.isFinite(seasonStart)
+            ? [{ rating_after: seasonStart, delta: 0, events: { name: 'Season Start' }, _synthetic: true }, ...history]
+            : history.slice();
+
+        const vals    = enriched.map(h => Number(h.rating_after));
+        // Peak / trough markers — restrict to real race results so the
+        // synthetic 1500 anchor never gets the gold-star treatment for
+        // simply being the starting point.
+        const raceVals = history.map(h => Number(h.rating_after));
+        const realLo  = raceVals.length ? Math.min(...raceVals) : Math.min(...vals);
+        const realHi  = raceVals.length ? Math.max(...raceVals) : Math.max(...vals);
         const padded  = Math.max(20, Math.round((realHi - realLo) * 0.15));
         const lo      = Math.max(800,  realLo - padded);
         const hi      = Math.min(3000, realHi + padded);
@@ -43,10 +56,17 @@
         const yFn = v => PT + (1 - (v - lo) / range) * innerH;
 
         const cur   = vals[vals.length - 1];
-        const first = vals[0];
+        const first = vals[0]; // synthetic baseline if it was prepended
         const delta = cur - first;
-        const peakIdx = vals.indexOf(realHi);
-        const lowIdx  = vals.indexOf(realLo);
+        // Find peak / trough in the *real* race section only (enriched
+        // starts at index 1 when the synthetic anchor was prepended) so
+        // the gold-star never lands on the baseline 1500 dot.
+        const realStart = enriched[0]._synthetic ? 1 : 0;
+        let peakIdx = realStart, lowIdx = realStart;
+        for (let i = realStart; i < vals.length; i++) {
+            if (vals[i] > vals[peakIdx]) peakIdx = i;
+            if (vals[i] < vals[lowIdx])  lowIdx  = i;
+        }
 
         // Smooth-ish polyline. For perf + simplicity stick to straight
         // segments — endurance leagues rarely have so many events that a
@@ -73,15 +93,21 @@
         const dots = vals.map((v, i) => {
             const cx = xFn(i).toFixed(1);
             const cy = yFn(v).toFixed(1);
-            const ev = history[i].events || {};
+            const row = enriched[i] || {};
+            const ev = row.events || {};
             const evtName = ev.name ? `${ev.name}` : (ev.round != null ? `Round ${ev.round}` : 'Event');
-            const dlt = history[i].delta;
-            const dStr = dlt != null ? ` (${dlt >= 0 ? '+' : ''}${dlt})` : '';
+            const dlt = row.delta;
+            const dStr = dlt != null && !row._synthetic ? ` (${dlt >= 0 ? '+' : ''}${dlt})` : '';
             const title = `${escXml(evtName)} — ${v}${dStr}`;
-            if (i === peakIdx && vals.length > 1) {
+            if (row._synthetic) {
+                // Smaller hollow ring for the season-start anchor so it
+                // reads as a baseline marker, not a race result.
+                return `<circle cx="${cx}" cy="${cy}" r="3" fill="rgba(255,209,102,0.15)" stroke="rgba(255,209,102,0.55)" stroke-width="1.5"><title>${title}</title></circle>`;
+            }
+            if (i === peakIdx && history.length > 0) {
                 return `<circle cx="${cx}" cy="${cy}" r="5.5" fill="#ffd166" stroke="var(--bg-1)" stroke-width="2" filter="drop-shadow(0 0 5px rgba(255,209,102,0.6))"><title>${title}</title></circle>`;
             }
-            if (i === lowIdx && vals.length > 1 && peakIdx !== lowIdx) {
+            if (i === lowIdx && history.length > 0 && peakIdx !== lowIdx) {
                 return `<circle cx="${cx}" cy="${cy}" r="4" fill="#f87171" stroke="var(--bg-1)" stroke-width="1.5"><title>${title}</title></circle>`;
             }
             return `<circle cx="${cx}" cy="${cy}" r="3" fill="#94a3b8" stroke="var(--bg-1)" stroke-width="1.5"><title>${title}</title></circle>`;
@@ -90,8 +116,9 @@
         const gradId  = 'gtec-elo-grad-' + Math.random().toString(36).slice(2, 8);
         const lineCol = delta > 0 ? '#4ade80' : delta < 0 ? '#f87171' : '#ffd166';
 
-        const meta = vals.length > 1
-            ? `<div class="gtec-elo-meta">
+        // history.length = real race count (excludes the synthetic anchor)
+        const eventCount = history.length;
+        const meta = `<div class="gtec-elo-meta">
                   <span class="gtec-elo-meta-item">
                       <span class="gtec-elo-meta-k">Current</span>
                       <span class="gtec-elo-meta-v">${cur}</span>
@@ -105,18 +132,8 @@
                       <span class="gtec-elo-meta-v" style="color:#f87171">${realLo}</span>
                   </span>
                   <span class="gtec-elo-meta-item" style="margin-left:auto">
-                      <span class="gtec-elo-meta-k">${vals.length} event${vals.length === 1 ? '' : 's'}</span>
+                      <span class="gtec-elo-meta-k">${eventCount} event${eventCount === 1 ? '' : 's'}</span>
                       <span class="gtec-elo-meta-v" style="color:${delta > 0 ? '#4ade80' : delta < 0 ? '#f87171' : 'var(--muted)'}">${delta > 0 ? '+' : ''}${delta}</span>
-                  </span>
-               </div>`
-            : `<div class="gtec-elo-meta">
-                  <span class="gtec-elo-meta-item">
-                      <span class="gtec-elo-meta-k">First Rating</span>
-                      <span class="gtec-elo-meta-v">${cur}</span>
-                  </span>
-                  <span class="gtec-elo-meta-item" style="margin-left:auto">
-                      <span class="gtec-elo-meta-k">Race a second event</span>
-                      <span class="gtec-elo-meta-v" style="font-size:0.78rem">to see your trend</span>
                   </span>
                </div>`;
 
