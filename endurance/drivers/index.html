@@ -464,7 +464,6 @@
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
 <script src="/endurance/assets/gtec-badges.js?v=6"></script>
-<script src="/endurance/assets/gtec-elo-chart.js?v=2"></script>
 <script>
 'use strict';
 const { createClient } = window.supabase;
@@ -877,12 +876,6 @@ async function showProfile() {
                 <div class="stat-item hide-mob"><div class="stat-label">Podiums</div><div class="stat-value">${totals.podiums}</div></div>
                 <div class="stat-item hide-mob"><div class="stat-label">Poles</div><div class="stat-value">${totals.poles}</div></div>
             </div>
-
-            ${ratingHist.length >= 1 && window.renderEloChart ? `
-            <div class="section">
-                <div class="section-title">Rating History</div>
-                ${window.renderEloChart(ratingHist)}
-            </div>` : ''}
 
             ${driver.bio ? `<div class="section"><div class="section-title">Bio</div><div class="bio-text">${esc(driver.bio)}</div></div>` : ''}
 

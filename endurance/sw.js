@@ -3,7 +3,7 @@
 'use strict';
 
 // Bump this string to force every client to refetch their shell.
-const CACHE_NAME = 'gtec-shell-v8';
+const CACHE_NAME = 'gtec-shell-v9';
 
 // Assets to pre-cache on install. Keep this short — fonts and Supabase
 // data are intentionally omitted so they always come fresh. The list is
@@ -28,7 +28,6 @@ const PRECACHE = [
     '/endurance/assets/gtec-footer.js',
     '/endurance/assets/elo-tiers.js?v=3',
     '/endurance/assets/gtec-badges.js?v=6',
-    '/endurance/assets/gtec-elo-chart.js?v=2',
     '/endurance/assets/countries.js',
     '/endurance/assets/gtec-logo.png',
     '/endurance/assets/gtec-icon.svg',
