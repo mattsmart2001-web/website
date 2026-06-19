@@ -1,16 +1,19 @@
-/* GTEC career + victory badges — shared helper used on the public
-   driver profile and the My Profile portal. Categories are defined
-   below; both renderers take a single { starts, wins } stats object
-   and the helper figures out who's earned what. */
+/* GTEC career / victory / circuit badges — shared helper used on the
+   public driver profile and the My Profile portal. Categories are
+   defined below; both renderers take a single
+       { starts, wins, completedCircuits }
+   stats object and the helper figures out who's earned what. */
 (function () {
     'use strict';
 
     // Tier ladders. Highest threshold first so earnedFor() can pick
-    // the top-most badge a driver has unlocked within a category.
+    // the top-most badge a driver has unlocked within a threshold-style
+    // category. Circuit badges use type:'match' instead.
     const CATEGORIES = [
         {
             key: 'career',
             title: 'Career',
+            type: 'threshold',
             stat: 'starts',
             statLabel: 'races',
             badges: [
@@ -25,6 +28,7 @@
         {
             key: 'victories',
             title: 'Victories',
+            type: 'threshold',
             stat: 'wins',
             statLabel: 'wins',
             badges: [
@@ -36,17 +40,60 @@
                 { key: 'first_victory',  name: 'First Victory',  icon: '🎉', threshold:  1, blurb: 'Win your first race' },
             ],
         },
+        {
+            key: 'circuits',
+            title: 'Circuits',
+            type: 'match',
+            stat: 'completedCircuits',  // array of lowercased circuit name strings
+            // Each matcher is a case-insensitive substring tested against
+            // every circuit the driver has classified-finished. First hit
+            // unlocks the badge. Easy to extend — add a row, the public
+            // strip + portal grid both pick it up automatically.
+            badges: [
+                { key: 'spa',          name: 'Spa Survivor',         icon: '🇧🇪', blurb: 'Complete a race at Spa-Francorchamps',     matchers: ['spa', 'francorchamp'] },
+                { key: 'monza',        name: 'Temple Visitor',       icon: '🇮🇹', blurb: 'Complete a race at Monza',                   matchers: ['monza'] },
+                { key: 'suzuka',       name: 'Suzuka Graduate',      icon: '🇯🇵', blurb: 'Complete a race at Suzuka',                  matchers: ['suzuka'] },
+                { key: 'bathurst',     name: 'Mountain Survivor',    icon: '🇦🇺', blurb: 'Complete a race at Mount Panorama / Bathurst', matchers: ['bathurst', 'mount panorama', 'panorama'] },
+                { key: 'nurburgring',  name: 'Green Hell Survivor',  icon: '🇩🇪', blurb: 'Complete a race at the Nürburgring',         matchers: ['nürburgring', 'nurburgring', 'nordschleife'] },
+                { key: 'le_mans',      name: 'Le Mans Finisher',     icon: '🇫🇷', blurb: 'Complete a race at Circuit de la Sarthe / Le Mans', matchers: ['le mans', 'sarthe'] },
+                { key: 'silverstone',  name: 'Silverstone Veteran',  icon: '🇬🇧', blurb: 'Complete a race at Silverstone',             matchers: ['silverstone'] },
+                { key: 'daytona',      name: 'Daytona Survivor',     icon: '🇺🇸', blurb: 'Complete a race at Daytona',                 matchers: ['daytona'] },
+                { key: 'interlagos',   name: 'Interlagos Survivor',  icon: '🇧🇷', blurb: 'Complete a race at Interlagos',              matchers: ['interlagos'] },
+                { key: 'catalunya',    name: 'Catalunya Survivor',   icon: '🇪🇸', blurb: 'Complete a race at Circuit de Catalunya',    matchers: ['catalunya', 'catalonia'] },
+                { key: 'red_bull',     name: 'Red Bull Ring Survivor', icon: '🇦🇹', blurb: 'Complete a race at the Red Bull Ring',     matchers: ['red bull ring'] },
+                { key: 'fuji',         name: 'Fuji Climber',         icon: '🗻', blurb: 'Complete a race at Fuji Speedway',           matchers: ['fuji'] },
+            ],
+        },
     ];
 
-    function earnedFor(cat, value) {
-        const n = Number(value) || 0;
-        return cat.badges
-            .filter(b => n >= b.threshold)
-            .slice()
-            .reverse(); // ascending difficulty for display
+    function badgeIsEarned(cat, badge, stats) {
+        if (cat.type === 'threshold') {
+            return (Number(stats[cat.stat]) || 0) >= badge.threshold;
+        }
+        if (cat.type === 'match') {
+            const completed = Array.isArray(stats[cat.stat]) ? stats[cat.stat] : [];
+            if (!completed.length) return false;
+            return badge.matchers.some(m =>
+                completed.some(c => c.toLowerCase().includes(m.toLowerCase()))
+            );
+        }
+        return false;
     }
 
-    function nextFor(cat, value) {
+    // Returns the badges from `cat` that the driver has earned, in
+    // ascending difficulty order for threshold ladders and in the
+    // declaration order for match-style sets.
+    function earnedFor(cat, stats) {
+        if (cat.type === 'threshold') {
+            return cat.badges.filter(b => (Number(stats[cat.stat]) || 0) >= b.threshold).slice().reverse();
+        }
+        return cat.badges.filter(b => badgeIsEarned(cat, b, stats)).slice().reverse();
+    }
+
+    // For threshold ladders, returns the next unlock + how far away.
+    // For match-style sets there's no ladder so returns null.
+    function nextThreshold(cat, value) {
+        if (cat.type !== 'threshold') return null;
         const n = Number(value) || 0;
         const remaining = cat.badges
             .filter(b => n < b.threshold)
@@ -79,7 +126,7 @@
     function renderBadgeStrip(stats) {
         stats = stats || {};
         const sections = CATEGORIES.map(cat => {
-            const earned = earnedFor(cat, stats[cat.stat]);
+            const earned = earnedFor(cat, stats);
             if (!earned.length) return '';
             return earned.map(b => badgeIcon(b)).join('');
         }).filter(Boolean);
@@ -88,37 +135,72 @@
     }
 
     // Portal-style full grid — every category, every badge, with locked
-    // ones desaturated + a conic progress ring filling 0 → 100% as the
-    // driver approaches the threshold. Each category gets its own
-    // sub-heading and a "X / Y to NEXT" footer line.
+    // ones desaturated + a conic progress ring (threshold ladders only)
+    // filling 0 → 100% as the driver approaches the next unlock. Each
+    // category gets its own sub-heading and a footer line.
     function renderBadgeGrid(stats) {
         stats = stats || {};
         return CATEGORIES.map(cat => {
-            const n = Number(stats[cat.stat]) || 0;
-            const ordered = cat.badges.slice().reverse(); // Debut → Legend, easiest first
-            const cards = ordered.map(b => {
-                const locked = n < b.threshold;
-                if (!locked) return badgeIcon(b);
-                const prev = b.threshold === ordered[0].threshold ? 0
-                    : cat.badges.find(x => x.threshold < b.threshold).threshold;
-                const range = b.threshold - prev;
-                const intoRange = Math.max(0, n - prev);
-                const progress = Math.max(0, Math.min(1, intoRange / range));
-                return badgeIcon(b, { locked: true, progress });
-            }).join('');
-
-            const next = nextFor(cat, n);
-            const footer = next
-                ? `<div class="gtec-badge-next">🏁 <strong>${n} / ${next.threshold}</strong> ${cat.statLabel} to <strong>${next.name}</strong></div>`
-                : `<div class="gtec-badge-next">Every ${cat.title.toLowerCase()} badge earned.</div>`;
-
-            return `
-                <div class="gtec-badge-section">
-                    <div class="gtec-badge-section-title">${cat.title}</div>
-                    <div class="gtec-badge-grid">${cards}</div>
-                    ${footer}
-                </div>`;
+            if (cat.type === 'threshold') return renderThresholdSection(cat, stats);
+            if (cat.type === 'match')     return renderMatchSection(cat, stats);
+            return '';
         }).join('');
+    }
+
+    function renderThresholdSection(cat, stats) {
+        const n = Number(stats[cat.stat]) || 0;
+        const ordered = cat.badges.slice().reverse(); // easiest first
+        const cards = ordered.map(b => {
+            const locked = n < b.threshold;
+            if (!locked) return badgeIcon(b);
+            const prev = b.threshold === ordered[0].threshold ? 0
+                : cat.badges.find(x => x.threshold < b.threshold).threshold;
+            const range = b.threshold - prev;
+            const intoRange = Math.max(0, n - prev);
+            const progress = Math.max(0, Math.min(1, intoRange / range));
+            return badgeIcon(b, { locked: true, progress });
+        }).join('');
+
+        const next = nextThreshold(cat, n);
+        const footer = next
+            ? `<div class="gtec-badge-next">🏁 <strong>${n} / ${next.threshold}</strong> ${cat.statLabel} to <strong>${next.name}</strong></div>`
+            : `<div class="gtec-badge-next">Every ${cat.title.toLowerCase()} badge earned.</div>`;
+
+        return `
+            <div class="gtec-badge-section">
+                <div class="gtec-badge-section-title">${cat.title}</div>
+                <div class="gtec-badge-grid">${cards}</div>
+                ${footer}
+            </div>`;
+    }
+
+    function renderMatchSection(cat, stats) {
+        // Show declared order (Spa, Monza, Suzuka…) instead of the
+        // reverse used for threshold ladders so the list feels like a
+        // tour itinerary rather than a podium.
+        const ordered = cat.badges.slice();
+        let earnedCount = 0;
+        const cards = ordered.map(b => {
+            if (badgeIsEarned(cat, b, stats)) {
+                earnedCount++;
+                return badgeIcon(b);
+            }
+            return badgeIcon(b, { locked: true });
+        }).join('');
+
+        const total  = ordered.length;
+        const footer = earnedCount === 0
+            ? `<div class="gtec-badge-next">No circuit badges yet — finish a race to claim your first.</div>`
+            : earnedCount === total
+                ? `<div class="gtec-badge-next">Every circuit conquered. Untouchable.</div>`
+                : `<div class="gtec-badge-next">🏁 <strong>${earnedCount} / ${total}</strong> circuits visited</div>`;
+
+        return `
+            <div class="gtec-badge-section">
+                <div class="gtec-badge-section-title">${cat.title}</div>
+                <div class="gtec-badge-grid">${cards}</div>
+                ${footer}
+            </div>`;
     }
 
     // Inject CSS once.

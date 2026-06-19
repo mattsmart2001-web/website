@@ -463,7 +463,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=3"></script>
+<script src="/endurance/assets/gtec-badges.js?v=4"></script>
 <script>
 'use strict';
 const { createClient } = window.supabase;
@@ -672,7 +672,7 @@ async function showProfile() {
             finish_position, status, points_awarded, pole_point, fastest_lap_point, laps_driven,
             results(
                 entries(car_number, teams(name)),
-                events(round, name, starts_at, seasons(year, name))
+                events(round, name, starts_at, circuit_name, seasons(year, name))
             )
         `)
         .eq('driver_id', driver.id),
@@ -694,6 +694,15 @@ async function showProfile() {
         .filter(r => r.results?.events?.starts_at)
         .sort((a, b) => new Date(b.results.events.starts_at) - new Date(a.results.events.starts_at))
         .slice(0, 15);
+
+    // Distinct circuit names the driver has classified-finished, used
+    // by the Circuits badge category to decide which flags to light up.
+    const completedCircuits = Array.from(new Set(
+        rawHistory
+            .filter(r => (r.status || 'classified') === 'classified')
+            .map(r => (r.results?.events?.circuit_name || '').toLowerCase())
+            .filter(Boolean)
+    ));
 
     // Current rating
     const currentRating = ratingHist.length ? ratingHist[ratingHist.length - 1].rating_after : 1500;
@@ -855,7 +864,7 @@ async function showProfile() {
                     ${driver.career_number ? `<div class="profile-number">#${driver.career_number}</div>` : ''}
                     <div class="profile-name">${esc(driver.display_name)}</div>
                     <div class="profile-tags">${tagsHTML}</div>
-                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins }) : ''}
+                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits }) : ''}
                 </div>
             </div>
 
