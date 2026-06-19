@@ -50,18 +50,14 @@
             // unlocks the badge. Easy to extend — add a row, the public
             // strip + portal grid both pick it up automatically.
             badges: [
-                { key: 'spa',          name: 'Spa Survivor',         icon: '🇧🇪', blurb: 'Complete a race at Spa-Francorchamps',     matchers: ['spa', 'francorchamp'] },
-                { key: 'monza',        name: 'Temple Visitor',       icon: '🇮🇹', blurb: 'Complete a race at Monza',                   matchers: ['monza'] },
-                { key: 'suzuka',       name: 'Suzuka Graduate',      icon: '🇯🇵', blurb: 'Complete a race at Suzuka',                  matchers: ['suzuka'] },
-                { key: 'bathurst',     name: 'Mountain Survivor',    icon: '🇦🇺', blurb: 'Complete a race at Mount Panorama / Bathurst', matchers: ['bathurst', 'mount panorama', 'panorama'] },
-                { key: 'nurburgring',  name: 'Green Hell Survivor',  icon: '🇩🇪', blurb: 'Complete a race at the Nürburgring',         matchers: ['nürburgring', 'nurburgring', 'nordschleife'] },
+                { key: 'spa',          name: 'Spa Survivor',         icon: '🇧🇪', blurb: 'Complete a race at Spa-Francorchamps',         matchers: ['spa', 'francorchamp'] },
+                { key: 'monza',        name: 'Temple Visitor',       icon: '🇮🇹', blurb: 'Complete a race at Monza',                       matchers: ['monza'] },
+                { key: 'suzuka',       name: 'Suzuka Graduate',      icon: '🇯🇵', blurb: 'Complete a race at Suzuka',                      matchers: ['suzuka'] },
+                { key: 'bathurst',     name: 'Mountain Survivor',    icon: '🇦🇺', blurb: 'Complete a race at Mount Panorama / Bathurst',   matchers: ['bathurst', 'mount panorama', 'panorama'] },
+                { key: 'daytona',      name: 'Daytona Survivor',     icon: '🇺🇸', blurb: 'Complete a race at Daytona',                     matchers: ['daytona'] },
+                { key: 'interlagos',   name: 'Interlagos Survivor',  icon: '🇧🇷', blurb: 'Complete a race at Interlagos',                  matchers: ['interlagos'] },
+                { key: 'nurburgring',  name: 'Green Hell Survivor',  icon: '🇩🇪', blurb: 'Complete a race at the Nürburgring Nordschleife', matchers: ['nürburgring', 'nurburgring', 'nordschleife', 'nords'] },
                 { key: 'le_mans',      name: 'Le Mans Finisher',     icon: '🇫🇷', blurb: 'Complete a race at Circuit de la Sarthe / Le Mans', matchers: ['le mans', 'sarthe'] },
-                { key: 'silverstone',  name: 'Silverstone Veteran',  icon: '🇬🇧', blurb: 'Complete a race at Silverstone',             matchers: ['silverstone'] },
-                { key: 'daytona',      name: 'Daytona Survivor',     icon: '🇺🇸', blurb: 'Complete a race at Daytona',                 matchers: ['daytona'] },
-                { key: 'interlagos',   name: 'Interlagos Survivor',  icon: '🇧🇷', blurb: 'Complete a race at Interlagos',              matchers: ['interlagos'] },
-                { key: 'catalunya',    name: 'Catalunya Survivor',   icon: '🇪🇸', blurb: 'Complete a race at Circuit de Catalunya',    matchers: ['catalunya', 'catalonia'] },
-                { key: 'red_bull',     name: 'Red Bull Ring Survivor', icon: '🇦🇹', blurb: 'Complete a race at the Red Bull Ring',     matchers: ['red bull ring'] },
-                { key: 'fuji',         name: 'Fuji Climber',         icon: '🗻', blurb: 'Complete a race at Fuji Speedway',           matchers: ['fuji'] },
             ],
         },
     ];
