@@ -143,17 +143,29 @@
 
         /* ---------- career number badge (top-right of photo) ---------- */
         if (driver.career_number != null) {
-            const numCx = photoCx + photoR + 8;
-            const numCy = photoCy - photoR + 28;
+            const numText = '#' + driver.career_number;
+            // Auto-size the coin so a 3-digit number doesn't blow it out
+            // and a 1-digit number doesn't leave a yawning gap.
+            let coinR  = 32;
+            let coinFs = 26;
+            if (numText.length === 4) { coinR = 36; coinFs = 24; }  // e.g. #888
+            if (numText.length >= 5)  { coinR = 40; coinFs = 22; }  // 4-digit numbers
+            const numCx = photoCx + photoR - coinR + 24;
+            const numCy = photoCy - photoR + coinR - 8;
+            // Dark inner ring so the coin reads as separate from the halo.
+            ctx.fillStyle = '#0a0e15';
+            ctx.beginPath();
+            ctx.arc(numCx, numCy, coinR + 3, 0, Math.PI * 2);
+            ctx.fill();
             ctx.fillStyle = '#ffd166';
             ctx.beginPath();
-            ctx.arc(numCx, numCy, 44, 0, Math.PI * 2);
+            ctx.arc(numCx, numCy, coinR, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#1a1300';
-            ctx.font = '900 38px "Anton", Impact, sans-serif';
+            ctx.font = `900 ${coinFs}px "Anton", Impact, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('#' + driver.career_number, numCx, numCy + 2);
+            ctx.fillText(numText, numCx, numCy + 1);
             ctx.textBaseline = 'alphabetic';
         }
 
@@ -202,29 +214,44 @@
 
         grid.forEach((cell, i) => {
             const cx = 80 + colW * i + colW / 2;
-            // Divider line (skip on first cell).
+            // Divider line (skip on first cell). Made more prominent —
+            // the previous 0.18 alpha was so faint it disappeared, so
+            // long Elo values flowed visually into the next cell.
             if (i > 0) {
-                ctx.strokeStyle = 'rgba(255,209,102,0.18)';
+                ctx.strokeStyle = 'rgba(255,209,102,0.32)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(80 + colW * i, gridY + 30);
                 ctx.lineTo(80 + colW * i, gridY + gridH - 30);
                 ctx.stroke();
             }
-            // Value
+            // Value — auto-shrink so 4-digit Elos don't overflow the
+            // column. Start big, shrink by 4px until it fits with 18px
+            // breathing room each side.
+            const maxW = colW - 36;
+            let valFs = 76;
+            ctx.font = `900 ${valFs}px "Anton", Impact, sans-serif`;
+            while (ctx.measureText(cell.v).width > maxW && valFs > 36) {
+                valFs -= 4;
+                ctx.font = `900 ${valFs}px "Anton", Impact, sans-serif`;
+            }
             ctx.fillStyle = '#ffd166';
-            ctx.font = '900 84px "Anton", Impact, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(cell.v, cx, gridY + 110);
+            ctx.fillText(cell.v, cx, gridY + 108);
             // Label
             ctx.fillStyle = 'rgba(148,163,184,0.85)';
-            ctx.font = '800 20px "Orbitron", system-ui, sans-serif';
-            ctx.fillText(cell.k, cx, gridY + 150);
-            // Optional sub-line (tier under Elo)
+            ctx.font = '800 18px "Orbitron", system-ui, sans-serif';
+            ctx.fillText(cell.k, cx, gridY + 148);
+            // Optional sub-line (tier under Elo) — auto-shrink too.
             if (cell.sub) {
+                let subFs = 16;
+                ctx.font = `700 ${subFs}px "Orbitron", system-ui, sans-serif`;
+                while (ctx.measureText(cell.sub.toUpperCase()).width > maxW && subFs > 10) {
+                    subFs -= 1;
+                    ctx.font = `700 ${subFs}px "Orbitron", system-ui, sans-serif`;
+                }
                 ctx.fillStyle = 'rgba(255,209,102,0.85)';
-                ctx.font = '700 18px "Orbitron", system-ui, sans-serif';
-                ctx.fillText(cell.sub.toUpperCase(), cx, gridY + 178);
+                ctx.fillText(cell.sub.toUpperCase(), cx, gridY + 174);
             }
         });
 
