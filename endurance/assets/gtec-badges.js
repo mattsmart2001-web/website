@@ -58,6 +58,10 @@
                 { key: 'interlagos',   name: 'Interlagos Survivor',  icon: '🇧🇷', blurb: 'Complete a race at Interlagos',                  matchers: ['interlagos'] },
                 { key: 'nurburgring',  name: 'Green Hell Survivor',  icon: '🇩🇪', blurb: 'Complete a race at the Nürburgring Nordschleife', matchers: ['nürburgring', 'nurburgring', 'nordschleife', 'nords'] },
                 { key: 'le_mans',      name: 'Le Mans Finisher',     icon: '🇫🇷', blurb: 'Complete a race at Circuit de la Sarthe / Le Mans', matchers: ['le mans', 'sarthe'] },
+                // Capstone. Auto-unlocks the moment every other badge in
+                // this category is earned, so it doesn't need its own
+                // matchers — badgeIsEarned() resolves it dynamically.
+                { key: 'grand_tour',   name: 'Grand Tour',           icon: '🏁', blurb: 'Complete every event on the calendar',           requiresAll: true },
             ],
         },
     ];
@@ -67,9 +71,17 @@
             return (Number(stats[cat.stat]) || 0) >= badge.threshold;
         }
         if (cat.type === 'match') {
+            // Capstone: earned when every other badge in the category is
+            // earned. Lets us add a "complete-the-set" trophy without
+            // hard-wiring which badges count toward it.
+            if (badge.requiresAll) {
+                return cat.badges
+                    .filter(b => b.key !== badge.key)
+                    .every(b => badgeIsEarned(cat, b, stats));
+            }
             const completed = Array.isArray(stats[cat.stat]) ? stats[cat.stat] : [];
             if (!completed.length) return false;
-            return badge.matchers.some(m =>
+            return (badge.matchers || []).some(m =>
                 completed.some(c => c.toLowerCase().includes(m.toLowerCase()))
             );
         }
