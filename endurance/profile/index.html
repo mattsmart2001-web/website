@@ -323,6 +323,12 @@
         </div>
     </div>
 
+    <!-- Elo history chart -->
+    <div class="card" id="card-elo-chart" style="display:none">
+        <div class="card-title">Rating History</div>
+        <div id="elo-chart"></div>
+    </div>
+
     <!-- Career badges -->
     <div class="card" id="card-badges" style="display:none">
         <div class="card-title">Career Badges</div>
@@ -477,6 +483,7 @@
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
 <script src="/endurance/assets/gtec-badges.js?v=6"></script>
+<script src="/endurance/assets/gtec-elo-chart.js?v=1"></script>
 <script src="../assets/countries.js"></script>
 <script>
 'use strict';
@@ -790,6 +797,17 @@ async function loadBadges(driverId) {
     document.getElementById('card-badges').style.display = '';
 }
 
+async function loadEloChart(driverId) {
+    if (!window.renderEloChart) return;
+    const { data: hist } = await sb.from('driver_ratings')
+        .select('rating_before, rating_after, delta, event_id, events(round, name, starts_at)')
+        .eq('driver_id', driverId)
+        .order('created_at', { ascending: true });
+    if (!hist || !hist.length) return;
+    document.getElementById('elo-chart').innerHTML = window.renderEloChart(hist);
+    document.getElementById('card-elo-chart').style.display = '';
+}
+
 async function loadRecentResults(driverId) {
     const { data: eds } = await sb.from('entry_drivers')
         .select('entry_id')
@@ -909,6 +927,7 @@ async function init() {
     loadRecentResults(driver.id);
     loadInbox(driver.id);
     loadBadges(driver.id);
+    loadEloChart(driver.id);
     loadTeamingSections(driver);
     loadTeamCard(driver);
 }
