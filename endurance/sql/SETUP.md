@@ -141,6 +141,7 @@ Always apply in this order:
 59. `59_event_refuel_and_slipstream.sql` — two more per-event briefing fields: refuel rate (1–10 L/s) and slipstream (off / weak / real / strong)
 60. `60_rename_lobby_to_split_in_notifications.sql` — notification subject + body now say "Split N" instead of "Lobby N" to match the rebranded UI vocabulary
 61. `61_secret_badges.sql` — server-side detector for hidden achievements (Giant Killer / David vs Goliath / Giant Slayer) returned as a single jsonb RPC
+62. `62_more_secret_badges.sql` — adds Unfinished Business / Phoenix / Comeback King / Last to First / Mr Consistent to the same RPC
 
 ---
 
