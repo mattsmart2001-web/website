@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="GTEC — A Gran Turismo 7 endurance championship. Launches October 2026.">
+    <meta name="description" content="GTEC is the team-based Gran Turismo 7 endurance championship: multi-split racing across the world's greatest circuits (Spa, Monza, Suzuka, Bathurst, Daytona, Interlagos, Nordschleife, Le Mans) with full stewarding, live championship standings, driver ratings and race reports. Inaugural GT7 endurance season launches October 2026.">
+    <meta name="keywords" content="GTEC, GT7 endurance, Gran Turismo 7 endurance championship, GT7 league, GT7 racing series, sim racing championship">
+    <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="theme-color" content="#0a0e15">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/">
 
-    <title>GTEC — A Gran Turismo 7 Endurance Championship</title>
+    <title>GTEC — Gran Turismo 7 (GT7) Endurance Championship</title>
 
     <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
     <link rel="manifest" href="/endurance/assets/manifest.json">
@@ -21,14 +24,62 @@
          file with a proper 1200×630 card when ready). -->
     <meta property="og:type"        content="website">
     <meta property="og:site_name"   content="GTEC">
-    <meta property="og:title"       content="GTEC — A Gran Turismo 7 Endurance Championship">
-    <meta property="og:description" content="A multi-season, team-based endurance championship for Gran Turismo 7. Run by SparksTheory.">
+    <meta property="og:title"       content="GTEC — Gran Turismo 7 (GT7) Endurance Championship">
+    <meta property="og:description" content="The team-based Gran Turismo 7 endurance championship. Multi-split racing on the world's greatest circuits with full stewarding, live standings and driver ratings. Season 1 launches October 2026.">
     <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
     <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/">
     <meta name="twitter:card"        content="summary_large_image">
-    <meta name="twitter:title"       content="GTEC — A Gran Turismo 7 Endurance Championship">
-    <meta name="twitter:description" content="A multi-season, team-based endurance championship for Gran Turismo 7.">
+    <meta name="twitter:title"       content="GTEC — Gran Turismo 7 (GT7) Endurance Championship">
+    <meta name="twitter:description" content="The team-based Gran Turismo 7 endurance championship. Season 1 launches October 2026.">
     <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+
+    <!-- Structured data: helps Google understand GTEC is a real organisation
+         with a real championship, and lets it parse the inaugural event. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SportsOrganization",
+          "@id": "https://sparkstheory.co.uk/endurance/#org",
+          "name": "GTEC",
+          "alternateName": ["Gran Turismo 7 Endurance Championship", "GT7 Endurance Championship"],
+          "url": "https://sparkstheory.co.uk/endurance/",
+          "logo": "https://sparkstheory.co.uk/endurance/assets/gtec-logo.png",
+          "sport": "Sim Racing",
+          "description": "GTEC is a team-based endurance championship for Gran Turismo 7 (GT7), built around real endurance circuits with full stewarding, live championship standings and driver ratings.",
+          "parentOrganization": {
+            "@type": "Organization",
+            "name": "SparksTheory",
+            "url": "https://sparkstheory.co.uk/"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://sparkstheory.co.uk/endurance/#site",
+          "name": "GTEC",
+          "alternateName": "GT7 Endurance Championship",
+          "url": "https://sparkstheory.co.uk/endurance/",
+          "publisher": { "@id": "https://sparkstheory.co.uk/endurance/#org" }
+        },
+        {
+          "@type": "SportsEvent",
+          "name": "GTEC Season 1",
+          "description": "The inaugural GTEC season: an eight-round Gran Turismo 7 endurance championship across Spa, Monza, Suzuka, Bathurst, Daytona, Interlagos, Nordschleife and Le Mans.",
+          "startDate": "2026-10-10",
+          "sport": "Sim Racing",
+          "organizer": { "@id": "https://sparkstheory.co.uk/endurance/#org" },
+          "eventStatus": "https://schema.org/EventScheduled",
+          "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+          "url": "https://sparkstheory.co.uk/endurance/calendar/",
+          "location": {
+            "@type": "VirtualLocation",
+            "url": "https://sparkstheory.co.uk/endurance/"
+          }
+        }
+      ]
+    }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;600;700;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -234,6 +285,14 @@
             margin-bottom: 1.5rem;
             text-indent: 0.5em;
         }
+        .gtec-title-h1 {
+            margin: 0;
+            padding: 0;
+            line-height: 1;
+            font-weight: inherit;
+            font-size: inherit;
+            text-align: center;
+        }
         .gtec-title {
             display: block;
             width: clamp(260px, 70vw, 720px);
@@ -241,6 +300,15 @@
             max-width: 100%;
             margin: 0 auto 0.5rem;
             filter: drop-shadow(0 8px 24px rgba(0,0,0,0.45));
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            white-space: nowrap;
+            border: 0;
         }
         .gtec-tagline {
             font-family: 'Anton', sans-serif;
@@ -735,7 +803,10 @@
     </a>
     <span class="gtec-status">Launching Oct 2026</span>
     <div class="gtec-kicker">Gran Turismo 7</div>
-    <img class="gtec-title" src="/endurance/assets/gtec-logo.png" alt="GTEC">
+    <h1 class="gtec-title-h1">
+        <img class="gtec-title" src="/endurance/assets/gtec-logo.png" alt="GTEC — Gran Turismo 7 Endurance Championship">
+        <span class="sr-only">GTEC — Gran Turismo 7 (GT7) Endurance Championship</span>
+    </h1>
     <div class="gtec-tagline">Endurance racing, properly</div>
     <div class="gtec-lead">
         <p><strong style="color:var(--text)">GTEC isn't just an endurance championship.</strong></p>

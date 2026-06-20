@@ -70,67 +70,67 @@
          ============================================================ -->
     <url>
         <loc>https://sparkstheory.co.uk/endurance/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.95</priority>
     </url>
     <url>
         <loc>https://sparkstheory.co.uk/endurance/calendar/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.9</priority>
     </url>
     <url>
         <loc>https://sparkstheory.co.uk/endurance/standings/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.9</priority>
     </url>
     <url>
         <loc>https://sparkstheory.co.uk/endurance/results/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.9</priority>
     </url>
     <url>
         <loc>https://sparkstheory.co.uk/endurance/drivers/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.85</priority>
     </url>
     <url>
         <loc>https://sparkstheory.co.uk/endurance/teams/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.85</priority>
     </url>
     <url>
         <loc>https://sparkstheory.co.uk/endurance/stats/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.7</priority>
     </url>
     <url>
         <loc>https://sparkstheory.co.uk/endurance/news/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.7</priority>
     </url>
     <url>
         <loc>https://sparkstheory.co.uk/endurance/media/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.65</priority>
     </url>
     <url>
         <loc>https://sparkstheory.co.uk/endurance/rules/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.6</priority>
     </url>
     <url>
         <loc>https://sparkstheory.co.uk/endurance/apply/</loc>
-        <lastmod>2026-06-14</lastmod>
+        <lastmod>2026-06-20</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
