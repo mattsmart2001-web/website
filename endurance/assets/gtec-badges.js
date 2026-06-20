@@ -343,8 +343,25 @@
             .gtec-badge-strip {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 0.55rem;
+                gap: 0.4rem;
                 margin: 0.85rem 0 0.5rem;
+            }
+            /* Strip tiles are noticeably smaller than the portal grid
+               so a profile with a full collection doesn't sprawl down
+               the page. The grid keeps its larger sizing for browsing. */
+            .gtec-badge-strip .gtec-badge {
+                min-width: 64px;
+                padding: 0.4rem 0.35rem 0.35rem;
+                gap: 0.25rem;
+            }
+            .gtec-badge-strip .gtec-badge-icon {
+                width: 34px; height: 34px;
+                font-size: 1.05rem;
+                border-width: 1.5px;
+            }
+            .gtec-badge-strip .gtec-badge-label {
+                font-size: 0.48rem;
+                letter-spacing: 0.14em;
             }
             .gtec-badge-section + .gtec-badge-section { margin-top: 1.5rem; }
             .gtec-badge-section-title {
