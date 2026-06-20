@@ -824,6 +824,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/countries.js"></script>
 <script src="../assets/gtec-config.js"></script>
+<script src="../assets/gtec-badges.js?v=11"></script>
 <script>
 'use strict';
 
@@ -1760,7 +1761,36 @@ function driverForm(d = {}) {
             <label>Bio</label>
             <textarea name="bio" placeholder="Driver bio…">${esc(d.bio)}</textarea>
         </div>
+
+        <div style="margin-top:1rem;padding-top:0.85rem;border-top:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.15em;color:var(--gold);text-transform:uppercase;margin-bottom:0.65rem">Manual Badges <span style="color:var(--muted);font-weight:normal;letter-spacing:0.08em;text-transform:none">(overrides auto-detection)</span></div>
+            ${manualBadgePicker(Array.isArray(d.manual_badges) ? d.manual_badges : [])}
+        </div>
     </form>`;
+}
+
+// Renders a checkbox grid keyed off window.BADGE_CATEGORIES (loaded
+// from gtec-badges.js) so the picker stays in lockstep with whatever
+// badges exist on the front-end without manual duplication. Each
+// checkbox carries the badge key as its value — saveDriver scoops the
+// :checked set straight into a text[] for the manual_badges column.
+function manualBadgePicker(granted) {
+    const cats = (window.BADGE_CATEGORIES || []);
+    if (!cats.length) {
+        return '<div style="color:var(--muted);font-size:0.82rem">Badge list unavailable — make sure gtec-badges.js loaded.</div>';
+    }
+    const set = new Set(granted || []);
+    return cats.map(cat => `
+        <div style="margin-bottom:0.85rem">
+            <div style="font-size:0.6rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem">${esc(cat.title)}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.35rem 0.85rem">
+                ${cat.badges.map(b => `
+                    <label style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.82rem;cursor:pointer;user-select:none">
+                        <input type="checkbox" name="manual_badges" value="${esc(b.key)}" ${set.has(b.key) ? 'checked' : ''} style="accent-color:var(--gold);width:14px;height:14px">
+                        <span>${b.icon || ''} ${esc(b.name)}</span>
+                    </label>`).join('')}
+            </div>
+        </div>`).join('');
 }
 
 function syncDriverMfrToTeam() {
@@ -1884,6 +1914,10 @@ async function saveDriver(id) {
             return;
         }
     }
+    // Multi-checkbox group: getFormData collapses these to a single
+    // boolean, so we read the :checked set straight from the DOM.
+    const manualBadges = Array.from(document.querySelectorAll('#entity-form input[name="manual_badges"]:checked')).map(el => el.value);
+
     const payload = {
         display_name: d.display_name, slug: d.slug, psn_id: d.psn_id,
         discord_username: d.discord_username || null,
@@ -1891,6 +1925,7 @@ async function saveDriver(id) {
         current_team_id: d.current_team_id || null, current_manufacturer_id: d.current_manufacturer_id || null,
         joined_at: d.joined_at || null, bio: d.bio,
         gt7_dr_rating: d.gt7_dr_rating || null, gt7_sr_rating: d.gt7_sr_rating || null,
+        manual_badges: manualBadges,
     };
     const { error } = id
         ? await sb.from('drivers').update(payload).eq('id', id)

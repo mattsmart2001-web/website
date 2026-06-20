@@ -117,6 +117,11 @@
     ];
 
     function badgeIsEarned(cat, badge, stats) {
+        // Admin override — manual_badges on the driver row is a text[]
+        // of badge keys an organiser has granted by hand to paper over
+        // missed results / data-entry mishaps. Trumps every other rule.
+        const manual = Array.isArray(stats.manualBadges) ? stats.manualBadges : [];
+        if (manual.includes(badge.key)) return true;
         // Generic per-badge evaluator — used by Titles and ready for any
         // future "this is too bespoke for the threshold/match shape" badge.
         if (typeof badge.evalFn === 'function') {
@@ -147,9 +152,8 @@
     // ascending difficulty order for threshold ladders and in the
     // declaration order for match-style sets.
     function earnedFor(cat, stats) {
-        if (cat.type === 'threshold') {
-            return cat.badges.filter(b => (Number(stats[cat.stat]) || 0) >= b.threshold).slice().reverse();
-        }
+        // Use badgeIsEarned for every category so admin manual_badges
+        // unlocks ripple into the public strip too.
         return cat.badges.filter(b => badgeIsEarned(cat, b, stats)).slice().reverse();
     }
 
@@ -251,7 +255,7 @@
         const n = Number(stats[cat.stat]) || 0;
         const ordered = cat.badges.slice().reverse(); // easiest first
         const cards = ordered.map(b => {
-            const locked = n < b.threshold;
+            const locked = !badgeIsEarned(cat, b, stats);
             if (!locked) return badgeIcon(b);
             const prev = b.threshold === ordered[0].threshold ? 0
                 : cat.badges.find(x => x.threshold < b.threshold).threshold;
