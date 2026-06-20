@@ -212,6 +212,31 @@
         roundRect(ctx, 80, gridY, W - 160, gridH, 18);
         ctx.stroke();
 
+        const maxW = colW - 30;
+        const eloIdx = grid.findIndex(c => c.k === 'ELO');
+        const hasLetterSpacing = ('letterSpacing' in ctx);
+
+        // Helper: measure a value with the right kerning for its column.
+        // ELO uses tighter letter-spacing so a 4-digit number fits at
+        // roughly the same visual size as the single-digit values.
+        const measureVal = (text, fs, tight) => {
+            ctx.font = `900 ${fs}px "Anton", Impact, sans-serif`;
+            if (hasLetterSpacing) ctx.letterSpacing = tight ? '-2px' : '0px';
+            const w = ctx.measureText(text).width;
+            if (hasLetterSpacing) ctx.letterSpacing = '0px';
+            return w;
+        };
+
+        // Pick a single font size that lets *every* value fit, so the
+        // ELO doesn't end up much smaller than the WINS / PODIUMS cells
+        // because of auto-shrink. Start big, shrink uniformly.
+        let valFs = 78;
+        while (valFs > 36) {
+            const allFit = grid.every((c, idx) => measureVal(c.v, valFs, idx === eloIdx) <= maxW);
+            if (allFit) break;
+            valFs -= 2;
+        }
+
         grid.forEach((cell, i) => {
             const cx = 80 + colW * i + colW / 2;
             // Divider line (skip on first cell). Made more prominent —
@@ -225,19 +250,16 @@
                 ctx.lineTo(80 + colW * i, gridY + gridH - 30);
                 ctx.stroke();
             }
-            // Value — auto-shrink so 4-digit Elos don't overflow the
-            // column. Start big, shrink by 4px until it fits with 18px
-            // breathing room each side.
-            const maxW = colW - 36;
-            let valFs = 76;
+            // Value — uniform font size across every cell, with tighter
+            // kerning on the ELO so its 4-digit number reads at the same
+            // visual size as the single-digit ones beside it.
+            const tight = (i === eloIdx);
             ctx.font = `900 ${valFs}px "Anton", Impact, sans-serif`;
-            while (ctx.measureText(cell.v).width > maxW && valFs > 36) {
-                valFs -= 4;
-                ctx.font = `900 ${valFs}px "Anton", Impact, sans-serif`;
-            }
+            if (hasLetterSpacing) ctx.letterSpacing = tight ? '-2px' : '0px';
             ctx.fillStyle = '#ffd166';
             ctx.textAlign = 'center';
             ctx.fillText(cell.v, cx, gridY + 108);
+            if (hasLetterSpacing) ctx.letterSpacing = '0px';
             // Label
             ctx.fillStyle = 'rgba(148,163,184,0.85)';
             ctx.font = '800 18px "Orbitron", system-ui, sans-serif';
@@ -391,7 +413,7 @@
         overlay.innerHTML = `
             <div class="gtec-share-modal" role="dialog" aria-label="Share driver card">
                 <div class="gtec-share-head">
-                    <div class="gtec-share-title">Share Card</div>
+                    <div class="gtec-share-title">Share Driver Card</div>
                     <button class="gtec-share-close" data-act="close" aria-label="Close">✕</button>
                 </div>
                 <div class="gtec-share-preview"><img src="${previewUrl}" alt="${escAttr(driver.display_name || 'Driver')} — GTEC"></div>
