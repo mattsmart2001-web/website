@@ -3925,12 +3925,15 @@ async function fetchRaceReportData(eventId, seasonId) {
         if (teamId) priorByTeam.set(teamId, (priorByTeam.get(teamId) || 0) + pts);
     });
 
-    // Current driver standings for this season come from the view; we
-    // also need names which the view conveniently joins.
-    const { data: standingsNow = [] } = await sb.from('driver_standings')
+    // Current driver standings for this season. Sort with the same
+    // comparator the public standings page uses so the article's order
+    // matches what visitors see on /endurance/standings/.
+    const { data: standingsRaw = [] } = await sb.from('driver_standings')
         .select('driver_id, driver_name, driver_slug, points, wins, podiums, team_name')
-        .eq('season_id', seasonId)
-        .order('points', { ascending: false });
+        .eq('season_id', seasonId);
+    const standingsCmp = (a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums);
+    const standingsNow = (standingsRaw || []).slice().sort(standingsCmp);
+    const teamStandingsNow = (teamStRes.data || []).slice().sort(standingsCmp);
 
     return {
         event,
@@ -3938,7 +3941,7 @@ async function fetchRaceReportData(eventId, seasonId) {
         results,
         perDriver,
         standingsNow,
-        teamStandingsNow: teamStRes.data || [],
+        teamStandingsNow,
         priorByDriver,
         priorByTeam,
     };
@@ -4403,7 +4406,8 @@ function buildRaceReport(d) {
     // ---- Constructors ----
     if (teamStandingsNow.length) {
         html.push(`<div class="kicker">Constructors</div><h2>The Team Battle</h2>`);
-        const teamSorted = teamStandingsNow.slice().sort((a, b) => Number(b.points) - Number(a.points));
+        // teamStandingsNow is already sorted with the standings page's comparator.
+        const teamSorted = teamStandingsNow.slice();
         const teamLeader = teamSorted[0];
         const teamSecond = teamSorted[1];
         if (teamLeader) {
