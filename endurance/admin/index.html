@@ -2020,6 +2020,7 @@ async function renderEvents() {
                     <button class="btn-icon" onclick="viewEventResults('${e.id}','${esc(e.name)}')">Results</button>
                     <button class="btn-icon" onclick="viewEventPenalties('${e.id}','${esc(e.name)}')">Penalties</button>
                     <button class="btn-icon" onclick="viewEventSteward('${e.id}','${esc(e.name)}')">Steward</button>
+                    <button class="btn-icon" style="border-color:rgba(255,209,102,0.45);color:var(--gold)" onclick="generateRaceReport('${e.id}','${esc(e.name)}','${e.season_id}')">Race Report</button>
                     <button class="btn-icon" onclick="editEvent('${e.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="resetEventStats('${e.id}','${esc(e.name)}')">Reset Stats</button>
                     <button class="btn-icon danger" onclick="deleteEvent('${e.id}','${esc(e.name)}')">Delete</button>
@@ -3853,6 +3854,384 @@ async function viewEventSteward(eventId, eventName) {
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
 }
+
+
+// ============================================================
+// 14d. Race Report generator
+// Pulls qualifying, race + per-driver results, championship before
+// and after this event, then templates an HTML article ready to drop
+// into the news table. Reads, no writes, until admin hits Publish.
+// ============================================================
+async function generateRaceReport(eventId, eventName, seasonId) {
+    openModal(`Race Report — ${esc(eventName)}`,
+        '<div class="loading-state">Building report from results…</div>',
+        '<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>'
+    );
+
+    try {
+        const data = await fetchRaceReportData(eventId, seasonId);
+        if (!data.results.length) {
+            document.querySelector('.modal-body').innerHTML =
+                `<div class="empty-state">No results recorded for this event yet. Enter race results first.</div>`;
+            return;
+        }
+        const draft = buildRaceReport(data);
+        openReportEditor(eventId, eventName, draft, data);
+    } catch (err) {
+        document.querySelector('.modal-body').innerHTML =
+            `<div class="empty-state">Could not build report: ${esc(err.message || String(err))}</div>`;
+    }
+}
+
+async function fetchRaceReportData(eventId, seasonId) {
+    const [evRes, qualiRes, resultsRes, rdRes, allEvRes, allRdRes, teamStRes, teamPriorRes] = await Promise.all([
+        sb.from('events').select('*, seasons(name, year)').eq('id', eventId).single(),
+        sb.from('qualifying_results').select('entry_id, driver_id, position, best_lap_ms, drivers(display_name, slug, career_number), entries(car_number, lobby_number, teams(name))').eq('event_id', eventId),
+        sb.from('results').select('id, entry_id, finish_position, entries(car_number, lobby_number, teams(name, slug), manufacturers(name))').eq('event_id', eventId),
+        // Per-driver rows for the event we're reporting on
+        sb.from('result_drivers').select('result_id, driver_id, finish_position, status, classified, points_awarded, pole_point, fastest_lap_point, fastest_lap_ms, drivers(display_name, slug, career_number)').in('result_id', []), // backfilled below
+        // Every event in this season + every result_drivers points awarded
+        // so we can compute "championship before this round".
+        sb.from('events').select('id, starts_at').eq('season_id', seasonId),
+        sb.from('result_drivers').select('driver_id, points_awarded, results!inner(event_id, entries!inner(team_id))'),
+        sb.from('team_standings').select('team_id, team_name, points, races, wins, podiums').eq('season_id', seasonId),
+        // Team prior points: same source but grouped by team
+        sb.from('result_drivers').select('points_awarded, results!inner(event_id, entries!inner(team_id))'),
+    ]);
+    if (evRes.error)      throw new Error(evRes.error.message);
+    if (resultsRes.error) throw new Error(resultsRes.error.message);
+
+    const event   = evRes.data;
+    const results = resultsRes.data || [];
+    const resultIds = results.map(r => r.id);
+
+    // Now load the per-driver rows for the specific result ids.
+    const { data: perDriver = [] } = await sb.from('result_drivers')
+        .select('result_id, driver_id, finish_position, status, classified, points_awarded, pole_point, fastest_lap_point, fastest_lap_ms, drivers(display_name, slug, career_number)')
+        .in('result_id', resultIds.length ? resultIds : ['00000000-0000-0000-0000-000000000000']);
+
+    // Championship before this event: every other event in the same
+    // season with starts_at earlier than this one.
+    const priorEventIds = (allEvRes.data || [])
+        .filter(e => e.id !== eventId && e.starts_at && event.starts_at && e.starts_at < event.starts_at)
+        .map(e => e.id);
+    const priorByDriver = new Map();
+    const priorByTeam   = new Map();
+    (allRdRes.data || []).forEach(r => {
+        if (!priorEventIds.includes(r.results?.event_id)) return;
+        const pts = Number(r.points_awarded || 0);
+        priorByDriver.set(r.driver_id, (priorByDriver.get(r.driver_id) || 0) + pts);
+        const teamId = r.results?.entries?.team_id;
+        if (teamId) priorByTeam.set(teamId, (priorByTeam.get(teamId) || 0) + pts);
+    });
+
+    // Current driver standings for this season come from the view; we
+    // also need names which the view conveniently joins.
+    const { data: standingsNow = [] } = await sb.from('driver_standings')
+        .select('driver_id, driver_name, driver_slug, points, wins, podiums, team_name')
+        .eq('season_id', seasonId)
+        .order('points', { ascending: false });
+
+    return {
+        event,
+        quali: qualiRes.data || [],
+        results,
+        perDriver,
+        standingsNow,
+        teamStandingsNow: teamStRes.data || [],
+        priorByDriver,
+        priorByTeam,
+    };
+}
+
+function fmtLap(ms) {
+    if (ms == null) return '';
+    const totalSec = ms / 1000;
+    const min = Math.floor(totalSec / 60);
+    const sec = (totalSec - min * 60).toFixed(3).padStart(6, '0');
+    return min > 0 ? `${min}:${sec}` : sec;
+}
+
+function fmtPoints(n) {
+    const v = Number(n || 0);
+    return v % 1 === 0 ? String(v) : v.toFixed(1);
+}
+
+function pickOne(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function buildRaceReport(d) {
+    const { event, quali, results, perDriver, standingsNow, teamStandingsNow, priorByDriver, priorByTeam } = d;
+
+    // Group everything by split (lobby_number). 0 = unassigned.
+    const splits = {};
+    results.forEach(r => {
+        const lobby = r.entries?.lobby_number ?? 0;
+        (splits[lobby] = splits[lobby] || { lobby, entries: [], drivers: [], qualis: [] }).entries.push(r);
+    });
+    perDriver.forEach(rd => {
+        const res = results.find(r => r.id === rd.result_id);
+        const lobby = res?.entries?.lobby_number ?? 0;
+        if (splits[lobby]) splits[lobby].drivers.push({ ...rd, _entry: res?.entries });
+    });
+    quali.forEach(q => {
+        const lobby = q.entries?.lobby_number ?? 0;
+        (splits[lobby] = splits[lobby] || { lobby, entries: [], drivers: [], qualis: [] }).qualis.push(q);
+    });
+    const splitKeys = Object.keys(splits).map(Number).sort((a, b) => {
+        if (a === 0) return 1; if (b === 0) return -1; return a - b;
+    });
+    const multiSplit = splitKeys.filter(k => k !== 0).length > 1;
+    const splitLabel = (n) => n === 0 ? 'Unassigned' : (multiSplit ? `Split ${n}` : 'the race');
+
+    // Helpers
+    const classified  = (rd) => (rd.status || 'classified') === 'classified';
+    const driverName  = (rd) => rd.drivers?.display_name || 'Unknown';
+    const driverSlug  = (rd) => rd.drivers?.slug;
+    const carNum      = (rd) => rd.drivers?.career_number;
+    const teamOf      = (rd) => rd._entry?.teams?.name;
+
+    // Title + lead
+    const reportTitle = `Round ${event.round}: ${event.name}`;
+    const seasonLabel = event.seasons?.name || `${event.seasons?.year || ''} Season`.trim();
+    const circuit = event.circuit_name || 'the circuit';
+
+    const html = [];
+    const subtitle = pickOne([
+        `Drama at ${circuit}.`,
+        `${circuit} delivers.`,
+        `A round to remember at ${circuit}.`,
+        `${circuit} writes another chapter.`,
+        `Lights out at ${circuit}.`,
+    ]);
+
+    html.push(`<p class="lede"><strong>${esc(subtitle)}</strong> The GTEC field returned to action for Round ${event.round} of ${esc(seasonLabel)}, and the results book is now thicker for it.</p>`);
+
+    /* ---- Qualifying ---- */
+    html.push(`<h2>Qualifying</h2>`);
+    if (quali.length === 0) {
+        html.push(`<p>No qualifying times were lodged for this round.</p>`);
+    } else {
+        splitKeys.forEach(k => {
+            const split = splits[k];
+            const qs = (split.qualis || []).filter(q => q.position != null).sort((a, b) => a.position - b.position);
+            if (!qs.length) return;
+            const pole = qs[0];
+            const second = qs[1];
+            const lines = [];
+            const verb = pickOne(['claimed', 'snatched', 'banked', 'secured', 'nailed down']);
+            lines.push(`<strong>${esc(splitLabel(k))}.</strong> ${esc(pole.drivers?.display_name || 'Pole sitter')} ${verb} pole with a ${pole.best_lap_ms ? `<strong>${fmtLap(pole.best_lap_ms)}</strong>` : 'flying lap'}${pole.entries?.teams?.name ? ` for ${esc(pole.entries.teams.name)}` : ''}.`);
+            if (second && second.best_lap_ms && pole.best_lap_ms) {
+                const gap = ((second.best_lap_ms - pole.best_lap_ms) / 1000).toFixed(3);
+                lines.push(`${esc(second.drivers?.display_name || 'Second')} lined up alongside, ${gap}s adrift.`);
+            }
+            html.push(`<p>${lines.join(' ')}</p>`);
+        });
+    }
+
+    /* ---- Race ---- */
+    html.push(`<h2>The Race</h2>`);
+    splitKeys.forEach(k => {
+        const split = splits[k];
+        const classifiedDrivers = (split.drivers || [])
+            .filter(rd => classified(rd) && rd.finish_position != null)
+            .sort((a, b) => a.finish_position - b.finish_position);
+        if (!classifiedDrivers.length) {
+            html.push(`<p><strong>${esc(splitLabel(k))}.</strong> No classified finishers.</p>`);
+            return;
+        }
+        const winner = classifiedDrivers[0];
+        const p2     = classifiedDrivers[1];
+        const p3     = classifiedDrivers[2];
+        const flWinner = (split.drivers || []).find(rd => rd.fastest_lap_point && classified(rd));
+        const poleSitter = (split.drivers || []).find(rd => rd.pole_point);
+
+        const winVerb = pickOne(['took the win', 'crossed the line first', 'sealed the victory', 'led them home', 'came out on top']);
+        let line = `<strong>${esc(splitLabel(k))}.</strong> ${esc(driverName(winner))}${teamOf(winner) ? ` of ${esc(teamOf(winner))}` : ''} ${winVerb}`;
+        if (p2 && p3) line += `, ahead of ${esc(driverName(p2))} and ${esc(driverName(p3))}`;
+        else if (p2) line += `, ahead of ${esc(driverName(p2))}`;
+        line += '.';
+        if (poleSitter && poleSitter.driver_id === winner.driver_id) {
+            line += ` Pole to flag for ${esc(driverName(winner))}, a ${pickOne(['clinical', 'commanding', 'controlled', 'flawless'])} performance.`;
+        } else if (poleSitter) {
+            line += ` Pole sitter ${esc(driverName(poleSitter))} ${pickOne(['couldn\'t hold on', 'fell short of converting', 'was reeled in', 'came up short'])}.`;
+        }
+        if (flWinner) {
+            line += ` Fastest lap${flWinner.fastest_lap_ms ? ` of <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>` : ''} to ${esc(driverName(flWinner))}.`;
+        }
+        // Notable non-finishers
+        const dnf = (split.drivers || []).filter(rd => rd.status === 'dnf').length;
+        const dsq = (split.drivers || []).filter(rd => rd.status === 'dsq').length;
+        if (dnf || dsq) {
+            const bits = [];
+            if (dnf) bits.push(`${dnf} retired from the race`);
+            if (dsq) bits.push(`${dsq} disqualified from the result`);
+            line += ` ${bits.join(' and ')}.`;
+        }
+        html.push(`<p>${line}</p>`);
+    });
+
+    /* ---- Championship (Drivers) ---- */
+    html.push(`<h2>Championship Standings</h2>`);
+    if (standingsNow.length === 0) {
+        html.push(`<p>Standings will be confirmed shortly.</p>`);
+    } else {
+        const leaderNow = standingsNow[0];
+        // Prior leader: top of priorByDriver by points; need a name
+        const priorSorted = Array.from(priorByDriver.entries())
+            .map(([id, pts]) => ({ id, pts }))
+            .sort((a, b) => b.pts - a.pts);
+        const priorLeaderRow = priorSorted[0];
+        const priorLeaderName = priorLeaderRow
+            ? (standingsNow.find(s => s.driver_id === priorLeaderRow.id)?.driver_name || 'the previous leader')
+            : null;
+
+        const second = standingsNow[1];
+        const gap = second ? (Number(leaderNow.points) - Number(second.points)) : 0;
+
+        let openLine;
+        if (!priorLeaderRow) {
+            openLine = `<strong>${esc(leaderNow.driver_name)}</strong> leaves Round ${event.round} atop the standings on <strong>${fmtPoints(leaderNow.points)}</strong> points${second ? `, ${fmtPoints(gap)} clear of ${esc(second.driver_name)}` : ''}.`;
+        } else if (priorLeaderRow.id === leaderNow.driver_id) {
+            const verb = pickOne(['extends', 'stretches', 'protects', 'maintains', 'keeps hold of']);
+            openLine = `<strong>${esc(leaderNow.driver_name)}</strong> ${verb} the championship lead, now on <strong>${fmtPoints(leaderNow.points)}</strong> points${second ? `, ${fmtPoints(gap)} ahead of ${esc(second.driver_name)}` : ''}.`;
+        } else {
+            openLine = `<strong>${esc(leaderNow.driver_name)}</strong> takes over the championship lead on <strong>${fmtPoints(leaderNow.points)}</strong> points${priorLeaderName ? `, displacing ${esc(priorLeaderName)} at the top` : ''}${second && second.driver_id !== leaderNow.driver_id ? `. ${esc(second.driver_name)} sits second on ${fmtPoints(second.points)}` : ''}.`;
+        }
+        html.push(`<p>${openLine}</p>`);
+
+        // Top 5 table
+        const top5 = standingsNow.slice(0, 5);
+        html.push(`<table style="width:100%;border-collapse:collapse;margin:0.75rem 0 1rem">
+            <thead><tr><th style="text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">#</th><th style="text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Driver</th><th style="text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Team</th><th style="text-align:right;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Pts</th></tr></thead>
+            <tbody>
+            ${top5.map((s, i) => `<tr>
+                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04)">${i + 1}</td>
+                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04)">${esc(s.driver_name)}</td>
+                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04);color:rgba(255,255,255,0.55)">${esc(s.team_name || '')}</td>
+                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;font-weight:700">${fmtPoints(s.points)}</td>
+            </tr>`).join('')}
+            </tbody>
+        </table>`);
+    }
+
+    /* ---- Teams ---- */
+    if (teamStandingsNow.length) {
+        html.push(`<h2>Constructors' Race</h2>`);
+        const teamLeader = teamStandingsNow.slice().sort((a, b) => Number(b.points) - Number(a.points))[0];
+        if (teamLeader) {
+            const teamPriorTop = Array.from(priorByTeam.entries()).sort((a, b) => b[1] - a[1])[0];
+            const stayed = teamPriorTop && teamLeader.team_id === teamPriorTop[0];
+            const verb = stayed ? pickOne(['maintain', 'hold', 'keep', 'retain']) : pickOne(['take over', 'climb to', 'rise into']);
+            html.push(`<p><strong>${esc(teamLeader.team_name)}</strong> ${stayed ? verb + ' the constructors\' lead' : verb + ' the top of the constructors\' table'} on <strong>${fmtPoints(teamLeader.points)}</strong> points after the round.</p>`);
+        }
+        const teamTop5 = teamStandingsNow.slice().sort((a, b) => Number(b.points) - Number(a.points)).slice(0, 5);
+        html.push(`<table style="width:100%;border-collapse:collapse;margin:0.75rem 0 1rem">
+            <thead><tr><th style="text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">#</th><th style="text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Team</th><th style="text-align:right;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Wins</th><th style="text-align:right;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Pts</th></tr></thead>
+            <tbody>
+            ${teamTop5.map((t, i) => `<tr>
+                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04)">${i + 1}</td>
+                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04)">${esc(t.team_name)}</td>
+                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right">${t.wins || 0}</td>
+                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;font-weight:700">${fmtPoints(t.points)}</td>
+            </tr>`).join('')}
+            </tbody>
+        </table>`);
+    }
+
+    /* ---- Closer ---- */
+    const closer = pickOne([
+        `The series rolls on. Eyes already turn to the next round.`,
+        `Plenty to talk about. Plenty more to come.`,
+        `The championship picture shifts again. Next round can't come soon enough.`,
+        `One round closer to crowning a champion. Strap in.`,
+    ]);
+    html.push(`<p><em>${esc(closer)}</em></p>`);
+
+    const excerpt = `Round ${event.round} of ${seasonLabel} from ${circuit}. ${standingsNow[0] ? `${standingsNow[0].driver_name} leads the championship on ${fmtPoints(standingsNow[0].points)} points.` : ''}`.trim();
+    const slugBase = (event.slug || `round-${event.round}-${event.name}`).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return {
+        title: reportTitle,
+        slug:  `report-${slugBase}`,
+        excerpt,
+        body:  html.join('\n'),
+    };
+}
+
+function openReportEditor(eventId, eventName, draft, data) {
+    const body = `
+        <p style="color:var(--muted);font-size:0.84rem;margin-bottom:0.85rem">Edit anything you like before publishing. Saves into the News section tagged as a Race Report.</p>
+        <form id="entity-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Title <span class="required">*</span></label>
+                    <input type="text" name="title" value="${esc(draft.title)}" required>
+                </div>
+                <div class="form-group">
+                    <label>Slug <span class="required">*</span></label>
+                    <input type="text" name="slug" value="${esc(draft.slug)}" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Excerpt</label>
+                <textarea name="excerpt" rows="2">${esc(draft.excerpt)}</textarea>
+            </div>
+            <div class="form-group">
+                <label>Cover Image URL <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(leave blank to use the GTEC mark)</span></label>
+                <input type="url" name="cover_url" placeholder="https://…">
+            </div>
+            <div class="form-group">
+                <label>Body <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(HTML, tagged automatically as race-report)</span></label>
+                <textarea name="body" rows="18" style="font-family:monospace;font-size:0.75rem">${esc(draft.body)}</textarea>
+            </div>
+            <div class="form-group">
+                <label>Author</label>
+                <input type="text" name="author" value="GTEC Editorial">
+            </div>
+        </form>
+        <div style="margin-top:0.85rem;padding:0.85rem 1rem;background:var(--bg-2);border:1px solid var(--border);border-radius:8px">
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:0.5rem">Preview</div>
+            <div style="max-height:240px;overflow-y:auto;font-size:0.85rem;line-height:1.65" id="report-preview">${draft.body}</div>
+        </div>`;
+    openModal(`Race Report — ${esc(eventName)}`, body,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-ghost" onclick="saveRaceReport(false)">Save as Draft</button>
+         <button class="btn btn-primary" onclick="saveRaceReport(true)">Publish to News</button>`
+    );
+}
+
+async function saveRaceReport(publishNow) {
+    const d = getFormData('entity-form');
+    if (!d.title || !d.slug) { toast('Title and slug are required.', 'error'); return; }
+    const payload = {
+        title:        d.title,
+        slug:         d.slug,
+        author:       d.author || 'GTEC Editorial',
+        excerpt:      d.excerpt || null,
+        cover_url:    d.cover_url || null,
+        body:         d.body || '',
+        tags:         ['race-report'],
+        is_published: !!publishNow,
+        published_at: publishNow ? new Date().toISOString() : null,
+        updated_at:   new Date().toISOString(),
+    };
+    const { error } = await sb.from('news').insert(payload);
+    if (error) {
+        // Likely a slug clash — append a timestamp suffix.
+        if (String(error.message).includes('duplicate')) {
+            payload.slug = `${payload.slug}-${Date.now().toString(36).slice(-5)}`;
+            const retry = await sb.from('news').insert(payload);
+            if (retry.error) { toast(retry.error.message, 'error'); return; }
+        } else {
+            toast(error.message, 'error');
+            return;
+        }
+    }
+    toast(publishNow ? 'Race report published to News.' : 'Draft saved.', 'success');
+    closeModal();
+}
+
 
 async function openStewardModal(eventId, eventName, decisionId) {
     let existing = {};

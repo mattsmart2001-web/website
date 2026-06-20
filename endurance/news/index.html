@@ -227,11 +227,15 @@ async function loadArticle(slug) {
 
     document.title = `${data.title} — GTEC`;
 
+    const isReport = Array.isArray(data.tags) && data.tags.includes('race-report');
+    const eyebrow  = isReport ? 'Race Report' : 'News';
+    const cover    = data.cover_url || (isReport ? '/endurance/assets/icon-512.png' : '');
+
     app.innerHTML = `
     <div class="page-wrap">
         <a class="article-back" href="/endurance/news/">← Back to News</a>
-        ${data.cover_url ? `<img class="article-cover" src="${esc(data.cover_url)}" alt="${esc(data.title)}">` : ''}
-        <div class="article-eyebrow">News</div>
+        ${cover ? `<img class="article-cover" src="${esc(cover)}" alt="${esc(data.title)}">` : ''}
+        <div class="article-eyebrow">${eyebrow}</div>
         <h1 class="article-title">${esc(data.title)}</h1>
         <div class="article-meta">
             ${data.author ? `<strong>${esc(data.author)}</strong> · ` : ''}${fmtDate(data.published_at)}
