@@ -4021,7 +4021,8 @@ function buildRaceReport(d) {
         const dnf = (split.drivers || []).filter(rd => rd.status === 'dnf').length;
         const dsq = (split.drivers || []).filter(rd => rd.status === 'dsq').length;
         return { key: k, label: splitLabel(k), qs, pole, poleGap, finishers, winner, p2, p3,
-                 flWinner, poleToFlag, grandSlam, teamOneTwo, driveOfRace, dnf, dsq };
+                 flWinner, poleToFlag, grandSlam, teamOneTwo, driveOfRace, dnf, dsq,
+                 allDrivers: split.drivers || [] };
     }).filter(s => s.winner);
 
     const leaderNow = standingsNow[0];
@@ -4251,7 +4252,7 @@ function buildRaceReport(d) {
     // ---- The Race ----
     html.push(`<div class="kicker">Race Day</div><h2>The Race</h2>`);
     splitStories.forEach(s => {
-        const { winner, p2, p3, flWinner, poleToFlag, grandSlam, teamOneTwo, driveOfRace, dnf, dsq, label, qs, finishers } = s;
+        const { winner, p2, p3, flWinner, poleToFlag, grandSlam, teamOneTwo, driveOfRace, dnf, dsq, label, qs, finishers, allDrivers } = s;
         const lines = [];
         const winN = esc(driverName(winner));
         const team = teamOf(winner) ? esc(teamOf(winner)) : null;
@@ -4281,7 +4282,7 @@ function buildRaceReport(d) {
             // tell DSQ apart from DNF (both are "not classified" but they
             // deserve very different prose).
             const psResultRow = psBeaten
-                ? (split.drivers || []).find(rd => rd.driver_id === polesitter.driver_id)
+                ? allDrivers.find(rd => rd.driver_id === polesitter.driver_id)
                 : null;
             const psStatus = psResultRow?.status;
             const psName = polesitter?.drivers?.display_name ? esc(polesitter.drivers.display_name) : null;
