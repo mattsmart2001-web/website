@@ -508,7 +508,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=8"></script>
+<script src="/endurance/assets/gtec-badges.js?v=9"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script src="../assets/countries.js"></script>
 <script>
@@ -835,15 +835,14 @@ async function loadBadges(driverId) {
     // is the distinct lower-cased events.circuit_name for any classified
     // result_drivers row owned by this driver — the same source the
     // public profile uses for the strip.
-    const [{ data: stats }, { data: circuitRows }, { data: seasons }, { data: allStandings }] = await Promise.all([
+    const [{ data: stats }, { data: circuitRows }, { data: seasons }, { data: allStandings }, { data: secretBadges }] = await Promise.all([
         sb.from('driver_career_stats').select('starts, wins').eq('driver_id', driverId).maybeSingle(),
         sb.from('result_drivers')
             .select('status, results(events(circuit_name))')
             .eq('driver_id', driverId),
-        // Season list — is_active=false means the season is over and its
-        // final standings are eligible for title badges.
         sb.from('seasons').select('id, is_active'),
         sb.from('driver_standings').select('driver_id, season_id, points'),
+        sb.rpc('driver_secret_badges', { p_driver_id: driverId }),
     ]);
 
     const completedCircuits = Array.from(new Set(
@@ -870,6 +869,7 @@ async function loadBadges(driverId) {
         wins:   Number(stats?.wins)   || 0,
         completedCircuits,
         seasonFinishes,
+        secretBadges: secretBadges || {},
     });
     document.getElementById('card-badges').style.display = '';
 }

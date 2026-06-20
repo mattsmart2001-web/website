@@ -87,6 +87,23 @@
                   evalFn: s => (s.seasonFinishes || []).some(p => p >= 1 && p <= 10) },
             ],
         },
+        {
+            key: 'secrets',
+            title: 'Secrets',
+            type: 'secret',
+            // Hidden badges — locked tiles render as a "?" with no name
+            // / blurb so drivers don't know what's possible until they
+            // unlock one. evalFn pulls from stats.secretBadges, populated
+            // by the driver_secret_badges RPC (mig 61).
+            badges: [
+                { key: 'giant_killer',     name: 'Giant Killer',     icon: '⚔️', blurb: 'Beat a driver 300+ Elo above you',
+                  evalFn: s => !!(s.secretBadges || {}).giant_killer },
+                { key: 'david_vs_goliath', name: 'David vs Goliath', icon: '🏹', blurb: 'Win a race as the lowest-rated driver in your split',
+                  evalFn: s => !!(s.secretBadges || {}).david_vs_goliath },
+                { key: 'giant_slayer',     name: 'Giant Slayer',     icon: '🗡️', blurb: 'Beat the championship leader in a race',
+                  evalFn: s => !!(s.secretBadges || {}).giant_slayer },
+            ],
+        },
     ];
 
     function badgeIsEarned(cat, badge, stats) {
@@ -139,7 +156,18 @@
 
     function badgeIcon(b, opts = {}) {
         const locked   = !!opts.locked;
+        const secret   = !!opts.secret;
         const progress = opts.progress;
+        // Hidden tile — drivers see "?" with no name, no blurb, no
+        // hover hint, until they unlock it.
+        if (locked && secret) {
+            return `
+                <div class="gtec-badge gtec-badge-locked gtec-badge-secret" title="Hidden badge">
+                    <span class="gtec-badge-icon" aria-hidden="true">?</span>
+                    <span class="gtec-badge-lock">🔒</span>
+                    <span class="gtec-badge-label">Hidden</span>
+                </div>`;
+        }
         const cls      = 'gtec-badge' + (locked ? ' gtec-badge-locked' : '');
         const title    = locked
             ? `${b.name} — ${b.blurb}${progress != null ? ` · ${Math.round(progress * 100)}%` : ''}`
@@ -180,8 +208,33 @@
             if (cat.type === 'threshold') return renderThresholdSection(cat, stats);
             if (cat.type === 'match')     return renderMatchSection(cat, stats);
             if (cat.type === 'season')    return renderSeasonSection(cat, stats);
+            if (cat.type === 'secret')    return renderSecretSection(cat, stats);
             return '';
         }).join('');
+    }
+
+    function renderSecretSection(cat, stats) {
+        const ordered = cat.badges.slice();
+        let earnedCount = 0;
+        const cards = ordered.map(b => {
+            if (badgeIsEarned(cat, b, stats)) {
+                earnedCount++;
+                return badgeIcon(b);
+            }
+            return badgeIcon(b, { locked: true, secret: true });
+        }).join('');
+        const total  = ordered.length;
+        const footer = earnedCount === 0
+            ? `<div class="gtec-badge-next">🔍 ${total} hidden badge${total === 1 ? '' : 's'} waiting to be discovered…</div>`
+            : earnedCount === total
+                ? `<div class="gtec-badge-next">Every secret uncovered. Few have done it.</div>`
+                : `<div class="gtec-badge-next">🔍 <strong>${earnedCount} / ${total}</strong> secrets discovered</div>`;
+        return `
+            <div class="gtec-badge-section">
+                <div class="gtec-badge-section-title">${cat.title}</div>
+                <div class="gtec-badge-grid">${cards}</div>
+                ${footer}
+            </div>`;
     }
 
     function renderThresholdSection(cat, stats) {
@@ -315,6 +368,25 @@
                 opacity: 0.75;
             }
             .gtec-badge-locked .gtec-badge-label { color: rgba(148,163,184,0.55); }
+            .gtec-badge-secret {
+                background: linear-gradient(160deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)) !important;
+                border-style: dashed !important;
+                border-color: rgba(255,255,255,0.18) !important;
+                opacity: 0.6;
+            }
+            .gtec-badge-secret .gtec-badge-icon {
+                background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.05), rgba(0,0,0,0.5) 75%) !important;
+                border-color: rgba(255,255,255,0.18) !important;
+                box-shadow: none !important;
+                color: rgba(148,163,184,0.6);
+                font-family: 'Anton', sans-serif !important;
+                font-weight: 900;
+                filter: none !important;
+            }
+            .gtec-badge-secret .gtec-badge-label {
+                color: rgba(148,163,184,0.45) !important;
+                letter-spacing: 0.3em;
+            }
             .gtec-badge-locked:hover { transform: none; box-shadow: none; }
             .gtec-badge-icon {
                 font-size: 1.5rem;
