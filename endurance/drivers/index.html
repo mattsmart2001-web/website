@@ -486,7 +486,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=6"></script>
+<script src="/endurance/assets/gtec-badges.js?v=7"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script>
 'use strict';
@@ -728,6 +728,22 @@ async function showProfile() {
             .filter(Boolean)
     ));
 
+    // Finishing positions across completed seasons, used by the Titles
+    // category. is_active=false means the season is "official" and its
+    // standings are eligible for Season Champion / Vice Champion / etc.
+    const [{ data: _seasonsList }, { data: _allStandings }] = await Promise.all([
+        sb.from('seasons').select('id, is_active'),
+        sb.from('driver_standings').select('driver_id, season_id, points'),
+    ]);
+    const seasonFinishes = [];
+    (_seasonsList || []).filter(s => !s.is_active).forEach(s => {
+        const standings = (_allStandings || [])
+            .filter(r => r.season_id === s.id && Number(r.points) > 0)
+            .sort((a, b) => Number(b.points) - Number(a.points));
+        const idx = standings.findIndex(r => r.driver_id === driver.id);
+        if (idx >= 0) seasonFinishes.push(idx + 1);
+    });
+
     // Current rating
     const currentRating = ratingHist.length ? ratingHist[ratingHist.length - 1].rating_after : 1500;
     const peakRating    = ratingHist.length ? Math.max(...ratingHist.map(r => r.rating_after)) : 1500;
@@ -888,7 +904,7 @@ async function showProfile() {
                     ${driver.career_number ? `<div class="profile-number">#${driver.career_number}</div>` : ''}
                     <div class="profile-name">${esc(driver.display_name)}</div>
                     <div class="profile-tags">${tagsHTML}</div>
-                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits }) : ''}
+                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes }) : ''}
                     <button class="share-btn" id="share-profile-btn" type="button">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>

@@ -508,7 +508,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=6"></script>
+<script src="/endurance/assets/gtec-badges.js?v=7"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script src="../assets/countries.js"></script>
 <script>
@@ -835,11 +835,15 @@ async function loadBadges(driverId) {
     // is the distinct lower-cased events.circuit_name for any classified
     // result_drivers row owned by this driver — the same source the
     // public profile uses for the strip.
-    const [{ data: stats }, { data: circuitRows }] = await Promise.all([
+    const [{ data: stats }, { data: circuitRows }, { data: seasons }, { data: allStandings }] = await Promise.all([
         sb.from('driver_career_stats').select('starts, wins').eq('driver_id', driverId).maybeSingle(),
         sb.from('result_drivers')
             .select('status, results(events(circuit_name))')
             .eq('driver_id', driverId),
+        // Season list — is_active=false means the season is over and its
+        // final standings are eligible for title badges.
+        sb.from('seasons').select('id, is_active'),
+        sb.from('driver_standings').select('driver_id, season_id, points'),
     ]);
 
     const completedCircuits = Array.from(new Set(
@@ -849,11 +853,23 @@ async function loadBadges(driverId) {
             .filter(Boolean)
     ));
 
+    // For each completed season, find this driver's finishing position
+    // by sorting all drivers' total points descending.
+    const seasonFinishes = [];
+    (seasons || []).filter(s => !s.is_active).forEach(s => {
+        const standings = (allStandings || [])
+            .filter(r => r.season_id === s.id && Number(r.points) > 0)
+            .sort((a, b) => Number(b.points) - Number(a.points));
+        const idx = standings.findIndex(r => r.driver_id === driverId);
+        if (idx >= 0) seasonFinishes.push(idx + 1);
+    });
+
     if (!window.renderBadgeGrid) return;
     document.getElementById('badges-grid').innerHTML = window.renderBadgeGrid({
         starts: Number(stats?.starts) || 0,
         wins:   Number(stats?.wins)   || 0,
         completedCircuits,
+        seasonFinishes,
     });
     document.getElementById('card-badges').style.display = '';
 }

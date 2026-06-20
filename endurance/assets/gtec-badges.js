@@ -64,9 +64,37 @@
                 { key: 'grand_tour',   name: 'Grand Tour',           icon: '🏁', blurb: 'Complete every event on the calendar',           requiresAll: true },
             ],
         },
+        {
+            key: 'titles',
+            title: 'Titles',
+            type: 'season',
+            // Each badge is earned via its own evalFn — gives us count-
+            // based "Win 2 championships" without bolting on yet another
+            // category-type. stats.seasonFinishes is an array of finish
+            // positions (1..N) across *completed* seasons only.
+            badges: [
+                { key: 'dynasty',          name: 'Dynasty',                 icon: '🏛️', blurb: 'Win 3 championships',
+                  evalFn: s => (s.seasonFinishes || []).filter(p => p === 1).length >= 3 },
+                { key: 'double_champion',  name: 'Double Champion',         icon: '🏆', blurb: 'Win 2 championships',
+                  evalFn: s => (s.seasonFinishes || []).filter(p => p === 1).length >= 2 },
+                { key: 'season_champion',  name: 'Season Champion',         icon: '👑', blurb: 'Win a championship',
+                  evalFn: s => (s.seasonFinishes || []).some(p => p === 1) },
+                { key: 'vice_champion',    name: 'Vice Champion',           icon: '🥈', blurb: 'Finish P2 in a season',
+                  evalFn: s => (s.seasonFinishes || []).some(p => p === 2) },
+                { key: 'challenger',       name: 'Championship Challenger', icon: '🎯', blurb: 'Finish top 5 in a season',
+                  evalFn: s => (s.seasonFinishes || []).some(p => p >= 1 && p <= 5) },
+                { key: 'contender',        name: 'Championship Contender',  icon: '🚩', blurb: 'Finish top 10 in a season',
+                  evalFn: s => (s.seasonFinishes || []).some(p => p >= 1 && p <= 10) },
+            ],
+        },
     ];
 
     function badgeIsEarned(cat, badge, stats) {
+        // Generic per-badge evaluator — used by Titles and ready for any
+        // future "this is too bespoke for the threshold/match shape" badge.
+        if (typeof badge.evalFn === 'function') {
+            try { return !!badge.evalFn(stats); } catch (_) { return false; }
+        }
         if (cat.type === 'threshold') {
             return (Number(stats[cat.stat]) || 0) >= badge.threshold;
         }
@@ -151,6 +179,7 @@
         return CATEGORIES.map(cat => {
             if (cat.type === 'threshold') return renderThresholdSection(cat, stats);
             if (cat.type === 'match')     return renderMatchSection(cat, stats);
+            if (cat.type === 'season')    return renderSeasonSection(cat, stats);
             return '';
         }).join('');
     }
@@ -203,6 +232,34 @@
                 ? `<div class="gtec-badge-next">Every circuit conquered. Untouchable.</div>`
                 : `<div class="gtec-badge-next">🏁 <strong>${earnedCount} / ${total}</strong> circuits visited</div>`;
 
+        return `
+            <div class="gtec-badge-section">
+                <div class="gtec-badge-section-title">${cat.title}</div>
+                <div class="gtec-badge-grid">${cards}</div>
+                ${footer}
+            </div>`;
+    }
+
+    function renderSeasonSection(cat, stats) {
+        // Order goes hardest → easiest (Dynasty at top). Lock state +
+        // grid identical to threshold/match sections.
+        const ordered = cat.badges.slice();
+        let earnedCount = 0;
+        const cards = ordered.map(b => {
+            if (badgeIsEarned(cat, b, stats)) {
+                earnedCount++;
+                return badgeIcon(b);
+            }
+            return badgeIcon(b, { locked: true });
+        }).join('');
+        const total = ordered.length;
+        const seasons = (stats.seasonFinishes || []).length;
+        const titles  = (stats.seasonFinishes || []).filter(p => p === 1).length;
+        const footer = seasons === 0
+            ? `<div class="gtec-badge-next">Title badges unlock once a season has been completed.</div>`
+            : earnedCount === total
+                ? `<div class="gtec-badge-next">Every title earned. Untouchable.</div>`
+                : `<div class="gtec-badge-next">🏁 <strong>${titles}</strong> championship${titles === 1 ? '' : 's'} · <strong>${seasons}</strong> season${seasons === 1 ? '' : 's'} finished</div>`;
         return `
             <div class="gtec-badge-section">
                 <div class="gtec-badge-section-title">${cat.title}</div>
