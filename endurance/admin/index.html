@@ -4277,6 +4277,13 @@ function buildRaceReport(d) {
             const polesitter = qs[0];
             const psBeaten = polesitter && polesitter.driver_id !== winner.driver_id;
             const psFinish = psBeaten ? finishers.find(rd => rd.driver_id === polesitter.driver_id) : null;
+            // Pull the pole sitter's actual race-day status row so we can
+            // tell DSQ apart from DNF (both are "not classified" but they
+            // deserve very different prose).
+            const psResultRow = psBeaten
+                ? (split.drivers || []).find(rd => rd.driver_id === polesitter.driver_id)
+                : null;
+            const psStatus = psResultRow?.status;
             const psName = polesitter?.drivers?.display_name ? esc(polesitter.drivers.display_name) : null;
             if (psBeaten && psName && psFinish) {
                 lines.push(freshPick('race-psFinish', [
@@ -4287,11 +4294,20 @@ function buildRaceReport(d) {
                     `${winN} flipped the script in ${esc(label)}${team ? ` for ${team}` : ''}, overhauling ${psName} en route to the win and shoving the pole sitter back to P${psFinish.finish_position}${podiumTail}.`,
                     `Pole sitter ${psName} could not hold on in ${esc(label)}; ${winN}${team ? ` (${team})` : ''} ran him down and took the chequered flag, leaving him in P${psFinish.finish_position}${podiumTail}.`,
                 ]));
+            } else if (psBeaten && psName && psStatus === 'dsq') {
+                lines.push(freshPick('race-psDsq', [
+                    `Pole sitter ${psName} was disqualified from ${esc(label)}, handing the win to ${winN}${team ? ` of ${team}` : ''}${podiumTail}.`,
+                    `${esc(label)}'s headline went to the stewards' office. Pole sitter ${psName} was stripped of the result and ${winN}${team ? ` (${team})` : ''} took the chequered flag${podiumTail}.`,
+                    `${psName} put it on pole, then lost it after the flag. A disqualification removed the pole sitter from the result of ${esc(label)} and gifted ${winN}${team ? ` of ${team}` : ''} the win${podiumTail}.`,
+                    `Stewards stripped pole sitter ${psName} of the result in ${esc(label)}, and ${winN}${team ? ` (${team})` : ''} took the chequered flag as classified winner${podiumTail}.`,
+                    `Disqualification for the pole sitter. ${psName} was thrown out of the ${esc(label)} result, leaving ${winN}${team ? ` (${team})` : ''} to take the win${podiumTail}.`,
+                ]));
             } else if (psBeaten && psName) {
                 lines.push(freshPick('race-psNoFinish', [
-                    `${esc(label)} swallowed its pole sitter whole. ${psName} did not feature at the finish, leaving ${winN}${team ? ` (${team})` : ''} to take the win${podiumTail}.`,
-                    `Pole turned to dust in ${esc(label)}. ${psName} dropped out of the result entirely and ${winN}${team ? ` of ${team}` : ''} took the chequered flag${podiumTail}.`,
-                    `${winN}${team ? ` (${team})` : ''} inherited the lead when ${psName} fell out of contention in ${esc(label)}, and saw the job through${podiumTail}.`,
+                    `Pole sitter ${psName} retired from ${esc(label)}, leaving ${winN}${team ? ` (${team})` : ''} to take the win${podiumTail}.`,
+                    `${psName} did not see the chequered flag in ${esc(label)} after starting from pole, and ${winN}${team ? ` of ${team}` : ''} took the win${podiumTail}.`,
+                    `${winN}${team ? ` (${team})` : ''} inherited the lead when pole sitter ${psName} retired in ${esc(label)}, and saw the job through${podiumTail}.`,
+                    `${esc(label)}'s pole sitter ${psName} dropped out of the race, handing ${winN}${team ? ` of ${team}` : ''} the win${podiumTail}.`,
                 ]));
             } else {
                 lines.push(freshPick('race-default', [
