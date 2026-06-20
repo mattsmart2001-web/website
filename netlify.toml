@@ -7,6 +7,45 @@
   # These are client-side credentials by design — not secrets.
   SECRETS_SCAN_OMIT_PATHS = "endurance/assets/gtec-config.js"
 
+# Legacy Shopify URLs. The site previously ran a store under these paths
+# and Google still has them in its index. Return HTTP 410 (Gone) so Google
+# drops them rather than treating them as soft duplicates of the homepage,
+# which is what the catch-all below would otherwise do.
+[[redirects]]
+  from = "/products/*"
+  status = 410
+  force = true
+
+[[redirects]]
+  from = "/collections/*"
+  status = 410
+  force = true
+
+[[redirects]]
+  from = "/pages/*"
+  status = 410
+  force = true
+
+[[redirects]]
+  from = "/policies/*"
+  status = 410
+  force = true
+
+[[redirects]]
+  from = "/supporters/*"
+  status = 410
+  force = true
+
+[[redirects]]
+  from = "/en-eur"
+  status = 410
+  force = true
+
+[[redirects]]
+  from = "/en-eur/*"
+  status = 410
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
