@@ -4016,12 +4016,15 @@ function buildRaceReport(d) {
         const grandSlam  = poleToFlag && flWinner && flWinner.driver_id === winner.driver_id;
         const teamOneTwo = !!(p2 && teamSlugOf(winner) && teamSlugOf(winner) === teamSlugOf(p2));
         const driveOfRace = finishers
-            .filter(rd => rd._gained != null && rd._gained >= 3 && rd.finish_position <= 10)
+            .filter(rd => rd._gained != null && rd._gained >= 3 && rd.finish_position <= 10 && rd.driver_id !== winner?.driver_id)
             .sort((a, b) => b._gained - a._gained)[0];
+        // Winner came from way back — a separate story to "drive of the day"
+        // (which is by definition not the winner).
+        const comebackWin = !!(winner && winner._gained != null && winner._gained >= 3 && winner._qualiPos > 1);
         const dnf = (split.drivers || []).filter(rd => rd.status === 'dnf').length;
         const dsq = (split.drivers || []).filter(rd => rd.status === 'dsq').length;
         return { key: k, label: splitLabel(k), qs, pole, poleGap, finishers, winner, p2, p3,
-                 flWinner, poleToFlag, grandSlam, teamOneTwo, driveOfRace, dnf, dsq,
+                 flWinner, poleToFlag, grandSlam, teamOneTwo, driveOfRace, comebackWin, dnf, dsq,
                  allDrivers: split.drivers || [] };
     }).filter(s => s.winner);
 
@@ -4093,6 +4096,13 @@ function buildRaceReport(d) {
             `It was a controlled, almost serene afternoon for <strong>${esc(driverName(heroSplit.winner))}</strong> at ${esc(circuit)}. Pole position turned into a race lead that was never seriously questioned, and Round ${event.round} ended exactly the way it began.`,
             `Pole to flag, and never any closer to losing it than he wanted to be. <strong>${esc(driverName(heroSplit.winner))}</strong> commanded ${esc(circuit)} from the moment the lights went out, the result settled long before the chequer fell.`,
         ]);
+    } else if (heroSplit?.comebackWin) {
+        const w = heroSplit.winner;
+        lede = pickOne([
+            `<strong>${esc(driverName(w))}</strong> turned Round ${event.round} into a comeback story at ${esc(circuit)}, charging from P${w._qualiPos} on the grid to take the win, ${w._gained} places gained in a single afternoon.`,
+            `Forget the grid. <strong>${esc(driverName(w))}</strong> started P${w._qualiPos} at ${esc(circuit)} and finished it on top of the rostrum, a ${w._gained}-place climb that produced one of the headline drives of ${esc(seasonLabel)} so far.`,
+            `Some races are decided in qualifying. Not this one. <strong>${esc(driverName(w))}</strong> lined up P${w._qualiPos} at ${esc(circuit)} and converted it into a Round ${event.round} race win, the kind of comeback drive that lingers in the season's memory.`,
+        ]);
     } else if (heroSplit?.driveOfRace) {
         const dor = heroSplit.driveOfRace;
         lede = pickOne([
@@ -4131,6 +4141,13 @@ function buildRaceReport(d) {
             <div class="stat-card-label">Pole to Flag</div>
             <div class="stat-card-value">${esc(driverName(heroSplit.winner))}</div>
             <div class="stat-card-detail">${teamOf(heroSplit.winner) ? `${esc(teamOf(heroSplit.winner))}. ` : ''}Led from green light to chequer at ${esc(circuit)}.</div>
+        </div>`;
+    } else if (heroSplit?.comebackWin) {
+        const w = heroSplit.winner;
+        statCard = `<div class="stat-card">
+            <div class="stat-card-label">Comeback Win</div>
+            <div class="stat-card-value">${esc(driverName(w))}</div>
+            <div class="stat-card-detail">${teamOf(w) ? `${esc(teamOf(w))}. ` : ''}From P${w._qualiPos} on the grid to the chequered flag at ${esc(circuit)}, ${w._gained} places gained.</div>
         </div>`;
     } else if (heroSplit?.driveOfRace) {
         const dor = heroSplit.driveOfRace;
@@ -4380,6 +4397,9 @@ function buildRaceReport(d) {
         pullQuote = `There is a new name at the top.`;
     } else if (heroSplit?.poleToFlag) {
         pullQuote = `Pole to flag. ${esc(driverName(heroSplit.winner))} ran ${esc(circuit)} on his terms.`;
+    } else if (heroSplit?.comebackWin) {
+        const w = heroSplit.winner;
+        pullQuote = `From P${w._qualiPos} to P1. ${esc(driverName(w))} won ${esc(circuit)} the hard way.`;
     } else if (heroSplit?.driveOfRace) {
         const dor = heroSplit.driveOfRace;
         pullQuote = `From P${dor._qualiPos} to P${dor.finish_position}. ${esc(driverName(dor))} stole a headline he hadn't earned at lights-out.`;
@@ -4514,6 +4534,9 @@ function buildRaceReport(d) {
         excerpt = `${leaderNow.driver_name} takes over the ${seasonLabel} championship lead after a pivotal Round ${event.round} at ${circuit}.`;
     } else if (heroSplit?.poleToFlag) {
         excerpt = `${driverName(heroSplit.winner)} converts pole to chequered flag at ${circuit} as Round ${event.round} unfolds in commanding fashion.`;
+    } else if (heroSplit?.comebackWin) {
+        const w = heroSplit.winner;
+        excerpt = `${driverName(w)} charges from P${w._qualiPos} on the grid to win Round ${event.round} at ${circuit}, the comeback story of ${seasonLabel}.`;
     } else if (heroSplit?.driveOfRace) {
         excerpt = `${driverName(heroSplit.driveOfRace)} climbs ${heroSplit.driveOfRace._gained} places at ${circuit} to steal the headlines from Round ${event.round} of ${seasonLabel}.`;
     } else if (heroSplit) {
