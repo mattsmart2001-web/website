@@ -99,6 +99,58 @@
         .article-body th { background: var(--bg-2); color: var(--muted); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
         .article-body td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
 
+        /* Race report newsroom styling */
+        .article-body.race-report .dateline {
+            font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700;
+            letter-spacing: 0.35em; text-transform: uppercase; color: var(--gold);
+            padding-bottom: 1rem; margin-bottom: 1.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .article-body.race-report > p.lede {
+            font-size: 1.18rem; line-height: 1.7; color: #e2e8f0;
+            margin-bottom: 1.75rem;
+        }
+        .article-body.race-report .dropcap {
+            font-family: 'Anton', sans-serif; font-size: 4.2em; line-height: 0.85;
+            float: left; margin: 0.08em 0.5rem 0 0; color: var(--gold);
+            text-transform: uppercase; font-weight: 400;
+        }
+        .article-body.race-report .stat-card {
+            background: linear-gradient(135deg, rgba(255,209,102,0.07), rgba(255,209,102,0.02));
+            border: 1px solid rgba(255,209,102,0.18); border-left: 3px solid var(--gold);
+            border-radius: 8px; padding: 1.1rem 1.25rem; margin: 1.75rem 0;
+        }
+        .article-body.race-report .stat-card-label {
+            font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700;
+            letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold);
+            margin-bottom: 0.45rem;
+        }
+        .article-body.race-report .stat-card-value {
+            font-family: 'Anton', sans-serif; font-size: 1.55rem;
+            letter-spacing: 0.04em; text-transform: uppercase;
+            line-height: 1.1; margin-bottom: 0.45rem;
+        }
+        .article-body.race-report .stat-card-detail {
+            color: var(--muted); font-size: 0.84rem; line-height: 1.55;
+        }
+        .article-body.race-report .kicker {
+            font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700;
+            letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold);
+            margin-top: 2.5rem; margin-bottom: 0.3rem;
+        }
+        .article-body.race-report .kicker + h2 { margin-top: 0.15rem; }
+        .article-body.race-report blockquote.pull-quote {
+            font-family: 'Anton', sans-serif; font-size: 1.45rem;
+            letter-spacing: 0.02em; text-transform: none; color: var(--text);
+            font-style: normal; border-left: 3px solid var(--gold);
+            padding: 0.35rem 1.25rem; margin: 1.85rem 0;
+            line-height: 1.3;
+        }
+        .article-body.race-report .closer {
+            margin-top: 2.5rem; padding-top: 1.5rem;
+            border-top: 1px solid var(--border); color: var(--muted);
+        }
+
         /* States */
         .state-msg { text-align: center; padding: 5rem 2rem; }
         .state-msg h3 { font-family: 'Anton', sans-serif; font-size: 1.3rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.5rem; }
@@ -240,7 +292,7 @@ async function loadArticle(slug) {
         <div class="article-meta">
             ${data.author ? `<strong>${esc(data.author)}</strong> · ` : ''}${fmtDate(data.published_at)}
         </div>
-        <div class="article-body">${data.body || ''}</div>
+        <div class="article-body${isReport ? ' race-report' : ''}">${data.body || ''}</div>
     </div>`;
 }
 </script>

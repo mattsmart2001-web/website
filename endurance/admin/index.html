@@ -3990,7 +3990,6 @@ function buildRaceReport(d) {
     const teamOf      = (rd) => rd._entry?.teams?.name;
     const teamSlugOf  = (rd) => rd._entry?.teams?.slug;
 
-    // ---- Per-split storyboard: extract dramatic facts BEFORE narrating ----
     const splitStories = splitKeys.map(k => {
         const split = splits[k];
         const qs = (split.qualis || []).filter(q => q.position != null).sort((a, b) => a.position - b.position);
@@ -4018,14 +4017,10 @@ function buildRaceReport(d) {
             .sort((a, b) => b._gained - a._gained)[0];
         const dnf = (split.drivers || []).filter(rd => rd.status === 'dnf').length;
         const dsq = (split.drivers || []).filter(rd => rd.status === 'dsq').length;
-        return {
-            key: k, label: splitLabel(k),
-            qs, pole, poleGap, finishers, winner, p2, p3, flWinner,
-            poleToFlag, grandSlam, teamOneTwo, driveOfRace, dnf, dsq,
-        };
+        return { key: k, label: splitLabel(k), qs, pole, poleGap, finishers, winner, p2, p3,
+                 flWinner, poleToFlag, grandSlam, teamOneTwo, driveOfRace, dnf, dsq };
     }).filter(s => s.winner);
 
-    // ---- Championship facts ----
     const leaderNow = standingsNow[0];
     const priorSorted = Array.from(priorByDriver.entries())
         .map(([id, pts]) => ({ id, pts }))
@@ -4042,133 +4037,324 @@ function buildRaceReport(d) {
     const circuit     = event.circuit_name || 'the circuit';
     const heroSplit   = splitStories[0] || null;
 
-    // ---- The hero lede: pick the single biggest story of the round ----
-    let lede;
-    if (leadChanged && leaderNow) {
-        lede = `<strong>${esc(leaderNow.driver_name)}</strong> ${pickOne(['walks out of', 'leaves', 'departs'])} ${esc(circuit)} as the new championship leader of ${esc(seasonLabel)}, ${pickOne(['ending', 'breaking', 'snapping'])} ${esc(priorLeaderName || 'the incumbent')}'s grip on the top of the table after a ${pickOne(['pivotal', 'decisive', 'season-defining', 'turning-point'])} Round ${event.round}.`;
-    } else if (heroSplit?.grandSlam) {
-        lede = `It was a near-perfect afternoon for <strong>${esc(driverName(heroSplit.winner))}</strong> at ${esc(circuit)}: pole position, fastest lap, race win. The kind of weekend drivers chase a whole season for, and one ${pickOne(['nobody', 'few', 'no one'])} else in ${esc(heroSplit.label)} could answer.`;
-    } else if (heroSplit?.poleToFlag) {
-        lede = `<strong>${esc(driverName(heroSplit.winner))}</strong> converted pole to chequered flag at ${esc(circuit)}, ${pickOne(['controlling', 'commanding', 'managing'])} every phase of the race and leaving the rest of the field with little to say in reply.`;
-    } else if (heroSplit?.driveOfRace) {
-        lede = `Round ${event.round} at ${esc(circuit)} belonged as much to <strong>${esc(driverName(heroSplit.driveOfRace))}</strong> as it did to the winner: a charge from P${heroSplit.driveOfRace._qualiPos} on the grid to P${heroSplit.driveOfRace.finish_position} at the flag, ${heroSplit.driveOfRace._gained} places gained in a single afternoon.`;
-    } else if (heroSplit) {
-        lede = `<strong>${esc(driverName(heroSplit.winner))}</strong>${teamOf(heroSplit.winner) ? ` of ${esc(teamOf(heroSplit.winner))}` : ''} took ${pickOne(['the spoils', 'top honours', 'the chequered flag'])} at ${esc(circuit)} as the GTEC field reconvened for Round ${event.round} of ${esc(seasonLabel)}.`;
-    } else {
-        lede = `Round ${event.round} of ${esc(seasonLabel)} ${pickOne(['unfolded', 'was contested', 'played out'])} at ${esc(circuit)}.`;
+    function fmtDateline(iso) {
+        if (!iso) return '';
+        const dt = new Date(iso);
+        const day = String(dt.getDate()).padStart(2, '0');
+        const month = dt.toLocaleString('en-GB', { month: 'short' }).toUpperCase().replace(/\./g, '');
+        return `${day} ${month} ${dt.getFullYear()}`;
+    }
+    function ledeWithDropcap(text) {
+        let inTag = false, head = '';
+        for (let i = 0; i < text.length; i++) {
+            const c = text[i];
+            if (c === '<') { inTag = true; head += c; continue; }
+            if (c === '>') { inTag = false; head += c; continue; }
+            if (inTag)    { head += c; continue; }
+            if (/[A-Za-z]/.test(c)) return `${head}<span class="dropcap">${c}</span>${text.slice(i + 1)}`;
+            head += c;
+        }
+        return text;
     }
 
+    // ---- Hero lede: single biggest story of the round ----
+    let lede;
+    if (leadChanged && leaderNow) {
+        lede = pickOne([
+            `<strong>${esc(leaderNow.driver_name)}</strong> walks out of ${esc(circuit)} as the new championship leader of ${esc(seasonLabel)}, ending ${esc(priorLeaderName || 'the incumbent')}'s grip on the top of the table after a pivotal Round ${event.round}.`,
+            `For the first time this season, the ${esc(seasonLabel)} championship has a new name at the top. <strong>${esc(leaderNow.driver_name)}</strong> wrested the lead from ${esc(priorLeaderName || 'the previous leader')} at ${esc(circuit)}, turning Round ${event.round} into the day the title race flipped on its head.`,
+            `Round ${event.round} reshaped ${esc(seasonLabel)}. <strong>${esc(leaderNow.driver_name)}</strong> leaves ${esc(circuit)} as the new points leader, the kind of turning point seasons hinge on, with ${esc(priorLeaderName || 'the previous leader')} now playing chase.`,
+        ]);
+    } else if (heroSplit?.grandSlam) {
+        lede = pickOne([
+            `Pole, fastest lap, the race win. <strong>${esc(driverName(heroSplit.winner))}</strong> did everything that could be done at ${esc(circuit)}, the kind of weekend drivers chase a whole season for and rarely find.`,
+            `<strong>${esc(driverName(heroSplit.winner))}</strong> rewrote the ${esc(circuit)} record card on race day, taking pole position, fastest lap and the chequered flag inside a single afternoon and never looking troubled doing it.`,
+            `Some days the result book runs out of ways to credit a driver. <strong>${esc(driverName(heroSplit.winner))}</strong>'s afternoon at ${esc(circuit)} was one of them: pole, fastest lap, victory, and not much room for argument in between.`,
+        ]);
+    } else if (heroSplit?.poleToFlag) {
+        lede = pickOne([
+            `<strong>${esc(driverName(heroSplit.winner))}</strong> ran the lap board at ${esc(circuit)} from pole to chequer, controlling the front of the race with the kind of patience that wins championships.`,
+            `It was a controlled, almost serene afternoon for <strong>${esc(driverName(heroSplit.winner))}</strong> at ${esc(circuit)}. Pole position turned into a race lead that was never seriously questioned, and Round ${event.round} ended exactly the way it began.`,
+            `Pole to flag, and never any closer to losing it than he wanted to be. <strong>${esc(driverName(heroSplit.winner))}</strong> commanded ${esc(circuit)} from the moment the lights went out, the result settled long before the chequer fell.`,
+        ]);
+    } else if (heroSplit?.driveOfRace) {
+        const dor = heroSplit.driveOfRace;
+        lede = pickOne([
+            `If Round ${event.round} had a heart, it beat in the cockpit of <strong>${esc(driverName(dor))}</strong>, who climbed ${dor._gained} places from P${dor._qualiPos} on the grid to P${dor.finish_position} at the flag and stole the headlines from the man who actually won.`,
+            `<strong>${esc(driverName(dor))}</strong> may not have crossed the line first at ${esc(circuit)}, but a P${dor._qualiPos} to P${dor.finish_position} charge was the kind of drive that wins a driver a following, and it left the paddock talking about him as much as the race winner.`,
+            `Round ${event.round} at ${esc(circuit)} produced one of those drives the cameras struggle to track. <strong>${esc(driverName(dor))}</strong> gained ${dor._gained} places in a single afternoon, climbing from P${dor._qualiPos} on the grid to P${dor.finish_position} at the chequered flag.`,
+        ]);
+    } else if (heroSplit) {
+        const winN = driverName(heroSplit.winner);
+        const team = teamOf(heroSplit.winner);
+        lede = pickOne([
+            `<strong>${esc(winN)}</strong>${team ? ` of ${esc(team)}` : ''} took Round ${event.round} of ${esc(seasonLabel)} at ${esc(circuit)}, the kind of clean result the championship picture has been waiting for.`,
+            `Round ${event.round} at ${esc(circuit)} belonged to <strong>${esc(winN)}</strong>${team ? `, a result that puts ${esc(team)} firmly back in the conversation` : ''}.`,
+            `The chequered flag at ${esc(circuit)} fell first for <strong>${esc(winN)}</strong>${team ? `, leading ${esc(team)} home in Round ${event.round} of ${esc(seasonLabel)}` : ` in Round ${event.round} of ${esc(seasonLabel)}`}.`,
+        ]);
+    } else {
+        lede = `Round ${event.round} of ${esc(seasonLabel)} was contested at ${esc(circuit)}.`;
+    }
+
+    // ---- Stat card: headline fact ----
+    let statCard = '';
+    if (leadChanged && leaderNow) {
+        statCard = `<div class="stat-card">
+            <div class="stat-card-label">New Championship Leader</div>
+            <div class="stat-card-value">${esc(leaderNow.driver_name)}</div>
+            <div class="stat-card-detail">Takes the ${esc(seasonLabel)} lead from ${esc(priorLeaderName || 'the previous leader')} on ${fmtPoints(leaderNow.points)} points after Round ${event.round}.</div>
+        </div>`;
+    } else if (heroSplit?.grandSlam) {
+        statCard = `<div class="stat-card">
+            <div class="stat-card-label">Grand Slam</div>
+            <div class="stat-card-value">${esc(driverName(heroSplit.winner))}</div>
+            <div class="stat-card-detail">Pole position. Fastest lap. Race win. The clean sweep at ${esc(circuit)}.</div>
+        </div>`;
+    } else if (heroSplit?.poleToFlag) {
+        statCard = `<div class="stat-card">
+            <div class="stat-card-label">Pole to Flag</div>
+            <div class="stat-card-value">${esc(driverName(heroSplit.winner))}</div>
+            <div class="stat-card-detail">${teamOf(heroSplit.winner) ? `${esc(teamOf(heroSplit.winner))}. ` : ''}Led from green light to chequer at ${esc(circuit)}.</div>
+        </div>`;
+    } else if (heroSplit?.driveOfRace) {
+        const dor = heroSplit.driveOfRace;
+        statCard = `<div class="stat-card">
+            <div class="stat-card-label">Drive of the Day</div>
+            <div class="stat-card-value">${esc(driverName(dor))}</div>
+            <div class="stat-card-detail">From P${dor._qualiPos} on the grid to P${dor.finish_position} at the flag, ${dor._gained} places gained at ${esc(circuit)}.</div>
+        </div>`;
+    } else if (heroSplit) {
+        statCard = `<div class="stat-card">
+            <div class="stat-card-label">Race Winner</div>
+            <div class="stat-card-value">${esc(driverName(heroSplit.winner))}</div>
+            <div class="stat-card-detail">${teamOf(heroSplit.winner) ? `${esc(teamOf(heroSplit.winner))}. ` : ''}Round ${event.round} of ${esc(seasonLabel)} at ${esc(circuit)}.</div>
+        </div>`;
+    }
+
+    // ---- Assemble body ----
     const html = [];
-    html.push(`<p class="lede">${lede}</p>`);
+
+    const dlBits = [];
+    if (circuit) dlBits.push(esc(circuit.toUpperCase()));
+    if (event.starts_at) dlBits.push(fmtDateline(event.starts_at));
+    dlBits.push('GTEC EDITORIAL');
+    html.push(`<p class="dateline">${dlBits.join(' · ')}</p>`);
+
+    html.push(`<p class="lede">${ledeWithDropcap(lede)}</p>`);
+    if (statCard) html.push(statCard);
 
     // Nut graf
     const nut = [];
     if (multiSplit && splitStories.length > 1) {
-        nut.push(`Across ${splitStories.length} splits, the round produced ${pickOne(['fresh storylines', 'plenty to chew on', 'a clutch of headlines'])} for the championship to digest.`);
+        nut.push(pickOne([
+            `The round split into ${splitStories.length} separate races across the GTEC grid, and each one wrote its own headlines.`,
+            `Across ${splitStories.length} splits, the field produced ${splitStories.length === 2 ? 'a pair of contrasting' : 'a clutch of contrasting'} race narratives for the championship to make sense of.`,
+            `${splitStories.length} splits, ${splitStories.length} separate stories. Round ${event.round} delivered a little of everything across the grid.`,
+        ]));
     }
     if (leaderNow && !leadChanged && !isFirstRound) {
-        nut.push(`${esc(leaderNow.driver_name)} sleeps on the championship lead for another round, but ${pickOne(['the chasing pack closed in', 'the picture behind shuffled', 'the pursuit has not gone quiet'])}.`);
+        nut.push(pickOne([
+            `${esc(leaderNow.driver_name)} retains the championship lead for another round, but on this evidence the picture behind has not gone quiet.`,
+            `${esc(leaderNow.driver_name)} stays at the top of the table, with the rest of the contenders making certain the title race is far from settled.`,
+            `${esc(leaderNow.driver_name)}'s name remains the one to beat, though the gap behind reads a touch different than it did a round ago.`,
+        ]));
     }
     if (isFirstRound && leaderNow) {
-        nut.push(`With the first round in the books, ${esc(leaderNow.driver_name)} is the inaugural points leader of ${esc(seasonLabel)}.`);
+        nut.push(pickOne([
+            `With the opening round in the books, ${esc(leaderNow.driver_name)} is the first name on the ${esc(seasonLabel)} championship board.`,
+            `${esc(leaderNow.driver_name)} writes the first chapter of the ${esc(seasonLabel)} title fight, taking the inaugural points lead out of ${esc(circuit)}.`,
+            `Every season needs a starting point. ${esc(seasonLabel)} found its early leader in ${esc(leaderNow.driver_name)}, with ${esc(circuit)} setting the tone.`,
+        ]));
     }
     if (nut.length) html.push(`<p>${nut.join(' ')}</p>`);
 
     // ---- Qualifying ----
-    html.push(`<h2>Qualifying</h2>`);
-    if (!splitStories.some(s => s.qs.length)) {
-        html.push(`<p>No qualifying times were lodged for this round.</p>`);
-    } else {
+    if (splitStories.some(s => s.qs.length)) {
+        html.push(`<div class="kicker">Qualifying</div><h2>On the Front Row</h2>`);
         splitStories.forEach(s => {
             const { qs, pole, poleGap, label } = s;
             if (!qs.length || !pole) return;
-            const verb = pickOne(['claimed', 'snatched', 'banked', 'secured', 'nailed down', 'wrestled away']);
-            const lapStr  = pole.best_lap_ms ? ` with a <strong>${fmtLap(pole.best_lap_ms)}</strong>` : '';
-            const teamStr = pole.entries?.teams?.name ? ` for ${esc(pole.entries.teams.name)}` : '';
-            let line = `<strong>${esc(label)}.</strong> ${esc(pole.drivers?.display_name || 'Pole sitter')} ${verb} pole${lapStr}${teamStr}.`;
-            if (poleGap != null) {
-                const second = qs[1];
-                let qual;
-                if (poleGap < 0.05)      qual = pickOne(['by the slimmest of margins', 'by a whisker', 'by a hundredth or two']);
-                else if (poleGap < 0.2)  qual = pickOne(['by a tight margin', 'by a hair', 'in the closest of fights']);
-                else if (poleGap < 0.5)  qual = pickOne(['by a comfortable cushion', 'with breathing room', 'with daylight in hand']);
-                else                     qual = pickOne(['by a commanding margin', 'in a class of one', 'with the rest in his wake']);
-                line += ` ${esc(second.drivers?.display_name || 'Second')} lined up alongside, ${poleGap.toFixed(3)}s back, ${qual}.`;
+            const poleN  = esc(pole.drivers?.display_name || 'pole sitter');
+            const teamN  = pole.entries?.teams?.name ? esc(pole.entries.teams.name) : null;
+            const lap    = pole.best_lap_ms ? fmtLap(pole.best_lap_ms) : null;
+            const second = qs[1];
+            const secondN = second?.drivers?.display_name ? esc(second.drivers.display_name) : null;
+            const gapStr = poleGap != null ? poleGap.toFixed(3) : null;
+
+            let para;
+            if (poleGap == null || !secondN) {
+                para = pickOne([
+                    `${poleN} starts ${esc(label)} on pole${lap ? ` after a <strong>${lap}</strong> effort` : ''}${teamN ? ` for ${teamN}` : ''}.`,
+                    `Pole in ${esc(label)} belongs to ${poleN}${teamN ? ` of ${teamN}` : ''}${lap ? `, banked at <strong>${lap}</strong>` : ''}.`,
+                    `${esc(label)} sees ${poleN}${teamN ? ` (${teamN})` : ''} on the front of the grid${lap ? ` with a <strong>${lap}</strong> on the board` : ''}.`,
+                ]);
+            } else if (poleGap < 0.1) {
+                para = pickOne([
+                    `Pole in ${esc(label)} came down to the last possible hundredth. ${poleN}'s ${lap ? `<strong>${lap}</strong>` : 'best lap'} pipped ${secondN} by just ${gapStr}s${teamN ? `, ${teamN} clinging to the front` : ''}, the kind of margin that doesn't sleep easy.`,
+                    `${poleN} stole pole in ${esc(label)}, ${gapStr}s standing between ${lap ? `a <strong>${lap}</strong>` : 'his best effort'} and ${secondN}'s when the timing screens settled${teamN ? `; ${teamN} take the top slot for now` : ''}.`,
+                    `Nothing separates the front row of ${esc(label)}. ${poleN}${teamN ? ` (${teamN})` : ''} edges ${secondN} by ${gapStr}s, pole settled by a sigh${lap ? ` on a <strong>${lap}</strong>` : ''}.`,
+                    `${esc(label)}'s pole shoot-out went the distance. ${poleN}${lap ? ` on a <strong>${lap}</strong>` : ''} took it by ${gapStr}s from ${secondN}, a margin you could fit on a napkin.`,
+                ]);
+            } else if (poleGap < 0.35) {
+                para = pickOne([
+                    `${poleN} takes ${esc(label)} pole by ${gapStr}s over ${secondN}${lap ? `, a <strong>${lap}</strong> the benchmark` : ''}${teamN ? `, and ${teamN} stamp themselves on the front row` : ''}.`,
+                    `Pole in ${esc(label)} goes to ${poleN}${teamN ? ` of ${teamN}` : ''}, ${gapStr}s clear of ${secondN}${lap ? ` with a <strong>${lap}</strong>` : ''}. Comfortable enough, but no further.`,
+                    `In ${esc(label)}, ${poleN} clears ${secondN} by ${gapStr}s for pole${lap ? `, a <strong>${lap}</strong>` : ''}${teamN ? `, the lift ${teamN} needed` : ''}.`,
+                    `${poleN}${teamN ? ` (${teamN})` : ''} got the better of ${secondN} when it mattered in ${esc(label)} qualifying, ${gapStr}s the margin${lap ? `, a <strong>${lap}</strong> the headline figure` : ''}.`,
+                ]);
+            } else if (poleGap < 0.7) {
+                para = pickOne([
+                    `${poleN} stamps authority on ${esc(label)} qualifying${lap ? `, a <strong>${lap}</strong>` : ''} landing ${gapStr}s clear of ${secondN}${teamN ? ` for ${teamN}` : ''}.`,
+                    `${esc(label)}'s pole was rarely in doubt. ${poleN}${teamN ? ` (${teamN})` : ''} laid down ${lap ? `a <strong>${lap}</strong>` : 'the benchmark'} and walked away ${gapStr}s clear of ${secondN}.`,
+                    `A pole worth shouting about in ${esc(label)}: ${poleN}${lap ? ` on a <strong>${lap}</strong>` : ''} put ${gapStr}s into ${secondN}${teamN ? `, ${teamN} the side reaping it` : ''}.`,
+                    `Make it look easy. ${poleN}${teamN ? `, ${teamN}'s man,` : ''} fired in ${lap ? `a <strong>${lap}</strong>` : 'a session-best'} that left ${secondN} ${gapStr}s adrift in ${esc(label)}.`,
+                ]);
+            } else {
+                para = pickOne([
+                    `${poleN} put pole in ${esc(label)} out of reach${lap ? `, a <strong>${lap}</strong>` : ''} that finished ${gapStr}s clear of ${secondN}${teamN ? `, a statement weekend for ${teamN}` : ''}.`,
+                    `Qualifying in ${esc(label)} was over before it began. ${poleN}${lap ? `'s <strong>${lap}</strong>` : "'s best lap"} dropped ${gapStr}s on ${secondN}, a margin nobody else got close to bridging.`,
+                    `Pole in ${esc(label)} was a class apart. ${poleN}${teamN ? ` of ${teamN}` : ''} cleared ${secondN} by ${gapStr}s${lap ? ` with a <strong>${lap}</strong>` : ''}, and the grid behind looked like spectators.`,
+                ]);
             }
             const p3 = qs[2];
-            if (p3 && p3.drivers?.display_name) line += ` ${esc(p3.drivers.display_name)} completed the top three.`;
-            html.push(`<p>${line}</p>`);
+            if (p3 && p3.drivers?.display_name) {
+                para += ' ' + pickOne([
+                    `${esc(p3.drivers.display_name)} lines up third.`,
+                    `${esc(p3.drivers.display_name)} completes the top three on the grid.`,
+                    `Third on the grid: ${esc(p3.drivers.display_name)}.`,
+                ]);
+            }
+            html.push(`<p>${para}</p>`);
         });
     }
 
     // ---- The Race ----
-    html.push(`<h2>The Race</h2>`);
+    html.push(`<div class="kicker">Race Day</div><h2>The Race</h2>`);
     splitStories.forEach(s => {
         const { winner, p2, p3, flWinner, poleToFlag, grandSlam, teamOneTwo, driveOfRace, dnf, dsq, label, qs, finishers } = s;
         const lines = [];
-        const winVerb = pickOne(['took the win', 'crossed the line first', 'sealed the victory', 'led them home', 'came out on top', 'banked the maximum']);
-        let l = `<strong>${esc(label)}.</strong> ${esc(driverName(winner))}${teamOf(winner) ? ` of ${esc(teamOf(winner))}` : ''} ${winVerb}`;
-        if (p2 && p3)      l += `, with ${esc(driverName(p2))} second and ${esc(driverName(p3))} rounding out the podium`;
-        else if (p2)       l += `, ahead of ${esc(driverName(p2))}`;
-        l += '.';
-        lines.push(l);
+        const winN = esc(driverName(winner));
+        const team = teamOf(winner) ? esc(teamOf(winner)) : null;
+        const p2N = p2 ? esc(driverName(p2)) : null;
+        const p3N = p3 ? esc(driverName(p3)) : null;
+        const podiumTail = p2N && p3N ? `, ${p2N} second and ${p3N} third` : p2N ? `, ${p2N} a step behind` : '';
 
         if (grandSlam) {
-            lines.push(`Pole, fastest lap, the win. The full set for ${esc(driverName(winner))}, a ${pickOne(['statement', 'showpiece', 'flawless'])} weekend in every sense.`);
+            lines.push(pickOne([
+                `${winN} did everything that could be done in ${esc(label)}${team ? ` for ${team}` : ''}: pole, fastest lap, the win${podiumTail}.`,
+                `It was the full set in ${esc(label)} for ${winN}${team ? ` (${team})` : ''}. Pole became a race lead, the race lead became a race win, and the fastest lap arrived for good measure${podiumTail}.`,
+                `Pole, fastest lap, race win${team ? `, ${team} sweeping the lot` : ''}. ${winN} made ${esc(label)} his own${podiumTail}.`,
+            ]));
         } else if (poleToFlag) {
-            lines.push(`Pole to flag, ${pickOne(['a textbook performance', 'serenely managed', 'never headed', 'a controlled drive from green to chequered'])}.`);
+            lines.push(pickOne([
+                `${winN}${team ? ` of ${team}` : ''} converted ${esc(label)} pole into the chequered flag, the race controlled from green light to checker${podiumTail}.`,
+                `Never headed. ${winN} ran ${esc(label)} from pole to the flag${team ? `, ${team} taking the spoils` : ''}${podiumTail}.`,
+                `${winN} did the simple job in ${esc(label)}: led from pole, never lost it${team ? `, handed ${team} a clean win` : ''}${podiumTail}.`,
+            ]));
         } else {
             const polesitter = qs[0];
-            if (polesitter && winner.driver_id !== polesitter.driver_id) {
-                const psFinish = finishers.find(rd => rd.driver_id === polesitter.driver_id);
-                if (psFinish) {
-                    lines.push(`Pole sitter ${esc(polesitter.drivers?.display_name || 'the front row starter')} ${pickOne(['could not convert', 'fell short of converting', 'was overhauled', 'lost the lead'])} and ${pickOne(['took the flag in', 'settled for', 'recovered to'])} P${psFinish.finish_position}.`);
-                } else {
-                    lines.push(`Pole sitter ${esc(polesitter.drivers?.display_name || 'the front row starter')} ${pickOne(['failed to see the flag', 'did not feature at the finish', 'fell out of contention'])}.`);
-                }
+            const psBeaten = polesitter && polesitter.driver_id !== winner.driver_id;
+            const psFinish = psBeaten ? finishers.find(rd => rd.driver_id === polesitter.driver_id) : null;
+            const psName = polesitter?.drivers?.display_name ? esc(polesitter.drivers.display_name) : null;
+            if (psBeaten && psName && psFinish) {
+                lines.push(pickOne([
+                    `${esc(label)}'s race did not honour the grid. ${winN}${team ? ` (${team})` : ''} won it, with pole sitter ${psName} slipping to P${psFinish.finish_position}${podiumTail}.`,
+                    `Pole did not pay in ${esc(label)}. ${winN} got the better of ${psName}${team ? ` and put ${team} top of the result sheet` : ''}, the pole sitter settling for P${psFinish.finish_position}${podiumTail}.`,
+                    `${winN} hunted down the pole sitter in ${esc(label)}. ${psName} dropped to P${psFinish.finish_position} by the flag while ${winN}${team ? `, in ${team} colours,` : ''} took the win${podiumTail}.`,
+                ]));
+            } else if (psBeaten && psName) {
+                lines.push(pickOne([
+                    `${esc(label)} swallowed its pole sitter whole. ${psName} did not feature at the finish, leaving ${winN}${team ? ` (${team})` : ''} to take the win${podiumTail}.`,
+                    `Pole turned to dust in ${esc(label)}. ${psName} dropped out of the result entirely and ${winN}${team ? ` of ${team}` : ''} took the chequered flag${podiumTail}.`,
+                    `${winN}${team ? ` (${team})` : ''} inherited the lead when ${psName} fell out of contention in ${esc(label)}, and saw the job through${podiumTail}.`,
+                ]));
+            } else {
+                lines.push(pickOne([
+                    `${winN}${team ? ` of ${team}` : ''} took the win in ${esc(label)}${podiumTail}.`,
+                    `In ${esc(label)}, ${winN}${team ? ` (${team})` : ''} crossed the line first${podiumTail}.`,
+                    `${esc(label)}'s win went to ${winN}${team ? `, ${team}'s man on the day` : ''}${podiumTail}.`,
+                ]));
             }
         }
 
-        if (teamOneTwo && teamOf(winner)) {
-            lines.push(`A perfect afternoon for ${esc(teamOf(winner))}, who locked out the front row of the result with a one-two.`);
+        if (teamOneTwo && team && !grandSlam) {
+            lines.push(pickOne([
+                `${team} couldn't have asked for more, locking out the top two with a one-two finish.`,
+                `A team-perfect day for ${team}, who put both cars on the front of the result sheet.`,
+                `A one-two for ${team}, a result the season wasn't necessarily promising them.`,
+            ]));
         }
 
         if (flWinner) {
             const sameAsWinner = flWinner.driver_id === winner.driver_id;
             if (sameAsWinner && !grandSlam) {
-                lines.push(`Fastest lap${flWinner.fastest_lap_ms ? ` of <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>` : ''} to ${esc(driverName(flWinner))}, just to underline the point.`);
+                lines.push(pickOne([
+                    `Fastest lap${flWinner.fastest_lap_ms ? ` of <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>` : ''} to ${esc(driverName(flWinner))}, just so the point couldn't be missed.`,
+                    `${esc(driverName(flWinner))} stamped the fastest lap${flWinner.fastest_lap_ms ? `, <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>,` : ''} on top of the win.`,
+                ]));
             } else if (!sameAsWinner) {
-                lines.push(`Fastest lap${flWinner.fastest_lap_ms ? ` of <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>` : ''} went to ${esc(driverName(flWinner))}${teamOf(flWinner) ? ` of ${esc(teamOf(flWinner))}` : ''}, a small consolation on a day when the win went elsewhere.`);
+                const flTeam = teamOf(flWinner) ? esc(teamOf(flWinner)) : null;
+                lines.push(pickOne([
+                    `Fastest lap went elsewhere: ${esc(driverName(flWinner))}${flTeam ? `, in ${flTeam} colours,` : ''} took it${flWinner.fastest_lap_ms ? ` at <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>` : ''}, a small consolation on a day the win sat out of reach.`,
+                    `${esc(driverName(flWinner))}${flTeam ? ` (${flTeam})` : ''} grabbed the fastest lap point${flWinner.fastest_lap_ms ? ` on a <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>` : ''}, something to take home from a race that didn't deliver the bigger prize.`,
+                ]));
             }
         }
 
         if (driveOfRace && driveOfRace.driver_id !== winner.driver_id) {
-            lines.push(`The drive of the day belonged to <strong>${esc(driverName(driveOfRace))}</strong>, climbing from P${driveOfRace._qualiPos} on the grid to P${driveOfRace.finish_position} at the chequered flag, ${driveOfRace._gained} places gained.`);
+            lines.push(pickOne([
+                `The drive of the day, though, belonged to <strong>${esc(driverName(driveOfRace))}</strong>: P${driveOfRace._qualiPos} on the grid, P${driveOfRace.finish_position} at the flag, ${driveOfRace._gained} places gained.`,
+                `<strong>${esc(driverName(driveOfRace))}</strong> stole the eye in ${esc(label)}, climbing from P${driveOfRace._qualiPos} on the grid to P${driveOfRace.finish_position} at the chequered flag.`,
+                `Save a thought for <strong>${esc(driverName(driveOfRace))}</strong>, who turned a P${driveOfRace._qualiPos} grid slot into a P${driveOfRace.finish_position} finish, ${driveOfRace._gained} places gained.`,
+            ]));
         }
 
         if (dnf || dsq) {
             const bits = [];
             if (dnf) bits.push(`${dnf} ${dnf === 1 ? 'retirement' : 'retirements'}`);
             if (dsq) bits.push(`${dsq} ${dsq === 1 ? 'disqualification' : 'disqualifications'}`);
-            lines.push(`The race was not without its casualties: ${bits.join(' and ')} ${(dnf + dsq) === 1 ? 'on the day' : 'between them'}.`);
+            lines.push(pickOne([
+                `It was not without cost: ${bits.join(' and ')} ${(dnf + dsq) === 1 ? 'on the day' : 'across the field'}.`,
+                `The race claimed its scalps too, with ${bits.join(' and ')} recorded.`,
+                `Behind the top three, ${bits.join(' and ')} reshaped the back end of the order.`,
+            ]));
         }
 
         html.push(`<p>${lines.join(' ')}</p>`);
     });
 
+    // ---- Pull quote: the line worth pulling out ----
+    let pullQuote = null;
+    if (heroSplit?.grandSlam) {
+        pullQuote = `Pole, fastest lap, the win. The full set for ${esc(driverName(heroSplit.winner))} at ${esc(circuit)}.`;
+    } else if (leadChanged && leaderNow) {
+        pullQuote = `There is a new name at the top.`;
+    } else if (heroSplit?.poleToFlag) {
+        pullQuote = `Pole to flag. ${esc(driverName(heroSplit.winner))} ran ${esc(circuit)} on his terms.`;
+    } else if (heroSplit?.driveOfRace) {
+        const dor = heroSplit.driveOfRace;
+        pullQuote = `From P${dor._qualiPos} to P${dor.finish_position}. ${esc(driverName(dor))} stole a headline he hadn't earned at lights-out.`;
+    }
+    if (pullQuote) html.push(`<blockquote class="pull-quote">${pullQuote}</blockquote>`);
+
     // ---- Championship ----
-    html.push(`<h2>The Championship</h2>`);
-    if (!standingsNow.length) {
-        html.push(`<p>Standings will be confirmed shortly.</p>`);
-    } else {
+    if (standingsNow.length) {
+        html.push(`<div class="kicker">The Title Race</div><h2>Championship Standings</h2>`);
         const second = standingsNow[1];
         const gap = second ? (Number(leaderNow.points) - Number(second.points)) : 0;
         let openLine;
         if (isFirstRound) {
-            openLine = `The opening round is in the books, and it is <strong>${esc(leaderNow.driver_name)}</strong> who sets the early pace on <strong>${fmtPoints(leaderNow.points)}</strong> points${second ? `, ${fmtPoints(gap)} clear of ${esc(second.driver_name)}` : ''}.`;
+            openLine = pickOne([
+                `Round one is in the books, and <strong>${esc(leaderNow.driver_name)}</strong> sets the early benchmark on <strong>${fmtPoints(leaderNow.points)}</strong> points${second ? `, ${fmtPoints(gap)} clear of ${esc(second.driver_name)}` : ''}.`,
+                `The first championship table of ${esc(seasonLabel)} reads <strong>${esc(leaderNow.driver_name)}</strong>${second ? ` from ${esc(second.driver_name)}` : ''}, the opening round handing <strong>${fmtPoints(leaderNow.points)}</strong> points to the new leader.`,
+                `A title fight needs a first leader, and ${esc(seasonLabel)} found one in <strong>${esc(leaderNow.driver_name)}</strong>, ${fmtPoints(leaderNow.points)} points on the board after the opener${second ? `, ${fmtPoints(gap)} ahead of ${esc(second.driver_name)}` : ''}.`,
+            ]);
         } else if (leadChanged) {
-            openLine = `There is a new name at the top. <strong>${esc(leaderNow.driver_name)}</strong> ${pickOne(['has wrested', 'has taken', 'has claimed'])} the championship lead from ${esc(priorLeaderName || 'the previous leader')}, ${pickOne(['flipping', 'rewriting', 'reshaping'])} the title picture and moving to <strong>${fmtPoints(leaderNow.points)}</strong> points.`;
-            if (second && second.driver_id !== leaderNow.driver_id) openLine += ` ${esc(second.driver_name)} now sits second on ${fmtPoints(second.points)}.`;
+            openLine = pickOne([
+                `There is a new name at the top of ${esc(seasonLabel)}. <strong>${esc(leaderNow.driver_name)}</strong> takes the lead from ${esc(priorLeaderName || 'the previous leader')}, moving to <strong>${fmtPoints(leaderNow.points)}</strong> points${second && second.driver_id !== leaderNow.driver_id ? `; ${esc(second.driver_name)} now sits second on ${fmtPoints(second.points)}` : ''}.`,
+                `The title picture has been rewritten. <strong>${esc(leaderNow.driver_name)}</strong> overhauls ${esc(priorLeaderName || 'the previous leader')} at the top of ${esc(seasonLabel)}, the new leader on <strong>${fmtPoints(leaderNow.points)}</strong> points after Round ${event.round}.`,
+                `${esc(priorLeaderName || 'The previous leader')} is no longer the man to beat in ${esc(seasonLabel)}. <strong>${esc(leaderNow.driver_name)}</strong> takes the championship lead on <strong>${fmtPoints(leaderNow.points)}</strong> points, the title race officially flipped.`,
+            ]);
         } else {
             const priorGap = (() => {
                 if (!second) return null;
@@ -4176,33 +4362,47 @@ function buildRaceReport(d) {
                 const sp = priorByDriver.get(second.driver_id) || 0;
                 return lp - sp;
             })();
-            let direction = '';
-            if (priorGap != null && second) {
-                if (gap > priorGap + 1)      direction = pickOne([' and stretches the gap further', ' and extends his cushion', ' and widens the margin']);
-                else if (gap < priorGap - 1) direction = pickOne([', though the gap has narrowed', ', but the chasing pack has closed in', ', but the lead is no longer as comfortable as it was']);
+            const widened = priorGap != null && second && gap > priorGap + 1;
+            const narrowed = priorGap != null && second && gap < priorGap - 1;
+            if (widened) {
+                openLine = pickOne([
+                    `<strong>${esc(leaderNow.driver_name)}</strong> stretches the championship lead to <strong>${fmtPoints(leaderNow.points)}</strong> points, the gap to ${esc(second.driver_name)} now ${fmtPoints(gap)} after Round ${event.round}.`,
+                    `The leader pulls clear. <strong>${esc(leaderNow.driver_name)}</strong> heads ${esc(seasonLabel)} on <strong>${fmtPoints(leaderNow.points)}</strong> points, ${fmtPoints(gap)} ahead of ${esc(second.driver_name)}, the buffer growing.`,
+                    `<strong>${esc(leaderNow.driver_name)}</strong> extends his cushion. <strong>${fmtPoints(leaderNow.points)}</strong> points at the top of the table, ${fmtPoints(gap)} clear of ${esc(second.driver_name)}.`,
+                ]);
+            } else if (narrowed) {
+                openLine = pickOne([
+                    `<strong>${esc(leaderNow.driver_name)}</strong> holds the championship lead on <strong>${fmtPoints(leaderNow.points)}</strong> points, but the gap to ${esc(second.driver_name)} has shrunk to ${fmtPoints(gap)} and the chase is on.`,
+                    `The points lead is no longer comfortable. <strong>${esc(leaderNow.driver_name)}</strong> stays at the top on <strong>${fmtPoints(leaderNow.points)}</strong>, with ${esc(second.driver_name)} closing to within ${fmtPoints(gap)}.`,
+                    `<strong>${esc(leaderNow.driver_name)}</strong> keeps the lead, but only just. ${esc(second.driver_name)} has clawed it back to ${fmtPoints(gap)} points, and ${esc(seasonLabel)} suddenly looks live.`,
+                ]);
+            } else {
+                openLine = pickOne([
+                    `<strong>${esc(leaderNow.driver_name)}</strong> keeps the championship lead on <strong>${fmtPoints(leaderNow.points)}</strong> points${second ? `, ${fmtPoints(gap)} ahead of ${esc(second.driver_name)}` : ''}.`,
+                    `Status quo at the top of ${esc(seasonLabel)}: <strong>${esc(leaderNow.driver_name)}</strong> on <strong>${fmtPoints(leaderNow.points)}</strong> points${second ? `, ${fmtPoints(gap)} clear of ${esc(second.driver_name)}` : ''}.`,
+                    `<strong>${esc(leaderNow.driver_name)}</strong> sleeps on the championship lead again, the table reading <strong>${fmtPoints(leaderNow.points)}</strong> at the top${second ? ` and ${esc(second.driver_name)} ${fmtPoints(gap)} back` : ''}.`,
+                ]);
             }
-            const verb = pickOne(['holds', 'keeps hold of', 'protects', 'maintains']);
-            openLine = `<strong>${esc(leaderNow.driver_name)}</strong> ${verb} the championship lead on <strong>${fmtPoints(leaderNow.points)}</strong> points${second ? `, ${fmtPoints(gap)} ahead of ${esc(second.driver_name)}` : ''}${direction}.`;
         }
         html.push(`<p>${openLine}</p>`);
 
         const top5 = standingsNow.slice(0, 5);
-        html.push(`<table style="width:100%;border-collapse:collapse;margin:0.75rem 0 1rem">
-            <thead><tr><th style="text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">#</th><th style="text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Driver</th><th style="text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Team</th><th style="text-align:right;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Pts</th></tr></thead>
+        html.push(`<table>
+            <thead><tr><th>#</th><th>Driver</th><th>Team</th><th style="text-align:right">Pts</th></tr></thead>
             <tbody>
             ${top5.map((sRow, i) => `<tr>
-                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04)">${i + 1}</td>
-                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04)">${esc(sRow.driver_name)}</td>
-                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04);color:rgba(255,255,255,0.55)">${esc(sRow.team_name || '')}</td>
-                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;font-weight:700">${fmtPoints(sRow.points)}</td>
+                <td>${i + 1}</td>
+                <td>${esc(sRow.driver_name)}</td>
+                <td style="color:rgba(255,255,255,0.55)">${esc(sRow.team_name || '')}</td>
+                <td style="text-align:right;font-weight:700">${fmtPoints(sRow.points)}</td>
             </tr>`).join('')}
             </tbody>
         </table>`);
     }
 
-    // ---- Teams ----
+    // ---- Constructors ----
     if (teamStandingsNow.length) {
-        html.push(`<h2>Constructors' Race</h2>`);
+        html.push(`<div class="kicker">Constructors</div><h2>The Team Battle</h2>`);
         const teamSorted = teamStandingsNow.slice().sort((a, b) => Number(b.points) - Number(a.points));
         const teamLeader = teamSorted[0];
         const teamSecond = teamSorted[1];
@@ -4211,38 +4411,50 @@ function buildRaceReport(d) {
             const stayed = teamPriorTop && teamLeader.team_id === teamPriorTop[0];
             let teamLine;
             if (!teamPriorTop) {
-                teamLine = `<strong>${esc(teamLeader.team_name)}</strong> set the early benchmark in the constructors' race on <strong>${fmtPoints(teamLeader.points)}</strong> points${teamSecond ? `, with ${esc(teamSecond.team_name)} in close pursuit on ${fmtPoints(teamSecond.points)}` : ''}.`;
+                teamLine = pickOne([
+                    `<strong>${esc(teamLeader.team_name)}</strong> set the early benchmark in the constructors' race on <strong>${fmtPoints(teamLeader.points)}</strong> points${teamSecond ? `, with ${esc(teamSecond.team_name)} in close pursuit on ${fmtPoints(teamSecond.points)}` : ''}.`,
+                    `The first constructors' lead of ${esc(seasonLabel)} belongs to <strong>${esc(teamLeader.team_name)}</strong>, ${fmtPoints(teamLeader.points)} points on the board after the opener${teamSecond ? ` and ${esc(teamSecond.team_name)} the first challenger` : ''}.`,
+                ]);
             } else if (stayed) {
-                teamLine = `<strong>${esc(teamLeader.team_name)}</strong> ${pickOne(['keep', 'retain', 'hold onto'])} the constructors' lead on <strong>${fmtPoints(teamLeader.points)}</strong> points after Round ${event.round}${teamSecond ? `, ${fmtPoints(Number(teamLeader.points) - Number(teamSecond.points))} clear of ${esc(teamSecond.team_name)}` : ''}.`;
+                teamLine = pickOne([
+                    `<strong>${esc(teamLeader.team_name)}</strong> keep the constructors' lead on <strong>${fmtPoints(teamLeader.points)}</strong> points${teamSecond ? `, ${fmtPoints(Number(teamLeader.points) - Number(teamSecond.points))} ahead of ${esc(teamSecond.team_name)}` : ''}.`,
+                    `Up and down the constructors' table, the top line stays the same. <strong>${esc(teamLeader.team_name)}</strong> head it on <strong>${fmtPoints(teamLeader.points)}</strong> points${teamSecond ? ` from ${esc(teamSecond.team_name)}` : ''}.`,
+                    `<strong>${esc(teamLeader.team_name)}</strong> retain the constructors' lead, ${fmtPoints(teamLeader.points)} points the figure to match.`,
+                ]);
             } else {
                 const priorName = teamSorted.find(t => t.team_id === teamPriorTop[0])?.team_name || 'the previous leader';
-                teamLine = `<strong>${esc(teamLeader.team_name)}</strong> ${pickOne(['leapfrog', 'climb above', 'take over from'])} ${esc(priorName)} in the constructors' fight, the round ending with them on <strong>${fmtPoints(teamLeader.points)}</strong> points.`;
+                teamLine = pickOne([
+                    `<strong>${esc(teamLeader.team_name)}</strong> climb above ${esc(priorName)} in the constructors' fight, the round ending with them on <strong>${fmtPoints(teamLeader.points)}</strong> points.`,
+                    `There is a new top of the constructors' table too. <strong>${esc(teamLeader.team_name)}</strong> overhaul ${esc(priorName)} on <strong>${fmtPoints(teamLeader.points)}</strong> points after Round ${event.round}.`,
+                    `<strong>${esc(teamLeader.team_name)}</strong> leapfrog ${esc(priorName)} at the top of the constructors' table, the team title race suddenly louder than it was.`,
+                ]);
             }
             html.push(`<p>${teamLine}</p>`);
         }
         const teamTop5 = teamSorted.slice(0, 5);
-        html.push(`<table style="width:100%;border-collapse:collapse;margin:0.75rem 0 1rem">
-            <thead><tr><th style="text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">#</th><th style="text-align:left;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Team</th><th style="text-align:right;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Wins</th><th style="text-align:right;padding:0.4rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.1)">Pts</th></tr></thead>
+        html.push(`<table>
+            <thead><tr><th>#</th><th>Team</th><th style="text-align:right">Wins</th><th style="text-align:right">Pts</th></tr></thead>
             <tbody>
             ${teamTop5.map((t, i) => `<tr>
-                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04)">${i + 1}</td>
-                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04)">${esc(t.team_name)}</td>
-                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right">${t.wins || 0}</td>
-                <td style="padding:0.35rem 0.5rem;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;font-weight:700">${fmtPoints(t.points)}</td>
+                <td>${i + 1}</td>
+                <td>${esc(t.team_name)}</td>
+                <td style="text-align:right">${t.wins || 0}</td>
+                <td style="text-align:right;font-weight:700">${fmtPoints(t.points)}</td>
             </tr>`).join('')}
             </tbody>
         </table>`);
     }
 
     // ---- Closer ----
-    html.push(`<h2>Looking Ahead</h2>`);
+    html.push(`<div class="kicker">Looking Ahead</div><h2>Onwards</h2>`);
     const closerOpts = [
-        `Round ${event.round} is in the books. The paddock packs up, the data goes home, and the championship rolls on.`,
-        leaderNow ? `The series moves on. ${esc(leaderNow.driver_name)} carries the points lead into the next round, but on this evidence ${pickOne(['nothing is settled', 'nobody is safe', 'the chase is on'])}.` : `The series moves on, and the fight does too.`,
-        `Plenty to take away from ${esc(circuit)}. Plenty more to come.`,
-        `One round closer to crowning a champion. The fight, on this evidence, is far from over.`,
+        `Round ${event.round} is in the book. The paddock packs up, the data goes home, and ${esc(seasonLabel)} rolls on with a story slightly rewritten.`,
+        leaderNow ? `${esc(leaderNow.driver_name)} carries the points lead into the next round, but on the evidence of ${esc(circuit)}, nobody at the top is sleeping easy.` : `The series moves on, and the fight does with it.`,
+        `Plenty to take away from ${esc(circuit)}. Plenty more to come, with the championship far from settled.`,
+        `One round closer to crowning a champion. On the evidence of this one, the rest of ${esc(seasonLabel)} will not lack for drama.`,
+        `The lights go out again before long. Until then, the results from ${esc(circuit)} will keep the paddock arguing about them.`,
     ];
-    html.push(`<p><em>${pickOne(closerOpts)}</em></p>`);
+    html.push(`<p class="closer"><em>${pickOne(closerOpts)}</em></p>`);
 
     // Excerpt: a tight single sentence keyed to the headline
     let excerpt;
@@ -4252,6 +4464,8 @@ function buildRaceReport(d) {
         excerpt = `${leaderNow.driver_name} takes over the ${seasonLabel} championship lead after a pivotal Round ${event.round} at ${circuit}.`;
     } else if (heroSplit?.poleToFlag) {
         excerpt = `${driverName(heroSplit.winner)} converts pole to chequered flag at ${circuit} as Round ${event.round} unfolds in commanding fashion.`;
+    } else if (heroSplit?.driveOfRace) {
+        excerpt = `${driverName(heroSplit.driveOfRace)} climbs ${heroSplit.driveOfRace._gained} places at ${circuit} to steal the headlines from Round ${event.round} of ${seasonLabel}.`;
     } else if (heroSplit) {
         excerpt = `${driverName(heroSplit.winner)} takes Round ${event.round} honours at ${circuit}${leaderNow ? `, with ${leaderNow.driver_name} leading the championship on ${fmtPoints(leaderNow.points)} points` : ''}.`;
     } else {
