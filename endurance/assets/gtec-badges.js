@@ -241,9 +241,9 @@
     }
 
     function renderSeasonSection(cat, stats) {
-        // Order goes hardest → easiest (Dynasty at top). Lock state +
-        // grid identical to threshold/match sections.
-        const ordered = cat.badges.slice();
+        // Display easiest → hardest (Contender left, Dynasty right) so
+        // the row reads as a climb instead of starting at the summit.
+        const ordered = cat.badges.slice().reverse();
         let earnedCount = 0;
         const cards = ordered.map(b => {
             if (badgeIsEarned(cat, b, stats)) {
