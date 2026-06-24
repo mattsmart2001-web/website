@@ -2022,10 +2022,21 @@ async function renderEvents() {
     };
 
     const rows = data.length === 0 ? `<tr><td colspan="7"><div class="empty-state">No events yet — add one to get started.</div></td></tr>` :
-        data.map(e => `
+        data.map(e => {
+            const lockBtn = e.is_locked
+                ? `<button class="btn-icon" style="border-color:rgba(248,113,113,0.45);color:#fca5a5"
+                       onclick="toggleEventLock('${e.id}','${esc(e.name)}',false)"
+                       title="Unlock this event">🔓 Unlock</button>`
+                : `<button class="btn-icon" style="border-color:rgba(255,209,102,0.45);color:var(--gold)"
+                       onclick="toggleEventLock('${e.id}','${esc(e.name)}',true)"
+                       title="Lock this event — no further edits to entries, qualifying, results, penalties or stewards">🔒 Lock</button>`;
+            const lockBadge = e.is_locked
+                ? `<span class="badge" style="background:rgba(248,113,113,0.15);color:#fca5a5;border:1px solid rgba(248,113,113,0.35);margin-left:0.35rem">🔒 Locked</span>`
+                : '';
+            return `
             <tr>
                 <td><strong>R${e.round}</strong> <span class="td-muted" style="font-size:0.78rem">${esc(e.seasons?.name || '')}</span></td>
-                <td><strong>${esc(e.name)}</strong></td>
+                <td><strong>${esc(e.name)}</strong>${lockBadge}</td>
                 <td class="td-muted">${esc(e.circuit_name)}${e.circuit_country ? ` (${esc(e.circuit_country)})` : ''}</td>
                 <td class="td-muted" style="font-size:0.78rem">${formatDatetime(e.starts_at)}</td>
                 <td class="td-muted">${e.duration_hours}h</td>
@@ -2038,11 +2049,13 @@ async function renderEvents() {
                     <button class="btn-icon" onclick="viewEventPenalties('${e.id}','${esc(e.name)}')">Penalties</button>
                     <button class="btn-icon" onclick="viewEventSteward('${e.id}','${esc(e.name)}')">Steward</button>
                     <button class="btn-icon" style="border-color:rgba(255,209,102,0.45);color:var(--gold)" onclick="generateRaceReport('${e.id}','${esc(e.name)}','${e.season_id}')">Race Report</button>
+                    ${lockBtn}
                     <button class="btn-icon" onclick="editEvent('${e.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="resetEventStats('${e.id}','${esc(e.name)}')">Reset Stats</button>
                     <button class="btn-icon danger" onclick="deleteEvent('${e.id}','${esc(e.name)}')">Delete</button>
                 </div></td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
 
     document.getElementById('content').innerHTML = `
         <div class="table-wrap">
@@ -2309,6 +2322,21 @@ async function deleteEvent(id, name) {
     const { error } = await sb.from('events').delete().eq('id', id);
     if (error) { toast(error.message, 'error'); return; }
     toast('Event deleted.', 'success');
+    await renderEvents();
+}
+
+async function toggleEventLock(id, name, lock) {
+    if (lock) {
+        if (!confirm(`Lock "${name}"?\n\nNo entries, qualifying times, results, penalties or steward decisions can be added or changed for this event until you unlock it.`)) return;
+    } else {
+        if (!confirm(`Unlock "${name}"?\n\nThis event will become editable again. Re-lock it when you're done.`)) return;
+    }
+    const patch = lock
+        ? { is_locked: true,  locked_at: new Date().toISOString() }
+        : { is_locked: false, locked_at: null, locked_by: null };
+    const { error } = await sb.from('events').update(patch).eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(lock ? `🔒 "${name}" locked.` : `🔓 "${name}" unlocked.`, 'success');
     await renderEvents();
 }
 

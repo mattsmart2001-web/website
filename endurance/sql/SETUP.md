@@ -147,6 +147,7 @@ Always apply in this order:
 65. `65_split_movement_notifications.sql` — split-assignment notifications now compare against the previous round's split and tell each driver whether they've been promoted, relegated or are staying put
 66. `66_notification_prior_event_by_round.sql` — the prior-round lookup now sorts by `round` (NOT NULL) instead of `starts_at` (nullable), so the promotion / relegation copy works even when an event's date is still TBC
 67. `67_lock_team_window_in_season.sql` — adds `is_team_window_open()` and gates `team_join_requests` INSERT plus `approve_team_join_request` so drivers can't switch teams once the active season has any results recorded (admin keeps an override)
+68. `68_event_lock.sql` — adds `events.is_locked` plus triggers on every event-scoped child table (entries, qualifying_results, results, result_drivers, entry_drivers, penalties, steward_decisions, driver_ratings) so a locked event refuses inserts, updates and deletes at the database level
 
 ---
 
