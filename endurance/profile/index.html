@@ -158,6 +158,17 @@
         .pill-gold  { background: rgba(255,209,102,0.15); color: var(--gold); }
         .pill-green { background: rgba(34,197,94,0.15); color: #4ade80; }
         .pill-muted { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .window-closed-msg {
+            padding: 0.85rem 1rem;
+            background: rgba(255,209,102,0.06);
+            border: 1px solid rgba(255,209,102,0.25);
+            border-left: 3px solid var(--gold);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.85rem;
+            line-height: 1.55;
+        }
+        .window-closed-msg strong { color: var(--gold); margin-right: 0.35rem; }
         .btn-small { padding: 0.45rem 0.9rem; border-radius: 6px; font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: color 0.15s, border-color 0.15s; }
         .btn-small:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
         .btn-small.primary { background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: #1a1300; border: none; }
@@ -1093,27 +1104,43 @@ let _currentDriver = null;
 async function loadTeamingSections(driver) {
     _currentDriver = driver;
 
+    // Check whether the team transfer window is open. Closed once the
+    // active season has any results recorded — fresh applications and
+    // approvals are blocked until the season ends. Admin can override.
+    const { data: windowOpen } = await sb.rpc('is_team_window_open');
+    const teamWindowOpen = windowOpen !== false;
+
     // If they don't have a team, show the find-a-team list and any outgoing requests
     if (!driver.current_team_id) {
-        const { data: teams } = await sb.from('team_open_seats')
-            .select('*')
-            .gt('open_seats', 0);
-        if (teams?.length) {
-            const card = document.getElementById('card-find-team');
-            document.getElementById('find-team-list').innerHTML = teams.map(t => `
-                <div class="open-team-row">
-                    <div style="flex:1;min-width:0">
-                        <div class="open-team-name">
-                            <a href="/endurance/teams/?slug=${esc(t.team_slug)}" style="color:inherit;text-decoration:none">${esc(t.team_name)}</a>
-                            ${t.leader_name ? `<span style="font-size:0.72rem;color:var(--muted);margin-left:0.5rem">Led by ${esc(t.leader_name)}</span>` : ''}
-                        </div>
-                        <div class="open-team-meta">
-                            ${t.manufacturer_name ? esc(t.manufacturer_name) + ' · ' : ''}${t.driver_count}/${t.max_drivers} drivers · ${t.open_seats} seat${t.open_seats === 1 ? '' : 's'} open
-                        </div>
-                    </div>
-                    <button class="btn-small primary" onclick="applyToTeam('${esc(t.team_id)}','${esc(t.team_name)}')">Apply</button>
-                </div>`).join('');
+        const card = document.getElementById('card-find-team');
+        if (!teamWindowOpen) {
+            document.getElementById('find-team-list').innerHTML = `
+                <div class="window-closed-msg">
+                    <strong>Team window closed.</strong>
+                    Driver transfers are locked for the duration of the current season.
+                    Applications will reopen once the season ends.
+                </div>`;
             card.style.display = '';
+        } else {
+            const { data: teams } = await sb.from('team_open_seats')
+                .select('*')
+                .gt('open_seats', 0);
+            if (teams?.length) {
+                document.getElementById('find-team-list').innerHTML = teams.map(t => `
+                    <div class="open-team-row">
+                        <div style="flex:1;min-width:0">
+                            <div class="open-team-name">
+                                <a href="/endurance/teams/?slug=${esc(t.team_slug)}" style="color:inherit;text-decoration:none">${esc(t.team_name)}</a>
+                                ${t.leader_name ? `<span style="font-size:0.72rem;color:var(--muted);margin-left:0.5rem">Led by ${esc(t.leader_name)}</span>` : ''}
+                            </div>
+                            <div class="open-team-meta">
+                                ${t.manufacturer_name ? esc(t.manufacturer_name) + ' · ' : ''}${t.driver_count}/${t.max_drivers} drivers · ${t.open_seats} seat${t.open_seats === 1 ? '' : 's'} open
+                            </div>
+                        </div>
+                        <button class="btn-small primary" onclick="applyToTeam('${esc(t.team_id)}','${esc(t.team_name)}')">Apply</button>
+                    </div>`).join('');
+                card.style.display = '';
+            }
         }
     }
 
@@ -1157,7 +1184,16 @@ async function loadTeamingSections(driver) {
             .order('created_at');
         if (incoming?.length) {
             document.getElementById('card-team-requests').style.display = '';
-            document.getElementById('team-requests-list').innerHTML = incoming.map(r => `
+            const lockedNote = teamWindowOpen
+                ? ''
+                : `<div class="window-closed-msg" style="margin-bottom:0.75rem">
+                       <strong>Window closed.</strong> You can review applications, but approvals
+                       are locked until the season ends.
+                   </div>`;
+            const approveBtn = (id) => teamWindowOpen
+                ? `<button class="btn-small primary" onclick="approveRequest('${esc(id)}')">Approve</button>`
+                : `<button class="btn-small primary" disabled title="Team window closed for the season" style="opacity:0.4;cursor:not-allowed">Approve</button>`;
+            document.getElementById('team-requests-list').innerHTML = lockedNote + incoming.map(r => `
                 <div class="req-row">
                     <div style="flex:1;min-width:0">
                         <div class="open-team-name">
@@ -1174,7 +1210,7 @@ async function loadTeamingSections(driver) {
                         </div>
                     </div>
                     <div style="display:flex;gap:0.4rem">
-                        <button class="btn-small primary" onclick="approveRequest('${esc(r.id)}')">Approve</button>
+                        ${approveBtn(r.id)}
                         <button class="btn-small danger"  onclick="rejectRequest('${esc(r.id)}')">Reject</button>
                     </div>
                 </div>`).join('');
