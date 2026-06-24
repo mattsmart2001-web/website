@@ -395,6 +395,23 @@
         }
         .btn-icon:hover { color: var(--text); border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.05); }
         .btn-icon.danger:hover { color: #fca5a5; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.06); }
+
+        /* Split-movement pill shown next to each driver in the lobby view. */
+        .move-pill {
+            display: inline-block;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            padding: 0.22rem 0.45rem;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .move-pill.move-up   { color: #4ade80; border-color: rgba(74,222,128,0.35); background: rgba(74,222,128,0.08); }
+        .move-pill.move-down { color: #f87171; border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.08); }
+        .move-pill.move-same { color: var(--muted); border-color: var(--border); background: rgba(255,255,255,0.02); }
+        .move-pill.move-new  { color: var(--gold);  border-color: rgba(255,209,102,0.35); background: rgba(255,209,102,0.06); }
         .empty-state {
             padding: 3rem 1.25rem;
             text-align: center;
@@ -2827,6 +2844,31 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
         .eq('event_id', eventId);
     if (error) { panel.innerHTML = `<div class="loading-state">${esc(error.message)}</div>`; return; }
 
+    // Look up the previous event in this season so we can show whether
+    // each driver has been promoted, relegated or stayed put.
+    const prevLobbyByDriver = new Map();
+    const { data: thisEvent } = await sb.from('events').select('starts_at').eq('id', eventId).maybeSingle();
+    if (thisEvent?.starts_at) {
+        const { data: priorEvents } = await sb.from('events')
+            .select('id')
+            .eq('season_id', seasonId)
+            .lt('starts_at', thisEvent.starts_at)
+            .order('starts_at', { ascending: false })
+            .limit(1);
+        const priorId = priorEvents?.[0]?.id;
+        if (priorId) {
+            const { data: priorEntries } = await sb.from('entries')
+                .select('lobby_number, entry_drivers(driver_id)')
+                .eq('event_id', priorId)
+                .not('lobby_number', 'is', null);
+            (priorEntries || []).forEach(en => {
+                (en.entry_drivers || []).forEach(ed => {
+                    if (ed.driver_id != null) prevLobbyByDriver.set(ed.driver_id, en.lobby_number);
+                });
+            });
+        }
+    }
+
     // Fetch the actual race-rated drivers (any row in driver_ratings means
     // they've been rated for real). driver_current_ratings.rating defaults to
     // 1500 even when there's no race history, so we can't trust that alone.
@@ -2874,6 +2916,19 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
 
     const totalDrivers = driverRows.length;
 
+    // Render a tiny movement pill that compares a driver's previous split
+    // against their current one. Promotion / relegation / unchanged / new.
+    const movePill = (driverId, currentLobby) => {
+        if (currentLobby === 0 || driverId == null) return '';
+        if (!prevLobbyByDriver.has(driverId)) {
+            return `<span class="move-pill move-new" title="First event">NEW</span>`;
+        }
+        const prev = prevLobbyByDriver.get(driverId);
+        if (prev > currentLobby)  return `<span class="move-pill move-up"   title="Promoted from Split ${prev}">↑ S${prev}</span>`;
+        if (prev < currentLobby)  return `<span class="move-pill move-down" title="Relegated from Split ${prev}">↓ S${prev}</span>`;
+        return `<span class="move-pill move-same" title="Same split as last round">–</span>`;
+    };
+
     const renderLobbyCard = (lobbyNum, list) => {
         const title = lobbyNum === 0 ? 'Unassigned' : `Split ${lobbyNum}`;
         const sorted = list.slice().sort((a, b) => b.skill - a.skill);
@@ -2898,6 +2953,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <td><strong>${driverName}</strong></td>
                 <td class="td-muted" style="font-size:0.78rem">${esc(en.teams?.name) || '<em>Solo</em>'}</td>
                 <td style="font-size:0.78rem">${skillCell}</td>
+                <td>${movePill(d?.id, lobbyNum)}</td>
                 <td><div class="row-actions" style="gap:0.25rem;justify-content:flex-end">
                     <button class="btn-icon" title="Move entry to a faster split"
                         onclick="moveEntryLobby('${en.id}',-1,'${eventId}','${esc(eventName)}','${seasonId}')">↑</button>
@@ -2913,7 +2969,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <span class="section-card-title">${title} <span class="td-muted" style="font-weight:normal;font-size:0.78rem">· ${list.length} driver${list.length === 1 ? '' : 's'}</span></span>
             </div>
             <table><thead><tr>
-                <th>Car</th><th>Driver</th><th>Team</th><th>Skill</th><th></th>
+                <th>Car</th><th>Driver</th><th>Team</th><th>Skill</th><th>Move</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
     };

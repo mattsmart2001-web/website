@@ -144,6 +144,7 @@ Always apply in this order:
 62. `62_more_secret_badges.sql` — adds Unfinished Business / Phoenix / Comeback King / Last to First / Mr Consistent to the same RPC
 63. `63_driver_manual_badges.sql` — text[] column on drivers so admin can override the auto-detection and grant a badge by hand
 64. `64_david_vs_goliath_strict_min.sql` — David vs Goliath now requires a strict rating gap in the lobby, so it stops firing for everyone in round 1 when the field is flat at the seed Elo
+65. `65_split_movement_notifications.sql` — split-assignment notifications now compare against the previous round's split and tell each driver whether they've been promoted, relegated or are staying put
 
 ---
 
