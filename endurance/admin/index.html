@@ -2844,16 +2844,17 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
         .eq('event_id', eventId);
     if (error) { panel.innerHTML = `<div class="loading-state">${esc(error.message)}</div>`; return; }
 
-    // Look up the previous event in this season so we can show whether
-    // each driver has been promoted, relegated or stayed put.
+    // Look up the previous round in this season (by round number, which is
+    // always set, rather than starts_at which may not be) so we can show
+    // whether each driver has been promoted, relegated or stayed put.
     const prevLobbyByDriver = new Map();
-    const { data: thisEvent } = await sb.from('events').select('starts_at').eq('id', eventId).maybeSingle();
-    if (thisEvent?.starts_at) {
+    const { data: thisEvent } = await sb.from('events').select('round').eq('id', eventId).maybeSingle();
+    if (thisEvent?.round != null) {
         const { data: priorEvents } = await sb.from('events')
             .select('id')
             .eq('season_id', seasonId)
-            .lt('starts_at', thisEvent.starts_at)
-            .order('starts_at', { ascending: false })
+            .lt('round', thisEvent.round)
+            .order('round', { ascending: false })
             .limit(1);
         const priorId = priorEvents?.[0]?.id;
         if (priorId) {

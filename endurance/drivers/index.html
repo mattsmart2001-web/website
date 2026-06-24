@@ -870,10 +870,11 @@ async function showProfile() {
 
     // Split journey: chronological list of which split this driver raced in
     // each event, with promotion / relegation arrows between stops. Only
-    // shown once a driver has actually raced two or more rounds.
+    // shown once a driver has actually raced two or more rounds. Sort by
+    // round number (always present) rather than starts_at (which may not be).
     const splitJourney = rawHistory
-        .filter(r => r.results?.events?.starts_at && r.results?.entries?.lobby_number != null)
-        .sort((a, b) => new Date(a.results.events.starts_at) - new Date(b.results.events.starts_at))
+        .filter(r => r.results?.events?.round != null && r.results?.entries?.lobby_number != null)
+        .sort((a, b) => (a.results.events.round ?? 0) - (b.results.events.round ?? 0))
         .map(r => ({
             circuit: r.results.events.circuit_name || r.results.events.name || 'Round',
             round:   r.results.events.round,
