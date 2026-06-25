@@ -194,8 +194,7 @@
         </div>
         <div id="window-notice" class="window-notice" style="display:none">
             <strong>Mid-season sign-up.</strong>
-            Team applications are paused while the active season is running. You can join now as a solo driver
-            and either join an existing team or form a new one once the off-season opens.
+            The active season is already underway — you're welcome to apply now (as a driver or as a team), but you'll race from the next available round and won't carry any prior-round points for this season. Plenty of season still to come.
         </div>
 
         <div id="error-box" class="error-msg" style="display:none"></div>
@@ -336,27 +335,16 @@ function esc(s) {
 // Country dropdown
 document.getElementById('field-nationality').innerHTML = window.gtecCountryOptions();
 
-// Team applications are gated by the same season window that locks
-// in-portal transfers — mid-season sign-ups can only come in as solo
-// drivers. If the window is closed, hide the Team option and pin the
-// form to Driver.
+// Mid-season sign-ups are welcome — we just want applicants to know
+// upfront that they'll race from the next available round and won't
+// carry any prior-round points. Existing rosters stay stable for the
+// season (handled separately by migration 67).
 (async () => {
     try {
         const { data: open } = await sb.rpc('is_team_window_open');
         if (open === false) {
-            const btnTeam = document.getElementById('btn-team');
-            const notice  = document.getElementById('window-notice');
-            const tn      = document.getElementById('field-team-name');
-            if (btnTeam) btnTeam.style.display = 'none';
-            if (notice)  notice.style.display = '';
-            if (tn) tn.required = false;
-            // Force Driver type and never let setType('team') succeed.
-            const orig = window.setType;
-            window.setType = function (type) {
-                if (type === 'team') return;
-                if (typeof orig === 'function') orig('driver');
-            };
-            setType('driver');
+            const notice = document.getElementById('window-notice');
+            if (notice) notice.style.display = '';
         }
     } catch (e) { /* RPC unavailable → leave the UI as-is */ }
 })();
