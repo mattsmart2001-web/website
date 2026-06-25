@@ -192,9 +192,9 @@
             <button class="type-btn active" id="btn-driver" onclick="setType('driver')">🏁 Driver Application</button>
             <button class="type-btn" id="btn-team" onclick="setType('team')">🏎 Team Application</button>
         </div>
-        <div id="window-notice" class="window-notice" style="display:none">
-            <strong>Mid-season sign-up.</strong>
-            The active season is already underway — you're welcome to apply now (as a driver or as a team), but you'll race from the next available round and won't carry any prior-round points for this season. Plenty of season still to come.
+        <div id="window-notice" class="window-notice">
+            <strong>What happens next.</strong>
+            <span id="window-notice-body">Applications open — we'll review and be in touch.</span>
         </div>
 
         <div id="error-box" class="error-msg" style="display:none"></div>
@@ -335,18 +335,30 @@ function esc(s) {
 // Country dropdown
 document.getElementById('field-nationality').innerHTML = window.gtecCountryOptions();
 
-// Mid-season sign-ups are welcome — we just want applicants to know
-// upfront that they'll race from the next available round and won't
-// carry any prior-round points. Existing rosters stay stable for the
-// season (handled separately by migration 67).
+// Always show a "what happens next" line, but tailor the copy to the
+// championship state so pre-season applicants know they'll start at
+// Round 1 and mid-season applicants know they'll join from the next
+// available round.
 (async () => {
+    const body = document.getElementById('window-notice-body');
+    if (!body) return;
     try {
-        const { data: open } = await sb.rpc('is_team_window_open');
-        if (open === false) {
-            const notice = document.getElementById('window-notice');
-            if (notice) notice.style.display = '';
+        const [windowRes, seasonRes] = await Promise.all([
+            sb.rpc('is_team_window_open').catch(() => ({ data: null })),
+            sb.from('seasons').select('id, name').eq('is_active', true).maybeSingle(),
+        ]);
+        const open       = windowRes?.data;
+        const hasSeason  = !!seasonRes?.data;
+        if (hasSeason && open === false) {
+            body.innerHTML = `The <strong>${esc(seasonRes.data.name || 'current season')}</strong> is already underway. You're welcome to apply now (as a driver or as a team) — you'll race from the next available round and won't carry prior-round points for this season. Plenty of season still to come.`;
+        } else if (hasSeason && open !== false) {
+            body.innerHTML = `The <strong>${esc(seasonRes.data.name || 'current season')}</strong> is on the way. You'll be on the grid from the first round.`;
+        } else {
+            body.innerHTML = `Applications are open. You'll be in from the start of the next season.`;
         }
-    } catch (e) { /* RPC unavailable → leave the UI as-is */ }
+    } catch (e) {
+        /* leave the default copy */
+    }
 })();
 
 // Load manufacturers for dropdown
