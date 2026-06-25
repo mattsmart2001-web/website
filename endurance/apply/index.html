@@ -336,28 +336,49 @@ function esc(s) {
 document.getElementById('field-nationality').innerHTML = window.gtecCountryOptions();
 
 // Always show a "what happens next" line, but tailor the copy to the
-// championship state so pre-season applicants know they'll start at
-// Round 1 and mid-season applicants know they'll join from the next
-// available round.
+// championship state. Three independent queries: each catches its own
+// errors, so a failure in one doesn't kill the others, and the page
+// shows correct copy even if migration 67 hasn't been applied yet.
 (async () => {
     const body = document.getElementById('window-notice-body');
     if (!body) return;
+
+    // Active season (if any).
+    let season = null;
     try {
-        const [windowRes, seasonRes] = await Promise.all([
-            sb.rpc('is_team_window_open').catch(() => ({ data: null })),
-            sb.from('seasons').select('id, name').eq('is_active', true).maybeSingle(),
-        ]);
-        const open       = windowRes?.data;
-        const hasSeason  = !!seasonRes?.data;
-        if (hasSeason && open === false) {
-            body.innerHTML = `The <strong>${esc(seasonRes.data.name || 'current season')}</strong> is already underway. You're welcome to apply now (as a driver or as a team) — you'll race from the next available round and won't carry prior-round points for this season. Plenty of season still to come.`;
-        } else if (hasSeason && open !== false) {
-            body.innerHTML = `The <strong>${esc(seasonRes.data.name || 'current season')}</strong> is on the way. You'll be on the grid from the first round.`;
-        } else {
-            body.innerHTML = `Applications are open. You'll be in from the start of the next season.`;
+        const r = await sb.from('seasons')
+            .select('id, name')
+            .eq('is_active', true)
+            .maybeSingle();
+        season = r?.data || null;
+    } catch (e) { /* leave null */ }
+
+    // Has the active season started racing? Try the RPC first; if
+    // it's not available (migration 67 not applied), fall back to a
+    // direct existence check that anyone can run.
+    let racingStarted = false;
+    if (season) {
+        try {
+            const r = await sb.rpc('is_team_window_open');
+            if (r?.data === false) racingStarted = true;
+        } catch (e) { /* RPC not yet deployed, fall back */ }
+        if (!racingStarted) {
+            try {
+                const r = await sb.from('results')
+                    .select('id, events!inner(season_id)', { head: true, count: 'exact' })
+                    .eq('events.season_id', season.id)
+                    .limit(1);
+                if ((r?.count ?? 0) > 0) racingStarted = true;
+            } catch (e) { /* leave false */ }
         }
-    } catch (e) {
-        /* leave the default copy */
+    }
+
+    if (season && racingStarted) {
+        body.innerHTML = `The <strong>${esc(season.name || 'current season')}</strong> is already underway. You're welcome to apply now (as a driver or as a team) — you'll race from the next available round and won't carry prior-round points for this season. Plenty of season still to come.`;
+    } else if (season) {
+        body.innerHTML = `The <strong>${esc(season.name || 'current season')}</strong> is on the way. You'll be on the grid from the first round.`;
+    } else {
+        body.innerHTML = `Applications are open. You'll be in from the start of the next season.`;
     }
 })();
 
