@@ -4100,16 +4100,38 @@ function buildRaceReport(d) {
         const poleToFlag = winner && pole && winner.driver_id === pole.driver_id;
         const grandSlam  = poleToFlag && flWinner && flWinner.driver_id === winner.driver_id;
         const teamOneTwo = !!(p2 && teamSlugOf(winner) && teamSlugOf(winner) === teamSlugOf(p2));
-        const driveOfRace = finishers
+        // All meaningful climbers (positions gained ≥ 3, classified, top half-ish).
+        const climbers = finishers
             .filter(rd => rd._gained != null && rd._gained >= 3 && rd.finish_position <= 10 && rd.driver_id !== winner?.driver_id)
-            .sort((a, b) => b._gained - a._gained)[0];
+            .sort((a, b) => b._gained - a._gained);
+        const driveOfRace  = climbers[0];
+        const secondClimber = climbers[1];
+        // Headline faller — someone who qualified inside the top 5 and slipped
+        // well outside it without retiring. The pole sitter losing the lead is
+        // already covered by the opener, so skip them.
+        const bigFaller = finishers
+            .filter(rd => rd._gained != null && rd._gained <= -3 && rd._qualiPos <= 6 && rd.driver_id !== (pole?.driver_id))
+            .sort((a, b) => a._gained - b._gained)[0];
+        // Positions 4 → 7: the rest of the points payers behind the podium.
+        const pointsPack = finishers.slice(3, 7);
         // Winner came from way back — a separate story to "drive of the day"
         // (which is by definition not the winner).
         const comebackWin = !!(winner && winner._gained != null && winner._gained >= 3 && winner._qualiPos > 1);
-        const dnf = (split.drivers || []).filter(rd => rd.status === 'dnf').length;
-        const dsq = (split.drivers || []).filter(rd => rd.status === 'dsq').length;
+        // Named DNFs / DSQs rather than bare counts.
+        const dnfDrivers = (split.drivers || []).filter(rd => rd.status === 'dnf');
+        const dsqDrivers = (split.drivers || []).filter(rd => rd.status === 'dsq');
+        const dnf = dnfDrivers.length;
+        const dsq = dsqDrivers.length;
+        // How chaotic was the race? Average absolute position change among
+        // classified runners who started. Used for one of the closing beats.
+        const movers = finishers.filter(rd => rd._gained != null);
+        const chaosScore = movers.length
+            ? movers.reduce((s, rd) => s + Math.abs(rd._gained), 0) / movers.length
+            : 0;
         return { key: k, label: splitLabel(k), qs, pole, poleGap, finishers, winner, p2, p3,
-                 flWinner, poleToFlag, grandSlam, teamOneTwo, driveOfRace, comebackWin, dnf, dsq,
+                 flWinner, poleToFlag, grandSlam, teamOneTwo,
+                 driveOfRace, secondClimber, bigFaller, pointsPack,
+                 comebackWin, dnf, dsq, dnfDrivers, dsqDrivers, chaosScore,
                  allDrivers: split.drivers || [] };
     }).filter(s => s.winner);
 
@@ -4354,23 +4376,32 @@ function buildRaceReport(d) {
     // ---- The Race ----
     html.push(`<div class="kicker">Race Day</div><h2>The Race</h2>`);
     splitStories.forEach(s => {
-        const { winner, p2, p3, flWinner, poleToFlag, grandSlam, teamOneTwo, driveOfRace, dnf, dsq, label, qs, finishers, allDrivers } = s;
-        const lines = [];
+        const { winner, p2, p3, flWinner, poleToFlag, grandSlam, teamOneTwo,
+                driveOfRace, secondClimber, bigFaller, pointsPack,
+                dnf, dsq, dnfDrivers, dsqDrivers, chaosScore,
+                label, qs, finishers, allDrivers } = s;
+        // headLines = opening paragraph (winner + podium + team result)
+        // bodyLines = follow-up paragraph (behind the podium, movers, FL, casualties)
+        const headLines = [];
+        const bodyLines = [];
         const winN = esc(driverName(winner));
         const team = teamOf(winner) ? esc(teamOf(winner)) : null;
         const p2N = p2 ? esc(driverName(p2)) : null;
         const p3N = p3 ? esc(driverName(p3)) : null;
         const podiumTail = p2N && p3N ? `, ${p2N} second and ${p3N} third` : p2N ? `, ${p2N} a step behind` : '';
+        // p2/p3 team context (for the opener flesh-out)
+        const p2Team = p2 && teamOf(p2) ? esc(teamOf(p2)) : null;
+        const p3Team = p3 && teamOf(p3) ? esc(teamOf(p3)) : null;
 
         if (grandSlam) {
-            lines.push(freshPick('race-grandSlam', [
+            headLines.push(freshPick('race-grandSlam', [
                 `${winN} did everything that could be done in ${esc(label)}${team ? ` for ${team}` : ''}: pole, fastest lap, the win${podiumTail}.`,
                 `It was the full set in ${esc(label)} for ${winN}${team ? ` (${team})` : ''}. Pole became a race lead, the race lead became a race win, and the fastest lap arrived for good measure${podiumTail}.`,
                 `Pole, fastest lap, race win${team ? `, ${team} sweeping the lot` : ''}. ${winN} made ${esc(label)} his own${podiumTail}.`,
                 `Nothing left on the table. ${winN}${team ? `, flying ${team} colours,` : ''} took pole, the win and the fastest lap in ${esc(label)}${podiumTail}.`,
             ]));
         } else if (poleToFlag) {
-            lines.push(freshPick('race-poleToFlag', [
+            headLines.push(freshPick('race-poleToFlag', [
                 `${winN}${team ? ` of ${team}` : ''} converted ${esc(label)} pole into the chequered flag, the race controlled from green light to checker${podiumTail}.`,
                 `Never headed. ${winN} ran ${esc(label)} from pole to the flag${team ? `, ${team} taking the spoils` : ''}${podiumTail}.`,
                 `${winN} did the simple job in ${esc(label)}: led from pole, never lost it${team ? `, handed ${team} a clean win` : ''}${podiumTail}.`,
@@ -4389,7 +4420,7 @@ function buildRaceReport(d) {
             const psStatus = psResultRow?.status;
             const psName = polesitter?.drivers?.display_name ? esc(polesitter.drivers.display_name) : null;
             if (psBeaten && psName && psFinish) {
-                lines.push(freshPick('race-psFinish', [
+                headLines.push(freshPick('race-psFinish', [
                     `${esc(label)}'s race did not honour the grid. ${winN}${team ? ` (${team})` : ''} won it, with pole sitter ${psName} slipping to P${psFinish.finish_position}${podiumTail}.`,
                     `Pole did not pay in ${esc(label)}. ${winN} got the better of ${psName}${team ? ` and put ${team} top of the result sheet` : ''}, the pole sitter settling for P${psFinish.finish_position}${podiumTail}.`,
                     `${winN} reeled in the pole sitter in ${esc(label)}. ${psName} dropped to P${psFinish.finish_position} by the flag while ${winN}${team ? `, in ${team} colours,` : ''} took the win${podiumTail}.`,
@@ -4398,7 +4429,7 @@ function buildRaceReport(d) {
                     `Pole sitter ${psName} could not hold on in ${esc(label)}; ${winN}${team ? ` (${team})` : ''} ran him down and took the chequered flag, leaving him in P${psFinish.finish_position}${podiumTail}.`,
                 ]));
             } else if (psBeaten && psName && psStatus === 'dsq') {
-                lines.push(freshPick('race-psDsq', [
+                headLines.push(freshPick('race-psDsq', [
                     `Pole sitter ${psName} was disqualified from ${esc(label)}, handing the win to ${winN}${team ? ` of ${team}` : ''}${podiumTail}.`,
                     `${esc(label)}'s headline went to the stewards' office. Pole sitter ${psName} was stripped of the result and ${winN}${team ? ` (${team})` : ''} took the chequered flag${podiumTail}.`,
                     `${psName} put it on pole, then lost it after the flag. A disqualification removed the pole sitter from the result of ${esc(label)} and gifted ${winN}${team ? ` of ${team}` : ''} the win${podiumTail}.`,
@@ -4406,14 +4437,14 @@ function buildRaceReport(d) {
                     `Disqualification for the pole sitter. ${psName} was thrown out of the ${esc(label)} result, leaving ${winN}${team ? ` (${team})` : ''} to take the win${podiumTail}.`,
                 ]));
             } else if (psBeaten && psName) {
-                lines.push(freshPick('race-psNoFinish', [
+                headLines.push(freshPick('race-psNoFinish', [
                     `Pole sitter ${psName} retired from ${esc(label)}, leaving ${winN}${team ? ` (${team})` : ''} to take the win${podiumTail}.`,
                     `${psName} did not see the chequered flag in ${esc(label)} after starting from pole, and ${winN}${team ? ` of ${team}` : ''} took the win${podiumTail}.`,
                     `${winN}${team ? ` (${team})` : ''} inherited the lead when pole sitter ${psName} retired in ${esc(label)}, and saw the job through${podiumTail}.`,
                     `${esc(label)}'s pole sitter ${psName} dropped out of the race, handing ${winN}${team ? ` of ${team}` : ''} the win${podiumTail}.`,
                 ]));
             } else {
-                lines.push(freshPick('race-default', [
+                headLines.push(freshPick('race-default', [
                     `${winN}${team ? ` of ${team}` : ''} took the win in ${esc(label)}${podiumTail}.`,
                     `In ${esc(label)}, ${winN}${team ? ` (${team})` : ''} crossed the line first${podiumTail}.`,
                     `${esc(label)}'s win went to ${winN}${team ? `, ${team}'s man on the day` : ''}${podiumTail}.`,
@@ -4422,7 +4453,7 @@ function buildRaceReport(d) {
         }
 
         if (teamOneTwo && team && !grandSlam) {
-            lines.push(freshPick('race-teamOneTwo', [
+            headLines.push(freshPick('race-teamOneTwo', [
                 `${team} couldn't have asked for more, locking out the top two with a one-two finish.`,
                 `A team-perfect day for ${team}, who put both cars on the front of the result sheet.`,
                 `A one-two for ${team}, a result the season wasn't necessarily promising them.`,
@@ -4433,14 +4464,14 @@ function buildRaceReport(d) {
         if (flWinner) {
             const sameAsWinner = flWinner.driver_id === winner.driver_id;
             if (sameAsWinner && !grandSlam) {
-                lines.push(freshPick('race-flSame', [
+                headLines.push(freshPick('race-flSame', [
                     `Fastest lap${flWinner.fastest_lap_ms ? ` of <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>` : ''} to ${esc(driverName(flWinner))}, just so the point couldn't be missed.`,
                     `${esc(driverName(flWinner))} stamped the fastest lap${flWinner.fastest_lap_ms ? `, <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>,` : ''} on top of the win.`,
                     `One more for the winner: the fastest lap${flWinner.fastest_lap_ms ? ` at <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>` : ''} fell ${esc(driverName(flWinner))}'s way too.`,
                 ]));
             } else if (!sameAsWinner) {
                 const flTeam = teamOf(flWinner) ? esc(teamOf(flWinner)) : null;
-                lines.push(freshPick('race-flElse', [
+                bodyLines.push(freshPick('race-flElse', [
                     `Fastest lap went elsewhere: ${esc(driverName(flWinner))}${flTeam ? `, in ${flTeam} colours,` : ''} took it${flWinner.fastest_lap_ms ? ` at <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>` : ''}, a small consolation on a day the win sat out of reach.`,
                     `${esc(driverName(flWinner))}${flTeam ? ` (${flTeam})` : ''} grabbed the fastest lap point${flWinner.fastest_lap_ms ? ` on a <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong>` : ''}, something to take home from a race that didn't deliver the bigger prize.`,
                     `The fastest tour of the lap chart belonged to ${esc(driverName(flWinner))}${flTeam ? ` of ${flTeam}` : ''}${flWinner.fastest_lap_ms ? `, <strong>${fmtLap(flWinner.fastest_lap_ms)}</strong> on the screens` : ''}, a single point earned on a result sheet otherwise written by someone else.`,
@@ -4449,8 +4480,42 @@ function buildRaceReport(d) {
             }
         }
 
+        // ---- Behind the podium: name the rest of the points-paying finishers ----
+        if (pointsPack && pointsPack.length) {
+            const packBits = pointsPack.map(rd => {
+                const nm = esc(driverName(rd));
+                const tn = teamOf(rd) ? ` (${esc(teamOf(rd))})` : '';
+                return `${nm}${tn} in P${rd.finish_position}`;
+            });
+            if (packBits.length === 1) {
+                bodyLines.push(freshPick('race-pack-1', [
+                    `${packBits[0]} led the chasing pack home.`,
+                    `Closest to the podium party: ${packBits[0]}.`,
+                    `${packBits[0]} headed the rest of the points scorers.`,
+                ]));
+            } else {
+                const last = packBits.pop();
+                bodyLines.push(freshPick('race-pack-many', [
+                    `Behind the podium, ${packBits.join(', ')} and ${last} filled out the points-paying positions.`,
+                    `${packBits.join(', ')} and ${last} took the remaining points home.`,
+                    `The rest of the top runners: ${packBits.join(', ')} and ${last}.`,
+                ]));
+            }
+        }
+
+        // ---- Big faller: someone who qualified well and slipped out of the front ----
+        if (bigFaller && bigFaller.driver_id !== winner.driver_id) {
+            const fnm = esc(driverName(bigFaller));
+            const ftm = teamOf(bigFaller) ? esc(teamOf(bigFaller)) : null;
+            bodyLines.push(freshPick('race-faller', [
+                `Tough afternoon for <strong>${fnm}</strong>${ftm ? ` of ${ftm}` : ''}, who started P${bigFaller._qualiPos} but slipped to P${bigFaller.finish_position} by the flag, ${Math.abs(bigFaller._gained)} places shed.`,
+                `<strong>${fnm}</strong>${ftm ? ` (${ftm})` : ''} went the other way: a P${bigFaller._qualiPos} grid slot turned into P${bigFaller.finish_position}, losing ${Math.abs(bigFaller._gained)} places in the process.`,
+                `Spare a thought for <strong>${fnm}</strong>${ftm ? ` of ${ftm}` : ''}, who dropped from P${bigFaller._qualiPos} on the grid to P${bigFaller.finish_position} at the flag — ${Math.abs(bigFaller._gained)} positions surrendered.`,
+            ]));
+        }
+
         if (driveOfRace && driveOfRace.driver_id !== winner.driver_id) {
-            lines.push(freshPick('race-dor', [
+            bodyLines.push(freshPick('race-dor', [
                 `The drive of the day, though, belonged to <strong>${esc(driverName(driveOfRace))}</strong>: P${driveOfRace._qualiPos} on the grid, P${driveOfRace.finish_position} at the flag, ${driveOfRace._gained} places gained.`,
                 `<strong>${esc(driverName(driveOfRace))}</strong> stole the eye in ${esc(label)}, climbing from P${driveOfRace._qualiPos} on the grid to P${driveOfRace.finish_position} at the chequered flag.`,
                 `Save a thought for <strong>${esc(driverName(driveOfRace))}</strong>, who turned a P${driveOfRace._qualiPos} grid slot into a P${driveOfRace.finish_position} finish, ${driveOfRace._gained} places gained.`,
@@ -4459,19 +4524,75 @@ function buildRaceReport(d) {
             ]));
         }
 
-        if (dnf || dsq) {
-            const bits = [];
-            if (dnf) bits.push(`${dnf} ${dnf === 1 ? 'retirement' : 'retirements'}`);
-            if (dsq) bits.push(`${dsq} ${dsq === 1 ? 'disqualification' : 'disqualifications'}`);
-            lines.push(freshPick('race-cas', [
-                `It was not without cost: ${bits.join(' and ')} ${(dnf + dsq) === 1 ? 'on the day' : 'across the field'}.`,
-                `The race claimed its scalps too, with ${bits.join(' and ')} recorded.`,
-                `Behind the top three, ${bits.join(' and ')} reshaped the back end of the order.`,
-                `Not everyone saw the chequered flag: ${bits.join(' and ')} ${(dnf + dsq) === 1 ? 'on the books' : 'between them'}.`,
+        // ---- Second-best climber: another mover worth a one-liner ----
+        if (secondClimber && secondClimber.driver_id !== winner.driver_id
+                          && driveOfRace && secondClimber.driver_id !== driveOfRace.driver_id) {
+            const sc = secondClimber;
+            const scTeam = teamOf(sc) ? esc(teamOf(sc)) : null;
+            bodyLines.push(freshPick('race-second-climber', [
+                `Not far behind in the recovery stakes, ${esc(driverName(sc))}${scTeam ? ` of ${scTeam}` : ''} hauled in ${sc._gained} places of his own to finish P${sc.finish_position}.`,
+                `${esc(driverName(sc))}${scTeam ? ` (${scTeam})` : ''} matched the mood, climbing ${sc._gained} spots from P${sc._qualiPos} to P${sc.finish_position}.`,
+                `${esc(driverName(sc))}${scTeam ? ` of ${scTeam}` : ''} added another comeback story, P${sc._qualiPos} to P${sc.finish_position} for ${sc._gained} places gained.`,
             ]));
         }
 
-        html.push(`<p>${lines.join(' ')}</p>`);
+        // ---- Casualties: now with names rather than bare counts ----
+        if (dnf || dsq) {
+            const nameOf = (rd) => {
+                const nm = esc(driverName(rd));
+                const tn = teamOf(rd) ? ` (${esc(teamOf(rd))})` : '';
+                return `${nm}${tn}`;
+            };
+            const joinList = (arr) => {
+                if (arr.length === 0) return '';
+                if (arr.length === 1) return arr[0];
+                const last = arr[arr.length - 1];
+                return arr.slice(0, -1).join(', ') + ' and ' + last;
+            };
+            const dnfNames = dnfDrivers.map(nameOf);
+            const dsqNames = dsqDrivers.map(nameOf);
+            if (dnfNames.length && dsqNames.length) {
+                bodyLines.push(freshPick('race-cas-both', [
+                    `The race claimed its scalps too: ${joinList(dnfNames)} did not see the flag, while ${joinList(dsqNames)} ${dsqNames.length === 1 ? 'was' : 'were'} ruled out of the result by the stewards.`,
+                    `Casualty list: ${joinList(dnfNames)} retired and ${joinList(dsqNames)} ${dsqNames.length === 1 ? 'was' : 'were'} disqualified.`,
+                ]));
+            } else if (dnfNames.length) {
+                const fmt = joinList(dnfNames);
+                bodyLines.push(freshPick('race-cas-dnf', [
+                    `${dnfNames.length === 1 ? 'Retirement' : 'Retirements'} for ${fmt} thinned the field.`,
+                    `Not everyone saw the chequered flag: ${fmt} ${dnfNames.length === 1 ? 'retired' : 'all retired'}.`,
+                    `${fmt} ${dnfNames.length === 1 ? "didn't" : "didn't all"} make the finish.`,
+                    `The race took its toll: ${fmt} ${dnfNames.length === 1 ? 'pulled' : 'all pulled'} out before the flag.`,
+                ]));
+            } else if (dsqNames.length) {
+                const fmt = joinList(dsqNames);
+                bodyLines.push(freshPick('race-cas-dsq', [
+                    `Stewards' room afterwards: ${fmt} ${dsqNames.length === 1 ? 'was' : 'were'} stripped of the result.`,
+                    `${dsqNames.length === 1 ? 'Disqualification' : 'Disqualifications'} for ${fmt} reshaped the back end of the order.`,
+                    `${fmt} ${dsqNames.length === 1 ? 'was' : 'were'} thrown out of the result post-race.`,
+                ]));
+            }
+        }
+
+        // ---- Closing beat: how the race felt overall (orderly vs chaotic) ----
+        const significantMovers = finishers.filter(rd => rd._gained != null && Math.abs(rd._gained) >= 3).length;
+        if (chaosScore >= 2.5 && finishers.length >= 5) {
+            bodyLines.push(freshPick('race-close-chaos', [
+                `The grid bore little resemblance to the result; ${significantMovers} drivers moved three places or more across the race.`,
+                `Whatever the grid promised, the race delivered something else: ${significantMovers} drivers finished three or more places from where they started.`,
+                `Few drivers ended where they began. The order shuffled all afternoon, with ${significantMovers} significant movers in the classification.`,
+            ]));
+        } else if (chaosScore <= 0.9 && finishers.length >= 5) {
+            bodyLines.push(freshPick('race-close-orderly', [
+                `Up and down the order, most drivers held station — qualifying form was largely the result.`,
+                `An orderly race in that respect: the grid was a strong predictor of the flag.`,
+                `Few real surprises through the field. Most drivers came home roughly where the grid suggested.`,
+            ]));
+        }
+
+        // Two paragraphs per split: headline result, then the deeper read.
+        if (headLines.length) html.push(`<p>${headLines.join(' ')}</p>`);
+        if (bodyLines.length) html.push(`<p>${bodyLines.join(' ')}</p>`);
     });
 
     // ---- Pull quote: the line worth pulling out ----
