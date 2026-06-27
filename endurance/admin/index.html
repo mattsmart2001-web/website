@@ -4777,6 +4777,8 @@ function buildRaceReport(d) {
 }
 
 function openReportEditor(eventId, eventName, draft, data) {
+    // Stash so saveRaceReport can send the Discord notification on publish.
+    window._reportCtx = { eventId, eventName, round: data?.event?.round ?? null };
     const body = `
         <p style="color:var(--muted);font-size:0.84rem;margin-bottom:0.85rem">Edit anything you like before publishing. Saves into the News section tagged as a Race Report.</p>
         <form id="entity-form">
@@ -4847,6 +4849,29 @@ async function saveRaceReport(publishNow) {
     }
     toast(publishNow ? 'Race report published to News.' : 'Draft saved.', 'success');
     closeModal();
+
+    // On publish, post a results summary to Discord #results (fire-and-forget)
+    if (publishNow) {
+        try {
+            const ctx     = window._reportCtx || {};
+            const session = await sb.auth.getSession();
+            const token   = session?.data?.session?.access_token;
+            if (token && ctx.eventId) {
+                fetch('/.netlify/functions/notify-discord-results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({
+                        event_id:     ctx.eventId,
+                        event_name:   ctx.eventName,
+                        round:        ctx.round,
+                        article_slug: payload.slug,
+                    }),
+                }).then(async r => {
+                    if (!r.ok) console.warn('Discord results post failed:', await r.text());
+                }).catch(e => console.warn('Discord results post error:', e));
+            }
+        } catch (e) { console.warn('Discord results notification skipped:', e); }
+    }
 }
 
 
