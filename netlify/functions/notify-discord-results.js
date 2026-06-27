@@ -24,7 +24,6 @@ const SITE_URL          = 'https://sparkstheory.co.uk';
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
-const MEDALS = ['🥇', '🥈', '🥉'];
 const SPLIT_COLOURS = [0xffd166, 0x5dd3ff, 0x4ade80, 0xf97316, 0xc084fc];
 
 exports.handler = async (event) => {
@@ -107,10 +106,9 @@ exports.handler = async (event) => {
 
     const sortedSplits = Object.keys(splits).map(Number).sort((a, b) => a - b);
 
-    const label = [
-        event_name || 'Race Results',
-        round ? `· Round ${round}` : '',
-    ].filter(Boolean).join(' ');
+    // Avoid "Round 1 Spa · Round 1" if the event name already contains the round
+    const roundSuffix = (round && !/round\s*\d/i.test(event_name || '')) ? ` · Round ${round}` : '';
+    const label = (event_name || 'Race Results') + roundSuffix;
 
     const articleUrl = article_slug
         ? `${SITE_URL}/endurance/news/?article=${article_slug}`
@@ -123,16 +121,23 @@ exports.handler = async (event) => {
 
         const lines = rows.map(rd => {
             const pos    = rd.finish_position;
-            const medal  = MEDALS[pos - 1] || `P${pos}`;
             const name   = rd.driver_name || '(Unknown)';
-            const status = rd.status && rd.status !== 'classified' ? ` *(${rd.status.toUpperCase()})*` : '';
-            return `${medal} ${name}${status}`;
+            const dnf    = rd.status && rd.status !== 'classified';
+            const suffix = dnf ? ` — *${rd.status.toUpperCase()}*` : '';
+
+            if (pos === 1) return `🥇  **${name}**${suffix}`;
+            if (pos === 2) return `🥈  **${name}**${suffix}`;
+            if (pos === 3) return `🥉  **${name}**${suffix}`;
+            // Thin divider after podium
+            const divider = pos === 4 ? '─────────────────\n' : '';
+            return `${divider}P${pos}  ${name}${suffix}`;
         });
 
         if (lines.length === 0) lines.push('No classified finishers');
 
+        const title = sortedSplits.length > 1 ? `Split ${splitNum}` : 'Results';
         return {
-            title: sortedSplits.length > 1 ? `Split ${splitNum}` : 'Results',
+            title,
             description: lines.join('\n'),
             color: SPLIT_COLOURS[i % SPLIT_COLOURS.length],
         };
@@ -140,7 +145,7 @@ exports.handler = async (event) => {
 
     const headerEmbed = {
         title: `🏁  ${label}`,
-        description: `[Read the full race report](${articleUrl})`,
+        description: `[📰  Read the full race report](${articleUrl})`,
         color: 0xffffff,
         url: articleUrl,
     };
