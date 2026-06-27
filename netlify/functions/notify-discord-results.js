@@ -67,42 +67,35 @@ exports.handler = async (event) => {
 
     const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${userToken}` };
 
-    // Fetch results: result_drivers joined to results, with lobby_number from entries
-    const rdRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/result_drivers` +
-        `?select=finish_position,status,drivers(display_name),results(split_number,entries(lobby_number))` +
-        `&results.event_id=eq.${event_id}` +
-        `&order=finish_position`,
+    // Query results → entries (for lobby_number/split) → result_drivers (for per-driver finish)
+    const rRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/results` +
+        `?select=id,entries(lobby_number),result_drivers(finish_position,status,drivers(display_name))` +
+        `&event_id=eq.${event_id}` +
+        `&order=entries(lobby_number)`,
         { headers }
     );
-    let rdRows = await rdRes.json();
+    const resultsRaw = await rRes.json();
 
-    // Fallback: query via results table if join filter didn't work
-    if (!Array.isArray(rdRows) || rdRows.length === 0) {
-        const rRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/results?select=id,split_number,entries(lobby_number),result_drivers(finish_position,status,drivers(display_name))&event_id=eq.${event_id}&order=split_number`,
-            { headers }
-        );
-        const results = await rRes.json();
-        if (Array.isArray(results) && results.length > 0) {
-            // Flatten to same shape
-            rdRows = results.flatMap(r =>
-                (r.result_drivers || []).map(rd => ({
-                    finish_position: rd.finish_position,
-                    status: rd.status,
-                    drivers: rd.drivers,
-                    results: { split_number: r.split_number, entries: r.entries },
-                }))
-            );
-        }
-    }
-
-    if (!Array.isArray(rdRows) || rdRows.length === 0) {
+    if (!Array.isArray(resultsRaw) || resultsRaw.length === 0) {
         return { statusCode: 404, body: 'No results found for this event' };
     }
 
-    // Determine split number: prefer results.split_number, fall back to entries.lobby_number
-    const splitFor = rd => rd.results?.split_number ?? rd.results?.entries?.lobby_number ?? 1;
+    // Flatten to one row per driver with the split they ran in
+    const rdRows = resultsRaw.flatMap(r =>
+        (r.result_drivers || []).map(rd => ({
+            finish_position: rd.finish_position,
+            status:          rd.status,
+            driver_name:     rd.drivers?.display_name || null,
+            lobby_number:    r.entries?.lobby_number ?? 1,
+        }))
+    );
+
+    if (rdRows.length === 0) {
+        return { statusCode: 404, body: 'No driver results found for this event' };
+    }
+
+    const splitFor = rd => rd.lobby_number ?? 1;
 
     // Group classified finishers by split
     const splits = {};
@@ -132,7 +125,7 @@ exports.handler = async (event) => {
         const lines = rows.map(rd => {
             const pos    = rd.finish_position;
             const medal  = MEDALS[pos - 1] || `P${pos}`;
-            const name   = rd.drivers?.display_name || '(Unknown)';
+            const name   = rd.driver_name || '(Unknown)';
             const status = rd.status && rd.status !== 'classified' ? ` *(${rd.status.toUpperCase()})*` : '';
             return `${medal} ${name}${status}`;
         });
