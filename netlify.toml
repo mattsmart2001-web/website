@@ -13,36 +13,43 @@
 # which is what the catch-all below would otherwise do.
 [[redirects]]
   from = "/products/*"
+  to = "/gone"
   status = 410
   force = true
 
 [[redirects]]
   from = "/collections/*"
+  to = "/gone"
   status = 410
   force = true
 
 [[redirects]]
   from = "/pages/*"
+  to = "/gone"
   status = 410
   force = true
 
 [[redirects]]
   from = "/policies/*"
+  to = "/gone"
   status = 410
   force = true
 
 [[redirects]]
   from = "/supporters/*"
+  to = "/gone"
   status = 410
   force = true
 
 [[redirects]]
   from = "/en-eur"
+  to = "/gone"
   status = 410
   force = true
 
 [[redirects]]
   from = "/en-eur/*"
+  to = "/gone"
   status = 410
   force = true
 

@@ -21,9 +21,10 @@ const fetch = require('node-fetch');
 const SITE_URL    = 'https://sparkstheory.co.uk';
 const DISCORD_URL = 'https://discord.gg/rMRNYNXnZx';
 
-// Discord constants — guild and Driver role are fixed for this deployment.
-const DISCORD_GUILD_ID   = '1063051073536929845';
-const DISCORD_DRIVER_ROLE = '1520483316418085107';
+// Discord constants — read from Netlify env vars so no IDs live in source.
+// Set DISCORD_GUILD_ID and DISCORD_DRIVER_ROLE_ID in Netlify environment variables.
+const DISCORD_GUILD_ID    = process.env.DISCORD_GUILD_ID;
+const DISCORD_DRIVER_ROLE = process.env.DISCORD_DRIVER_ROLE_ID;
 
 const SUPABASE_URL      = process.env.GTEC_SUPABASE_URL      || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.GTEC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -103,8 +104,10 @@ function templateFor(emailType, app, claimUrl) {
 // Returns { ok, reason } — never throws.
 async function assignDiscordRole(discordUsername) {
     const botToken = process.env.GTEC_DISCORD_BOT_TOKEN;
-    if (!botToken)        return { ok: false, reason: 'no bot token configured' };
-    if (!discordUsername) return { ok: false, reason: 'no discord username on application' };
+    if (!botToken)          return { ok: false, reason: 'no bot token configured' };
+    if (!DISCORD_GUILD_ID)  return { ok: false, reason: 'DISCORD_GUILD_ID env var not set' };
+    if (!DISCORD_DRIVER_ROLE) return { ok: false, reason: 'DISCORD_DRIVER_ROLE_ID env var not set' };
+    if (!discordUsername)   return { ok: false, reason: 'no discord username on application' };
 
     // Support both legacy "user#1234" and the new username-only format.
     const username = discordUsername.split('#')[0].toLowerCase().trim();
