@@ -5,18 +5,25 @@
 //
 // Sends an acceptance / waitlist / rejection email via Resend and
 // logs the result to public.application_emails.
+// On acceptance, also assigns the Discord "Driver" role if the applicant
+// is already in the server and their discord_username is on record.
 //
 // Env vars required:
 //   GTEC_SUPABASE_URL       (falls back to SUPABASE_URL if unset)
 //   GTEC_SUPABASE_ANON_KEY  (falls back to SUPABASE_ANON_KEY if unset)
 //   RESEND_API_KEY
 //   GTEC_FROM_EMAIL         (e.g. "GTEC <noreply@yourdomain.com>")
+//   GTEC_DISCORD_BOT_TOKEN  — Discord bot token (required for role assignment)
 // ============================================================
 
 const fetch = require('node-fetch');
 
 const SITE_URL    = 'https://sparkstheory.co.uk';
 const DISCORD_URL = 'https://discord.gg/rMRNYNXnZx';
+
+// Discord constants — guild and Driver role are fixed for this deployment.
+const DISCORD_GUILD_ID   = '1063051073536929845';
+const DISCORD_DRIVER_ROLE = '1520483316418085107';
 
 const SUPABASE_URL      = process.env.GTEC_SUPABASE_URL      || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.GTEC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -90,6 +97,54 @@ function templateFor(emailType, app, claimUrl) {
         default:
             return null;
     }
+}
+
+// Attempt to assign the Driver role in Discord.
+// Returns { ok, reason } — never throws.
+async function assignDiscordRole(discordUsername) {
+    const botToken = process.env.GTEC_DISCORD_BOT_TOKEN;
+    if (!botToken)        return { ok: false, reason: 'no bot token configured' };
+    if (!discordUsername) return { ok: false, reason: 'no discord username on application' };
+
+    // Support both legacy "user#1234" and the new username-only format.
+    const username = discordUsername.split('#')[0].toLowerCase().trim();
+    if (!username) return { ok: false, reason: 'empty username' };
+
+    const base = 'https://discord.com/api/v10';
+    const auth = { Authorization: `Bot ${botToken}` };
+
+    // Search the guild's member list for this username.
+    const searchRes = await fetch(
+        `${base}/guilds/${DISCORD_GUILD_ID}/members/search?query=${encodeURIComponent(username)}&limit=10`,
+        { headers: auth }
+    );
+    if (!searchRes.ok) {
+        return { ok: false, reason: `Discord members/search returned ${searchRes.status}` };
+    }
+
+    const members = await searchRes.json();
+    // Match on the account username (new system) or server nickname.
+    const member = members.find(m =>
+        m.user.username.toLowerCase() === username ||
+        (m.nick && m.nick.toLowerCase() === username)
+    );
+
+    if (!member) {
+        return { ok: false, reason: 'not in server yet — role can be assigned manually once they join' };
+    }
+
+    if (member.roles.includes(DISCORD_DRIVER_ROLE)) {
+        return { ok: true, reason: 'already has Driver role' };
+    }
+
+    const addRes = await fetch(
+        `${base}/guilds/${DISCORD_GUILD_ID}/members/${member.user.id}/roles/${DISCORD_DRIVER_ROLE}`,
+        { method: 'PUT', headers: { ...auth, 'X-Audit-Log-Reason': 'GTEC driver accepted' } }
+    );
+
+    return addRes.status === 204
+        ? { ok: true, reason: 'Driver role assigned' }
+        : { ok: false, reason: `Discord PUT roles returned ${addRes.status}` };
 }
 
 exports.handler = async (event) => {
@@ -242,9 +297,21 @@ exports.handler = async (event) => {
     if (!ok) {
         return { statusCode: 502, body: JSON.stringify({ ok: false, error: errorText }) };
     }
+
+    // On acceptance, silently try to grant the Discord Driver role.
+    let discordResult = { ok: false, reason: 'skipped' };
+    if (email_type === 'accepted') {
+        try {
+            discordResult = await assignDiscordRole(app.discord_username);
+        } catch (err) {
+            discordResult = { ok: false, reason: err.message || String(err) };
+        }
+        console.log('Discord role assignment:', discordResult);
+    }
+
     return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ok: true, provider_id: providerId }),
+        body: JSON.stringify({ ok: true, provider_id: providerId, discord: discordResult }),
     };
 };
