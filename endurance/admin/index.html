@@ -3150,19 +3150,21 @@ async function notifyLobbies(eventId, eventName, seasonId) {
 
     // Also post split assignments to Discord #splits (best effort — non-blocking)
     try {
-        const { data: ev } = await sb.from('events').select('round').eq('id', eventId).maybeSingle();
-        const session = await sb.auth.getSession();
-        const token   = session?.data?.session?.access_token;
-        if (token) {
+        const { data: { session: discordSession } } = await sb.auth.getSession();
+        if (discordSession?.access_token) {
+            const { data: ev } = await sb.from('events').select('round').eq('id', eventId).maybeSingle();
             fetch('/.netlify/functions/notify-discord-splits', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ event_id: eventId, event_name: eventName, round: ev?.round }),
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${discordSession.access_token}` },
+                body: JSON.stringify({ event_id: eventId, event_name: eventName, round: ev?.round ?? null }),
             }).then(async r => {
-                if (!r.ok) console.warn('Discord splits post failed:', await r.text());
+                if (!r.ok) console.warn('Discord splits post failed:', r.status, await r.text());
+                else console.log('Discord splits posted OK');
             }).catch(e => console.warn('Discord splits post error:', e));
+        } else {
+            console.warn('Discord splits skipped: no active session');
         }
-    } catch (e) { console.warn('Discord splits notification skipped:', e); }
+    } catch (e) { console.warn('Discord splits notification error:', e); }
 }
 
 async function deleteLobbyNotifications(eventId, eventName, seasonId) {
@@ -4853,13 +4855,12 @@ async function saveRaceReport(publishNow) {
     // On publish, post a results summary to Discord #results (fire-and-forget)
     if (publishNow) {
         try {
-            const ctx     = window._reportCtx || {};
-            const session = await sb.auth.getSession();
-            const token   = session?.data?.session?.access_token;
-            if (token && ctx.eventId) {
+            const ctx = window._reportCtx || {};
+            const { data: { session: discordSession } } = await sb.auth.getSession();
+            if (discordSession?.access_token && ctx.eventId) {
                 fetch('/.netlify/functions/notify-discord-results', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${discordSession.access_token}` },
                     body: JSON.stringify({
                         event_id:     ctx.eventId,
                         event_name:   ctx.eventName,
@@ -4867,10 +4868,13 @@ async function saveRaceReport(publishNow) {
                         article_slug: payload.slug,
                     }),
                 }).then(async r => {
-                    if (!r.ok) console.warn('Discord results post failed:', await r.text());
+                    if (!r.ok) console.warn('Discord results post failed:', r.status, await r.text());
+                    else console.log('Discord results posted OK');
                 }).catch(e => console.warn('Discord results post error:', e));
+            } else {
+                console.warn('Discord results skipped: no session or event context');
             }
-        } catch (e) { console.warn('Discord results notification skipped:', e); }
+        } catch (e) { console.warn('Discord results notification error:', e); }
     }
 }
 
