@@ -119,8 +119,7 @@ exports.handler = async (event) => {
     const splitEmbeds = sortedSplits.map((splitNum, i) => {
         const rows = splits[splitNum]
             .filter(rd => rd.finish_position != null)
-            .sort((a, b) => a.finish_position - b.finish_position)
-            .slice(0, 5);
+            .sort((a, b) => a.finish_position - b.finish_position);
 
         const lines = rows.map(rd => {
             const pos    = rd.finish_position;
