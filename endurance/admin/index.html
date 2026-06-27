@@ -3141,12 +3141,28 @@ async function clearAllLobbies(eventId, eventName, seasonId) {
 }
 
 async function notifyLobbies(eventId, eventName, seasonId) {
-    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox.`)) return;
+    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox and a summary will post to Discord #splits.`)) return;
     const { data, error } = await sb.rpc('notify_lobby_assignments', { p_event_id: eventId });
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
     toast(`Sent ${data.count} notification${data.count === 1 ? '' : 's'}.`, 'success');
     await refreshMsgsBadge();
+
+    // Also post split assignments to Discord #splits (best effort — non-blocking)
+    try {
+        const { data: ev } = await sb.from('events').select('round').eq('id', eventId).maybeSingle();
+        const session = await sb.auth.getSession();
+        const token   = session?.data?.session?.access_token;
+        if (token) {
+            fetch('/.netlify/functions/notify-discord-splits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ event_id: eventId, event_name: eventName, round: ev?.round }),
+            }).then(async r => {
+                if (!r.ok) console.warn('Discord splits post failed:', await r.text());
+            }).catch(e => console.warn('Discord splits post error:', e));
+        }
+    } catch (e) { console.warn('Discord splits notification skipped:', e); }
 }
 
 async function deleteLobbyNotifications(eventId, eventName, seasonId) {
