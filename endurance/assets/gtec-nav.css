@@ -85,14 +85,17 @@ nav.gtec-nav .back:has(img) {
         position: absolute;
         bottom: -3px;
         left: 0;
-        width: 0;
+        width: 100%;
         height: 1.5px;
         background: var(--gold, #ffd166);
         border-radius: 2px;
-        transition: width 0.25s ease;
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.25s ease;
+        pointer-events: none;
     }
     nav.gtec-nav .nav-links a:not(.apply):not(.back):hover::after {
-        width: 100%;
+        transform: scaleX(1);
     }
 }
 
