@@ -709,6 +709,13 @@
             .admin-nav-toggle { display: inline-flex; }
             .topbar { padding: 0.85rem 1rem; }
         }
+        /* Pre-season article generator */
+        .preseason-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.75rem; margin-top:1rem; }
+        .preseason-card { background:var(--bg-2); border:1px solid var(--border); border-radius:10px; padding:1.1rem 0.9rem; cursor:pointer; transition:border-color 0.15s,background 0.15s; text-align:center; }
+        .preseason-card:hover { border-color:var(--gold); background:rgba(255,209,102,0.05); }
+        .preseason-card-icon { font-size:1.7rem; margin-bottom:0.45rem; }
+        .preseason-card-title { font-weight:700; font-size:0.88rem; color:var(--text); margin-bottom:0.25rem; }
+        .preseason-card-desc { font-size:0.72rem; color:var(--muted); line-height:1.4; }
     </style>
     <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -1290,6 +1297,7 @@ async function renderSeasons() {
                 <td>${s.is_active ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-muted">Inactive</span>'}</td>
                 <td><div class="row-actions">
                     <button class="btn-icon" onclick="viewSeasonTeams('${s.id}','${esc(s.name)}')">Teams</button>
+                    <button class="btn-icon" onclick="openPreSeasonModal('${s.id}','${esc(s.name)}')">Pre-Season</button>
                     <button class="btn-icon" onclick="editSeason('${s.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteSeason('${s.id}','${esc(s.name)}')">Delete</button>
                 </div></td>
@@ -3986,6 +3994,373 @@ async function generateRaceReport(eventId, eventName, seasonId) {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PRE-SEASON ARTICLE GENERATOR
+// ═══════════════════════════════════════════════════════════════════════════
+
+const _PRESEASON_CIRCUITS = [
+    { keys:['spa','francorchamps'], name:'Circuit de Spa-Francorchamps', flag:'🇧🇪', loc:'Stavelot, Belgium', km:'7.004',
+      intros:['Spa-Francorchamps needs no introduction — seven kilometres of drama carved through the Ardennes forest, anchored by the most iconic corner complex in motorsport.','If one circuit defines endurance racing it is Spa. Unpredictable weather, unforgiving walls at Eau Rouge, and a back section that never lets you rest make it the ultimate test of car and driver.','The cathedral of motorsport. The Ardennes frame a circuit that has decided championships, ended dreams and created legends since the earliest days of racing.'],
+      corners:['Eau Rouge / Raidillon','Pouhon','Blanchimont','Bus Stop Chicane'], ot:'La Source hairpin and the Kemmel Straight',
+      tyre:'Wear is moderate across the lap but the high-speed sweepers load the rear shoulders. A car gentle on tyres in Stint 1 becomes a weapon in the closing stages.',
+      watch:'Weather. A dry La Source and a damp Raidillon is all the chaos you need.' },
+    { keys:['monza','autodromo nazionale'], name:'Autodromo Nazionale Monza', flag:'🇮🇹', loc:'Monza, Italy', km:'5.793',
+      intros:['The Temple of Speed. Monza strips away downforce and lets horsepower do the talking — the fastest circuit on the GTEC calendar and one of the oldest in the world.','Raw power and late-braking bravery. Low-drag setups, flat-out Lesmo sequences and the sweeping Parabolica create a circuit where the engine is the co-driver.','Monza is a timed knockout. Carry the wrong setup and the straights will expose you. Nail it and the race is yours to lose.'],
+      corners:['Curva Grande','Lesmo 1 & 2','Ascari Chicane','Parabolica'], ot:'Rettifilo chicane and under braking into Lesmo 1',
+      tyre:'Low downforce reduces tyre load overall, but locking up at the chicanes destroys fronts within a lap. Smooth braking is worth more here than any setup tweak.',
+      watch:'Slipstream battles along the main straight. Coming out of Parabolica cleanly is worth a tenth — and usually a position.' },
+    { keys:['nurburgring','nürburgring','nordschleife','nurburg'], name:'Nürburgring', flag:'🇩🇪', loc:'Nürburg, Germany', km:'20.832 / 5.148',
+      intros:['The Green Hell. Twenty kilometres of blind crests, compression corners and concrete barriers that show no mercy. The Nordschleife has humbled every great driver in history.','No circuit punishes mistakes like the Nordschleife. The sheer variety of corners, the undulating terrain and the ever-present barriers demand absolute respect from lap one.','Learn the Nordschleife and you know the most complex circuit in the world. Get it right and nothing else will feel difficult. Get it wrong and the barriers will remind you why they call it the Green Hell.'],
+      corners:['Flugplatz','Bergwerk','Karussell','Brünnchen','Pflanzgarten'], ot:'Hatzenbach and the long run into Tiergarten',
+      tyre:'The Nordschleife destroys right-rears through compression corners. Managing temperatures on the warm-up lap is as important as the flying lap itself.',
+      watch:'The Eifel weather. One sector can be dry while another is soaked — the circuit produces its own conditions.' },
+    { keys:['suzuka'], name:'Suzuka Circuit', flag:'🇯🇵', loc:'Suzuka, Japan', km:'5.807',
+      intros:['Suzuka is the purist\'s circuit — a figure-of-eight that flows from the first corner to the last, where mid-corner speed separates the great drivers from the rest.','The most technical circuit on the GTEC calendar. The S-curves, the blind Dunlop corner and the long sweeping Spoon demand absolute commitment and rhythm. Lift once and you\'ve lost it.','Ask any racing driver their favourite circuit and half say Suzuka. The reason is simple: it rewards drivers who maintain commitment through corners that look impossible from the outside.'],
+      corners:['The S-curves','Dunlop Curve','130R','Spoon Corner','Casio Triangle'], ot:'Into the hairpin at the end of the main straight and at the chicane',
+      tyre:'Rear tyre management through the Esses and 130R is the key strategic factor. Respect the rear tyres early and you gain a massive pace advantage in the closing laps.',
+      watch:'130R. Looks flat on the map. Feels terrifying in the car. The drivers who take it flat earn their lap time.' },
+    { keys:['brands hatch','brands'], name:'Brands Hatch', flag:'🇬🇧', loc:'West Kingsdown, Kent, UK', km:'3.908',
+      intros:['Brands Hatch sits in a natural bowl carved from the North Downs — a compact, flowing circuit that puts every driver on show and punishes oversteer at every corner.','Old-school British motorsport in four kilometres of asphalt. Paddock Hill Bend sets the tone from the opening lap and the undulating circuit never lets you settle into comfort.','The most dramatic first corner in motorsport? Paddock Hill Bend would make a strong argument. Brands produces the kind of close racing that made British motor sport famous.'],
+      corners:['Paddock Hill Bend','Druids','Graham Hill Bend','Hawthorn Bend','Clearways'], ot:'Into Druids under braking',
+      tyre:'The undulating layout stresses different axles at different points. Front-left wear is the limiting factor — managing it through Hawthorn determines late-race pace.',
+      watch:'Paddock Hill Bend on the opening lap. It produces something every single race.' },
+    { keys:['silverstone'], name:'Silverstone Circuit', flag:'🇬🇧', loc:'Silverstone, UK', km:'5.891',
+      intros:['Britain\'s home of motorsport and one of the fastest circuits in the world. Copse, Maggotts and Becketts demand absolute commitment — lift once through that sequence and you hand time to every driver behind.','Wide, fast and relentless — Silverstone rewards aerodynamic grip and punishes balance problems with brutal efficiency. The Becketts complex is one of the great sequences in world motorsport.','The birthplace of the World Championship. Silverstone\'s sweeping corners separate the aerodynamically efficient from the rest and reward drivers brave enough to trust the car.'],
+      corners:['Copse','Maggotts / Becketts / Chapel','Stowe','Club','Abbey'], ot:'Village / Loop complex and into Stowe',
+      tyre:'Sustained high-speed cornering loads the front-left heavily. A car that stays within its tyre window all race is worth more than pure one-lap pace.',
+      watch:'Maggotts to Becketts. If you are watching from that sector you are watching the race being won or lost.' },
+    { keys:['fuji','fuji speedway'], name:'Fuji Speedway', flag:'🇯🇵', loc:'Oyama, Shizuoka, Japan', km:'4.563',
+      intros:['Fuji Speedway sits in the shadow of Mount Fuji and on a clear day the backdrop alone justifies the entry. The circuit combines a 1.5 km main straight with a flowing infield that punishes indecision.','Japan\'s second great circuit is defined by 100R and the straight that follows it. Get 100R right and you carry a full straightline advantage into the braking zone; get it wrong and you are visible in every mirror.','The complete package — low drag for the straight, mechanical grip through the infield, late braking at the hairpin. Fuji reveals whether a driver has worked through every sector or guessed their setup.'],
+      corners:['100R','First Corner Hairpin','Coca-Cola Corner','TGR Corner'], ot:'The hairpin at the end of the main straight',
+      tyre:'The long straight cools tyres between loading cycles — rubber life is better here than at sustained high-speed tracks, but locking up at the hairpin costs both time and tyres.',
+      watch:'100R. The fastest drivers carry breathtaking speed; the gap between a clean exit and a ragged one is often the race.' },
+    { keys:['interlagos','sao paulo','são paulo','brazil'], name:'Autodromo José Carlos Pace', flag:'🇧🇷', loc:'São Paulo, Brazil', km:'4.309',
+      intros:['Interlagos runs anti-clockwise through the hills of São Paulo, and the energy it generates is unlike any other venue in the world. The Senna S at Turn 1 sets the tone immediately.','Compact, bumpy and unforgiving — Interlagos was built to produce racing. The anti-clockwise layout reverses tyre loading patterns from every other circuit and drivers who ignore that pay the price.','The home of Brazilian passion for motorsport — and the most atmospheric venue on the GTEC calendar. Anti-clockwise, narrow and relentless in the demands it places on car and driver.'],
+      corners:['Senna S','Curva do Sol','Descida do Lago','Junção','Mergulho'], ot:'Senna S on the opening lap and at Junção',
+      tyre:'Anti-clockwise means the right rear suffers where you normally worry about the left. Drivers arriving from clockwise circuits consistently underestimate this — adjust your strategy accordingly.',
+      watch:'The Senna S complex on lap 1. It produces action every single time.' },
+    { keys:['red bull ring','spielberg','austria','zeltweg'], name:'Red Bull Ring', flag:'🇦🇹', loc:'Spielberg, Austria', km:'4.318',
+      intros:['Set against the rolling Styrian hills, the Red Bull Ring is compact, fast and relentlessly action-packed. Ten corners — but every single one matters.','Short lap times mean more laps, more incidents and more overtaking. The uphill run to Turn 1 and the drag to the final hairpin create two genuine passing zones per lap.','The Red Bull Ring is deceptively simple to learn and devilishly hard to master. Uphill braking, camber changes and a compressed layout punish overconfidence every lap.'],
+      corners:['Turn 1 (Castrol)','Turn 3 (Remus)','Turn 6 (Rindt)','Turn 9 (Schlossgold)','Turn 10 (Rauch)'], ot:'Turn 1 and into the final hairpin',
+      tyre:'Short lap means tyres never fully settle before the next braking zone. Consistency outperforms peak pace — manage the fronts and the rears follow.',
+      watch:'Turn 3. It looks simple. It catches everyone out at least once.' },
+    { keys:['laguna seca','mazda raceway','weathertech'], name:'WeatherTech Raceway Laguna Seca', flag:'🇺🇸', loc:'Monterey, California, USA', km:'3.602',
+      intros:['One corner defines Laguna Seca and that corner is unlike anything else in racing. The Corkscrew — a blind left-right dropping nine metres in elevation — is the most dramatic piece of road on the GTEC calendar.','Compact, technical and completely captivating. Laguna Seca rewards commitment and punishes hesitation at every corner. The Corkscrew is iconic, but the corners around it decide the race.','Don\'t be fooled by the short lap time. Laguna Seca is dense with technical challenge from the uphill run to Turn 1 through to the Corkscrew — drivers who string it together consistently are the ones who win.'],
+      corners:['Andretti Hairpin (T1)','Turns 3-4 Esses','Rainey Curve','The Corkscrew (T8-8a)','Bondurant (T11)'], ot:'Turn 1 under braking',
+      tyre:'The Corkscrew\'s compression loads the front axle heavily. Front tyre management through the back section is the key to consistent lap times.',
+      watch:'The Corkscrew, obviously. But Turn 1 catches more drivers cold than any other corner here.' },
+    { keys:['bathurst','mount panorama','mt panorama'], name:'Mount Panorama Circuit', flag:'🇦🇺', loc:'Bathurst, NSW, Australia', km:'6.213',
+      intros:['Mount Panorama is a public road that becomes the greatest circuit in the world when racing comes to town. The climb to Skyline, the drop through The Dipper and the flat-out run home are unlike anything else in motorsport.','Bathurst demands reverence before it demands pace. The mountain does not forgive — barriers are close, walls are concrete and one mistake on the descent can end a race that was won on the climb.','Six kilometres of pure drama. Learn the mountain, respect the mountain and the mountain rewards you. Ignore it and the barriers will finish your race.'],
+      corners:['Hell Corner','The Cutting','McPhillamy Park','The Dipper','Forrest\'s Elbow','The Chase'], ot:'Hell Corner on the opening lap and The Chase',
+      tyre:'The downhill section generates tremendous brake and front tyre heat. Managing temperatures on the descent preserves life for the flat-out run home.',
+      watch:'The Dipper at full speed. It looks impossible. The best drivers make it look inevitable.' },
+    { keys:['sardegna','sardinia','autodromo regionale'], name:'Autodromo Regionale di Sardegna', flag:'🇮🇹', loc:'Sardinia, Italy', km:'3.149',
+      intros:['Nestled in the Sardinian hills, the Autodromo Regionale is one of GT7\'s most technical circuits — compact, demanding and relentless in the way it punishes drivers who try to force their way through its corners.','Don\'t underestimate Sardegna. The short lap conceals a demanding layout that punishes oversteer on exit and rewards smooth trail-braking into the hairpin complex.','The Autodromo Regionale grows on you. By lap three you know the layout; by lap ten you think you have it; by lap twenty you realise there is always another tenth waiting.'],
+      corners:['Turn 1 Hairpin','Double Apex Left','Chicane Complex','Final Hairpin'], ot:'Main hairpin under braking',
+      tyre:'Repeated tight corners generate high steering inputs and front tyre wear. Smooth steering into the hairpins rather than correction mid-corner is the key to tyre longevity.',
+      watch:'The chicane complex. Rewards bravery on entry, punishes commitment at the apex.' },
+    { keys:['cataluny','barcelona','catalunya'], name:'Circuit de Barcelona-Catalunya', flag:'🇪🇸', loc:'Montmeló, Spain', km:'4.675',
+      intros:['Barcelona is the benchmark. Long straight, high-speed sweepers, technical chicanes and the punishing Turn 3 — it has everything, and a car that is quick here is genuinely quick.','Catalunya is where setups are exposed. There is nowhere to hide a handling weakness across the range of corner types it presents.','The Swiss Army knife of motor racing venues. Technical and flowing by turns, placing equal demands on downforce efficiency, mechanical grip, tyre life and braking stability.'],
+      corners:['Turn 1 (Elf)','Turn 3','Repsol Chicane','New Holland Hairpin','La Caixa'], ot:'Turn 1 and into the final hairpin complex',
+      tyre:'Barcelona is notorious for front-left wear. Turn 3 and the long right-handers punish understeer mercilessly. Mid-race front-left management is the key strategic battleground.',
+      watch:'Turn 3. The most important corner on the circuit and the one most drivers get wrong under pressure.' },
+    { keys:['goodwood'], name:'Goodwood Motor Circuit', flag:'🇬🇧', loc:'Chichester, West Sussex, UK', km:'3.860',
+      intros:['Goodwood is old England in asphalt form — no chicanes, no unnecessary corners, just a flowing lap through the West Sussex countryside that rewards smoothness above everything else.','The Motor Circuit at Goodwood has barely changed since the 1950s. In GT7 that purity translates into a test of mechanical sympathy and consistent rhythm rather than setup aggression.','Soft walls, smooth surfaces and flowing rhythms — Goodwood is the antidote to modern circuit design. Its narrow track and close barriers make it trickier than its reputation suggests.'],
+      corners:['Madgwick','Fordwater','St Mary\'s','Lavant','Woodcote'], ot:'Madgwick and into the Woodcote chicane',
+      tyre:'The flowing layout generates consistent tyre loads. Wear is low to moderate — strategic timing matters more than rubber management here.',
+      watch:'St Mary\'s. The compression on entry is deceptive and the car loads heavily on exit. Very little room for error.' },
+    { keys:['dragon trail','seaside','gardens'], name:'Dragon Trail', flag:'🇭🇷', loc:'Adriatic Coast, Croatia', km:'3.788',
+      intros:['Set along the Croatian Adriatic, Dragon Trail is the most visually striking venue on the calendar — and behind the scenery is a demanding circuit of long sweepers and commitment corners that punishes the hesitant.','Dragon Trail blends coastal beauty with genuine technical challenge. The long flowing segments reward aerodynamic balance; the hairpin complexes are where positions change hands.','Perched above the Adriatic, Dragon Trail is GT7\'s most distinctive circuit. Beautiful to watch from, demanding to drive — the opening sweepers set a pace that cannot be dropped.'],
+      corners:['Opening Hairpin','Long Sweeper Complex','Sea View Corner','Final Chicane'], ot:'Into the opening hairpin and through the final chicane',
+      tyre:'Long sweeping sectors build sustained tyre load without sharp peaks. The outside shoulder degrades gradually — easy to miss until it is too late.',
+      watch:'The sea-view right-hander. Flat in the best cars. Terrifying in the ones that are not.' },
+];
+
+function _detectCircuit(name) {
+    if (!name) return null;
+    const l = name.toLowerCase();
+    return _PRESEASON_CIRCUITS.find(c => c.keys.some(k => l.includes(k))) || null;
+}
+function _psPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function _psDateStr(iso) { return iso ? new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : 'TBC'; }
+function _psSlug(str) { return str.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
+function _psToday() { return new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}); }
+
+function openPreSeasonModal(seasonId, seasonName) {
+    const types = [
+        { key:'grid',       icon:'🏁', title:'Grid Reveal',      desc:'Full confirmed driver and team lineup' },
+        { key:'calendar',   icon:'📅', title:'Calendar Drop',    desc:'Season schedule with all rounds and circuits' },
+        { key:'circuit',    icon:'🗺️', title:'Circuit Guide',   desc:'Detailed GT7 track preview for an event' },
+        { key:'contenders', icon:'🏆', title:'Title Contenders', desc:'Five drivers to watch based on Elo and GT7 rating' },
+        { key:'preview',    icon:'📰', title:'Season Preview',   desc:'Full editorial combining calendar, grid and picks' },
+    ];
+    openModal(`Pre-Season Content — ${esc(seasonName)}`,
+        `<p style="color:var(--muted);font-size:0.84rem;margin-bottom:1.1rem">Generate an article to publish before racing begins.</p>
+        <div class="preseason-grid">
+            ${types.map(t => `<div class="preseason-card" onclick="generatePreSeasonContent('${t.key}','${seasonId}','${esc(seasonName)}')">
+                <div class="preseason-card-icon">${t.icon}</div>
+                <div class="preseason-card-title">${esc(t.title)}</div>
+                <div class="preseason-card-desc">${esc(t.desc)}</div>
+            </div>`).join('')}
+        </div>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>`
+    );
+}
+
+async function generatePreSeasonContent(type, seasonId, seasonName) {
+    document.querySelector('.modal-body').innerHTML = '<div class="loading-state">Building article…</div>';
+    try {
+        const data = await _fetchPreSeasonData(seasonId, seasonName);
+        if (type === 'circuit') { _openCircuitPicker(data, seasonId, seasonName); return; }
+        const map = { grid: _buildGridReveal, calendar: _buildCalendarDrop, contenders: _buildTitleContenders, preview: _buildSeasonPreview };
+        const draft = map[type]?.(data);
+        if (!draft) throw new Error('Could not build this article type — ensure the season has events and drivers.');
+        _openArticleEditor(`Pre-Season Content — ${esc(seasonName)}`, draft);
+    } catch (err) {
+        document.querySelector('.modal-body').innerHTML = `<div class="empty-state">Could not build article: ${esc(err.message || String(err))}</div>`;
+    }
+}
+
+async function _fetchPreSeasonData(seasonId, seasonName) {
+    const [seasonRes, eventsRes] = await Promise.all([
+        sb.from('seasons').select('*').eq('id', seasonId).single(),
+        sb.from('events').select('id,name,round,circuit_name,starts_at,duration_hours').eq('season_id', seasonId).order('round'),
+    ]);
+    const season = seasonRes.data || {};
+    const events = eventsRes.data || [];
+    let drivers = [], teams = [], driverRatings = new Map();
+    const eventIds = events.map(e => e.id);
+    if (eventIds.length) {
+        const { data: entries } = await sb.from('entries')
+            .select('id,teams(id,name,manufacturers(name,brand_color)),entry_drivers(drivers(id,display_name,career_number,gt7_dr_rating,gt7_sr_rating))')
+            .in('event_id', eventIds);
+        const dMap = new Map(), tMap = new Map();
+        (entries || []).forEach(en => {
+            if (en.teams?.id) tMap.set(en.teams.id, en.teams);
+            (en.entry_drivers || []).forEach(ed => { if (ed.drivers?.id) dMap.set(ed.drivers.id, { ...ed.drivers, team: en.teams }); });
+        });
+        drivers = Array.from(dMap.values());
+        teams   = Array.from(tMap.values());
+        const dIds = drivers.map(d => d.id).filter(Boolean);
+        if (dIds.length) {
+            const { data: ratings } = await sb.from('driver_current_ratings').select('driver_id,rating').in('driver_id', dIds);
+            (ratings || []).forEach(r => driverRatings.set(r.driver_id, r.rating));
+        }
+    }
+    return { season, seasonName, events, drivers, teams, driverRatings };
+}
+
+function _openArticleEditor(modalTitle, draft) {
+    window._reportCtx = { tags: ['pre-season'] };
+    openModal(modalTitle,
+        `<p style="color:var(--muted);font-size:0.84rem;margin-bottom:0.85rem">Edit anything you like before publishing. Saves into the News section tagged as pre-season content.</p>
+        <form id="entity-form">
+            <div class="form-row">
+                <div class="form-group"><label>Title <span class="required">*</span></label>
+                    <input type="text" name="title" value="${esc(draft.title)}" required></div>
+                <div class="form-group"><label>Slug <span class="required">*</span></label>
+                    <input type="text" name="slug" value="${esc(draft.slug)}" required></div>
+            </div>
+            <div class="form-group"><label>Excerpt</label>
+                <textarea name="excerpt" rows="2">${esc(draft.excerpt || '')}</textarea></div>
+            <div class="form-group"><label>Cover Image URL <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(leave blank for default)</span></label>
+                <input type="url" name="cover_url" placeholder="https://…"></div>
+            <div class="form-group"><label>Body <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(HTML)</span></label>
+                <textarea name="body" rows="18" style="font-family:monospace;font-size:0.75rem">${esc(draft.body)}</textarea></div>
+            <div class="form-group"><label>Author</label>
+                <input type="text" name="author" value="GTEC Editorial"></div>
+        </form>
+        <div style="margin-top:0.85rem;padding:0.85rem 1rem;background:var(--bg-2);border:1px solid var(--border);border-radius:8px">
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:0.5rem">Preview</div>
+            <div style="max-height:240px;overflow-y:auto;font-size:0.85rem;line-height:1.65">${draft.body}</div>
+        </div>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-ghost" onclick="saveRaceReport(false)">Save as Draft</button>
+         <button class="btn btn-primary" onclick="saveRaceReport(true)">Publish to News</button>`
+    );
+}
+
+function _openCircuitPicker(data, seasonId, seasonName) {
+    const { events } = data;
+    if (!events.length) { document.querySelector('.modal-body').innerHTML = '<div class="empty-state">No events found for this season. Add events first.</div>'; return; }
+    document.querySelector('.modal-body').innerHTML = `
+        <p style="color:var(--muted);font-size:0.84rem;margin-bottom:1rem">Choose a circuit to generate a guide for:</p>
+        <div style="display:flex;flex-direction:column;gap:0.5rem">
+            ${events.map(e => `
+                <button class="btn btn-ghost" style="text-align:left;justify-content:flex-start;gap:0.75rem"
+                    onclick="generateCircuitGuide('${e.id}','${esc(e.circuit_name||e.name)}','${seasonId}','${esc(seasonName)}',${e.round||0})">
+                    <span style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.75rem;min-width:2rem">R${e.round}</span>
+                    <span style="flex:1">${esc(e.circuit_name||e.name)}</span>
+                    <span style="color:var(--muted);font-size:0.78rem">${_psDateStr(e.starts_at)}</span>
+                </button>`).join('')}
+        </div>`;
+}
+
+async function generateCircuitGuide(eventId, circuitName, seasonId, seasonName, round) {
+    document.querySelector('.modal-body').innerHTML = '<div class="loading-state">Building circuit guide…</div>';
+    try {
+        const { data: ev } = await sb.from('events').select('id,name,circuit_name,round,starts_at,duration_hours').eq('id', eventId).maybeSingle();
+        const draft = _buildCircuitGuide(ev || { id:eventId, circuit_name:circuitName, round, starts_at:null, duration_hours:null }, seasonName);
+        _openArticleEditor(`Circuit Guide — ${esc(circuitName)}`, draft);
+    } catch (err) {
+        document.querySelector('.modal-body').innerHTML = `<div class="empty-state">Could not build guide: ${esc(err.message||String(err))}</div>`;
+    }
+}
+
+// ─── Article builders ──────────────────────────────────────────────────────
+
+function _buildGridReveal({ season, seasonName, drivers, teams }) {
+    const dCount = drivers.length, tCount = teams.length;
+    if (!dCount) throw new Error('No drivers confirmed yet — add entries to this season\'s events first.');
+    const intro = _psPick([
+        `The ${seasonName} grid is officially confirmed. ${dCount} driver${dCount===1?'':'s'} across ${tCount} outfit${tCount===1?'':'s'} have locked in their seats for what promises to be the most competitive season in GTEC history.`,
+        `After weeks of applications and deliberation, the ${seasonName} lineup is set. ${dCount} racer${dCount===1?'':'s'} will carry their colours into the new season — and the field is stronger than it has ever been.`,
+        `The waiting is over. ${dCount} driver${dCount===1?'':'s'} confirmed for ${seasonName}, representing ${tCount} team${tCount===1?'':'s'} in a grid that spans every tier of the ranking from promising newcomers to proven frontrunners.`,
+    ]);
+    const byTeam = new Map();
+    drivers.forEach(d => {
+        const k = d.team?.name || '__solo__';
+        if (!byTeam.has(k)) byTeam.set(k, { team:d.team, drivers:[] });
+        byTeam.get(k).drivers.push(d);
+    });
+    const sections = Array.from(byTeam.entries()).map(([k, { team, drivers:drvs }]) => {
+        const mfr = team?.manufacturers?.name ? ` <span style="color:var(--muted);font-size:0.8rem">· ${esc(team.manufacturers.name)}</span>` : '';
+        const hdr = k === '__solo__'
+            ? `<div class="stat-card" style="margin:1rem 0 0.5rem"><strong>Independent Entries</strong></div>`
+            : `<div class="stat-card" style="margin:1rem 0 0.5rem"><strong>${esc(team.name)}</strong>${mfr}</div>`;
+        return hdr + drvs.map(d =>
+            `<div style="padding:0.3rem 0 0.3rem 1rem;border-left:2px solid rgba(255,255,255,0.08)">${d.career_number?`<span style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.75rem;margin-right:0.4rem">#${d.career_number}</span>`:''}<strong>${esc(d.display_name)}</strong></div>`
+        ).join('');
+    }).join('');
+    const closer = _psPick([
+        'The season begins soon. Every driver on this list has earned their place — now they have to prove it on track.',
+        `Full circuit guides, split previews and race coverage to follow as ${seasonName} builds.`,
+        'The grid is set. The countdown has started. See you on track.',
+    ]);
+    const title = `${seasonName} Grid Confirmed — ${dCount} Driver${dCount===1?'':'s'} Set for the Season`;
+    return { title, slug:_psSlug(title), excerpt:intro,
+        body:`<p class="kicker">Season Announcement</p>\n<p class="dropcap">${esc(intro)}</p>\n<p class="dateline">GTEC HQ — ${_psToday()}</p>\n${sections}\n<p class="closer">${esc(closer)}</p>` };
+}
+
+function _buildCalendarDrop({ season, seasonName, events }) {
+    if (!events.length) throw new Error('No events found for this season. Add events first.');
+    const intro = _psPick([
+        `The ${seasonName} calendar is confirmed. ${events.length} round${events.length===1?'':'s'} across ${events.length===1?'one venue':'a selection of circuits'} — and a championship that starts the moment the lights go out.`,
+        `GTEC has locked in the ${seasonName} schedule. ${events.length} event${events.length===1?'':'s'}, every date confirmed. Here is how the season unfolds.`,
+        `Mark your calendars. The ${seasonName} season runs ${events.length} round${events.length===1?'':'s'} and it begins sooner than you think.`,
+    ]);
+    const rows = events.map(e => {
+        const circuit = e.circuit_name||e.name;
+        const date    = e.starts_at ? new Date(e.starts_at).toLocaleDateString('en-GB',{day:'numeric',month:'long'}) : 'TBC';
+        const dur     = e.duration_hours ? ` <span style="color:var(--muted);font-size:0.8rem">· ${e.duration_hours}h</span>` : '';
+        return `<div class="stat-card" style="margin:0.6rem 0;display:flex;align-items:center;gap:1rem">
+            <span style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.8rem;min-width:2.5rem">R${e.round}</span>
+            <span style="flex:1"><strong>${esc(circuit)}</strong>${dur}</span>
+            <span style="color:var(--muted);font-size:0.82rem">${esc(date)}</span>
+        </div>`;
+    }).join('');
+    const closer = _psPick([
+        'Circuit guides for every round to follow in the weeks ahead. Watch this space.',
+        'Full preview coverage — circuit guides, title contender profiles, team breakdowns — coming ahead of Round 1.',
+        'Every date is now set. The only thing left to decide is who wins.',
+    ]);
+    const title = `${seasonName} Calendar: ${events.length} Round${events.length===1?'':'s'} Confirmed`;
+    return { title, slug:_psSlug(title), excerpt:intro,
+        body:`<p class="kicker">Season Calendar</p>\n<p class="dropcap">${esc(intro)}</p>\n<p class="dateline">GTEC HQ — ${_psToday()}</p>\n${rows}\n<p class="closer">${esc(closer)}</p>` };
+}
+
+function _buildCircuitGuide(ev, seasonName) {
+    const circuitName = ev.circuit_name||ev.name||'the venue';
+    const c = _detectCircuit(circuitName);
+    const displayName = c?.name || circuitName;
+    const intro = c ? _psPick(c.intros) : `${circuitName} is the venue for Round ${ev.round||'?'} of ${seasonName} — a circuit that will test every facet of a driver\'s ability from the opening lap to the last.`;
+    const meta  = c ? `<p class="dateline">${c.flag} ${esc(displayName)} · ${esc(c.loc)} · ${ev.starts_at?_psDateStr(ev.starts_at):'TBC'}</p>` : `<p class="dateline">🏁 ${esc(displayName)} · ${ev.starts_at?_psDateStr(ev.starts_at):'TBC'}</p>`;
+    const dur   = ev.duration_hours ? `Round ${ev.round||'?'} of ${seasonName} visits ${displayName} for a ${ev.duration_hours}-hour race. Here is everything you need to know.` : '';
+    const cornersHtml = (c?.corners||[]).map(k =>
+        `<div style="padding:0.3rem 0 0.3rem 1rem;border-left:2px solid rgba(255,209,102,0.4)">${esc(k)}</div>`
+    ).join('');
+    const body = [
+        `<p class="kicker">Circuit Guide · Round ${ev.round||'?'}</p>`,
+        `<p class="dropcap">${esc(intro)}</p>`,
+        meta,
+        dur ? `<p>${esc(dur)}</p>` : '',
+        cornersHtml ? `<div style="margin:1rem 0"><p style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700;margin-bottom:0.5rem">Key Corners</p>${cornersHtml}</div>` : '',
+        c?.ot   ? `<p><strong>Overtaking:</strong> ${esc(c.ot)}.</p>` : '',
+        c?.tyre ? `<p><strong>Tyre strategy:</strong> ${esc(c.tyre)}</p>` : '',
+        c?.watch ? `<p class="pull-quote">${esc(c.watch)}</p>` : '',
+    ].filter(Boolean).join('\n');
+    const title = `Track Guide: ${displayName} — ${seasonName} Round ${ev.round||'?'}`;
+    return { title, slug:_psSlug(title), excerpt:`Everything you need to know ahead of the ${seasonName} round at ${displayName}.`, body };
+}
+
+function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
+    if (!drivers.length) throw new Error('No drivers confirmed yet — add entries to this season\'s events first.');
+    const ranked = drivers.map(d => {
+        const elo  = driverRatings.get(d.id);
+        const seed = window.eloDrSrSeed ? window.eloDrSrSeed(d.gt7_dr_rating, d.gt7_sr_rating) : 1500;
+        return { ...d, skill: elo ?? seed ?? 1500, hasElo: !!elo };
+    }).sort((a,b) => b.skill - a.skill).slice(0, Math.min(5, drivers.length));
+    const intro = _psPick([
+        `${seasonName} is shaping up to be the most competitive season in GTEC history. With the grid confirmed, here are the five drivers who arrive with the strongest credentials — and the biggest targets on their backs.`,
+        `The ${seasonName} field is deep. Every driver has earned their place, but five arrive with a particular claim to championship contention. Here is who to watch from Round 1.`,
+        `Championships are won over a full season, not in a single race — but these five drivers enter ${seasonName} as the ones most likely to be in the fight when the final round arrives.`,
+    ]);
+    const descriptors = ['the benchmark to beat','the driver everyone is watching','a proven frontrunner','one of the sharpest talents in the field','a driver with a point to prove','a consistent performer who peaks under pressure','the wildcard with the pace to win'];
+    const profiles = ranked.map((d, i) => {
+        const tier = window.eloTierBadge ? window.eloTierBadge(d.skill, { provisional: !d.hasElo }) : '';
+        const team = d.team?.name ? ` <span style="color:var(--muted);font-size:0.82rem">${esc(d.team.name)}</span>` : '';
+        const stat = d.hasElo ? `Elo rating of <strong>${Math.round(d.skill)}</strong> heading in.` : `Arrives on DR-${d.gt7_dr_rating||'?'} / SR-${d.gt7_sr_rating||'?'}.`;
+        return `<div class="stat-card" style="margin:0.85rem 0">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem">
+                ${d.career_number?`<span style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.75rem">#${d.career_number}</span>`:''}
+                <strong>${esc(d.display_name)}</strong>${team}${tier}
+            </div>
+            <p style="margin:0;font-size:0.88rem;color:var(--muted)">${_psPick(descriptors).charAt(0).toUpperCase() + _psPick(descriptors).slice(1)}. ${stat}</p>
+        </div>`;
+    }).join('');
+    const closer = _psPick([
+        'Five names. One championship. The answer will be decided on track.',
+        `Predictions are just predictions. ${seasonName} will have its own story to tell.`,
+        'The title will not be decided in a preview article. But these are the five drivers who will be in the conversation when it is.',
+    ]);
+    const title = `${seasonName}: Five Drivers to Watch`;
+    return { title, slug:_psSlug(title), excerpt:intro,
+        body:`<p class="kicker">Championship Preview</p>\n<p class="dropcap">${esc(intro)}</p>\n<p class="dateline">GTEC HQ — ${_psToday()}</p>\n${profiles}\n<p class="closer">${esc(closer)}</p>` };
+}
+
+function _buildSeasonPreview({ season, seasonName, drivers, teams, events, driverRatings }) {
+    const dCount = drivers.length, tCount = teams.length, rCount = events.length;
+    if (!rCount) throw new Error('No events found for this season. Add events first.');
+    const intro = _psPick([
+        `${seasonName} is almost here. ${rCount} round${rCount===1?'':'s'}, ${dCount} driver${dCount===1?'':'s'}, ${tCount} team${tCount===1?'':'s'} — and a championship that nobody can call from the outside. Here is everything you need to know.`,
+        `The most complete picture of ${seasonName} you will find anywhere. Calendar, grid, title favourites — all in one place before Round 1.`,
+        `${season?.year||''} shapes up as the strongest GTEC season yet. Here is the full preview.`,
+    ]);
+    const firstEv = events[0], lastEv = events[events.length-1];
+    const calCard = `<div class="stat-card" style="margin:1rem 0">
+        <p style="margin:0 0 0.35rem;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700">The Calendar</p>
+        <p style="margin:0">${rCount} round${rCount===1?'':'s'} — opening at <strong>${esc(firstEv.circuit_name||firstEv.name)}</strong>${firstEv.starts_at?` on ${new Date(firstEv.starts_at).toLocaleDateString('en-GB',{day:'numeric',month:'long'})}`:''}, closing at <strong>${esc(lastEv.circuit_name||lastEv.name)}</strong>${lastEv.starts_at?` on ${new Date(lastEv.starts_at).toLocaleDateString('en-GB',{day:'numeric',month:'long'})}`:''}.
+    </div>`;
+    const gridCard = `<div class="stat-card" style="margin:1rem 0">
+        <p style="margin:0 0 0.35rem;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700">The Grid</p>
+        <p style="margin:0">${dCount} driver${dCount===1?'':'s'} confirmed across ${tCount} team${tCount===1?'':'s'}. ${_psPick(['The field is the deepest it has ever been.','Competition for places was fierce this season.','From experienced frontrunners to promising newcomers, the grid covers every tier.'])}</p>
+    </div>`;
+    const top3 = drivers.map(d => ({ ...d, skill: driverRatings.get(d.id) ?? (window.eloDrSrSeed?window.eloDrSrSeed(d.gt7_dr_rating,d.gt7_sr_rating):1500) ?? 1500 }))
+        .sort((a,b)=>b.skill-a.skill).slice(0,3);
+    const contCard = top3.length ? `<div class="stat-card" style="margin:1rem 0">
+        <p style="margin:0 0 0.35rem;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700">Ones to Watch</p>
+        <p style="margin:0">${top3.map(d=>`<strong>${esc(d.display_name)}</strong>`).join(', ')} arrive with the strongest credentials — but this grid is deep enough to make any prediction a risky one.</p>
+    </div>` : '';
+    const closer = _psPick([
+        `Full circuit guides for every round to follow. ${seasonName} begins soon.`,
+        `That is the picture ahead of ${seasonName}. Everything else will be decided on track.`,
+        'Predictions are for the pre-season. The racing tells its own story.',
+    ]);
+    const title = `${seasonName}: The Complete Season Preview`;
+    return { title, slug:_psSlug(title), excerpt:intro,
+        body:`<p class="kicker">Season Preview</p>\n<p class="dropcap">${esc(intro)}</p>\n<p class="dateline">GTEC HQ — ${_psToday()}</p>\n${calCard}${gridCard}${contCard}\n<p class="closer">${esc(closer)}</p>` };
+}
+
 async function fetchRaceReportData(eventId, seasonId) {
     const [evRes, qualiRes, resultsRes, rdRes, allEvRes, allRdRes, teamStRes, teamPriorRes] = await Promise.all([
         sb.from('events').select('*, seasons(name, year)').eq('id', eventId).single(),
@@ -4832,7 +5207,7 @@ async function saveRaceReport(publishNow) {
         excerpt:      d.excerpt || null,
         cover_url:    d.cover_url || null,
         body:         d.body || '',
-        tags:         ['race-report'],
+        tags:         window._reportCtx?.tags || ['race-report'],
         is_published: !!publishNow,
         published_at: publishNow ? new Date().toISOString() : null,
         updated_at:   new Date().toISOString(),
