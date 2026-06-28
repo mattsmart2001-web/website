@@ -3324,7 +3324,7 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
 
     const [entriesRes, quailRes] = await Promise.all([
         sb.from('entries')
-            .select('id, car_number, car_model, lobby_number, teams(name), entry_drivers(driver_id, drivers(id, display_name, career_number))')
+            .select('id, car_number, car_model, lobby_number, teams(name), entry_drivers(driver_id, drivers(id, display_name, career_number, psn_id))')
             .eq('event_id', eventId)
             .order('lobby_number')
             .order('car_number'),
@@ -3363,7 +3363,7 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
             const q = qMap[qKey(en.id, d?.id)] || {};
             const carLabel = en.car_number != null ? '#' + en.car_number : '—';
             const driverLabel = d
-                ? `<strong>${esc(d.display_name)}</strong>${d.career_number ? ` <span class="td-muted">#${d.career_number}</span>` : ''}`
+                ? `<strong>${esc(d.display_name)}</strong>${d.career_number ? ` <span class="td-muted">#${d.career_number}</span>` : ''}${d.psn_id ? ` <span class="td-muted" style="font-size:0.75rem">· ${esc(d.psn_id)}</span>` : ''}`
                 : '<em class="td-muted">No drivers</em>';
             const dAttr = d ? `data-driver="${esc(d.id)}"` : '';
             return `<tr>
@@ -3458,7 +3458,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
 
     const [entriesRes, resultsRes] = await Promise.all([
         sb.from('entries')
-            .select('id, car_number, car_model, lobby_number, teams(name), entry_drivers(driver_id, drivers(id, display_name, career_number))')
+            .select('id, car_number, car_model, lobby_number, teams(name), entry_drivers(driver_id, drivers(id, display_name, career_number, psn_id))')
             .eq('event_id', eventId)
             .order('lobby_number')
             .order('car_number'),
@@ -3516,7 +3516,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
                 `<option value="${s}" ${status === s ? 'selected' : ''}>${s}</option>`).join('');
             const carLabel = en.car_number != null ? '#' + en.car_number : '—';
             const driverLabel = d
-                ? `<strong>${esc(d.display_name)}</strong>${d.career_number ? ` <span class="td-muted">#${d.career_number}</span>` : ''}`
+                ? `<strong>${esc(d.display_name)}</strong>${d.career_number ? ` <span class="td-muted">#${d.career_number}</span>` : ''}${d.psn_id ? ` <span class="td-muted" style="font-size:0.75rem">· ${esc(d.psn_id)}</span>` : ''}`
                 : '<em class="td-muted">No drivers</em>';
             const dAttr = d ? `data-driver="${esc(d.id)}"` : '';
             const dis   = d ? '' : 'disabled';
