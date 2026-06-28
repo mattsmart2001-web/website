@@ -797,6 +797,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             Activity Log
         </button>
+        <button class="nav-link" data-section="guide">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Admin Guide
+        </button>
     </nav>
     <div class="sidebar-bottom">
         <div class="user-chip" id="user-email">—</div>
@@ -994,11 +998,12 @@ async function navigate(section, pushHash = true) {
         pages: 'Pages',
         admins: 'Admins',
         activity: 'Activity Log',
+        guide: 'Admin Guide',
     };
     document.getElementById('page-title').textContent = titles[section] || section;
 
     const addBtn = document.getElementById('btn-add');
-    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins' || section === 'messages' || section === 'activity') {
+    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins' || section === 'messages' || section === 'activity' || section === 'guide') {
         addBtn.style.display = 'none';
     } else {
         addBtn.style.display = '';
@@ -1024,6 +1029,7 @@ async function navigate(section, pushHash = true) {
         case 'admins':       await renderAdmins(); break;
         case 'messages':     await renderMessages(); break;
         case 'activity':     await renderActivityLog(); break;
+        case 'guide':        renderGuide(); break;
     }
 }
 
@@ -5812,6 +5818,278 @@ async function clearActivityLog() {
     if (!data?.ok) { toast(data?.error || 'Could not clear.', 'error'); return; }
     toast('Activity log cleared.', 'success');
     await renderActivityLog();
+}
+
+// ============================================================
+// Admin Guide
+// ============================================================
+function renderGuide() {
+    const s = (title, body) => `
+        <details style="margin-bottom:0.6rem;border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden">
+            <summary style="padding:1rem 1.2rem;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.7rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none;background:rgba(255,255,255,0.02)" onclick="">
+                ${title}
+                <svg style="flex-shrink:0;transition:transform 0.2s;margin-left:0.5rem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="6 9 12 15 18 9"/></svg>
+            </summary>
+            <div style="padding:1.1rem 1.3rem 1.3rem;font-size:0.88rem;line-height:1.75;color:#cbd5e1;border-top:1px solid rgba(255,255,255,0.06)">${body}</div>
+        </details>`;
+    const h = t => `<p style="font-weight:700;color:#f1f5f9;margin:1rem 0 0.35rem">${t}</p>`;
+    const warn = t => `<div style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:8px;padding:0.75rem 1rem;margin:0.75rem 0;font-size:0.84rem;color:#fdba74"><strong>Warning:</strong> ${t}</div>`;
+    const tip = t => `<div style="background:rgba(255,209,102,0.07);border:1px solid rgba(255,209,102,0.2);border-radius:8px;padding:0.75rem 1rem;margin:0.75rem 0;font-size:0.84rem;color:#fde68a"><strong>Tip:</strong> ${t}</div>`;
+    const ol = items => `<ol style="margin:0.5rem 0 0.5rem 1.2rem;padding:0">${items.map(i=>`<li style="margin-bottom:0.35rem">${i}</li>`).join('')}</ol>`;
+    const ul = items => `<ul style="margin:0.5rem 0 0.5rem 1.2rem;padding:0">${items.map(i=>`<li style="margin-bottom:0.35rem">${i}</li>`).join('')}</ul>`;
+    const table = (heads, rows) => `<div style="overflow-x:auto;margin:0.75rem 0"><table style="width:100%;border-collapse:collapse;font-size:0.84rem"><thead><tr>${heads.map(h=>`<th style="text-align:left;padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);color:var(--muted);font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase">${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td style="padding:0.5rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.05);vertical-align:top">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+
+    document.getElementById('content').innerHTML = `
+        <div style="max-width:820px">
+            <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem">Everything you need to run GTEC from start to finish. Click any section to expand it.</p>
+
+            ${s('1. Portal Overview', `
+                <p>The sidebar groups everything into five areas:</p>
+                ${table(['Section','What it contains'],[
+                    ['<strong>Overview</strong>','Dashboard with stats and maintenance tools'],
+                    ['<strong>Championship</strong>','Manufacturers, Seasons, Teams, Drivers'],
+                    ['<strong>Race Events</strong>','Events (entries, qualifying, results, reports)'],
+                    ['<strong>Registration</strong>','Applications, Driver messages'],
+                    ['<strong>Content</strong>','News articles, Media uploads, Static pages'],
+                ])}
+                <p>The badge numbers on <strong>Applications</strong> and <strong>Messages</strong> show unread/pending counts.</p>
+            `)}
+
+            ${s('2. First-Time Season Setup — Order Matters', `
+                <p>Always follow this order. Each step depends on the one before it.</p>
+                ${ol([
+                    '<strong>Manufacturers</strong> &mdash; create car brands first',
+                    '<strong>Teams</strong> &mdash; create each racing outfit',
+                    '<strong>Season</strong> &mdash; create the championship and mark it Active',
+                    '<strong>Register Teams to Season</strong> &mdash; locks each team\'s manufacturer for the season',
+                    '<strong>Events</strong> &mdash; create each race round',
+                    '<strong>Entries</strong> &mdash; add drivers/teams to each event',
+                    'Ready to race',
+                ])}
+                ${warn('Skipping steps causes errors. You cannot add entries to an event if no teams are registered to the season.')}
+            `)}
+
+            ${s('3. Manufacturers', `
+                ${h('Adding a Manufacturer')}
+                ${ol([
+                    'Go to <strong>Manufacturers</strong>.',
+                    'Click <strong>Add Manufacturer</strong>.',
+                    'Fill in Name (slug auto-fills), Country, Brand Colour, and upload a Logo (PNG/SVG/WebP).',
+                    'Click <strong>Save</strong>.',
+                ])}
+                ${h('Editing / Deleting')}
+                <p>Click <strong>Edit</strong> to change details. Only delete a manufacturer if it is truly no longer needed &mdash; this removes the association from any team using it.</p>
+            `)}
+
+            ${s('4. Teams', `
+                ${h('Adding a Team')}
+                ${ol([
+                    'Go to <strong>Teams</strong>.',
+                    'Click <strong>Add Team</strong>.',
+                    'Fill in Name, Manufacturer (optional here), Home Country, Founded On, and Bio.',
+                    'Click <strong>Save</strong>.',
+                ])}
+                ${tip('You do not need to assign a manufacturer to a team here. The manufacturer gets locked when you register the team to a season.')}
+                ${h('Setting a Team Leader')}
+                <p>Once drivers are assigned to a team, click the star icon (&#9733;) on the team row and select the driver. This is shown publicly on the team profile.</p>
+            `)}
+
+            ${s('5. Drivers', `
+                ${h('Adding a Driver')}
+                ${ol([
+                    'Go to <strong>Drivers</strong>.',
+                    'Click <strong>Add Driver</strong>.',
+                    'Fill in Display Name, PSN ID, Career Number (1&ndash;999, must be unique &mdash; system suggests next available), Discord Username, Nationality, GT7 DR and SR ratings, and optionally a Team and Bio.',
+                    'Click <strong>Save</strong>.',
+                ])}
+                ${tip('The career number field shows a green tick when the number is available and a red cross when taken.')}
+                ${h('Generating a Claim Link')}
+                <p>Drivers access their portal by claiming their account. When you are ready to give a driver access:</p>
+                ${ol([
+                    'Find the driver in the <strong>Drivers</strong> list.',
+                    'Click <strong>Generate Claim Link</strong> (only visible for unclaimed drivers).',
+                    'Copy the link and send it to the driver.',
+                ])}
+                ${warn('Claim links expire after 24 hours and are single-use. If a driver misses the window, generate a new one from their driver record.')}
+            `)}
+
+            ${s('6. Seasons', `
+                ${h('Creating a Season')}
+                ${ol([
+                    'Go to <strong>Seasons</strong>.',
+                    'Click <strong>Add Season</strong>.',
+                    'Fill in Year (name auto-fills), Name, Points System, Starts On, Ends On.',
+                    'Tick <strong>Is Active</strong> to make it the live season.',
+                    'Click <strong>Save</strong>.',
+                ])}
+                ${tip('Only one season can be Active at a time. The active season is what the public standings page shows.')}
+                ${h('Registering Teams to a Season')}
+                <p>This step locks the manufacturer for each team for the whole season.</p>
+                ${ol([
+                    'Click <strong>Teams</strong> on the season row.',
+                    'Click <strong>Register Team</strong>.',
+                    'Select the team and their manufacturer for this season.',
+                    'Click <strong>Register</strong>. Repeat for every team.',
+                ])}
+                ${warn('The manufacturer cannot be changed after entries are made. Double-check before racing begins.')}
+            `)}
+
+            ${s('7. Events', `
+                ${h('Adding an Event')}
+                ${ol([
+                    'Go to <strong>Events</strong>.',
+                    'Click <strong>Add Event</strong>.',
+                    'Fill in Season, Round, Event Name, Circuit Name, Circuit Country, Circuit Length, Duration, Starts At.',
+                    'In the <strong>Race Details</strong> tab: set Tyre Wear, Fuel Consumption, Weather, Time of Day, Starting Procedure, Mandatory Pit Stops, BoP, Damage Level, Refuel Rate, Slipstream, Required Tyres, and any Additional Briefing.',
+                    'Click <strong>Save</strong>.',
+                ])}
+                ${tip('Fill in Race Details before notifying drivers &mdash; they can see this information in their portal.')}
+                ${h('Locking an Event')}
+                <p>Once a race is fully processed, click <strong>Lock</strong> on the event row. A padlock icon (&#128274;) confirms it. No edits can be made while locked &mdash; click <strong>Unlock</strong> to make a correction, then lock again.</p>
+            `)}
+
+            ${s('8. Running a Race — Complete Workflow', `
+                ${h('Step 1: Add Entries')}
+                ${ol([
+                    'Click <strong>Entries</strong> on the event row.',
+                    'Click <strong>Register All Drivers</strong> to auto-add every team registered to the season plus free-agent drivers.',
+                    'Or add entries individually with <strong>Add Entry</strong>.',
+                    'Confirm every competing driver appears in the list.',
+                ])}
+                ${h('Step 2: Assign Splits / Lobbies')}
+                ${ol([
+                    'Click <strong>Splits</strong> on the event row.',
+                    'Click <strong>Auto-allocate</strong> to distribute drivers evenly, or move them manually with the &#8593;/&#8595; buttons.',
+                    'Click <strong>Notify Drivers</strong> when ready &mdash; this sends each driver their split via the portal and posts to Discord <strong>#splits</strong>.',
+                ])}
+                ${h('Step 3: Enter Qualifying Times')}
+                ${ol([
+                    'Click <strong>Qualifying</strong> on the event row.',
+                    'Use the Split dropdown to filter by lobby.',
+                    'Enter each driver\'s best lap time.',
+                    'Click <strong>Save All</strong>.',
+                ])}
+                ${h('Step 4: Enter Race Results')}
+                ${ol([
+                    'Click <strong>Results</strong> on the event row.',
+                    'Use the Split dropdown to work through each lobby.',
+                    'Enter each driver\'s finish position and status (Classified, DNF, DSQ, etc.).',
+                    'Click <strong>Recompute Points</strong> to calculate points from positions.',
+                    'Click <strong>Compute Elo</strong> to update Elo ratings.',
+                    'Click <strong>Save All</strong>.',
+                ])}
+                ${h('Step 5: Add Penalties (if needed)')}
+                ${ol([
+                    'Click <strong>Penalties</strong> on the event row.',
+                    'Click <strong>Add Penalty</strong>, select the driver, enter type and amount.',
+                    'Click <strong>Save Penalty</strong>.',
+                ])}
+                ${tip('After adding penalties, click <strong>Recompute Points</strong> again in the Results panel so standings update correctly.')}
+                ${h('Step 6: Steward Decisions (if needed)')}
+                ${ol([
+                    'Click <strong>Steward</strong> on the event row.',
+                    'Add the incident details, drivers involved, and outcome.',
+                    'Save.',
+                ])}
+                ${h('Step 7: Lock the Event')}
+                <p>Click <strong>Lock</strong> on the event row once everything is confirmed.</p>
+                ${h('Step 8: Generate the Race Report')}
+                ${ol([
+                    'Click <strong>Race Report</strong> on the event row.',
+                    'The system generates a full article draft from the race data automatically.',
+                    'Review and edit the draft in the editor.',
+                    'Click <strong>Publish</strong> to post live to the news section and send results to Discord <strong>#results</strong>.',
+                    'Or click <strong>Save as Draft</strong> to come back to it later.',
+                ])}
+            `)}
+
+            ${s('9. Applications & Driver Acceptance', `
+                ${h('Processing an Application')}
+                ${ol([
+                    'Go to <strong>Applications</strong>.',
+                    'Click <strong>View</strong> to see the full submission.',
+                    'Set the Status: <strong>Accepted</strong>, <strong>Waitlisted</strong>, or <strong>Rejected</strong>.',
+                    'Click <strong>Send Email</strong> to fire the appropriate email template.',
+                    'If accepting: click <strong>Create Driver</strong> to generate their driver record directly from the application.',
+                ])}
+                ${h('Discord Role Assignment')}
+                <p>When you send an acceptance email, the system automatically tries to assign the Driver Discord role if their Discord username is on record and they are already in the server. If they have not joined yet, the role can be assigned manually once they do.</p>
+            `)}
+
+            ${s('10. Messaging Drivers', `
+                ${h('Broadcast (all drivers)')}
+                ${ol([
+                    'Go to <strong>Messages</strong>.',
+                    'Click <strong>Send Broadcast</strong>.',
+                    'Enter a Title and Body (markdown supported).',
+                    'Click <strong>Send</strong> &mdash; every driver with a portal account receives this in their inbox.',
+                ])}
+                <p style="color:var(--muted);font-size:0.83rem">Use broadcasts for: race reminders, rule changes, season news, important announcements.</p>
+                ${h('Direct Message (one driver)')}
+                ${ol([
+                    'Go to <strong>Messages</strong>.',
+                    'Click <strong>Send Direct Message</strong>.',
+                    'Select the driver, enter a Title and Body.',
+                    'Click <strong>Send</strong>.',
+                ])}
+            `)}
+
+            ${s('11. Pre-Season Articles', `
+                <p>Before racing begins, generate editorial content to keep the news section active.</p>
+                ${h('Generating an Article')}
+                ${ol([
+                    'Go to <strong>Seasons</strong>.',
+                    'Click <strong>Pre-Season</strong> on the season row.',
+                    'Choose one of the five article types.',
+                    'For Circuit Guide, select which event/round to preview.',
+                    'The system fetches live data and generates a draft.',
+                    'Edit in the editor, then click <strong>Publish</strong> or <strong>Save as Draft</strong>.',
+                ])}
+                ${table(['Article','What it generates','Data needed'],[
+                    ['&#127945; Grid Reveal','Full driver and team lineup','Drivers assigned to entries'],
+                    ['&#128197; Calendar Drop','Season schedule with rounds and circuits','All events created'],
+                    ['&#128506;&#65039; Circuit Guide','Detailed track preview for one event','Select which event'],
+                    ['&#127942; Title Contenders','Top 5 drivers to watch by rating','Drivers with ratings set'],
+                    ['&#128240; Season Preview','Combined calendar, grid and picks','All of the above'],
+                ])}
+            `)}
+
+            ${s('12. Discord Notifications', `
+                ${table(['Notification','When it fires','Where'],[
+                    ['<strong>Split Assignments</strong>','Click &ldquo;Notify Drivers&rdquo; in the Splits panel','#splits channel'],
+                    ['<strong>Race Results</strong>','Automatically when a Race Report is published','#results channel'],
+                ])}
+                ${tip('Both notifications are best-effort. If Discord is offline or the bot\'s permissions change, they may fail silently. Check the browser console (F12) if you suspect a notification did not send.')}
+            `)}
+
+            ${s('13. Dashboard Maintenance', `
+                ${h('Refresh Hall of Fame')}
+                <p>The Hall of Fame does not update automatically. After finalising a season\'s results, click <strong>Refresh Hall of Fame</strong> on the Dashboard to rebuild it.</p>
+                ${h('Reset All Statistics')}
+                ${warn('This is irreversible. Only use it to wipe a test season before going live.')}
+                <p>Deletes: all entries, results, qualifying, ratings, penalties, steward decisions, and Hall of Fame data.</p>
+                <p>Does <strong>not</strong> delete: events, drivers, teams, manufacturers, or seasons.</p>
+            `)}
+
+            ${s('14. Warnings &amp; Common Mistakes', `
+                ${h('The setup order matters')}
+                <p>Always: Manufacturers &rarr; Teams &rarr; Season &rarr; Register Teams &rarr; Events &rarr; Entries. Out-of-order steps cause errors that are hard to diagnose.</p>
+                ${h('Cascade deletes')}
+                ${ul([
+                    'Deleting a <strong>Season</strong> deletes all its Events, Entries, Qualifying, Results, Penalties, and Steward Decisions.',
+                    'Deleting an <strong>Event</strong> deletes all its Entries, Qualifying, Results, Penalties, and Steward Decisions.',
+                    'Deleting a <strong>Driver</strong> removes them from all entry and result records.',
+                ])}
+                ${h('Manufacturer season-lock')}
+                <p>A team\'s manufacturer is locked when they are registered to the season. It cannot be changed while entries exist. Remove and re-register the team (before entries are made) to fix an incorrect manufacturer.</p>
+                ${h('Points after penalties')}
+                <p>Always click <strong>Recompute Points</strong> again in the Results panel after adding or editing a penalty, or the standings will not reflect the change.</p>
+                ${h('Only one active season')}
+                <p>Only one season can be marked Active. If the wrong season is active, edit it and uncheck Is Active, then set the correct one.</p>
+                ${h('Claim links expire')}
+                <p>Driver claim links are valid for 24 hours, one-time use only. Generate a fresh link from the driver record if they miss the window.</p>
+            `)}
+        </div>`;
 }
 
 
