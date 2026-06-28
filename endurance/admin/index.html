@@ -352,6 +352,11 @@
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: rgba(255,255,255,0.02); }
         .td-muted { color: var(--muted); font-size: 0.82rem; }
+        th.th-sort { cursor: pointer; user-select: none; }
+        th.th-sort:hover { color: var(--text); }
+        th.th-sort::after { content: ' ⇅'; color: rgba(255,255,255,0.18); font-size: 0.65rem; }
+        th.th-sort.sort-asc::after  { content: ' ▲'; color: var(--gold); }
+        th.th-sort.sort-desc::after { content: ' ▼'; color: var(--gold); }
         .color-swatch {
             display: inline-flex;
             align-items: center;
@@ -1564,7 +1569,11 @@ async function renderTeams() {
                 <input class="table-search" type="search" placeholder="Search teams…" oninput="filterTable(this,'teams-table')">
             </div>
             <table id="teams-table"><thead><tr>
-                <th>Name</th><th>Slug</th><th>Manufacturer</th><th>Country</th><th>Leader</th><th></th>
+                <th class="th-sort" onclick="thSort(this,'teams-table')">Name</th>
+                <th class="th-sort" onclick="thSort(this,'teams-table')">Slug</th>
+                <th class="th-sort" onclick="thSort(this,'teams-table')">Manufacturer</th>
+                <th class="th-sort" onclick="thSort(this,'teams-table')">Country</th>
+                <th>Leader</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
 }
@@ -1692,7 +1701,13 @@ async function renderDrivers() {
                 <input class="table-search" type="search" placeholder="Search drivers…" oninput="filterTable(this,'drivers-table')">
             </div>
             <table id="drivers-table"><thead><tr>
-                <th>Name</th><th>PSN ID</th><th>Nationality</th><th>Team</th><th>Manufacturer</th><th>Portal</th><th></th>
+                <th class="th-sort" onclick="thSort(this,'drivers-table')">Name</th>
+                <th class="th-sort" onclick="thSort(this,'drivers-table')">PSN ID</th>
+                <th class="th-sort" onclick="thSort(this,'drivers-table')">Nationality</th>
+                <th class="th-sort" onclick="thSort(this,'drivers-table')">Team</th>
+                <th class="th-sort" onclick="thSort(this,'drivers-table')">Manufacturer</th>
+                <th class="th-sort" onclick="thSort(this,'drivers-table')">Portal</th>
+                <th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
 }
@@ -6872,6 +6887,30 @@ function filterTable(input, tableId) {
     document.querySelectorAll(`#${tableId} tbody tr`).forEach(row => {
         row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
     });
+}
+
+const _thSortState = {};
+function thSort(th, tableId) {
+    const ths = Array.from(th.closest('thead').querySelectorAll('th'));
+    const col = ths.indexOf(th);
+    const state = _thSortState[tableId] || { col: -1, dir: 'asc' };
+    const dir = (state.col === col && state.dir === 'asc') ? 'desc' : 'asc';
+    _thSortState[tableId] = { col, dir };
+    ths.forEach((t, i) => {
+        t.classList.remove('sort-asc', 'sort-desc');
+        if (i === col) t.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+    });
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const mult = dir === 'asc' ? 1 : -1;
+    rows.sort((a, b) => {
+        const at = (a.cells[col]?.textContent || '').trim().replace(/\s+/g, ' ');
+        const bt = (b.cells[col]?.textContent || '').trim().replace(/\s+/g, ' ');
+        if (!at || at === '—') return 1;
+        if (!bt || bt === '—') return -1;
+        return mult * at.localeCompare(bt, undefined, { sensitivity: 'base' });
+    });
+    rows.forEach(r => tbody.appendChild(r));
 }
 
 
