@@ -75,6 +75,27 @@ nav.gtec-nav .back:has(img) {
     .gtec-nav .brand-logo { height: 18px; margin-left: 0.35em; }
 }
 
+/* Animated underline on nav links (desktop only, excludes Apply + Back pills) */
+@media (min-width: 721px) {
+    nav.gtec-nav .nav-links a:not(.apply):not(.back) {
+        position: relative;
+    }
+    nav.gtec-nav .nav-links a:not(.apply):not(.back)::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 0;
+        height: 1.5px;
+        background: var(--gold, #ffd166);
+        border-radius: 2px;
+        transition: width 0.25s ease;
+    }
+    nav.gtec-nav .nav-links a:not(.apply):not(.back):hover::after {
+        width: 100%;
+    }
+}
+
 /* Hamburger toggle button (hidden on desktop) */
 .gtec-nav-toggle {
     display: none;
