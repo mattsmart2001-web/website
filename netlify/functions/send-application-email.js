@@ -70,7 +70,7 @@ function templateFor(emailType, app, claimUrl) {
                     <p>Your application to GTEC has been <strong style="color:#4ade80">accepted</strong>. Congrats.</p>
                     ${claimUrl ? `
                     <p>To set up your driver portal — where you'll see your standings, race history, lobby allocations and admin messages — open the secure link below and pick a password. It's valid for 24 hours.</p>
-                    <p style="margin:20px 0"><a href="${claimUrl}" style="display:inline-block;background:#ffd166;color:#1a1300;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;font-size:12px">Activate Your Profile</a></p>
+                    <p style="margin:20px 0"><a href="${claimUrl}" style="display:inline-block;background:#ffd166;color:#000000;text-decoration:none;padding:13px 26px;border-radius:999px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;font-size:13px">Activate Your Profile</a></p>
                     <p style="font-size:12px;color:#94a3b8;word-break:break-all">If the button doesn't work, paste this into your browser:<br><a href="${claimUrl}" style="color:#ffd166">${claimUrl}</a></p>
                     ` : ''}
                     <p>Jump into the Discord to meet the rest of the grid.</p>
