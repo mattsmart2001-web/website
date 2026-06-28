@@ -5855,15 +5855,15 @@ function renderGuide() {
                 <p>The badge numbers on <strong>Applications</strong> and <strong>Messages</strong> show unread/pending counts.</p>
             `)}
 
-            ${s('2. First-Time Season Setup — Order Matters', `
+            ${s('2. First-Time Season Setup: Order Matters', `
                 <p>Always follow this order. Each step depends on the one before it.</p>
                 ${ol([
-                    '<strong>Manufacturers</strong> &mdash; create car brands first',
-                    '<strong>Teams</strong> &mdash; create each racing outfit',
-                    '<strong>Season</strong> &mdash; create the championship and mark it Active',
-                    '<strong>Register Teams to Season</strong> &mdash; locks each team\'s manufacturer for the season',
-                    '<strong>Events</strong> &mdash; create each race round',
-                    '<strong>Entries</strong> &mdash; add drivers/teams to each event',
+                    '<strong>Manufacturers</strong> , create car brands first',
+                    '<strong>Teams</strong> , create each racing outfit',
+                    '<strong>Season</strong> , create the championship and mark it Active',
+                    '<strong>Register Teams to Season</strong> , locks each team\'s manufacturer for the season',
+                    '<strong>Events</strong> , create each race round',
+                    '<strong>Entries</strong> , add drivers/teams to each event',
                     'Ready to race',
                 ])}
                 ${warn('Skipping steps causes errors. You cannot add entries to an event if no teams are registered to the season.')}
@@ -5878,7 +5878,7 @@ function renderGuide() {
                     'Click <strong>Save</strong>.',
                 ])}
                 ${h('Editing / Deleting')}
-                <p>Click <strong>Edit</strong> to change details. Only delete a manufacturer if it is truly no longer needed &mdash; this removes the association from any team using it.</p>
+                <p>Click <strong>Edit</strong> to change details. Only delete a manufacturer if it is truly no longer needed , this removes the association from any team using it.</p>
             `)}
 
             ${s('4. Teams', `
@@ -5899,7 +5899,7 @@ function renderGuide() {
                 ${ol([
                     'Go to <strong>Drivers</strong>.',
                     'Click <strong>Add Driver</strong>.',
-                    'Fill in Display Name, PSN ID, Career Number (1&ndash;999, must be unique &mdash; system suggests next available), Discord Username, Nationality, GT7 DR and SR ratings, and optionally a Team and Bio.',
+                    'Fill in Display Name, PSN ID, Career Number (1&ndash;999, must be unique , system suggests next available), Discord Username, Nationality, GT7 DR and SR ratings, and optionally a Team and Bio.',
                     'Click <strong>Save</strong>.',
                 ])}
                 ${tip('The career number field shows a green tick when the number is available and a red cross when taken.')}
@@ -5943,12 +5943,12 @@ function renderGuide() {
                     'In the <strong>Race Details</strong> tab: set Tyre Wear, Fuel Consumption, Weather, Time of Day, Starting Procedure, Mandatory Pit Stops, BoP, Damage Level, Refuel Rate, Slipstream, Required Tyres, and any Additional Briefing.',
                     'Click <strong>Save</strong>.',
                 ])}
-                ${tip('Fill in Race Details before notifying drivers &mdash; they can see this information in their portal.')}
+                ${tip('Fill in Race Details before notifying drivers , they can see this information in their portal.')}
                 ${h('Locking an Event')}
-                <p>Once a race is fully processed, click <strong>Lock</strong> on the event row. A padlock icon (&#128274;) confirms it. No edits can be made while locked &mdash; click <strong>Unlock</strong> to make a correction, then lock again.</p>
+                <p>Once a race is fully processed, click <strong>Lock</strong> on the event row. A padlock icon (&#128274;) confirms it. No edits can be made while locked , click <strong>Unlock</strong> to make a correction, then lock again.</p>
             `)}
 
-            ${s('8. Running a Race — Complete Workflow', `
+            ${s('8. Running a Race: Complete Workflow', `
                 ${h('Step 1: Add Entries')}
                 ${ol([
                     'Click <strong>Entries</strong> on the event row.',
@@ -5960,7 +5960,7 @@ function renderGuide() {
                 ${ol([
                     'Click <strong>Splits</strong> on the event row.',
                     'Click <strong>Auto-allocate</strong> to distribute drivers evenly, or move them manually with the &#8593;/&#8595; buttons.',
-                    'Click <strong>Notify Drivers</strong> when ready &mdash; this sends each driver their split via the portal and posts to Discord <strong>#splits</strong>.',
+                    'Click <strong>Notify Drivers</strong> when ready , this sends each driver their split via the portal and posts to Discord <strong>#splits</strong>.',
                 ])}
                 ${h('Step 3: Enter Qualifying Times')}
                 ${ol([
@@ -6022,7 +6022,7 @@ function renderGuide() {
                     'Go to <strong>Messages</strong>.',
                     'Click <strong>Send Broadcast</strong>.',
                     'Enter a Title and Body (markdown supported).',
-                    'Click <strong>Send</strong> &mdash; every driver with a portal account receives this in their inbox.',
+                    'Click <strong>Send</strong> , every driver with a portal account receives this in their inbox.',
                 ])}
                 <p style="color:var(--muted);font-size:0.83rem">Use broadcasts for: race reminders, rule changes, season news, important announcements.</p>
                 ${h('Direct Message (one driver)')}
