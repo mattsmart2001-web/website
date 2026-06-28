@@ -1100,40 +1100,7 @@
         draw();
     })();
 
-    /* ---- Countdown to Season 1 (Sat 10 Oct 2026 00:00 UTC) ---- */
-    (function () {
-        const TARGET = Date.UTC(2026, 9, 10, 0, 0, 0);
-        const els = {
-            days:    document.getElementById('cd-days'),
-            hours:   document.getElementById('cd-hours'),
-            mins:    document.getElementById('cd-mins'),
-            secs:    document.getElementById('cd-secs'),
-            wrap:    document.getElementById('countdown'),
-            launched: document.getElementById('cd-launched'),
-        };
-
-        function pad(n) { return String(n).padStart(2, '0'); }
-
-        function tick() {
-            const diff = TARGET - Date.now();
-            if (diff <= 0) {
-                els.wrap.style.display = 'none';
-                els.launched.style.display = 'block';
-                return;
-            }
-            const d = Math.floor(diff / 86400000);
-            const h = Math.floor((diff % 86400000) / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
-            const s = Math.floor((diff % 60000) / 1000);
-            els.days.textContent  = d;
-            els.hours.textContent = pad(h);
-            els.mins.textContent  = pad(m);
-            els.secs.textContent  = pad(s);
-        }
-
-        tick();
-        setInterval(tick, 1000);
-    })();
+    /* Countdown target is fetched dynamically from Supabase (see post-config script below) */
 
     /* ---- Scroll reveal ---- */
     (function () {
@@ -1156,12 +1123,68 @@
     (function () {
         if (!window.supabase || !window.GTEC_CONFIG) return;
         const sb = window.supabase.createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+
+        // Auth — show portal or sign-in link
         sb.auth.getSession().then(({ data }) => {
             const portal = document.getElementById('nav-portal');
             const signin = document.getElementById('nav-signin');
             if (data.session) { if (portal) portal.style.display = ''; }
             else              { if (signin) signin.style.display = ''; }
         });
+
+        // Dynamic countdown — targets the starts_at of Round 1 of the active season
+        (async function () {
+            const cdWrap     = document.getElementById('countdown');
+            const cdLaunched = document.getElementById('cd-launched');
+            if (!cdWrap) return;
+
+            const { data: season } = await sb.from('seasons')
+                .select('id')
+                .eq('is_active', true)
+                .maybeSingle();
+
+            if (!season) { cdWrap.style.display = 'none'; return; }
+
+            const { data: event } = await sb.from('events')
+                .select('starts_at')
+                .eq('season_id', season.id)
+                .order('round')
+                .limit(1)
+                .maybeSingle();
+
+            if (!event?.starts_at) { cdWrap.style.display = 'none'; return; }
+
+            const TARGET = new Date(event.starts_at).getTime();
+
+            const els = {
+                days:  document.getElementById('cd-days'),
+                hours: document.getElementById('cd-hours'),
+                mins:  document.getElementById('cd-mins'),
+                secs:  document.getElementById('cd-secs'),
+            };
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+
+            function tick() {
+                const diff = TARGET - Date.now();
+                if (diff <= 0) {
+                    cdWrap.style.display = 'none';
+                    if (cdLaunched) cdLaunched.style.display = 'block';
+                    return;
+                }
+                const d = Math.floor(diff / 86400000);
+                const h = Math.floor((diff % 86400000) / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                els.days.textContent  = d;
+                els.hours.textContent = pad(h);
+                els.mins.textContent  = pad(m);
+                els.secs.textContent  = pad(s);
+            }
+
+            tick();
+            setInterval(tick, 1000);
+        })();
     })();
 </script>
 
