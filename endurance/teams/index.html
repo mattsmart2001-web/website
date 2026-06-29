@@ -283,7 +283,7 @@ function mfrBadge(logoUrl, brandColor, name) {
 async function showListing() {
     document.title = 'Teams — GTEC';
     const [{ data, error }, { data: activeSeasons }, { data: standings }, { data: dCounts }] = await Promise.all([
-        sb.from('teams').select('id, name, slug, home_country, bio, manufacturers(name,brand_color,logo_url)').order('name'),
+        sb.from('teams').select('id, name, slug, home_country, bio, manufacturers(name,brand_color,logo_url,car_name)').order('name'),
         sb.from('seasons').select('id').eq('is_active', true).limit(1),
         sb.from('team_standings').select('team_id, season_id, points'),
         sb.from('drivers').select('current_team_id'),
@@ -312,7 +312,7 @@ async function showListing() {
         const pts = pointsMap[t.id] || 0;
         return `
         <div class="team-card" data-search="${esc(search)}" data-name="${esc(t.name)}" data-points="${pts}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'">
-            ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}</div>` : ''}
+            ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}</div>` : ''}
             <div class="team-card-name">${esc(t.name)}</div>
             <div class="team-card-meta">
                 ${t.home_country ? flag(t.home_country) + ' ' + esc(t.home_country) + ' &nbsp;·&nbsp; ' : ''}
@@ -389,7 +389,7 @@ function sortCards(gridSel, cardSel, sortKey) {
 // ============================================================
 async function showProfile() {
     const { data: team, error } = await sb.from('teams')
-        .select('*, manufacturers(name,brand_color,logo_url), leader:drivers!leader_driver_id(id, display_name, slug)')
+        .select('*, manufacturers(name,brand_color,logo_url,car_name), leader:drivers!leader_driver_id(id, display_name, slug)')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -428,8 +428,9 @@ async function showProfile() {
     // Tags
     const tags = [];
     if (team.manufacturers?.name) {
-        const badge = mfrBadge(team.manufacturers.logo_url, team.manufacturers.brand_color, team.manufacturers.name);
-        tags.push(`${badge}${esc(team.manufacturers.name)}`);
+        const mfr = team.manufacturers;
+        const badge = mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name);
+        tags.push(`${badge}${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}`);
     }
     if (team.home_country) tags.push(`${flag(team.home_country)} ${esc(team.home_country)}`);
     if (team.founded_on)   tags.push(`Est. ${esc(team.founded_on.slice(0,4))}`);

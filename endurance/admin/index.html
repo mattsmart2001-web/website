@@ -1044,7 +1044,7 @@ async function navigate(section, pushHash = true) {
 // ============================================================
 async function loadCache() {
     const [mfr, ps, tm, dr, seas] = await Promise.all([
-        sb.from('manufacturers').select('id,name,slug').order('name'),
+        sb.from('manufacturers').select('id,name,slug,car_name').order('name'),
         sb.from('points_systems').select('id,name').order('name'),
         sb.from('teams').select('id,name,slug,manufacturer_id,max_drivers').order('name'),
         sb.from('drivers').select('id,display_name,slug,career_number,current_team_id').order('display_name'),
@@ -1168,6 +1168,7 @@ async function renderManufacturers() {
                     ? `<img src="${esc(m.logo_url)}" alt="${esc(m.name)}" style="width:32px;height:32px;object-fit:contain;background:rgba(255,255,255,0.04);border-radius:4px;padding:2px">`
                     : `<div style="width:32px;height:32px;border-radius:4px;background:${esc(m.brand_color || 'rgba(255,255,255,0.05)')};border:1px solid var(--border)"></div>`}</td>
                 <td><strong>${esc(m.name)}</strong></td>
+                <td class="td-muted">${esc(m.car_name) || '—'}</td>
                 <td class="td-muted">${esc(m.slug)}</td>
                 <td class="td-muted">${esc(m.country) || '—'}</td>
                 <td>${m.brand_color ? `<div class="color-swatch"><div class="swatch" style="background:${esc(m.brand_color)}"></div>${esc(m.brand_color)}</div>` : '<span class="td-muted">—</span>'}</td>
@@ -1183,7 +1184,7 @@ async function renderManufacturers() {
                 <input class="table-search" type="search" placeholder="Search manufacturers…" oninput="filterTable(this,'mfr-table')">
             </div>
             <table id="mfr-table"><thead><tr>
-                <th style="width:60px">Logo</th><th>Name</th><th>Slug</th><th>Country</th><th>Brand Colour</th><th></th>
+                <th style="width:60px">Logo</th><th>Name</th><th>Car</th><th>Slug</th><th>Country</th><th>Brand Colour</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
 }
@@ -1200,6 +1201,10 @@ function mfrForm(m = {}) {
                 <input type="text" name="slug" id="slug" value="${esc(m.slug)}" placeholder="bmw" required>
                 <div class="form-hint">Auto-generated · editable</div>
             </div>
+        </div>
+        <div class="form-group">
+            <label>Car</label>
+            <input type="text" name="car_name" value="${esc(m.car_name)}" placeholder="e.g. 911 GT3 R (992) '22">
         </div>
         <div class="form-row">
             <div class="form-group">
@@ -1268,7 +1273,7 @@ async function saveManufacturer(id) {
         logoUrl = sb.storage.from('gtec-manufacturers').getPublicUrl(path).data.publicUrl;
     }
 
-    const payload = { name: d.name, slug: d.slug, country: d.country, brand_color: d.brand_color, logo_url: logoUrl };
+    const payload = { name: d.name, slug: d.slug, car_name: d.car_name || null, country: d.country, brand_color: d.brand_color, logo_url: logoUrl };
     const { error } = id
         ? await sb.from('manufacturers').update(payload).eq('id', id)
         : await sb.from('manufacturers').insert(payload);
@@ -2507,7 +2512,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
     const [{ data: ts }, { data: existing }, { data: freeAgents }, { data: entryDrivers }, { data: anyDrivers }] = await Promise.all([
         sb.from('team_seasons').select('team_id, manufacturer_id, manufacturers(name)').eq('season_id', seasonId),
         sb.from('entries').select('id, team_id, car_number').eq('event_id', eventId),
-        sb.from('drivers').select('id, display_name, career_number, current_manufacturer_id, manufacturers(name)').is('current_team_id', null),
+        sb.from('drivers').select('id, display_name, career_number, current_manufacturer_id, manufacturers(name,car_name)').is('current_team_id', null),
         sb.from('entry_drivers').select('driver_id, entry_id, entries!inner(event_id)').eq('entries.event_id', eventId),
         sb.from('drivers').select('current_team_id, teams!current_team_id(id, name, manufacturer_id, manufacturers(name))').not('current_team_id', 'is', null),
     ]);
@@ -2566,7 +2571,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
         event_id:        eventId,
         team_id:         r.team_id,
         manufacturer_id: r.manufacturer_id,
-        car_model:       r.manufacturers?.name || 'TBC',
+        car_model:       r.manufacturers?.car_name || r.manufacturers?.name || 'TBC',
         status:          'confirmed',
     }));
 
@@ -2665,7 +2670,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
             team_id:  null,
             status:   'confirmed',
             car_number:      d.career_number || null,
-            car_model:       d.manufacturers?.name || 'TBC',
+            car_model:       d.manufacturers?.car_name || d.manufacturers?.name || 'TBC',
             manufacturer_id: d.current_manufacturer_id || null,
         }));
         const { data: created, error: soloErr } = await sb.from('entries').insert(soloEntries).select('id');
@@ -2692,7 +2697,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
 
 async function openAddEntryModal(eventId, eventName, seasonId) {
     const { data: ts } = await sb.from('team_seasons')
-        .select('team_id, manufacturer_id, teams(name), manufacturers(name)')
+        .select('team_id, manufacturer_id, teams(name), manufacturers(name,car_name)')
         .eq('season_id', seasonId);
 
     if (!ts || ts.length === 0) {
@@ -2721,7 +2726,7 @@ async function openAddEntryModal(eventId, eventName, seasonId) {
 
     const teamOptsHTML = ts
         .sort((a, b) => (a.teams?.name || '').localeCompare(b.teams?.name || ''))
-        .map(t => `<option value="${esc(t.team_id)}" data-mfr-id="${esc(t.manufacturer_id)}" data-mfr-name="${esc(t.manufacturers?.name || '')}">${esc(t.teams?.name)}</option>`)
+        .map(t => `<option value="${esc(t.team_id)}" data-mfr-id="${esc(t.manufacturer_id)}" data-mfr-name="${esc(t.manufacturers?.name || '')}" data-mfr-car-name="${esc(t.manufacturers?.car_name || '')}">${esc(t.teams?.name)}</option>`)
         .join('');
 
     const statusOpts = [
@@ -2766,10 +2771,12 @@ async function openAddEntryModal(eventId, eventName, seasonId) {
 
 function fillEntryMfr(sel) {
     const opt = sel.selectedOptions[0];
-    const mfrId   = opt?.dataset.mfrId   || '';
-    const mfrName = opt?.dataset.mfrName || '';
+    const mfrId      = opt?.dataset.mfrId      || '';
+    const mfrName    = opt?.dataset.mfrName    || '';
+    const mfrCarName = opt?.dataset.mfrCarName || '';
     const hidden  = document.getElementById('manufacturer_id');
     const display = document.getElementById('entry-mfr-display');
+    const carModel = document.querySelector('[name="car_model"]');
     if (hidden)  hidden.value = mfrId;
     if (display) {
         display.textContent = mfrName
@@ -2777,6 +2784,7 @@ function fillEntryMfr(sel) {
             : 'Pick a team — manufacturer is locked by the season registration.';
         display.style.color = mfrName ? 'var(--text)' : 'var(--muted)';
     }
+    if (carModel && !carModel.value && mfrCarName) carModel.value = mfrCarName;
 }
 
 async function saveEntry(eventId, eventName, seasonId) {

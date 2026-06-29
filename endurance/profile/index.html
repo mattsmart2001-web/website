@@ -945,7 +945,7 @@ async function init() {
     }
 
     const { data: driver, error } = await sb.from('drivers')
-        .select('*, teams!current_team_id(name,slug,leader_driver_id), manufacturers(name)')
+        .select('*, teams!current_team_id(name,slug,leader_driver_id), manufacturers(name,car_name)')
         .eq('user_id', session.user.id).single();
 
     if (error || !driver) { document.getElementById('auth-loading').textContent = 'Could not load driver profile.'; return; }
@@ -987,7 +987,7 @@ async function init() {
         driver.career_number ? { text: `#${driver.career_number}`, key: 'num' } : null,
         driver.nationality   ? { text: `${flag(driver.nationality)} ${driver.nationality}`, key: 'nat', attr: 'data-nat' } : null,
         driver.teams?.name   ? { text: `${driver.teams.name}${isTeamLeader ? ' <span class="pill-leader-inline">★ Leader</span>' : ''}`, key: 'team', raw: true } : null,
-        driver.manufacturers?.name ? { text: driver.manufacturers.name, key: 'mfr' } : null,
+        driver.manufacturers?.name ? { text: driver.manufacturers.name + (driver.manufacturers.car_name ? ' — ' + driver.manufacturers.car_name : ''), key: 'mfr' } : null,
     ].filter(Boolean);
     document.getElementById('profile-tags').innerHTML = tagData.map(t =>
         `<span class="tag" ${t.attr ? t.attr + '=""' : ''}>${t.raw ? t.text : esc(t.text)}</span>`
@@ -1022,7 +1022,7 @@ let _shareStats   = { elo: null, tier: null, points: 0, wins: 0, podiums: 0, rac
 async function loadTeamCard(driver) {
     if (!driver.current_team_id) return;
     const { data: team } = await sb.from('teams')
-        .select('id, name, slug, bio, home_country, founded_on, leader_driver_id, manufacturers(name, brand_color, logo_url)')
+        .select('id, name, slug, bio, home_country, founded_on, leader_driver_id, manufacturers(name, brand_color, logo_url, car_name)')
         .eq('id', driver.current_team_id)
         .maybeSingle();
     if (!team) return;
@@ -1057,7 +1057,7 @@ async function loadTeamCard(driver) {
             </div>
             <div class="team-info-item">
                 <div class="ti-label">Manufacturer</div>
-                <div class="ti-value">${mfr?.name ? esc(mfr.name) : '—'}</div>
+                <div class="ti-value">${mfr?.name ? esc(mfr.name) + (mfr.car_name ? ' — ' + esc(mfr.car_name) : '') : '—'}</div>
             </div>
             <div class="team-info-item">
                 <div class="ti-label">Home</div>

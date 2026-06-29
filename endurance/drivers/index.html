@@ -622,7 +622,7 @@ async function showListing() {
     document.title = 'Drivers — GTEC';
     const [{ data, error }, { data: ratings }, { data: activeSeasons }, { data: standings }] = await Promise.all([
         sb.from('drivers')
-            .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
+            .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url,car_name)')
             .order('display_name'),
         sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
         sb.from('seasons').select('id').eq('is_active', true).limit(1),
@@ -766,7 +766,7 @@ function sortCards(gridSel, cardSel, sortKey) {
 // ============================================================
 async function showProfile() {
     const { data: driver, error } = await sb.from('drivers')
-        .select('*, teams!current_team_id(name,slug,leader_driver_id), manufacturers(name,brand_color,logo_url)')
+        .select('*, teams!current_team_id(name,slug,leader_driver_id), manufacturers(name,brand_color,logo_url,car_name)')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -863,7 +863,10 @@ async function showProfile() {
             : '';
         tags.push(`${badge}${esc(driver.teams.name)}${leaderPill}`);
     }
-    if (driver.manufacturers?.name && !driver.teams?.name) tags.push(esc(driver.manufacturers.name));
+    if (driver.manufacturers?.name && !driver.teams?.name) {
+        const mfr = driver.manufacturers;
+        tags.push(`${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}`);
+    }
     if (driver.joined_at) tags.push(`Since ${esc(driver.joined_at.slice(0,4))}`);
     if (driver.willing_host) tags.push('<span style="color:#ffd166">🎛️</span> Lobby Host');
 
