@@ -135,6 +135,11 @@
             border-color: rgba(255,209,102,0.55);
             box-shadow: 0 0 0 3px rgba(255,209,102,0.12);
         }
+        .sort-pills { display:flex; align-items:center; gap:0.4rem; max-width:480px; margin:0 auto 1.5rem; flex-wrap:wrap; }
+        .sort-label { font-size:0.72rem; color:var(--muted); margin-right:0.15rem; }
+        .sort-btn { background:transparent; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:0.72rem; font-weight:600; letter-spacing:0.08em; padding:0.28rem 0.85rem; cursor:pointer; transition:border-color 0.15s,color 0.15s; font-family:inherit; }
+        .sort-btn:hover { border-color:rgba(255,255,255,0.25); color:var(--text); }
+        .sort-btn.sort-btn-active { border-color:var(--gold); color:var(--gold); }
 
         /* ===== LISTING ===== */
         .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
@@ -277,15 +282,20 @@ function mfrBadge(logoUrl, brandColor, name) {
 // ============================================================
 async function showListing() {
     document.title = 'Teams — GTEC';
-    const { data, error } = await sb.from('teams')
-        .select('id, name, slug, home_country, bio, manufacturers(name,brand_color,logo_url)')
-        .order('name');
+    const [{ data, error }, { data: activeSeasons }, { data: standings }, { data: dCounts }] = await Promise.all([
+        sb.from('teams').select('id, name, slug, home_country, bio, manufacturers(name,brand_color,logo_url)').order('name'),
+        sb.from('seasons').select('id').eq('is_active', true).limit(1),
+        sb.from('team_standings').select('team_id, season_id, points'),
+        sb.from('drivers').select('current_team_id'),
+    ]);
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
 
-    // Get driver counts per team
-    const { data: dCounts } = await sb.from('drivers')
-        .select('current_team_id');
+    const activeSznId = (activeSeasons || [])[0]?.id;
+    const pointsMap = {};
+    (standings || []).forEach(s => {
+        if (!activeSznId || s.season_id === activeSznId) pointsMap[s.team_id] = Number(s.points || 0);
+    });
     const countMap = {};
     (dCounts || []).forEach(r => {
         if (r.current_team_id) countMap[r.current_team_id] = (countMap[r.current_team_id] || 0) + 1;
@@ -299,8 +309,9 @@ async function showListing() {
             t.home_country,
             mfr?.name,
         ].filter(Boolean).join(' ').toLowerCase();
+        const pts = pointsMap[t.id] || 0;
         return `
-        <div class="team-card" data-search="${esc(search)}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'">
+        <div class="team-card" data-search="${esc(search)}" data-name="${esc(t.name)}" data-points="${pts}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'">
             ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}</div>` : ''}
             <div class="team-card-name">${esc(t.name)}</div>
             <div class="team-card-meta">
@@ -318,12 +329,17 @@ async function showListing() {
         </div>
         <div class="content">
             ${data.length ? `
-                <div class="gtec-search-wrap">
+                <div class="gtec-search-wrap" style="margin-bottom:0.65rem">
                     <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
                     <input class="gtec-search-input" id="teams-search" type="search" autocomplete="off"
                            placeholder="Search team, manufacturer or nationality" oninput="filterCards(this,'team-card','teams-count-sub','team','teams')">
+                </div>
+                <div class="sort-pills">
+                    <span class="sort-label">Sort:</span>
+                    <button class="sort-btn sort-btn-active" data-sort="alpha" onclick="sortCards('.team-grid','.team-card','alpha')">A–Z</button>
+                    <button class="sort-btn" data-sort="points" onclick="sortCards('.team-grid','.team-card','points')">Points</button>
                 </div>
                 <div class="team-grid">${cards}</div>
                 <div class="empty-msg" id="teams-empty" style="display:none">No teams match your search.</div>
@@ -350,6 +366,22 @@ function filterCards(input, cardClass, countId, singular, plural) {
     const emptyId = (countId || '').replace('-count-sub', '-empty');
     const emptyEl = emptyId && document.getElementById(emptyId);
     if (emptyEl) emptyEl.style.display = (q && shown === 0) ? '' : 'none';
+}
+
+function sortCards(gridSel, cardSel, sortKey) {
+    document.querySelectorAll('.sort-btn').forEach(b => {
+        b.classList.toggle('sort-btn-active', b.dataset.sort === sortKey);
+    });
+    const grid = document.querySelector(gridSel);
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll(cardSel));
+    cards.sort((a, b) => {
+        if (sortKey === 'alpha') {
+            return (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' });
+        }
+        return (Number(b.dataset[sortKey]) || 0) - (Number(a.dataset[sortKey]) || 0);
+    });
+    cards.forEach(c => grid.appendChild(c));
 }
 
 // ============================================================

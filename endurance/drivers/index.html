@@ -141,6 +141,11 @@
             border-color: rgba(255,209,102,0.55);
             box-shadow: 0 0 0 3px rgba(255,209,102,0.12);
         }
+        .sort-pills { display:flex; align-items:center; gap:0.4rem; max-width:480px; margin:0 auto 1.5rem; flex-wrap:wrap; }
+        .sort-label { font-size:0.72rem; color:var(--muted); margin-right:0.15rem; }
+        .sort-btn { background:transparent; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:0.72rem; font-weight:600; letter-spacing:0.08em; padding:0.28rem 0.85rem; cursor:pointer; transition:border-color 0.15s,color 0.15s; font-family:inherit; }
+        .sort-btn:hover { border-color:rgba(255,255,255,0.25); color:var(--text); }
+        .sort-btn.sort-btn-active { border-color:var(--gold); color:var(--gold); }
 
         /* ===== LISTING ===== */
         .driver-grid {
@@ -615,11 +620,13 @@ function mfrBadge(logoUrl, brandColor, name, opts = {}) {
 // ============================================================
 async function showListing() {
     document.title = 'Drivers — GTEC';
-    const [{ data, error }, { data: ratings }] = await Promise.all([
+    const [{ data, error }, { data: ratings }, { data: activeSeasons }, { data: standings }] = await Promise.all([
         sb.from('drivers')
             .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url)')
             .order('display_name'),
         sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
+        sb.from('seasons').select('id').eq('is_active', true).limit(1),
+        sb.from('driver_standings').select('driver_id, season_id, points'),
     ]);
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
@@ -634,6 +641,11 @@ async function showListing() {
     (ratings || []).forEach(r => {
         ratingMap[r.driver_id] = r.rating;
         if (r.last_rated_at) ratedDriver[r.driver_id] = r.rating;
+    });
+    const activeSznId = (activeSeasons || [])[0]?.id;
+    const pointsMap = {};
+    (standings || []).forEach(s => {
+        if (!activeSznId || s.season_id === activeSznId) pointsMap[s.driver_id] = Number(s.points || 0);
     });
 
     const cards = (data || []).map(d => {
@@ -664,8 +676,10 @@ async function showListing() {
             d.manufacturers?.name,
             d.nationality,
         ].filter(Boolean).join(' ').toLowerCase();
+        const pts    = pointsMap[d.id] || 0;
+        const eloVal = ratingMap[d.id] != null ? Math.round(ratingMap[d.id]) : 0;
         return `
-        <div class="driver-card" data-search="${esc(search)}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'">
+        <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'">
             <div class="driver-card-photo">${avatarHTML(d.photo_url, d.display_name, 'card')}</div>
             <div class="driver-card-body">
                 ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
@@ -688,12 +702,18 @@ async function showListing() {
         </div>
         <div class="content">
             ${data.length ? `
-                <div class="gtec-search-wrap">
+                <div class="gtec-search-wrap" style="margin-bottom:0.65rem">
                     <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
                     <input class="gtec-search-input" id="drivers-search" type="search" autocomplete="off"
                            placeholder="Search driver, team, nationality or #number" oninput="filterCards(this,'driver-card','drivers-count-sub','driver','drivers')">
+                </div>
+                <div class="sort-pills">
+                    <span class="sort-label">Sort:</span>
+                    <button class="sort-btn sort-btn-active" data-sort="alpha" onclick="sortCards('.driver-grid','.driver-card','alpha')">A–Z</button>
+                    <button class="sort-btn" data-sort="elo" onclick="sortCards('.driver-grid','.driver-card','elo')">ELO</button>
+                    <button class="sort-btn" data-sort="points" onclick="sortCards('.driver-grid','.driver-card','points')">Points</button>
                 </div>
                 <div class="driver-grid">${cards}</div>
                 <div class="empty-msg" id="drivers-empty" style="display:none">No drivers match your search.</div>
@@ -723,6 +743,22 @@ function filterCards(input, cardClass, countId, singular, plural) {
     const emptyId = (countId || '').replace('-count-sub', '-empty');
     const emptyEl = emptyId && document.getElementById(emptyId);
     if (emptyEl) emptyEl.style.display = (q && shown === 0) ? '' : 'none';
+}
+
+function sortCards(gridSel, cardSel, sortKey) {
+    document.querySelectorAll('.sort-btn').forEach(b => {
+        b.classList.toggle('sort-btn-active', b.dataset.sort === sortKey);
+    });
+    const grid = document.querySelector(gridSel);
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll(cardSel));
+    cards.sort((a, b) => {
+        if (sortKey === 'alpha') {
+            return (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' });
+        }
+        return (Number(b.dataset[sortKey]) || 0) - (Number(a.dataset[sortKey]) || 0);
+    });
+    cards.forEach(c => grid.appendChild(c));
 }
 
 // ============================================================
