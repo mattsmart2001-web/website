@@ -434,7 +434,10 @@
 
     <!-- Driver's outstanding outgoing requests -->
     <div class="card" id="card-my-requests" style="display:none">
-        <div class="card-title">Your Team Applications</div>
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Your Team Applications</span>
+            <button id="btn-clear-all-requests" class="btn-small danger" onclick="clearAllMyRequests()" style="display:none">Clear All</button>
+        </div>
         <div id="my-requests-list"></div>
     </div>
 
@@ -1152,6 +1155,8 @@ async function loadTeamingSections(driver) {
         .order('created_at', { ascending: false });
     if (myReqs?.length) {
         document.getElementById('card-my-requests').style.display = '';
+        const hasPending = myReqs.some(r => r.status === 'pending');
+        document.getElementById('btn-clear-all-requests').style.display = hasPending ? '' : 'none';
         document.getElementById('my-requests-list').innerHTML = myReqs.map(r => {
             const pill = r.status === 'pending' ? 'pill-gold' :
                          r.status === 'approved' ? 'pill-green' : 'pill-muted';
@@ -1240,6 +1245,17 @@ async function cancelMyRequest(requestId) {
     const { error } = await sb.from('team_join_requests').update({ status: 'cancelled', decided_at: new Date().toISOString() }).eq('id', requestId);
     if (error) { toast(error.message, 'error'); return; }
     toast('Request cancelled.', 'success');
+    await loadTeamingSections(_currentDriver);
+}
+
+async function clearAllMyRequests() {
+    if (!confirm('Cancel all pending applications?')) return;
+    const { error } = await sb.from('team_join_requests')
+        .update({ status: 'cancelled', decided_at: new Date().toISOString() })
+        .eq('driver_id', _currentDriver.id)
+        .eq('status', 'pending');
+    if (error) { toast(error.message, 'error'); return; }
+    toast('All pending applications cancelled.', 'success');
     await loadTeamingSections(_currentDriver);
 }
 
