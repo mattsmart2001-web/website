@@ -72,7 +72,8 @@ function buildEmail(driverName, eventName, round, lobbyNumber, startsAt) {
                 <li>Create a <strong>Custom Race</strong> lobby in Gran Turismo 7 before the race start time.</li>
                 <li>Set the race settings exactly as specified in the race briefing on your <a href="${SITE_URL}/endurance/calendar/" style="color:#ffd166">portal calendar</a>.</li>
                 <li>Share the lobby password with your split's drivers via the Discord <strong style="color:#f1f5f9">${lobbyNumber ? `#split-${lobbyNumber}` : 'split'}</strong> channel.</li>
-                <li>Start the lobby on time — aim to have everyone in the room <strong>10 minutes</strong> before the scheduled start.</li>
+                <li>Start the lobby on time — aim to have everyone in the room <strong>15 minutes</strong> before the scheduled start.</li>
+                <li>If any driver disconnects within the <strong>first lap</strong>, a restart is allowed. Call it in the Discord channel and requeue everyone.</li>
             </ol>
             <p>If you have any problems or cannot host, contact an admin as soon as possible so we can arrange a replacement host.</p>
             <p style="margin:24px 0"><a href="${SITE_URL}/endurance/calendar/" style="display:inline-block;background:#ffd166;color:#000000;text-decoration:none;padding:13px 26px;border-radius:999px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;font-size:13px">View Race Details</a></p>
