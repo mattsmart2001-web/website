@@ -1807,6 +1807,13 @@ function driverForm(d = {}) {
             <label>Bio</label>
             <textarea name="bio" placeholder="Driver bio…">${esc(d.bio)}</textarea>
         </div>
+        <div class="form-group">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:normal">
+                <input type="checkbox" name="willing_host" ${d.willing_host ? 'checked' : ''} style="accent-color:var(--gold);width:14px;height:14px">
+                <span>Available to host a lobby</span>
+            </label>
+            <div class="form-hint">Driver will be considered for host assignment during split auto-allocation.</div>
+        </div>
 
         <div style="margin-top:1rem;padding-top:0.85rem;border-top:1px solid var(--border)">
             <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.15em;color:var(--gold);text-transform:uppercase;margin-bottom:0.65rem">Manual Badges <span style="color:var(--muted);font-weight:normal;letter-spacing:0.08em;text-transform:none">(overrides auto-detection)</span></div>
@@ -1972,6 +1979,7 @@ async function saveDriver(id) {
         joined_at: d.joined_at || null, bio: d.bio,
         gt7_dr_rating: d.gt7_dr_rating || null, gt7_sr_rating: d.gt7_sr_rating || null,
         manual_badges: manualBadges,
+        willing_host: !!d.willing_host,
     };
     const { error } = id
         ? await sb.from('drivers').update(payload).eq('id', id)
