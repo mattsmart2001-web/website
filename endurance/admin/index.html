@@ -2893,7 +2893,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
 
     const { data: entries, error } = await sb.from('entries')
         .select(`
-            id, lobby_number, car_number, car_model, status,
+            id, lobby_number, car_number, car_model, status, host_driver_id,
             teams(name),
             manufacturers(name, brand_color),
             entry_drivers(driver_id, drivers(id, display_name, career_number, gt7_dr_rating, gt7_sr_rating))
@@ -2993,6 +2993,9 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
         const rows = sorted.map(({ entry: en, driver: d }) => {
             const num = d?.career_number ?? en.car_number;
             const driverName = d ? esc(d.display_name) : '<em class="td-muted">No driver</em>';
+            const hostBadge  = (en.host_driver_id && d?.id === en.host_driver_id)
+                ? `<span class="badge badge-gold" style="font-size:0.6rem;padding:0.1em 0.5em;margin-left:0.4em;vertical-align:middle">HOST</span>`
+                : '';
             // Show the real Elo only for drivers who've actually raced. Everyone
             // else gets their DR/SR letters (which is what we're sorting on).
             let skillCell = '<span class="td-muted">—</span>';
@@ -3008,7 +3011,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
             }
             return `<tr>
                 <td>${num != null ? '<strong>#' + num + '</strong>' : '<span class="td-muted">—</span>'}</td>
-                <td><strong>${driverName}</strong></td>
+                <td><strong>${driverName}</strong>${hostBadge}</td>
                 <td class="td-muted" style="font-size:0.78rem">${esc(en.teams?.name) || '<em>Solo</em>'}</td>
                 <td style="font-size:0.78rem">${skillCell}</td>
                 <td>${movePill(d?.id, lobbyNum)}</td>
@@ -3061,7 +3064,7 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const lobbySize = Math.max(2, Math.min(32, parseInt(sizeInput?.value, 10) || 16));
 
     const { data: entries } = await sb.from('entries')
-        .select(`id, car_number, entry_drivers(driver_id, drivers(career_number, gt7_dr_rating, gt7_sr_rating))`)
+        .select(`id, car_number, entry_drivers(driver_id, drivers(id, career_number, gt7_dr_rating, gt7_sr_rating, willing_host))`)
         .eq('event_id', eventId)
         .neq('status', 'withdrawn');
     if (!entries?.length) { toast('No entries to allocate.', 'error'); return; }
@@ -3145,8 +3148,9 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
         }
         currentCount += driversInEntry;
         totalDrivers += driversInEntry;
+        en._lobby = currentLobby;
 
-        const payload = { lobby_number: currentLobby };
+        const payload = { lobby_number: currentLobby, host_driver_id: null };
         if (en.car_number == null) {
             const firstDriver = (en.entry_drivers || []).find(ed => ed.drivers?.career_number != null);
             if (firstDriver) payload.car_number = firstDriver.drivers.career_number;
@@ -3155,27 +3159,80 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
         if (error) failures++;
     }
     const totalLobbiesUsed = currentLobby;
+
+    // Host selection — pick the highest-rated willing driver per lobby.
+    // Group entries by lobby, find the best willing candidate, and tag their entry.
+    const lobbyMap = new Map();
+    entries.forEach(en => {
+        const ln = en._lobby;
+        if (!ln) return;
+        (en.entry_drivers || []).forEach(ed => {
+            if (!ed.drivers?.willing_host) return;
+            const skill = skillFor(ed);
+            const cur = lobbyMap.get(ln);
+            if (!cur || skill > cur.skill) lobbyMap.set(ln, { entryId: en.id, driverId: ed.driver_id, skill });
+        });
+    });
+    await Promise.all(Array.from(lobbyMap.values()).map(({ entryId, driverId }) =>
+        sb.from('entries').update({ host_driver_id: driverId }).eq('id', entryId)
+    ));
+
     toast(failures
         ? `Allocated with ${failures} failure(s).`
-        : `${totalDrivers} driver${totalDrivers === 1 ? '' : 's'} across ${totalLobbiesUsed} split${totalLobbiesUsed === 1 ? '' : 's'}.`, failures ? 'error' : 'success');
+        : `${totalDrivers} driver${totalDrivers === 1 ? '' : 's'} across ${totalLobbiesUsed} split${totalLobbiesUsed === 1 ? '' : 's'}. ${lobbyMap.size} host${lobbyMap.size === 1 ? '' : 's'} assigned.`, failures ? 'error' : 'success');
     await viewEventLobbies(eventId, eventName, seasonId);
 }
 
 async function clearAllLobbies(eventId, eventName, seasonId) {
     if (!confirm('Clear all split assignments for this event?')) return;
-    const { error } = await sb.from('entries').update({ lobby_number: null }).eq('event_id', eventId);
+    const { error } = await sb.from('entries').update({ lobby_number: null, host_driver_id: null }).eq('event_id', eventId);
     if (error) { toast(error.message, 'error'); return; }
     toast('Split assignments cleared.', 'success');
     await viewEventLobbies(eventId, eventName, seasonId);
 }
 
 async function notifyLobbies(eventId, eventName, seasonId) {
-    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox and a summary will post to Discord #splits.`)) return;
+    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox, lobby hosts will receive an email, and a summary will post to Discord #splits.`)) return;
     const { data, error } = await sb.rpc('notify_lobby_assignments', { p_event_id: eventId });
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
     toast(`Sent ${data.count} notification${data.count === 1 ? '' : 's'}.`, 'success');
     await refreshMsgsBadge();
+
+    // Email lobby hosts — fetch entries that have a host assigned for this event
+    try {
+        const { data: { session: hostSession } } = await sb.auth.getSession();
+        if (hostSession?.access_token) {
+            const { data: ev } = await sb.from('events')
+                .select('round, starts_at')
+                .eq('id', eventId).maybeSingle();
+            const { data: hostEntries } = await sb.from('entries')
+                .select('lobby_number, host_driver_id')
+                .eq('event_id', eventId)
+                .not('host_driver_id', 'is', null);
+            if (hostEntries?.length) {
+                let hostEmailsSent = 0;
+                await Promise.all(hostEntries.map(async en => {
+                    try {
+                        const res = await fetch('/.netlify/functions/send-lobby-host-email', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${hostSession.access_token}` },
+                            body: JSON.stringify({
+                                driver_id:    en.host_driver_id,
+                                event_name:   eventName,
+                                round:        ev?.round ?? null,
+                                lobby_number: en.lobby_number,
+                                starts_at:    ev?.starts_at ?? null,
+                            }),
+                        });
+                        if (res.ok) hostEmailsSent++;
+                        else console.warn('Host email failed for', en.host_driver_id, res.status, await res.text());
+                    } catch (e) { console.warn('Host email error:', e); }
+                }));
+                if (hostEmailsSent > 0) toast(`Host email${hostEmailsSent === 1 ? '' : 's'} sent to ${hostEmailsSent} driver${hostEmailsSent === 1 ? '' : 's'}.`, 'success');
+            }
+        }
+    } catch (e) { console.warn('Host email dispatch error:', e); }
 
     // Also post split assignments to Discord #splits (best effort — non-blocking)
     try {
@@ -5643,6 +5700,9 @@ async function saveDriverFromApplication(appId) {
         }
     }
 
+    // Carry over willing_host from the original application
+    const { data: srcApp } = await sb.from('applications').select('willing_host').eq('id', appId).maybeSingle();
+
     const payload = {
         display_name: d.display_name, slug: d.slug, psn_id: d.psn_id,
         discord_username: d.discord_username || null,
@@ -5650,6 +5710,7 @@ async function saveDriverFromApplication(appId) {
         current_team_id: d.current_team_id || null, current_manufacturer_id: d.current_manufacturer_id || null,
         joined_at: d.joined_at || null, bio: d.bio,
         gt7_dr_rating: d.gt7_dr_rating || null, gt7_sr_rating: d.gt7_sr_rating || null,
+        willing_host: srcApp?.willing_host ?? false,
     };
     const { data: created, error } = await sb.from('drivers').insert(payload).select('id').single();
     if (error) { toast(error.message, 'error'); return; }
