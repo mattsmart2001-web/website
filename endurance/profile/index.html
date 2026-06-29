@@ -519,7 +519,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=12"></script>
+<script src="/endurance/assets/gtec-badges.js?v=13"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script src="../assets/countries.js"></script>
 <script>
@@ -854,7 +854,7 @@ async function loadBadges(driverId) {
         sb.from('seasons').select('id, is_active'),
         sb.from('driver_standings').select('driver_id, season_id, points'),
         sb.rpc('driver_secret_badges', { p_driver_id: driverId }),
-        sb.from('drivers').select('manual_badges').eq('id', driverId).maybeSingle(),
+        sb.from('drivers').select('manual_badges, willing_host').eq('id', driverId).maybeSingle(),
     ]);
 
     const completedCircuits = Array.from(new Set(
@@ -883,6 +883,7 @@ async function loadBadges(driverId) {
         seasonFinishes,
         secretBadges: secretBadges || {},
         manualBadges: Array.isArray(driverRow?.manual_badges) ? driverRow.manual_badges : [],
+        willingHost: !!driverRow?.willing_host,
     });
     document.getElementById('card-badges').style.display = '';
 }

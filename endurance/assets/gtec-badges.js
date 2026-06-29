@@ -114,6 +114,15 @@
                   evalFn: s => !!(s.secretBadges || {}).mr_consistent },
             ],
         },
+        {
+            key: 'community',
+            title: 'Community',
+            type: 'role',
+            badges: [
+                { key: 'lobby_host', name: 'Lobby Host', icon: '🎛️', blurb: 'Registered as a willing lobby host for their split',
+                  evalFn: s => !!s.willingHost },
+            ],
+        },
     ];
 
     function badgeIsEarned(cat, badge, stats) {
@@ -212,6 +221,17 @@
         return `<div class="gtec-badge-strip">${sections.join('')}</div>`;
     }
 
+    // Role badges — only show when earned; no locked tiles (it's a role, not an aspiration).
+    function renderRoleSection(cat, stats) {
+        const earned = earnedFor(cat, stats);
+        if (!earned.length) return '';
+        return `
+            <div class="gtec-badge-section">
+                <div class="gtec-badge-section-title">${cat.title}</div>
+                <div class="gtec-badge-grid">${earned.map(b => badgeIcon(b)).join('')}</div>
+            </div>`;
+    }
+
     // Portal-style full grid — every category, every badge, with locked
     // ones desaturated + a conic progress ring (threshold ladders only)
     // filling 0 → 100% as the driver approaches the next unlock. Each
@@ -223,6 +243,7 @@
             if (cat.type === 'match')     return renderMatchSection(cat, stats);
             if (cat.type === 'season')    return renderSeasonSection(cat, stats);
             if (cat.type === 'secret')    return renderSecretSection(cat, stats);
+            if (cat.type === 'role')      return renderRoleSection(cat, stats);
             return '';
         }).join('');
     }

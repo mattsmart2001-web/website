@@ -540,7 +540,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=12"></script>
+<script src="/endurance/assets/gtec-badges.js?v=13"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script>
 'use strict';
@@ -829,6 +829,7 @@ async function showProfile() {
     }
     if (driver.manufacturers?.name && !driver.teams?.name) tags.push(esc(driver.manufacturers.name));
     if (driver.joined_at) tags.push(`Since ${esc(driver.joined_at.slice(0,4))}`);
+    if (driver.willing_host) tags.push('<span style="color:#ffd166">🎛️</span> Lobby Host');
 
     const ratingClass = r => 'rc-' + (r === 'A+' ? 'Ap' : r);
     const ratingChips = [];
@@ -993,7 +994,7 @@ async function showProfile() {
                     ${driver.career_number ? `<div class="profile-number">#${driver.career_number}</div>` : ''}
                     <div class="profile-name">${esc(driver.display_name)}</div>
                     <div class="profile-tags">${tagsHTML}</div>
-                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [] }) : ''}
+                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [], willingHost: !!driver.willing_host }) : ''}
                     <button class="share-btn" id="share-profile-btn" type="button">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
