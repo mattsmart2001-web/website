@@ -1242,7 +1242,7 @@ async function applyToTeam(teamId, teamName) {
 
 async function cancelMyRequest(requestId) {
     if (!confirm('Cancel this application?')) return;
-    const { error } = await sb.from('team_join_requests').update({ status: 'cancelled', decided_at: new Date().toISOString() }).eq('id', requestId);
+    const { error } = await sb.from('team_join_requests').delete().eq('id', requestId);
     if (error) { toast(error.message, 'error'); return; }
     toast('Request cancelled.', 'success');
     await loadTeamingSections(_currentDriver);
@@ -1251,7 +1251,7 @@ async function cancelMyRequest(requestId) {
 async function clearAllMyRequests() {
     if (!confirm('Cancel all pending applications?')) return;
     const { error } = await sb.from('team_join_requests')
-        .update({ status: 'cancelled', decided_at: new Date().toISOString() })
+        .delete()
         .eq('driver_id', _currentDriver.id)
         .eq('status', 'pending');
     if (error) { toast(error.message, 'error'); return; }
