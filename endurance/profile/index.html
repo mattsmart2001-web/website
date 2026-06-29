@@ -1248,6 +1248,10 @@ const APPROVAL_COOLDOWN = 60;
 
 async function approveRequest(requestId) {
     if (_pendingApprovals[requestId]) return;
+    if (Object.keys(_pendingApprovals).length > 0) {
+        toast('One approval is already pending — undo or wait for it to confirm before approving another driver.', 'info');
+        return;
+    }
     const row = document.querySelector(`[data-request-id="${requestId}"]`);
     const btnWrap = row?.querySelector('.req-btns');
     if (!btnWrap) return;
@@ -1257,6 +1261,13 @@ async function approveRequest(requestId) {
         <span style="font-size:0.75rem;color:var(--gold);font-weight:600">Approved</span>
         <button class="btn-small" onclick="undoApproval('${requestId}')" style="min-width:88px">Undo (${remaining}s)</button>
     `;
+
+    // Disable approve buttons on all other pending rows
+    document.querySelectorAll('.req-row').forEach(r => {
+        if (r.dataset.requestId === requestId) return;
+        const btn = r.querySelector('.req-btns .btn-small.primary');
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.35'; btn.title = 'Undo or wait for the current approval first'; }
+    });
 
     const tick = setInterval(() => {
         remaining--;
