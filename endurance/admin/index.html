@@ -6024,9 +6024,11 @@ function renderGuide() {
                     'Go to <strong>Applications</strong>.',
                     'Click <strong>View</strong> to see the full submission.',
                     'Set the Status: <strong>Accepted</strong>, <strong>Waitlisted</strong>, or <strong>Rejected</strong>.',
-                    'Click <strong>Send Email</strong> to fire the appropriate email template.',
-                    'If accepting: click <strong>Create Driver</strong> to generate their driver record directly from the application.',
+                    'Click <strong>Save Status</strong>.',
+                    'If accepting: click <strong>Create Driver Record</strong> to add them to the roster. This generates their driver record and a unique claim link.',
+                    'Now click <strong>Send Acceptance Email</strong>. The email includes the claim link so the driver can activate their profile. The link will not exist until step 5 is done, so always add to the roster first.',
                 ])}
+                ${warn('Always create the driver record before sending the acceptance email. The claim link in the email is only generated once the driver is on the roster.')}
                 ${h('Discord Role Assignment')}
                 <p>When you send an acceptance email, the system automatically tries to assign the Driver Discord role if their Discord username is on record and they are already in the server. If they have not joined yet, the role can be assigned manually once they do.</p>
             `)}
