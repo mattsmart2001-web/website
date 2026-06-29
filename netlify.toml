@@ -58,6 +58,20 @@
   to = "/index.html"
   status = 200
 
+# Security headers — scoped to /endurance/* only so the main SparksTheory
+# site isn't affected. 'unsafe-inline' on script/style is required because
+# the pages use inline onclick handlers and <style> blocks throughout.
+# The meaningful protection here is locking down connect-src, frame-src,
+# and blocking object embeds and base-tag hijacking.
+[[headers]]
+  for = "/endurance/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net unpkg.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com unpkg.com cdnjs.cloudflare.com; font-src 'self' fonts.gstatic.com cdnjs.cloudflare.com; img-src 'self' data: img.youtube.com; connect-src 'self' https://wtryzoabpkqtucfpmbnn.supabase.co wss://wtryzoabpkqtucfpmbnn.supabase.co; frame-src www.youtube.com player.vimeo.com clips.twitch.tv player.twitch.tv; worker-src 'self'; object-src 'none'; base-uri 'self';"
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
 [functions]
   # DISABLED: Scheduled function to auto-update leaderboard stats
   # Disabled for ethical review - awaiting permission from gtstats.live
