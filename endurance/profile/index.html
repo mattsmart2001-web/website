@@ -1262,11 +1262,12 @@ async function approveRequest(requestId) {
         <button class="btn-small" onclick="undoApproval('${requestId}')" style="min-width:88px">Undo (${remaining}s)</button>
     `;
 
-    // Disable approve buttons on all other pending rows
+    // Disable all action buttons on other pending rows (Approve and Reject)
     document.querySelectorAll('.req-row').forEach(r => {
         if (r.dataset.requestId === requestId) return;
-        const btn = r.querySelector('.req-btns .btn-small.primary');
-        if (btn) { btn.disabled = true; btn.style.opacity = '0.35'; btn.title = 'Undo or wait for the current approval first'; }
+        r.querySelectorAll('.req-btns .btn-small').forEach(btn => {
+            btn.disabled = true; btn.style.opacity = '0.35'; btn.title = 'Undo or wait for the current approval first';
+        });
     });
 
     const tick = setInterval(() => {
