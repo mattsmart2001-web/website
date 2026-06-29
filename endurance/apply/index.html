@@ -402,12 +402,12 @@ document.getElementById('field-nationality').innerHTML = window.gtecCountryOptio
 
 // Load manufacturers for dropdown
 (async () => {
-    const { data: mfrs } = await sb.from('manufacturers').select('id, name').order('name');
+    const { data: mfrs } = await sb.from('manufacturers').select('id, name, car_name').order('name');
     const sel = document.getElementById('field-mfr');
     (mfrs || []).forEach(m => {
         const opt = document.createElement('option');
         opt.value = m.id;
-        opt.textContent = m.name;
+        opt.textContent = m.name + (m.car_name ? ' — ' + m.car_name : '');
         sel.appendChild(opt);
     });
 })();
