@@ -90,6 +90,6 @@ window.gtecCountryOptions = function (selected) {
     const sel = (selected || '').toUpperCase();
     const head = `<option value="">— Select country —</option>`;
     return head + window.GTEC_COUNTRIES.map(c =>
-        `<option value="${c.code}"${c.code === sel ? ' selected' : ''}>${c.label || c.flag} ${c.name}</option>`
+        `<option value="${c.code}"${c.code === sel ? ' selected' : ''}>${c.label || c.code} ${c.name}</option>`
     ).join('');
 };
