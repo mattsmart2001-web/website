@@ -6039,9 +6039,12 @@ function renderGuide() {
                 ${h('Step 2: Assign Splits / Lobbies')}
                 ${ol([
                     'Click <strong>Splits</strong> on the event row.',
-                    'Click <strong>Auto-allocate</strong> to distribute drivers evenly, or move them manually with the &#8593;/&#8595; buttons.',
-                    'Click <strong>Notify Drivers</strong> when ready , this sends each driver their split via the portal and posts to Discord <strong>#splits</strong>.',
+                    'Set the split size (default 16) and click <strong>Auto-allocate</strong>. Drivers are distributed by Elo rating (or DR/SR if no race history). Team-mates always stay in the same split.',
+                    'Auto-allocate also selects a <strong>lobby host</strong> for each split automatically , the highest-rated driver who ticked "willing host" on their application. They appear with a gold <strong>HOST</strong> badge in the splits view.',
+                    'Move any driver manually with the &#8593;/&#8595; buttons if needed. Moving a driver clears their host assignment; re-running Auto-allocate will reassign hosts.',
+                    'Click <strong>Notify Drivers</strong> when ready. Every driver receives their split in the portal inbox and a summary posts to Discord <strong>#splits</strong>. Each designated lobby host also receives a <strong>separate email</strong> with their split number, race time, and hosting instructions.',
                 ])}
+                ${tip('If no drivers have opted in as willing hosts, no host will be assigned automatically. You can still designate one manually by editing their driver record.')}
                 ${h('Step 3: Enter Qualifying Times')}
                 ${ol([
                     'Click <strong>Qualifying</strong> on the event row.',
@@ -6094,6 +6097,12 @@ function renderGuide() {
                     'Now click <strong>Send Acceptance Email</strong>. The email includes the claim link so the driver can activate their profile. The link will not exist until step 5 is done, so always add to the roster first.',
                 ])}
                 ${warn('Always create the driver record before sending the acceptance email. The claim link in the email is only generated once the driver is on the roster.')}
+                ${h('Team Applications')}
+                <p>When a driver applies as a <strong>Team</strong>, the form asks for a team name plus their teammate\'s display name and PSN ID. These appear in the application detail modal for your reference.</p>
+                <p>Only one team member submits the Team application , they become the team leader. Their teammate submits a separate <strong>Driver</strong> application. When you accept the teammate, create their driver record and then manually assign them to the team from the driver edit screen.</p>
+                ${tip('If you receive two Team applications with the same team name, one of them is the duplicate. Accept one as the team application, then convert the other to a driver application instead.')}
+                ${h('Willing Lobby Hosts')}
+                <p>Applicants can tick "I\'m happy to host a lobby if selected as split host" on the apply form. This flag carries automatically to their driver record when you create it. During split auto-allocation, the highest-rated willing host in each split is assigned the HOST role and will receive a host notification email when you click Notify Drivers.</p>
                 ${h('Discord Role Assignment')}
                 <p>When you send an acceptance email, the system automatically tries to assign the Driver Discord role if their Discord username is on record and they are already in the server. If they have not joined yet, the role can be assigned manually once they do.</p>
             `)}
