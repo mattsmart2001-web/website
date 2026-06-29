@@ -1464,7 +1464,7 @@ async function viewSeasonTeams(seasonId, seasonName) {
 
 function openRegisterTeamModal(seasonId) {
     const teamOpts = _teams.map(t => ({ value: t.id, label: t.name }));
-    const mfrOpts  = _manufacturers.map(m => ({ value: m.id, label: m.name }));
+    const mfrOpts  = _manufacturers.map(m => ({ value: m.id, label: m.name + (m.car_name ? ' — ' + m.car_name : '') }));
     openModal('Register Team for Season',
         `<form id="entity-form">
             <div class="form-group">
@@ -1602,7 +1602,7 @@ async function clearTeamLeader(teamId, teamName) {
 }
 
 function teamForm(t = {}) {
-    const mfrOpts = _manufacturers.map(m => ({ value: m.id, label: m.name }));
+    const mfrOpts = _manufacturers.map(m => ({ value: m.id, label: m.name + (m.car_name ? ' — ' + m.car_name : '') }));
     return `<form id="entity-form">
         <div class="form-row">
             <div class="form-group">
@@ -1733,7 +1733,7 @@ function driverForm(d = {}) {
         const cap      = ` · ${used}/${max}${full ? ' · FULL' : ''}`;
         return { value: t.id, label: `${t.name}${mfrLabel}${cap}`, disabled: full };
     });
-    const mfrOpts  = _manufacturers.map(m => ({ value: m.id, label: m.name }));
+    const mfrOpts  = _manufacturers.map(m => ({ value: m.id, label: m.name + (m.car_name ? ' — ' + m.car_name : '') }));
     const hasTeam  = !!d.current_team_id;
     return `<form id="entity-form">
         <div class="form-row">
