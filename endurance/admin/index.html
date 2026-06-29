@@ -2216,6 +2216,13 @@ function eventForm(e = {}) {
             </div>
             <div class="form-row">
                 <div class="form-group">
+                    <label>Time Multiplier</label>
+                    <input type="text" name="time_multiplier" value="${esc(e.time_multiplier)}" placeholder="e.g. 10x">
+                </div>
+                <div class="form-group"><!-- spacer --></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
                     <label>Weather</label>
                     <input type="text" name="weather" value="${esc(e.weather)}" placeholder="e.g. Variable, 60% rain">
                 </div>
@@ -2334,6 +2341,7 @@ async function saveEvent(id) {
         notes: d.notes || null,
         tyre_wear:          d.tyre_wear || null,
         fuel_consumption:   d.fuel_consumption || null,
+        time_multiplier:    d.time_multiplier || null,
         weather:            d.weather || null,
         time_of_day:        d.time_of_day || null,
         starting_procedure: d.starting_procedure || null,

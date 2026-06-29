@@ -480,7 +480,7 @@ async function load() {
         const gridBtn = e.status !== 'cancelled'
             ? `<button class="btn-results" onclick="openGrid('${esc(e.id)}','${esc(e.name)}')">Grid</button>`
             : '';
-        const hasDetails = e.tyre_wear || e.fuel_consumption || e.weather || e.time_of_day ||
+        const hasDetails = e.tyre_wear || e.fuel_consumption || e.time_multiplier || e.weather || e.time_of_day ||
                            e.starting_procedure || e.mandatory_pit_stops != null || e.race_details ||
                            e.bop_enabled != null || e.damage_level ||
                            e.refuel_rate_lps != null || e.slipstream ||
@@ -603,6 +603,7 @@ function openRaceDetails(eventId, eventName) {
     const rows = [
         ['Tyre Wear',          e.tyre_wear],
         ['Fuel Consumption',   e.fuel_consumption],
+        ['Time Multiplier',    e.time_multiplier],
         ['Weather',            e.weather],
         ['Time of Day',        e.time_of_day],
         ['Starting Procedure', e.starting_procedure],
