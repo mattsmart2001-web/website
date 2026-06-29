@@ -5576,7 +5576,11 @@ async function viewApplication(id) {
             <div><span style="color:var(--muted)">Pref. Career #</span><br><strong>${a.preferred_career_number != null ? '#' + a.preferred_career_number : '—'}</strong></div>
             <div><span style="color:var(--muted)">DR / SR</span><br><strong>${esc(a.gt7_dr_rating)||'—'} / ${esc(a.gt7_sr_rating)||'—'}</strong></div>
             <div><span style="color:var(--muted)">Applied</span><br><strong>${a.created_at?.slice(0,10)}</strong></div>
-            ${a.type==='team'?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Team Name</span><br><strong>${esc(a.team_name)||'—'}</strong></div>`:''}
+            ${a.type==='team'?`
+            <div style="grid-column:1/-1"><span style="color:var(--muted)">Team Name</span><br><strong>${esc(a.team_name)||'—'}</strong></div>
+            <div><span style="color:var(--muted)">Teammate Name</span><br><strong>${esc(a.teammate_name)||'—'}</strong></div>
+            <div><span style="color:var(--muted)">Teammate PSN</span><br><strong>${esc(a.teammate_psn)||'—'}</strong></div>
+            `:''}
         </div>
         ${a.experience ? `<div style="font-size:0.82rem;margin-bottom:0.75rem"><span style="color:var(--muted)">Experience</span><br>${esc(a.experience)}</div>` : ''}
         ${a.message    ? `<div style="font-size:0.82rem;margin-bottom:1.25rem"><span style="color:var(--muted)">Message</span><br>${esc(a.message)}</div>` : ''}
