@@ -30,7 +30,7 @@ window.GTEC_COUNTRIES = [
     { code: 'ES', name: 'Spain',                  flag: '🇪🇸' },
     { code: 'FI', name: 'Finland',                flag: '🇫🇮' },
     { code: 'FR', name: 'France',                 flag: '🇫🇷' },
-    { code: 'GB', name: 'United Kingdom',         flag: '🇬🇧' },
+    { code: 'GB', name: 'United Kingdom',         flag: '🇬🇧', label: 'UK' },
     { code: 'GR', name: 'Greece',                 flag: '🇬🇷' },
     { code: 'HK', name: 'Hong Kong',              flag: '🇭🇰' },
     { code: 'HR', name: 'Croatia',                flag: '🇭🇷' },
@@ -90,6 +90,6 @@ window.gtecCountryOptions = function (selected) {
     const sel = (selected || '').toUpperCase();
     const head = `<option value="">— Select country —</option>`;
     return head + window.GTEC_COUNTRIES.map(c =>
-        `<option value="${c.code}"${c.code === sel ? ' selected' : ''}>${c.flag} ${c.name}</option>`
+        `<option value="${c.code}"${c.code === sel ? ' selected' : ''}>${c.label || c.flag} ${c.name}</option>`
     ).join('');
 };
