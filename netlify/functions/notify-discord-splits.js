@@ -4,12 +4,12 @@
 // Auth: Bearer <supabase admin token>
 //
 // Fetches the split assignments for an event and posts a summary
-// embed to the #splits Discord channel so drivers can see their
+// embed to the #split-announcements Discord channel so drivers can see their
 // split without opening the portal.
 //
 // Env vars required:
 //   GTEC_DISCORD_BOT_TOKEN      — Discord bot token
-//   DISCORD_SPLITS_CHANNEL_ID   — #splits channel ID
+//   DISCORD_SPLITS_CHANNEL_ID   — #split-announcements channel ID
 //   GTEC_SUPABASE_URL           (falls back to SUPABASE_URL)
 //   GTEC_SUPABASE_ANON_KEY      (falls back to SUPABASE_ANON_KEY)
 // ============================================================

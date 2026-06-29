@@ -3192,7 +3192,7 @@ async function clearAllLobbies(eventId, eventName, seasonId) {
 }
 
 async function notifyLobbies(eventId, eventName, seasonId) {
-    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox, lobby hosts will receive an email, and a summary will post to Discord #splits.`)) return;
+    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox, lobby hosts will receive an email, and a summary will post to Discord #split-announcements.`)) return;
     const { data, error } = await sb.rpc('notify_lobby_assignments', { p_event_id: eventId });
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
@@ -3234,7 +3234,7 @@ async function notifyLobbies(eventId, eventName, seasonId) {
         }
     } catch (e) { console.warn('Host email dispatch error:', e); }
 
-    // Also post split assignments to Discord #splits (best effort — non-blocking)
+    // Also post split assignments to Discord #split-announcements (best effort — non-blocking)
     try {
         const { data: { session: discordSession } } = await sb.auth.getSession();
         if (discordSession?.access_token) {
@@ -6042,7 +6042,7 @@ function renderGuide() {
                     'Set the split size (default 16) and click <strong>Auto-allocate</strong>. Drivers are distributed by Elo rating (or DR/SR if no race history). Team-mates always stay in the same split.',
                     'Auto-allocate also selects a <strong>lobby host</strong> for each split automatically , the highest-rated driver who ticked "willing host" on their application. They appear with a gold <strong>HOST</strong> badge in the splits view.',
                     'Move any driver manually with the &#8593;/&#8595; buttons if needed. Moving a driver clears their host assignment; re-running Auto-allocate will reassign hosts.',
-                    'Click <strong>Notify Drivers</strong> when ready. Every driver receives their split in the portal inbox and a summary posts to Discord <strong>#splits</strong>. Each designated lobby host also receives a <strong>separate email</strong> with their split number, race time, and hosting instructions.',
+                    'Click <strong>Notify Drivers</strong> when ready. Every driver receives their split in the portal inbox and a summary posts to Discord <strong>#split-announcements</strong>. Each designated lobby host also receives a <strong>separate email</strong> with their split number, race time, and hosting instructions.',
                 ])}
                 ${tip('If no drivers have opted in as willing hosts, no host will be assigned automatically. You can still designate one manually by editing their driver record.')}
                 ${h('Step 3: Enter Qualifying Times')}
@@ -6147,7 +6147,7 @@ function renderGuide() {
 
             ${s('12. Discord Notifications', `
                 ${table(['Notification','When it fires','Where'],[
-                    ['<strong>Split Assignments</strong>','Click &ldquo;Notify Drivers&rdquo; in the Splits panel','#splits channel'],
+                    ['<strong>Split Assignments</strong>','Click &ldquo;Notify Drivers&rdquo; in the Splits panel','#split-announcements channel'],
                     ['<strong>Race Results</strong>','Automatically when a Race Report is published','#results channel'],
                 ])}
                 ${tip('Both notifications are best-effort. If Discord is offline or the bot\'s permissions change, they may fail silently. Check the browser console (F12) if you suspect a notification did not send.')}
