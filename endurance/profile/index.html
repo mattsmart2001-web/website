@@ -1195,7 +1195,7 @@ async function loadTeamingSections(driver) {
                 ? `<button class="btn-small primary" onclick="approveRequest('${esc(id)}')">Approve</button>`
                 : `<button class="btn-small primary" disabled title="Team window closed for the season" style="opacity:0.4;cursor:not-allowed">Approve</button>`;
             document.getElementById('team-requests-list').innerHTML = lockedNote + incoming.map(r => `
-                <div class="req-row">
+                <div class="req-row" data-request-id="${esc(r.id)}">
                     <div style="flex:1;min-width:0">
                         <div class="open-team-name">
                             ${r.drivers?.slug
@@ -1210,7 +1210,7 @@ async function loadTeamingSections(driver) {
                             ${r.message ? '<br><em style="font-size:0.8rem">' + esc(r.message) + '</em>' : ''}
                         </div>
                     </div>
-                    <div style="display:flex;gap:0.4rem">
+                    <div class="req-btns" style="display:flex;gap:0.4rem;align-items:center">
                         ${approveBtn(r.id)}
                         <button class="btn-small danger"  onclick="rejectRequest('${esc(r.id)}')">Reject</button>
                     </div>
@@ -1243,13 +1243,48 @@ async function cancelMyRequest(requestId) {
     await loadTeamingSections(_currentDriver);
 }
 
+const _pendingApprovals = {};
+const APPROVAL_COOLDOWN = 60;
+
 async function approveRequest(requestId) {
-    if (!confirm('Approve this driver and add them to your team?')) return;
-    const { data, error } = await sb.rpc('approve_team_join_request', { p_request_id: requestId });
-    if (error)       { toast(error.message, 'error'); return; }
-    if (!data?.ok)   { toast(data?.error || 'Could not approve.', 'error'); return; }
-    toast('Driver approved.', 'success');
-    await loadTeamingSections(_currentDriver);
+    if (_pendingApprovals[requestId]) return;
+    const row = document.querySelector(`[data-request-id="${requestId}"]`);
+    const btnWrap = row?.querySelector('.req-btns');
+    if (!btnWrap) return;
+
+    let remaining = APPROVAL_COOLDOWN;
+    btnWrap.innerHTML = `
+        <span style="font-size:0.75rem;color:var(--gold);font-weight:600">Approved</span>
+        <button class="btn-small" onclick="undoApproval('${requestId}')" style="min-width:88px">Undo (${remaining}s)</button>
+    `;
+
+    const tick = setInterval(() => {
+        remaining--;
+        const undoBtn = btnWrap.querySelector('button');
+        if (undoBtn) undoBtn.textContent = `Undo (${remaining}s)`;
+    }, 1000);
+
+    const timer = setTimeout(async () => {
+        clearInterval(tick);
+        delete _pendingApprovals[requestId];
+        const { data, error } = await sb.rpc('approve_team_join_request', { p_request_id: requestId });
+        if (error)     { toast(error.message, 'error'); await loadTeamingSections(_currentDriver); return; }
+        if (!data?.ok) { toast(data?.error || 'Could not approve.', 'error'); await loadTeamingSections(_currentDriver); return; }
+        toast('Driver approved and added to your team.', 'success');
+        await loadTeamingSections(_currentDriver);
+    }, APPROVAL_COOLDOWN * 1000);
+
+    _pendingApprovals[requestId] = { timer, tick };
+}
+
+function undoApproval(requestId) {
+    const pending = _pendingApprovals[requestId];
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    clearInterval(pending.tick);
+    delete _pendingApprovals[requestId];
+    toast('Approval cancelled.', 'info');
+    loadTeamingSections(_currentDriver);
 }
 
 async function rejectRequest(requestId) {
