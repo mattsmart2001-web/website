@@ -1289,7 +1289,13 @@ async function approveRequest(requestId) {
     const tick = setInterval(() => {
         remaining--;
         const undoBtn = btnWrap.querySelector('button');
-        if (undoBtn) undoBtn.textContent = `Undo (${remaining}s)`;
+        if (!undoBtn) return;
+        if (remaining <= 0) {
+            undoBtn.textContent = 'Confirming…';
+            undoBtn.disabled = true;
+        } else {
+            undoBtn.textContent = `Undo (${remaining}s)`;
+        }
     }, 1000);
 
     const timer = setTimeout(async () => {
