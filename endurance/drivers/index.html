@@ -184,7 +184,8 @@
             color: var(--muted);
             opacity: 0.4;
         }
-        .driver-card-body { padding: 0.9rem; position: relative; overflow: hidden; }
+        .driver-card-body { padding: 0.9rem; position: relative; overflow: hidden; display: flex; gap: 0.55rem; align-items: flex-start; }
+        .driver-card-body-main { flex: 1; min-width: 0; }
         .driver-card-ghost {
             position: absolute; top: -0.1rem; right: -0.1rem;
             font-family: 'Orbitron', sans-serif; font-weight: 900;
@@ -231,13 +232,14 @@
         .driver-card-tier .elo-tier { margin-left: 0 !important; }
         .driver-card-badges {
             display: flex;
-            gap: 0.3rem;
-            margin-top: 0.6rem;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 0.28rem;
+            flex-shrink: 0;
+            padding-top: 0.1rem;
         }
         .driver-card-badge {
             width: 26px; height: 26px;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             display: flex; align-items: center; justify-content: center;
             background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.12), rgba(0,0,0,0.45) 75%);
             border: 1px solid rgba(255,209,102,0.3);
@@ -677,25 +679,46 @@ async function showListing() {
     const pointsMap = {};
     const winsMap   = {};
     const racesMap  = {};
+    // Group completed-season standings for title badge computation
+    const _sznGroups = {};
     (standings || []).forEach(s => {
         if (!activeSznId || s.season_id === activeSznId) pointsMap[s.driver_id] = Number(s.points || 0);
         winsMap[s.driver_id]  = (winsMap[s.driver_id]  || 0) + Number(s.wins  || 0);
         racesMap[s.driver_id] = (racesMap[s.driver_id] || 0) + Number(s.races || 0);
+        if (s.season_id !== activeSznId) {
+            if (!_sznGroups[s.season_id]) _sznGroups[s.season_id] = [];
+            _sznGroups[s.season_id].push({ driver_id: s.driver_id, points: Number(s.points || 0) });
+        }
+    });
+    // Rank drivers within each completed season; build driver_id → [finish positions]
+    const seasonFinishesMap = {};
+    Object.values(_sznGroups).forEach(group => {
+        group.sort((a, b) => b.points - a.points);
+        group.forEach((entry, idx) => {
+            if (!seasonFinishesMap[entry.driver_id]) seasonFinishesMap[entry.driver_id] = [];
+            seasonFinishesMap[entry.driver_id].push(idx + 1);
+        });
     });
 
-    function cardBadges(d, totalWins, totalRaces) {
+    function cardBadges(d, totalWins, totalRaces, seasonFinishes) {
         const cats = window.BADGE_CATEGORIES;
         if (!cats) return '';
         const manualBadges = Array.isArray(d.manual_badges) ? d.manual_badges : [];
-        const stats = { wins: totalWins, starts: totalRaces, willingHost: !!d.willing_host, manualBadges };
+        const stats = { wins: totalWins, starts: totalRaces, willingHost: !!d.willing_host, manualBadges, seasonFinishes: seasonFinishes || [] };
         const earned = [];
-        // Victory — top badge only
+        // Victories — highest earned badge
         const vicCat = cats.find(c => c.key === 'victories');
         if (vicCat) {
             const top = vicCat.badges.find(b => manualBadges.includes(b.key) || totalWins >= b.threshold);
             if (top) earned.push(top);
         }
-        // Career — top badge only
+        // Titles — highest earned badge
+        const titCat = cats.find(c => c.key === 'titles');
+        if (titCat) {
+            const top = titCat.badges.find(b => manualBadges.includes(b.key) || (typeof b.evalFn === 'function' && b.evalFn(stats)));
+            if (top) earned.push(top);
+        }
+        // Career — highest earned badge
         const carCat = cats.find(c => c.key === 'career');
         if (carCat) {
             const top = carCat.badges.find(b => manualBadges.includes(b.key) || totalRaces >= b.threshold);
@@ -744,20 +767,22 @@ async function showListing() {
         const pts    = pointsMap[d.id] || 0;
         const eloVal = ratingMap[d.id] != null ? Math.round(ratingMap[d.id]) : 0;
         const mfrColor = d.manufacturers?.brand_color || '';
-        const badgeRow = cardBadges(d, winsMap[d.id] || 0, racesMap[d.id] || 0);
+        const badgeRow = cardBadges(d, winsMap[d.id] || 0, racesMap[d.id] || 0, seasonFinishesMap[d.id]);
         return `
         <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-top-color:${esc(mfrColor)}` : ''}">
             <div class="driver-card-photo">${avatarHTML(d.photo_url, d.display_name, 'card')}</div>
             <div class="driver-card-body">
                 ${d.career_number ? `<div class="driver-card-ghost">${d.career_number}</div>` : ''}
-                ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
-                <div class="driver-card-name">${esc(d.display_name)}</div>
-                <div class="driver-card-meta">
-                    ${d.nationality ? flag(d.nationality) + ' ' + esc(d.nationality) : ''}
-                    ${d.teams?.name ? `<br>${esc(d.teams.name)}` : ''}
+                <div class="driver-card-body-main">
+                    ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
+                    <div class="driver-card-name">${esc(d.display_name)}</div>
+                    <div class="driver-card-meta">
+                        ${d.nationality ? flag(d.nationality) + ' ' + esc(d.nationality) : ''}
+                        ${d.teams?.name ? `<br>${esc(d.teams.name)}` : ''}
+                    </div>
+                    ${eloRow}
+                    ${tier ? `<div class="driver-card-tier">${tier}</div>` : ''}
                 </div>
-                ${eloRow}
-                ${tier ? `<div class="driver-card-tier">${tier}</div>` : ''}
                 ${badgeRow}
             </div>
         </div>`;
