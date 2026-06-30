@@ -161,10 +161,12 @@
             overflow: hidden;
             text-decoration: none;
             color: var(--text);
-            transition: border-color 0.2s, transform 0.15s;
+            transition: border-color 0.2s, transform 0.08s, box-shadow 0.2s;
             cursor: pointer;
+            transform-style: preserve-3d;
+            will-change: transform;
         }
-        .driver-card:hover { border-color: rgba(255,209,102,0.35); transform: translateY(-2px); }
+        .driver-card:hover { border-color: rgba(255,209,102,0.35); }
         .driver-card-photo {
             width: 100%;
             aspect-ratio: 1;
@@ -729,6 +731,34 @@ async function showListing() {
             ` : `<div class="empty-msg">No drivers registered yet.</div>`}
         </div>`;
 }
+
+// 3-D tilt on driver cards — event delegation so it works after sort re-renders
+(function () {
+    let active = null;
+    document.addEventListener('mousemove', e => {
+        const card = e.target.closest('.driver-card');
+        if (!card) return;
+        if (active && active !== card) resetCard(active);
+        active = card;
+        const rect = card.getBoundingClientRect();
+        const cx = rect.left + rect.width  / 2;
+        const cy = rect.top  + rect.height / 2;
+        const dx = (e.clientX - cx) / (rect.width  / 2);
+        const dy = (e.clientY - cy) / (rect.height / 2);
+        const rotX = -dy * 8;
+        const rotY =  dx * 8;
+        card.style.transform = `perspective(700px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(6px)`;
+        card.style.boxShadow = `${-rotY * 1.5}px ${rotX * 1.5}px 28px rgba(0,0,0,0.45)`;
+    });
+    document.addEventListener('mouseleave', e => { if (active) { resetCard(active); active = null; } }, true);
+    document.addEventListener('mouseout', e => {
+        if (!e.relatedTarget?.closest('.driver-card')) { if (active) { resetCard(active); active = null; } }
+    });
+    function resetCard(card) {
+        card.style.transform = '';
+        card.style.boxShadow = '';
+    }
+})();
 
 // Generic card filter — reads data-search attributes and toggles
 // display:none on non-matching cards. Updates the count line + empty
