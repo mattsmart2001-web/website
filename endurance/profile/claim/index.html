@@ -186,6 +186,7 @@ const loadingEl = document.getElementById('loading-state');
 
 let mode = 'signup'; // or 'signin'
 let driverName = '';
+let prefillEmail = '';
 
 function showContent(html) {
     loadingEl.style.display = 'none';
@@ -211,7 +212,7 @@ function renderForm() {
         <div id="form-error"></div>
         <form id="claim-form" onsubmit="submitClaim(event)">
             <label>Email</label>
-            <input type="email" name="email" placeholder="your@email.com" required autocomplete="email">
+            <input type="email" name="email" placeholder="your@email.com" required autocomplete="email" value="${prefillEmail}">
             <label>Password</label>
             <input type="password" name="password" placeholder="••••••••" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6">
             <button type="submit" class="btn" id="submit-btn">${isSignup ? 'Create Account & Claim' : 'Sign In & Claim'}</button>
@@ -238,8 +239,20 @@ async function submitClaim(e) {
         // Sign up or sign in
         let authError;
         if (mode === 'signup') {
-            const { error } = await sb.auth.signUp({ email, password });
+            const { data: signUpData, error } = await sb.auth.signUp({ email, password });
             authError = error;
+            if (!error && !signUpData?.session) {
+                // Email confirmation is enabled — not authenticated yet.
+                // Ask the driver to confirm their email then come back to sign in.
+                prefillEmail = email;
+                errEl.innerHTML = `<div class="alert alert-success">
+                    Account created! Check your email for a confirmation link, then return to this page and <strong>Sign in</strong> to complete claiming your profile.
+                </div>`;
+                btn.disabled = false;
+                btn.textContent = 'Create Account & Claim';
+                setMode('signin');
+                return;
+            }
         } else {
             const { error } = await sb.auth.signInWithPassword({ email, password });
             authError = error;
