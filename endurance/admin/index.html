@@ -1715,7 +1715,7 @@ async function renderDrivers() {
                 <td class="td-muted">${esc(d.manufacturers?.name) || '—'}</td>
                 <td>${d.user_id ? '<span class="badge badge-green">Claimed</span>' : '<span class="badge badge-muted">Unclaimed</span>'}</td>
                 <td><div class="row-actions">
-                    ${!d.user_id ? `<button class="btn-icon" onclick="generateClaimLink('${d.id}','${esc(d.display_name)}')">Claim Link</button>` : ''}
+                    ${!d.user_id ? `<button class="btn-icon" onclick="generateClaimLink('${d.id}','${esc(d.display_name)}')">Claim Link</button>` : `<button class="btn-icon" onclick="unlinkDriver('${d.id}','${esc(d.display_name)}')">Unlink</button>`}
                     <button class="btn-icon" onclick="openDirectMessageModal('${d.id}','${esc(d.display_name)}')">Message</button>
                     <button class="btn-icon" onclick="editDriver('${d.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteDriver('${d.id}','${esc(d.display_name)}')">Delete</button>
@@ -2068,6 +2068,17 @@ async function generateClaimLink(driverId, driverName) {
 function copyClaimUrl() {
     const input = document.getElementById('claim-url');
     navigator.clipboard.writeText(input.value).then(() => toast('Link copied to clipboard.', 'success'));
+}
+
+async function unlinkDriver(driverId, driverName) {
+    if (!confirm(`Unlink "${driverName}" from their account?\n\nThis removes their portal access and clears their claim token. Their driver record and race history are untouched. You can then issue a fresh claim link.`)) return;
+
+    const { data, error } = await sb.rpc('admin_unlink_driver', { p_driver_id: driverId });
+    if (error || data?.error) { toast(error?.message || data.error, 'error'); return; }
+
+    toast(`${driverName} unlinked. Generating a fresh claim link…`, 'success');
+    await renderDrivers();
+    await generateClaimLink(driverId, driverName);
 }
 
 
