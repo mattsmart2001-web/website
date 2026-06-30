@@ -6298,6 +6298,24 @@ function renderGuide() {
                     'Copy the link and send it to the driver.',
                 ])}
                 ${warn('Claim links expire after 24 hours and are single-use. If a driver misses the window, generate a new one from their driver record.')}
+                ${h('Unlinking a Driver (Reset Claim)')}
+                <p>Use this when a driver needs to re-claim their profile , for example if they lost access to their email, changed accounts, or their claim link was never used after being sent. This keeps their driver record and all race history intact.</p>
+                ${ol([
+                    'Find the driver in the <strong>Drivers</strong> list.',
+                    'Click <strong>Unlink</strong> (only visible for claimed drivers).',
+                    'Confirm the prompt. Their portal access is revoked and the old claim token is cleared.',
+                    'A fresh claim link is generated automatically , copy it and send it to the driver.',
+                ])}
+                ${tip('Unlink is the right tool for almost every reset scenario. It avoids touching Supabase Auth entirely.')}
+                ${h('Permanently Removing a Driver')}
+                <p>Only do this if the driver truly needs to be deleted (e.g. a test account or duplicate). If they have race history, use <strong>Unlink</strong> instead to preserve their results.</p>
+                ${ol([
+                    'Change their <strong>Current Team</strong> to <em>Free Agent</em> and Save.',
+                    'Go to <strong>Supabase Dashboard &rarr; Authentication &rarr; Users</strong> and delete their email address. This frees the email for future re-registration.',
+                    'Delete the driver from the <strong>Drivers</strong> list. This cascade-deletes their claim token.',
+                    'Delete the original <strong>Driver Application</strong> if one exists.',
+                ])}
+                ${warn('Step 2 (Supabase Auth deletion) must happen before or alongside step 3. If you skip it, the driver\'s email remains locked in the system and cannot be used to create a new account.')}
             `)}
 
             ${s('6. Seasons', `
@@ -6476,7 +6494,7 @@ function renderGuide() {
                 ${ul([
                     'Deleting a <strong>Season</strong> deletes all its Events, Entries, Qualifying, Results, Penalties, and Steward Decisions.',
                     'Deleting an <strong>Event</strong> deletes all its Entries, Qualifying, Results, Penalties, and Steward Decisions.',
-                    'Deleting a <strong>Driver</strong> removes them from all entry and result records.',
+                    'Deleting a <strong>Driver</strong> removes them from all entry and result records and deletes their claim token. If you want to reset their access without losing history, use <strong>Unlink</strong> instead (see section 5).',
                 ])}
                 ${h('Manufacturer season-lock')}
                 <p>A team\'s manufacturer is locked when they are registered to the season. It cannot be changed while entries exist. Remove and re-register the team (before entries are made) to fix an incorrect manufacturer.</p>
