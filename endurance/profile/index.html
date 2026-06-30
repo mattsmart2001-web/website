@@ -391,6 +391,9 @@
             <span id="team-leader-pill" class="pill pill-gold" style="display:none;margin-left:0.5rem">★ Team Leader</span>
         </div>
         <div id="team-summary"></div>
+        <div id="team-leave-wrap" style="display:none;margin-top:1.1rem;padding-top:1.1rem;border-top:1px solid var(--border)">
+            <button class="btn-small danger" onclick="leaveTeam()">Leave Team</button>
+        </div>
         <div id="team-edit" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)">
             <div style="font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.85rem">Team Settings</div>
             <div class="form-grid">
@@ -1088,7 +1091,34 @@ async function loadTeamCard(driver) {
         document.getElementById('team-founded-on').value = team.founded_on ? team.founded_on.slice(0, 10) : '';
     }
 
+    const { data: windowOpen } = await sb.rpc('is_team_window_open');
+    if (windowOpen !== false) {
+        document.getElementById('team-leave-wrap').style.display = '';
+    }
+
     document.getElementById('card-team').style.display = '';
+}
+
+async function leaveTeam() {
+    const isLeader = !!document.getElementById('team-leader-pill')?.style.display !== false
+        && document.getElementById('team-leader-pill')?.style.display !== 'none';
+    const msg = isLeader
+        ? 'Leave your team? As team leader, the next driver on the roster will be promoted automatically.'
+        : 'Leave your team? You will become a free agent.';
+    if (!confirm(msg)) return;
+
+    const { data, error } = await sb.rpc('leave_team');
+    if (error || data?.error) { toast(error?.message || data.error, 'error'); return; }
+
+    toast('You have left the team.', 'success');
+    // Reload both sections so team card hides and find-a-team shows
+    const d = await sb.from('drivers').select('*').eq('user_id', (await sb.auth.getUser()).data.user?.id).single();
+    if (d.data) {
+        _currentDriver = d.data;
+        document.getElementById('card-team').style.display = 'none';
+        document.getElementById('team-leave-wrap').style.display = 'none';
+        await loadTeamingSections(d.data);
+    }
 }
 
 async function saveTeamSettings() {
