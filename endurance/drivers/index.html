@@ -263,8 +263,8 @@
         .driver-card-tier { margin-top: 0.5rem; }
         .driver-card-tier .elo-tier { margin-left: 0 !important; }
         .driver-card-badges {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 0.28rem;
             flex-shrink: 0;
             padding-top: 0.1rem;
@@ -737,32 +737,45 @@ async function showListing() {
         if (!cats) return '';
         const manualBadges = Array.isArray(d.manual_badges) ? d.manual_badges : [];
         const stats = { wins: totalWins, starts: totalRaces, willingHost: !!d.willing_host, manualBadges, seasonFinishes: seasonFinishes || [] };
+
+        const seen = new Set();
         const earned = [];
-        // Victories — highest earned badge
-        const vicCat = cats.find(c => c.key === 'victories');
-        if (vicCat) {
-            const top = vicCat.badges.find(b => manualBadges.includes(b.key) || totalWins >= b.threshold);
-            if (top) earned.push(top);
+        function add(b) { if (b && !seen.has(b.key)) { seen.add(b.key); earned.push(b); } }
+
+        function topEarned(catKey) {
+            const cat = cats.find(c => c.key === catKey);
+            if (!cat) return null;
+            return cat.badges.find(b => {
+                if (manualBadges.includes(b.key)) return true;
+                if (typeof b.evalFn === 'function') { try { return b.evalFn(stats); } catch (_) { return false; } }
+                if (cat.type === 'threshold') return (Number(stats[cat.stat]) || 0) >= b.threshold;
+                return false;
+            }) || null;
         }
-        // Titles — highest earned badge
-        const titCat = cats.find(c => c.key === 'titles');
-        if (titCat) {
-            const top = titCat.badges.find(b => manualBadges.includes(b.key) || (typeof b.evalFn === 'function' && b.evalFn(stats)));
-            if (top) earned.push(top);
-        }
-        // Career — highest earned badge
-        const carCat = cats.find(c => c.key === 'career');
-        if (carCat) {
-            const top = carCat.badges.find(b => manualBadges.includes(b.key) || totalRaces >= b.threshold);
-            if (top) earned.push(top);
-        }
-        // Community — lobby host
+
+        // First picks: best badge from each competitive category
+        add(topEarned('victories'));
+        add(topEarned('titles'));
+        add(topEarned('career'));
         if (d.willing_host) {
             const comCat = cats.find(c => c.key === 'community');
-            if (comCat) earned.push(comCat.badges[0]);
+            if (comCat) add(comCat.badges[0]);
         }
+
+        // Fill remaining slots from manually-granted badges across all categories
+        const fillOrder = ['victories', 'titles', 'career', 'secrets', 'circuits', 'community'];
+        for (const catKey of fillOrder) {
+            if (earned.length >= 8) break;
+            const cat = cats.find(c => c.key === catKey);
+            if (!cat) continue;
+            for (const b of cat.badges) {
+                if (earned.length >= 8) break;
+                if (!seen.has(b.key) && manualBadges.includes(b.key)) add(b);
+            }
+        }
+
         if (!earned.length) return '';
-        const chips = earned.slice(0, 4).map(b =>
+        const chips = earned.map(b =>
             `<span class="driver-card-badge" title="${b.name} — ${b.blurb}">${b.icon}</span>`
         ).join('');
         return `<div class="driver-card-badges">${chips}</div>`;
