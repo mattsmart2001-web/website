@@ -216,12 +216,32 @@ function renderForm() {
             <label>Password</label>
             <input type="password" name="password" placeholder="••••••••" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6">
             <button type="submit" class="btn" id="submit-btn">${isSignup ? 'Create Account & Claim' : 'Sign In & Claim'}</button>
-        </form>`;
+        </form>
+        ${!isSignup ? `<p style="text-align:center;margin-top:0.85rem;font-size:0.78rem">
+            <a href="#" onclick="forgotPassword(event)" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Forgot password?</a>
+        </p>` : ''}`;
 }
 
 function setMode(m) {
     mode = m;
     renderForm();
+}
+
+async function forgotPassword(e) {
+    e.preventDefault();
+    const email = document.querySelector('#claim-form input[name="email"]')?.value.trim();
+    if (!email) {
+        document.getElementById('form-error').innerHTML = `<div class="alert alert-error">Enter your email address above first.</div>`;
+        return;
+    }
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: `${location.origin}/endurance/profile/`,
+    });
+    if (error) {
+        document.getElementById('form-error').innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+        return;
+    }
+    document.getElementById('form-error').innerHTML = `<div class="alert alert-success">Password reset email sent to <strong>${email}</strong>. Check your inbox.</div>`;
 }
 
 async function submitClaim(e) {
