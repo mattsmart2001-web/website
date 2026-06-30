@@ -7093,7 +7093,7 @@ async function renderHealthCheck() {
 
     // Fetch solo drivers (claimed, no team)
     const { data: soloDrivers, error: e1 } = await sb.from('drivers')
-        .select('id, display_name, psn_id, nationality, manufacturer_id, manufacturers(name, slug), user_id')
+        .select('id, display_name, psn_id, nationality, manufacturer_id, manufacturers(name), user_id')
         .is('current_team_id', null)
         .not('user_id', 'is', null)
         .order('display_name');
@@ -7104,7 +7104,7 @@ async function renderHealthCheck() {
         .not('current_team_id', 'is', null);
 
     const { data: teams, error: e3 } = await sb.from('teams')
-        .select('id, name, slug, manufacturer_id, max_drivers, manufacturers(name, slug)')
+        .select('id, name, slug, manufacturer_id, max_drivers, manufacturers(name)')
         .order('name');
 
     // Fetch pending applications so we can show in-flight requests
@@ -7113,7 +7113,9 @@ async function renderHealthCheck() {
         .eq('status', 'pending');
 
     if (e1 || e2 || e3 || e4) {
-        content.innerHTML = `<div class="empty-state">Failed to load health check data.</div>`;
+        const err = e1 || e2 || e3 || e4;
+        content.innerHTML = `<div class="empty-state">Failed to load health check data: ${esc(err.message)}</div>`;
+        console.error('Health check errors:', { e1, e2, e3, e4 });
         return;
     }
 
