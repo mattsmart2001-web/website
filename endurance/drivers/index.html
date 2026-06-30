@@ -229,6 +229,28 @@
         }
         .driver-card-tier { margin-top: 0.5rem; }
         .driver-card-tier .elo-tier { margin-left: 0 !important; }
+        .driver-card-badges {
+            display: flex;
+            gap: 0.3rem;
+            margin-top: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .driver-card-badge {
+            width: 26px; height: 26px;
+            font-size: 0.9rem;
+            display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.12), rgba(0,0,0,0.45) 75%);
+            border: 1px solid rgba(255,209,102,0.3);
+            border-radius: 50%;
+            cursor: default;
+            transition: transform 0.15s, box-shadow 0.15s;
+            font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+            position: relative; z-index: 1;
+        }
+        .driver-card-badge:hover {
+            transform: scale(1.25);
+            box-shadow: 0 0 10px rgba(255,209,102,0.35);
+        }
 
         /* ===== PROFILE ===== */
         .profile-header {
@@ -631,11 +653,11 @@ async function showListing() {
     document.title = 'Drivers — GTEC';
     const [{ data, error }, { data: ratings }, { data: activeSeasons }, { data: standings }] = await Promise.all([
         sb.from('drivers')
-            .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url,car_name)')
+            .select('id, display_name, slug, nationality, career_number, photo_url, manual_badges, willing_host, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url,car_name)')
             .order('display_name'),
         sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
         sb.from('seasons').select('id').eq('is_active', true).limit(1),
-        sb.from('driver_standings').select('driver_id, season_id, points'),
+        sb.from('driver_standings').select('driver_id, season_id, points, wins, races'),
     ]);
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
@@ -653,9 +675,43 @@ async function showListing() {
     });
     const activeSznId = (activeSeasons || [])[0]?.id;
     const pointsMap = {};
+    const winsMap   = {};
+    const racesMap  = {};
     (standings || []).forEach(s => {
         if (!activeSznId || s.season_id === activeSznId) pointsMap[s.driver_id] = Number(s.points || 0);
+        winsMap[s.driver_id]  = (winsMap[s.driver_id]  || 0) + Number(s.wins  || 0);
+        racesMap[s.driver_id] = (racesMap[s.driver_id] || 0) + Number(s.races || 0);
     });
+
+    function cardBadges(d, totalWins, totalRaces) {
+        const cats = window.BADGE_CATEGORIES;
+        if (!cats) return '';
+        const manualBadges = Array.isArray(d.manual_badges) ? d.manual_badges : [];
+        const stats = { wins: totalWins, starts: totalRaces, willingHost: !!d.willing_host, manualBadges };
+        const earned = [];
+        // Victory — top badge only
+        const vicCat = cats.find(c => c.key === 'victories');
+        if (vicCat) {
+            const top = vicCat.badges.find(b => manualBadges.includes(b.key) || totalWins >= b.threshold);
+            if (top) earned.push(top);
+        }
+        // Career — top badge only
+        const carCat = cats.find(c => c.key === 'career');
+        if (carCat) {
+            const top = carCat.badges.find(b => manualBadges.includes(b.key) || totalRaces >= b.threshold);
+            if (top) earned.push(top);
+        }
+        // Community — lobby host
+        if (d.willing_host) {
+            const comCat = cats.find(c => c.key === 'community');
+            if (comCat) earned.push(comCat.badges[0]);
+        }
+        if (!earned.length) return '';
+        const chips = earned.slice(0, 4).map(b =>
+            `<span class="driver-card-badge" title="${b.name} — ${b.blurb}">${b.icon}</span>`
+        ).join('');
+        return `<div class="driver-card-badges">${chips}</div>`;
+    }
 
     const cards = (data || []).map(d => {
         let elo = null;
@@ -688,6 +744,7 @@ async function showListing() {
         const pts    = pointsMap[d.id] || 0;
         const eloVal = ratingMap[d.id] != null ? Math.round(ratingMap[d.id]) : 0;
         const mfrColor = d.manufacturers?.brand_color || '';
+        const badgeRow = cardBadges(d, winsMap[d.id] || 0, racesMap[d.id] || 0);
         return `
         <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-top-color:${esc(mfrColor)}` : ''}">
             <div class="driver-card-photo">${avatarHTML(d.photo_url, d.display_name, 'card')}</div>
@@ -701,6 +758,7 @@ async function showListing() {
                 </div>
                 ${eloRow}
                 ${tier ? `<div class="driver-card-tier">${tier}</div>` : ''}
+                ${badgeRow}
             </div>
         </div>`;
     }).join('');
