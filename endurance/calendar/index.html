@@ -433,8 +433,21 @@ async function load() {
     document.getElementById('season-title').textContent = season.name;
 
     const today = new Date(); today.setHours(0,0,0,0);
-    const startDt = season.starts_on ? new Date(season.starts_on) : null;
-    const endDt   = season.ends_on   ? new Date(season.ends_on)   : null;
+
+    // Prefer first/last event dates over the manually entered season fields
+    // so the display stays accurate without needing to update the season record.
+    const { data: events, error } = await sb.from('events')
+        .select('*')
+        .eq('season_id', season.id)
+        .order('round');
+
+    if (error || !events?.length) {
+        list.innerHTML = `<div class="state-msg"><h3>No Events Yet</h3><p>Events will appear here once they're scheduled.</p></div>`;
+        return;
+    }
+
+    const startDt = events[0].starts_at ? new Date(events[0].starts_at) : (season.starts_on ? new Date(season.starts_on) : null);
+    const endDt   = events[events.length - 1].starts_at ? new Date(events[events.length - 1].starts_at) : (season.ends_on ? new Date(season.ends_on) : null);
     const upcoming = startDt && startDt > today;
 
     const range = startDt && endDt
@@ -454,16 +467,6 @@ async function load() {
         descEl.style.cssText = 'color:var(--muted);font-size:0.9rem;line-height:1.6;margin-top:0.85rem;max-width:680px';
         descEl.textContent = season.description;
         subEl.insertAdjacentElement('afterend', descEl);
-    }
-
-    const { data: events, error } = await sb.from('events')
-        .select('*')
-        .eq('season_id', season.id)
-        .order('round');
-
-    if (error || !events?.length) {
-        list.innerHTML = `<div class="state-msg"><h3>No Events Yet</h3><p>Events will appear here once they're scheduled.</p></div>`;
-        return;
     }
 
     const statusLabel = { scheduled: 'Scheduled', in_progress: 'Live', completed: 'Completed', cancelled: 'Cancelled' };
