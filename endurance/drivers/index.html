@@ -175,8 +175,40 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
         }
         .driver-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .driver-card-pts {
+            position: absolute;
+            bottom: 0.5rem;
+            right: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.05rem;
+            padding: 0.25rem 0.5rem 0.2rem;
+            background: rgba(5,6,8,0.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,209,102,0.28);
+            border-radius: 6px;
+            line-height: 1;
+        }
+        .driver-card-pts-value {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.15rem;
+            letter-spacing: 0.03em;
+            color: var(--gold);
+            line-height: 1;
+        }
+        .driver-card-pts-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.4rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
         .driver-initials {
             font-family: 'Anton', sans-serif;
             font-size: 2.5rem;
@@ -770,7 +802,13 @@ async function showListing() {
         const badgeRow = cardBadges(d, winsMap[d.id] || 0, racesMap[d.id] || 0, seasonFinishesMap[d.id]);
         return `
         <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-top-color:${esc(mfrColor)}` : ''}">
-            <div class="driver-card-photo">${avatarHTML(d.photo_url, d.display_name, 'card')}</div>
+            <div class="driver-card-photo">
+                ${avatarHTML(d.photo_url, d.display_name, 'card')}
+                <div class="driver-card-pts">
+                    <span class="driver-card-pts-value">${pts}</span>
+                    <span class="driver-card-pts-label">PTS</span>
+                </div>
+            </div>
             <div class="driver-card-body">
                 ${d.career_number ? `<div class="driver-card-ghost">${d.career_number}</div>` : ''}
                 <div class="driver-card-body-main">
