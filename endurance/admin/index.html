@@ -773,6 +773,10 @@
             Applications
             <span class="nav-badge" id="apps-badge" style="display:none">0</span>
         </button>
+        <button class="nav-link" data-section="healthcheck">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Health Check
+        </button>
         <button class="nav-link" data-section="messages">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
             Messages
@@ -1014,6 +1018,7 @@ async function navigate(section, pushHash = true) {
         events: 'Events',
         applications: 'Applications',
         messages: 'Driver Messages',
+        healthcheck: 'Pre-Season Health Check',
         news: 'News',
         media: 'Media',
         pages: 'Rules & Info',
@@ -1024,7 +1029,7 @@ async function navigate(section, pushHash = true) {
     document.getElementById('page-title').textContent = titles[section] || section;
 
     const addBtn = document.getElementById('btn-add');
-    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins' || section === 'messages' || section === 'activity' || section === 'guide') {
+    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins' || section === 'messages' || section === 'activity' || section === 'guide' || section === 'healthcheck') {
         addBtn.style.display = 'none';
     } else {
         addBtn.style.display = '';
@@ -1049,6 +1054,7 @@ async function navigate(section, pushHash = true) {
         case 'pages':        await renderPages(); break;
         case 'admins':       await renderAdmins(); break;
         case 'messages':     await renderMessages(); break;
+        case 'healthcheck':  await renderHealthCheck(); break;
         case 'activity':     await renderActivityLog(); break;
         case 'guide':        renderGuide(); break;
     }
@@ -7076,6 +7082,162 @@ function thSort(th, tableId) {
         return mult * at.localeCompare(bt, undefined, { sensitivity: 'base' });
     });
     rows.forEach(r => tbody.appendChild(r));
+}
+
+
+// ============================================================
+// 11e. Pre-Season Health Check
+// ============================================================
+async function renderHealthCheck() {
+    const content = document.getElementById('content');
+
+    // Fetch solo drivers (claimed, no team)
+    const { data: soloDrivers, error: e1 } = await sb.from('drivers')
+        .select('id, display_name, psn_id, nationality, manufacturer_id, manufacturers(name, slug), user_id')
+        .is('current_team_id', null)
+        .not('user_id', 'is', null)
+        .order('display_name');
+
+    // Fetch all teams with their driver count
+    const { data: allDriversOnTeams, error: e2 } = await sb.from('drivers')
+        .select('id, current_team_id')
+        .not('current_team_id', 'is', null);
+
+    const { data: teams, error: e3 } = await sb.from('teams')
+        .select('id, name, slug, manufacturer_id, max_drivers, manufacturers(name, slug)')
+        .order('name');
+
+    // Fetch pending applications so we can show in-flight requests
+    const { data: pending, error: e4 } = await sb.from('team_join_requests')
+        .select('driver_id, team_id')
+        .eq('status', 'pending');
+
+    if (e1 || e2 || e3 || e4) {
+        content.innerHTML = `<div class="empty-state">Failed to load health check data.</div>`;
+        return;
+    }
+
+    const driverCountByTeam = new Map();
+    (allDriversOnTeams || []).forEach(d => {
+        driverCountByTeam.set(d.current_team_id, (driverCountByTeam.get(d.current_team_id) || 0) + 1);
+    });
+
+    const pendingDriversForTeam = new Map();
+    const pendingTeamsForDriver = new Map();
+    (pending || []).forEach(p => {
+        const td = pendingDriversForTeam.get(p.team_id) || new Set();
+        td.add(p.driver_id);
+        pendingDriversForTeam.set(p.team_id, td);
+        const dt = pendingTeamsForDriver.get(p.driver_id) || new Set();
+        dt.add(p.team_id);
+        pendingTeamsForDriver.set(p.driver_id, dt);
+    });
+
+    const openTeams = (teams || []).filter(t => {
+        const filled = driverCountByTeam.get(t.id) || 0;
+        return filled < (t.max_drivers || 2);
+    });
+
+    // Collect all manufacturer ids present in both lists for filter pills
+    const mfrMap = new Map(); // id -> name
+    (soloDrivers || []).forEach(d => { if (d.manufacturer_id && d.manufacturers) mfrMap.set(d.manufacturer_id, d.manufacturers.name); });
+    openTeams.forEach(t => { if (t.manufacturer_id && t.manufacturers) mfrMap.set(t.manufacturer_id, t.manufacturers.name); });
+    const mfrList = Array.from(mfrMap.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+
+    const soloCount = (soloDrivers || []).length;
+    const openCount = openTeams.length;
+    const matchCount = (soloDrivers || []).filter(d => d.manufacturer_id && openTeams.some(t => t.manufacturer_id === d.manufacturer_id)).length;
+
+    const soloRows = !soloCount
+        ? `<div class="empty-state" style="padding:2rem 1rem">All drivers are in teams.</div>`
+        : (soloDrivers || []).map(d => {
+            const mfr = d.manufacturers?.name || '—';
+            const mfrId = d.manufacturer_id || '';
+            const applied = pendingTeamsForDriver.get(d.id)?.size || 0;
+            return `
+            <div class="hc-driver-card" data-mfr="${esc(mfrId)}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+                    <div>
+                        <div style="font-weight:600">${esc(d.display_name)}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${esc(d.psn_id) || '—'} &middot; ${esc(mfr)}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
+                        ${applied ? `<span class="badge badge-gold" title="${applied} pending application${applied > 1 ? 's' : ''}">${applied} app${applied > 1 ? 's' : ''}</span>` : ''}
+                        <button class="btn-icon" onclick="openDirectMessageModal('${d.id}','${esc(d.display_name)}')">Message</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+    const teamRows = !openCount
+        ? `<div class="empty-state" style="padding:2rem 1rem">All teams are full.</div>`
+        : openTeams.map(t => {
+            const filled = driverCountByTeam.get(t.id) || 0;
+            const max = t.max_drivers || 2;
+            const open = max - filled;
+            const mfr = t.manufacturers?.name || '—';
+            const mfrId = t.manufacturer_id || '';
+            const inbound = pendingDriversForTeam.get(t.id)?.size || 0;
+            return `
+            <div class="hc-team-card" data-mfr="${esc(mfrId)}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+                    <div>
+                        <div style="font-weight:600">${esc(t.name)}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${esc(mfr)} &middot; ${filled}/${max} driver${max > 1 ? 's' : ''}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
+                        ${inbound ? `<span class="badge badge-green" title="${inbound} pending application${inbound > 1 ? 's' : ''}">${inbound} pending</span>` : ''}
+                        <span class="badge badge-muted">${open} seat${open > 1 ? 's' : ''} open</span>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+    const pillsHtml = mfrList.length > 1 ? `
+        <div id="hc-pills" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem">
+            <button class="btn btn-ghost hc-pill active" data-mfr="" onclick="hcFilter('')">All</button>
+            ${mfrList.map(([id, name]) => `<button class="btn btn-ghost hc-pill" data-mfr="${esc(id)}" onclick="hcFilter('${esc(id)}')">${esc(name)}</button>`).join('')}
+        </div>` : '';
+
+    content.innerHTML = `
+        <div style="max-width:1100px">
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
+                <div class="hc-stat"><span class="hc-stat-num">${soloCount}</span><span class="hc-stat-label">Solo Drivers</span></div>
+                <div class="hc-stat"><span class="hc-stat-num">${openCount}</span><span class="hc-stat-label">Teams with Open Seats</span></div>
+                <div class="hc-stat hc-stat-highlight"><span class="hc-stat-num">${matchCount}</span><span class="hc-stat-label">Manufacturer Matches</span></div>
+            </div>
+            ${pillsHtml}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
+                <div>
+                    <h3 style="margin:0 0 0.75rem;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Solo Drivers (${soloCount})</h3>
+                    <div id="hc-solo-list" style="display:flex;flex-direction:column;gap:0.5rem">${soloRows}</div>
+                </div>
+                <div>
+                    <h3 style="margin:0 0 0.75rem;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Teams with Open Seats (${openCount})</h3>
+                    <div id="hc-team-list" style="display:flex;flex-direction:column;gap:0.5rem">${teamRows}</div>
+                </div>
+            </div>
+        </div>
+        <style>
+            .hc-stat { display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem 1.5rem;min-width:130px;text-align:center }
+            .hc-stat-num { font-size:2rem;font-weight:700;line-height:1 }
+            .hc-stat-label { font-size:0.78rem;color:var(--muted);margin-top:0.25rem }
+            .hc-stat-highlight { border-color:var(--gold);color:var(--gold) }
+            .hc-stat-highlight .hc-stat-label { color:var(--gold);opacity:0.75 }
+            .hc-driver-card, .hc-team-card { background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem;transition:border-color 0.15s }
+            .hc-driver-card:hover { border-color:var(--accent) }
+            .hc-team-card:hover { border-color:var(--accent) }
+            .hc-pill.active { background:var(--accent);color:#fff;border-color:var(--accent) }
+            .hc-hidden { display:none !important }
+            @media(max-width:680px) { #hc-cols { grid-template-columns:1fr !important } }
+        </style>`;
+}
+
+function hcFilter(mfrId) {
+    document.querySelectorAll('.hc-pill').forEach(p => p.classList.toggle('active', p.dataset.mfr === mfrId));
+    document.querySelectorAll('.hc-driver-card, .hc-team-card').forEach(card => {
+        card.classList.toggle('hc-hidden', mfrId !== '' && card.dataset.mfr !== mfrId);
+    });
 }
 
 
