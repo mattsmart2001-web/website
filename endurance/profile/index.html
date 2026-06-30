@@ -1016,6 +1016,7 @@ async function init() {
     loadBadges(driver.id);
     loadTeamingSections(driver);
     loadTeamCard(driver);
+    setupRealtimeSubscriptions(driver);
 }
 
 let _editableTeam = null;
@@ -1454,6 +1455,48 @@ async function submitDriverReply(messageId, formEl) {
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
     toast('Reply sent.', 'success');
     await loadInbox(_currentDriver.id);
+}
+
+let _realtimeChannels = [];
+function setupRealtimeSubscriptions(driver) {
+    _realtimeChannels.forEach(ch => sb.removeChannel(ch));
+    _realtimeChannels = [];
+
+    function debounced(fn, ms = 300) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
+
+    const reloadInbox    = debounced(() => loadInbox(driver.id));
+    const reloadTeaming  = debounced(() => loadTeamingSections(driver));
+
+    // New/updated messages or admin thread replies (parent row updated by RPC)
+    _realtimeChannels.push(
+        sb.channel('inbox:' + driver.id)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_contact_messages', filter: `driver_id=eq.${driver.id}` }, reloadInbox)
+            .subscribe()
+    );
+
+    // Outgoing application status changes
+    _realtimeChannels.push(
+        sb.channel('my-reqs:' + driver.id)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'team_join_requests', filter: `driver_id=eq.${driver.id}` }, reloadTeaming)
+            .subscribe()
+    );
+
+    // Driver record: catches current_team_id change when approval fires
+    _realtimeChannels.push(
+        sb.channel('driver:' + driver.id)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'drivers', filter: `id=eq.${driver.id}` }, debounced(() => loadTeamCard(driver)))
+            .subscribe()
+    );
+
+    // If they lead a team, subscribe to incoming requests for that team
+    sb.from('teams').select('id').eq('leader_driver_id', driver.id).maybeSingle().then(({ data: team }) => {
+        if (!team) return;
+        _realtimeChannels.push(
+            sb.channel('team-reqs:' + team.id)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'team_join_requests', filter: `team_id=eq.${team.id}` }, reloadTeaming)
+                .subscribe()
+        );
+    });
 }
 
 init();

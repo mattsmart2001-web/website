@@ -917,7 +917,23 @@ async function initAuth() {
     await refreshMsgsBadge();
     setInterval(refreshAppsBadge, 60000);
     setInterval(refreshMsgsBadge, 60000);
+    setupAdminRealtime();
     await navigate('dashboard');
+}
+
+function setupAdminRealtime() {
+    let t;
+    function debouncedRefresh() {
+        clearTimeout(t);
+        t = setTimeout(async () => {
+            await refreshMsgsBadge();
+            if (currentSection === 'messages') await renderMessages();
+        }, 300);
+    }
+    sb.channel('admin:messages')
+        .on('postgres_changes', { event: '*',      schema: 'public', table: 'driver_contact_messages' }, debouncedRefresh)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_thread_posts'    }, debouncedRefresh)
+        .subscribe();
 }
 
 async function refreshMsgsBadge() {
