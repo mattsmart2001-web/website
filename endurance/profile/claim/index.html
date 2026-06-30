@@ -257,7 +257,22 @@ async function submitClaim(e) {
             const { error } = await sb.auth.signInWithPassword({ email, password });
             authError = error;
         }
-        if (authError) throw authError;
+        if (authError) {
+            // Supabase blocks a second sign-up for an existing email. Switch
+            // to sign-in automatically so the driver can continue with their
+            // existing credentials rather than hitting a dead end.
+            if (mode === 'signup' && /already registered|already exists/i.test(authError.message || '')) {
+                prefillEmail = email;
+                mode = 'signin';
+                renderForm();
+                document.getElementById('form-error').innerHTML = `<div class="alert alert-error">
+                    An account with this email already exists. Enter your password below to sign in and complete the claim.
+                </div>`;
+                document.getElementById('submit-btn').disabled = false;
+                return;
+            }
+            throw authError;
+        }
 
         // Call the claim RPC
         const { data, error: rpcError } = await sb.rpc('claim_driver_profile', { p_token: token });
