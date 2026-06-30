@@ -4125,78 +4125,167 @@ async function generateRaceReport(eventId, eventName, seasonId) {
 const _PRESEASON_CIRCUITS = [
     { keys:['spa','francorchamps'], name:'Circuit de Spa-Francorchamps', flag:'🇧🇪', loc:'Stavelot, Belgium', km:'7.004',
       intros:['Spa-Francorchamps needs no introduction: seven kilometres of drama carved through the Ardennes forest, anchored by the most iconic corner complex in motorsport.','If one circuit defines endurance racing it is Spa. Unpredictable weather, unforgiving walls at Eau Rouge, and a back section that never lets you rest make it the ultimate test of car and driver.','The cathedral of motorsport. The Ardennes frame a circuit that has decided championships, ended dreams and created legends since the earliest days of racing.'],
-      corners:['Eau Rouge / Raidillon','Pouhon','Blanchimont','Bus Stop Chicane'], ot:'La Source hairpin and the Kemmel Straight',
+      corners:['Eau Rouge / Raidillon','Pouhon','Blanchimont','Bus Stop Chicane'],
+      sectors:['Sector 1 opens at La Source and builds through Eau Rouge to the Kemmel Straight. Carrying the apex at Raidillon is the fastest way to join the straight — even a small lift costs three or four tenths.','Sector 2 winds through the Ardennes forest. Pouhon at full commitment and the Fagnes chicane complex define the middle phase; the gap between a precise and a ragged lap is largest here.','Sector 3 from Blanchimont to Bus Stop requires absolute bravery. Blanchimont at full throttle, then a late-braking stop at the chicane. Final exit speed onto the pit straight determines grid position.'],
+      setup:'Medium-high downforce is the Spa compromise. Low drag loses you everything through Raidillon; too much wing costs critical straightline speed along the Kemmel. A well-balanced setup is worth more than chasing peak downforce.',
+      qualifying:'The gap is made through Sector 2. A clean Pouhon at maximum commitment and a precise exit from the final chicane are the two moments that define a Spa lap time.',
+      ot:'La Source hairpin and the Kemmel Straight',
       tyre:'Wear is moderate across the lap but the high-speed sweepers load the rear shoulders. A car gentle on tyres in Stint 1 becomes a weapon in the closing stages.',
+      wet:'Rain changes Spa entirely. Raidillon becomes a corner and the run through the forest sector demands caution — different parts of the circuit dry at different rates, and a misjudged tyre call ends races.',
       watch:'Weather. A dry La Source and a damp Raidillon is all the chaos you need.' },
+
     { keys:['monza','autodromo nazionale'], name:'Autodromo Nazionale Monza', flag:'🇮🇹', loc:'Monza, Italy', km:'5.793',
       intros:['The Temple of Speed. Monza strips away downforce and lets horsepower do the talking, the fastest circuit on the GTEC calendar and one of the oldest in the world.','Raw power and late-braking bravery. Low-drag setups, flat-out Lesmo sequences and the sweeping Parabolica create a circuit where the engine is the co-driver.','Monza is a timed knockout. Carry the wrong setup and the straights will expose you. Nail it and the race is yours to lose.'],
-      corners:['Curva Grande','Lesmo 1 & 2','Ascari Chicane','Parabolica'], ot:'Rettifilo chicane and under braking into Lesmo 1',
+      corners:['Curva Grande','Lesmo 1 & 2','Ascari Chicane','Parabolica'],
+      sectors:['Sector 1 is all about traction off the first chicane and the run to Curva Grande. Getting the Rettifilo chicane right — smooth braking, clean exit — sets up the entire first third of the lap.','Sector 2 through Lesmo 1 and 2 punishes understeer. Both Lesmos reward a patient, trailing entry that keeps the throttle usable on exit; pushing the entry bleeds speed for the entire next straight.','Sector 3 from Ascari to Parabolica is the defining sequence. The Ascari chicane requires precise apexing, and Parabolica exit speed directly determines how long you spend on the main straight.'],
+      setup:'Minimum drag is non-negotiable at Monza. The challenge is maintaining enough front-end grip through the Lesmo sequence while keeping the wing as low as the car will tolerate. Every increment of drag costs tenths on the straights.',
+      qualifying:'Parabolica defines the qualifying lap. A clean final apex and maximum throttle out of the last corner is worth more than perfection anywhere else on the circuit.',
+      ot:'Rettifilo chicane and under braking into Lesmo 1',
       tyre:'Low downforce reduces tyre load overall, but locking up at the chicanes destroys fronts within a lap. Smooth braking is worth more here than any setup tweak.',
+      wet:'Rain at Monza removes the one aerodynamic aid keeping the car stable at high speed. Without wing loading, the rear becomes unstable through Curva Grande and the Lesmos; caution is the only strategy until the track rubbers in.',
       watch:'Slipstream battles along the main straight. Coming out of Parabolica cleanly is worth a tenth, and usually a position.' },
+
     { keys:['nurburgring','nürburgring','nordschleife','nurburg'], name:'Nürburgring', flag:'🇩🇪', loc:'Nürburg, Germany', km:'20.832 / 5.148',
       intros:['The Green Hell. Twenty kilometres of blind crests, compression corners and concrete barriers that show no mercy. The Nordschleife has humbled every great driver in history.','No circuit punishes mistakes like the Nordschleife. The sheer variety of corners, the undulating terrain and the ever-present barriers demand absolute respect from lap one.','Learn the Nordschleife and you know the most complex circuit in the world. Get it right and nothing else will feel difficult. Get it wrong and the barriers will remind you why they call it the Green Hell.'],
-      corners:['Flugplatz','Bergwerk','Karussell','Brünnchen','Pflanzgarten'], ot:'Hatzenbach and the long run into Tiergarten',
+      corners:['Flugplatz','Bergwerk','Karussell','Brünnchen','Pflanzgarten'],
+      sectors:['The opening section from the start to Flugplatz sets the tone. Blind crests and fast direction changes demand that you know the lap rather than react to it; the committed driver is always faster here.','The middle sector through Bergwerk, Karussell and Brünnchen is where the Nordschleife extracts its toll on machinery. The Karussell banking reduces lateral load but must be entered at the right angle to avoid understeer across the banking exit.','Pflanzgarten to the finish is the section that ends races. Compression corners over crests load the suspension violently; cars that are already stressed here will not survive to the flag.'],
+      setup:'A true all-rounder setup is required — the Nordschleife has every corner type. Mechanical grip over aerodynamic grip is the conventional wisdom; the undulating surface unsettles aero-dependent cars constantly.',
+      qualifying:'Knowing the lap is the most important qualifying tool. Sector 1 confidence and a clean run through the Karussell sequence separate the drivers who have done the homework from those who have not.',
+      ot:'Hatzenbach and the long run into Tiergarten',
       tyre:'The Nordschleife destroys right-rears through compression corners. Managing temperatures on the warm-up lap is as important as the flying lap itself.',
+      wet:'The Eifel microclimate means rain can fall on one sector while another remains dry. The correct tyre in the dry sector is wrong in the wet one; judging when to fit intermediates is the race within the race.',
       watch:'The Eifel weather. One sector can be dry while another is soaked; the circuit produces its own conditions.' },
+
     { keys:['suzuka'], name:'Suzuka Circuit', flag:'🇯🇵', loc:'Suzuka, Japan', km:'5.807',
       intros:['Suzuka is the purist\'s circuit, a figure-of-eight that flows from the first corner to the last, where mid-corner speed separates the great drivers from the rest.','The most technical circuit on the GTEC calendar. The S-curves, the blind Dunlop corner and the long sweeping Spoon demand absolute commitment and rhythm. Lift once and you\'ve lost it.','Ask any racing driver their favourite circuit and half say Suzuka. The reason is simple: it rewards drivers who maintain commitment through corners that look impossible from the outside.'],
-      corners:['The S-curves','Dunlop Curve','130R','Spoon Corner','Casio Triangle'], ot:'Into the hairpin at the end of the main straight and at the chicane',
+      corners:['The S-curves','Dunlop Curve','130R','Spoon Corner','Casio Triangle'],
+      sectors:['Sector 1 from Turn 1 through the S-curves to Dunlop is the technical heart of Suzuka. The S-curves reward a flowing, rhythmic approach; any correction or lift cascades into the following corners and costs significant time.','Sector 2 encompasses the back section — Degner, the hairpin and Spoon. Spoon is a slow-entry, fast-exit corner that sets up the long run to 130R; getting it right is worth half a second on the straight.','Sector 3 from 130R to the Casio Triangle is the theatre of Suzuka. 130R separates the committed from the cautious. The chicane and final corner must be taken cleanly to protect the exit speed onto the main straight.'],
+      setup:'Suzuka rewards aerodynamic balance rather than maximum downforce. The circuit demands that the car is consistent through all types of corners; a setup that generates understeer at the S-curves will haemorrhage time across an entire lap.',
+      qualifying:'The S-curves define the Suzuka qualifying lap. Thread them together with no corrections and the rest of the lap follows naturally. One lift through the sequence costs the lap.',
+      ot:'Into the hairpin at the end of the main straight and at the chicane',
       tyre:'Rear tyre management through the Esses and 130R is the key strategic factor. Respect the rear tyres early and you gain a massive pace advantage in the closing laps.',
+      wet:'Rain at Suzuka makes the S-curves and 130R genuinely dangerous. Both corners become significant braking references in the wet and the circuit punishes any attempt to carry dry-weather commitment.',
       watch:'130R. Looks flat on the map. Feels terrifying in the car. The drivers who take it flat earn their lap time.' },
+
     { keys:['brands hatch','brands'], name:'Brands Hatch', flag:'🇬🇧', loc:'West Kingsdown, Kent, UK', km:'3.908',
       intros:['Brands Hatch sits in a natural bowl carved from the North Downs, a compact, flowing circuit that puts every driver on show and punishes oversteer at every corner.','Old-school British motorsport in four kilometres of asphalt. Paddock Hill Bend sets the tone from the opening lap and the undulating circuit never lets you settle into comfort.','The most dramatic first corner in motorsport? Paddock Hill Bend would make a strong argument. Brands produces the kind of close racing that made British motor sport famous.'],
-      corners:['Paddock Hill Bend','Druids','Graham Hill Bend','Hawthorn Bend','Clearways'], ot:'Into Druids under braking',
+      corners:['Paddock Hill Bend','Druids','Graham Hill Bend','Hawthorn Bend','Clearways'],
+      sectors:['Sector 1 from the start through Paddock Hill and Druids defines the opening laps. Paddock Hill plunges downhill into a blind apex that is never quite where you expect it; Druids is the main overtaking point and rewards patience over aggression.','Sector 2 through Graham Hill Bend, Surtees and Hawthorn is the flowing, undulating mid-circuit section. Hawthorn is the most front-left-destructive corner at Brands; drivers who attack it inevitably pay for it later.','Sector 3 from Westfield through Clearways to the finish is where laps are polished rather than won. A smooth exit from Clearways onto the pit straight protects the race-long pace.'],
+      setup:'Mechanical grip over aerodynamic downforce. The undulating surface at Brands Hatch unsettles the car constantly; a soft, compliant setup that maintains tyre contact through the compressions is worth more than peak lateral grip.',
+      qualifying:'Paddock Hill and Druids set the lap tone. A confident, committed entry to Paddock and a clean exit from Druids — even if that means a cautious entry — delivers more lap time than bravery on either corner alone.',
+      ot:'Into Druids under braking',
       tyre:'The undulating layout stresses different axles at different points. Front-left wear is the limiting factor; managing it through Hawthorn determines late-race pace.',
+      wet:'Rain at Brands concentrates around Paddock Hill and the bowl section. The camber changes on the descent become more treacherous in the wet and the blind apex at Paddock demands even greater caution.',
       watch:'Paddock Hill Bend on the opening lap. It produces something every single race.' },
+
     { keys:['silverstone'], name:'Silverstone Circuit', flag:'🇬🇧', loc:'Silverstone, UK', km:'5.891',
       intros:['Britain\'s home of motorsport and one of the fastest circuits in the world. Copse, Maggotts and Becketts demand absolute commitment; lift once through that sequence and you hand time to every driver behind.','Wide, fast and relentless, Silverstone rewards aerodynamic grip and punishes balance problems with brutal efficiency. The Becketts complex is one of the great sequences in world motorsport.','The birthplace of the World Championship. Silverstone\'s sweeping corners separate the aerodynamically efficient from the rest and reward drivers brave enough to trust the car.'],
-      corners:['Copse','Maggotts / Becketts / Chapel','Stowe','Club','Abbey'], ot:'Village / Loop complex and into Stowe',
+      corners:['Copse','Maggotts / Becketts / Chapel','Stowe','Club','Abbey'],
+      sectors:['Sector 1 from the start to Maggotts is fast and unforgiving. Copse taken flat sets the tone; the entry to Maggotts at the end of the straight is where confidence in aerodynamic grip either holds or fades.','Sector 2 through the Becketts complex to Stowe is the defining section of any Silverstone lap. The rapid direction changes from Maggotts through Becketts to Chapel are linked — a compromise on one apex compromises the next. The lap is won or lost here.','Sector 3 from Stowe through Club to the Vale is technically demanding. Stowe rewards late braking; the Club corner and Vale sequence require a patient entry to maximize exit speed onto the long final straight.'],
+      setup:'High downforce is non-negotiable at Silverstone. The Maggotts-Becketts complex demands sustained aerodynamic grip at high speed; reducing downforce to gain straight-line advantage costs too much through the fast sweepers.',
+      qualifying:'Maggotts to Becketts is the Silverstone qualifying lap. Getting all three direction changes linked without corrections — carrying the same commitment from right to left to right — is the difference between a competitive lap and a very good one.',
+      ot:'Village / Loop complex and into Stowe',
       tyre:'Sustained high-speed cornering loads the front-left heavily. A car that stays within its tyre window all race is worth more than pure one-lap pace.',
+      wet:'Rain at Silverstone transforms it from an aerodynamic circuit to a mechanical grip test. The fast sweepers become cautious corners and the wide track surface offers multiple dry-line options that shift the braking references.',
       watch:'Maggotts to Becketts. If you are watching from that sector you are watching the race being won or lost.' },
+
     { keys:['fuji','fuji speedway'], name:'Fuji Speedway', flag:'🇯🇵', loc:'Oyama, Shizuoka, Japan', km:'4.563',
       intros:['Fuji Speedway sits in the shadow of Mount Fuji and on a clear day the backdrop alone justifies the entry. The circuit combines a 1.5 km main straight with a flowing infield that punishes indecision.','Japan\'s second great circuit is defined by 100R and the straight that follows it. Get 100R right and you carry a full straightline advantage into the braking zone; get it wrong and you are visible in every mirror.','The complete package: low drag for the straight, mechanical grip through the infield, late braking at the hairpin. Fuji reveals whether a driver has worked through every sector or guessed their setup.'],
-      corners:['100R','First Corner Hairpin','Coca-Cola Corner','TGR Corner'], ot:'The hairpin at the end of the main straight',
+      corners:['100R','First Corner Hairpin','Coca-Cola Corner','TGR Corner'],
+      sectors:['Sector 1 ends with 100R, the fastest and most important corner at Fuji. Carrying maximum speed through 100R and onto the main straight is the single most valuable thing you can do at this circuit. The rewards for a perfect 100R are felt for the next 30 seconds.','Sector 2 from the hairpin through the infield is a tight, mechanical-grip-dependent sequence. The hairpin is the principal overtaking point; patience on entry rewards with an early throttle application that carries onto the following straight.','Sector 3 through TGR Corner and back to the start is flowing and fast. A clean sequence here requires consistent mid-corner speed rather than braking heroics; the lap builds on what happened in Sectors 1 and 2.'],
+      setup:'A low-to-medium downforce setup balances the demands of 100R and the main straight. The infield rewards mechanical grip; the straight punishes drag. A car that is aero-efficient rather than maximum-downforce is the right call.',
+      qualifying:'100R defines the Fuji qualifying lap. Maximum commitment through the sweeper and onto the straight. An inch of caution through 100R costs three or four tenths across the rest of the lap.',
+      ot:'The hairpin at the end of the main straight',
       tyre:'The long straight cools tyres between loading cycles; rubber life is better here than at sustained high-speed tracks, but locking up at the hairpin costs both time and tyres.',
+      wet:'Mount Fuji generates its own weather and the cloud line can descend across the circuit without warning. The main straight drains well but the infield holds water; tyre selection in variable conditions requires reading the track surface rather than the sky.',
       watch:'100R. The fastest drivers carry breathtaking speed; the gap between a clean exit and a ragged one is often the race.' },
+
     { keys:['interlagos','sao paulo','são paulo','brazil'], name:'Autodromo José Carlos Pace', flag:'🇧🇷', loc:'São Paulo, Brazil', km:'4.309',
       intros:['Interlagos runs anti-clockwise through the hills of São Paulo, and the energy it generates is unlike any other venue in the world. The Senna S at Turn 1 sets the tone immediately.','Compact, bumpy and unforgiving, Interlagos was built to produce racing. The anti-clockwise layout reverses tyre loading patterns from every other circuit and drivers who ignore that pay the price.','The home of Brazilian passion for motorsport and the most atmospheric venue on the GTEC calendar. Anti-clockwise, narrow and relentless in the demands it places on car and driver.'],
-      corners:['Senna S','Curva do Sol','Descida do Lago','Junção','Mergulho'], ot:'Senna S on the opening lap and at Junção',
+      corners:['Senna S','Curva do Sol','Descida do Lago','Junção','Mergulho'],
+      sectors:['Sector 1 opens at the Senna S — a quick left-right that demands commitment and rewards smoothness. Too aggressive on entry and the rear steps out; too cautious and you give away position to every driver behind.','Sector 2 winds through the Descida do Lago and Junção sections. Junção is the second overtaking point and arguably the most important strategic corner; an early apex here produces a fast exit onto the back straight.','Sector 3 from Mergulho to the finish includes the challenging downhill approach to Turn 1. The circuit punishes oversteer on exit from every slow corner; get the exits right and the lap flows.'],
+      setup:'Mechanical grip dominates the setup requirement at Interlagos. The bumpy, anti-clockwise layout means the car is constantly being asked to work against its natural loading preferences; a stable, planted platform outperforms pure aerodynamic efficiency.',
+      qualifying:'The Senna S on a qualifying lap is the moment that defines the gap. Threading both apices without correction, carrying the speed onto the back straight — that sequence cannot be recovered if the first half is compromised.',
+      ot:'Senna S on the opening lap and at Junção',
       tyre:'Anti-clockwise means the right rear suffers where you normally worry about the left. Drivers arriving from clockwise circuits consistently underestimate this; adjust your strategy accordingly.',
+      wet:'Interlagos and rain are a classic combination. The bumpy surface channels water unpredictably and the anti-clockwise loading means the car\'s natural reactions in the wet are the reverse of what drivers expect. Safety car periods are extremely common.',
       watch:'The Senna S complex on lap 1. It produces action every single time.' },
+
     { keys:['red bull ring','spielberg','austria','zeltweg'], name:'Red Bull Ring', flag:'🇦🇹', loc:'Spielberg, Austria', km:'4.318',
       intros:['Set against the rolling Styrian hills, the Red Bull Ring is compact, fast and relentlessly action-packed. Ten corners, but every single one matters.','Short lap times mean more laps, more incidents and more overtaking. The uphill run to Turn 1 and the drag to the final hairpin create two genuine passing zones per lap.','The Red Bull Ring is deceptively simple to learn and devilishly hard to master. Uphill braking, camber changes and a compressed layout punish overconfidence every lap.'],
-      corners:['Turn 1 (Castrol)','Turn 3 (Remus)','Turn 6 (Rindt)','Turn 9 (Schlossgold)','Turn 10 (Rauch)'], ot:'Turn 1 and into the final hairpin',
+      corners:['Turn 1 (Castrol)','Turn 3 (Remus)','Turn 6 (Rindt)','Turn 9 (Schlossgold)','Turn 10 (Rauch)'],
+      sectors:['Sector 1 from the start to Turn 3 is an uphill charge followed by a heavy braking zone. Turn 1 opens after the crest and demands late braking; the uphill approach makes it easy to misjudge the stopping point and run wide.','Sector 2 through Turns 4 to 7 is a flowing mid-circuit section where setup balance is exposed. The camber changes through Turn 6 punish an imbalanced car and reward smooth inputs; this is where tyre management begins.','Sector 3 from the penultimate corner through the final hairpin is the key overtaking window. Turn 10 is a tight, slow-speed hairpin that rewards patience — an early apex closes down the exit; a late apex opens it onto the start-finish straight.'],
+      setup:'A medium-downforce setup suits the Red Bull Ring\'s mix of fast straights and demanding braking zones. The uphill braking zones demand strong brake stability; the flowing sector 2 corners need aerodynamic balance.',
+      qualifying:'Turn 1 sets the qualifying lap. A committed, late-braking entry to the uphill Turn 1 and a clean exit generates the momentum for the first straight and Turns 3 and 4.',
+      ot:'Turn 1 and into the final hairpin',
       tyre:'Short lap means tyres never fully settle before the next braking zone. Consistency outperforms peak pace; manage the fronts and the rears follow.',
+      wet:'Rain in the Styrian hills arrives quickly and the track surface at the Red Bull Ring holds water at the braking zones. Turn 1 under heavy braking in the wet is the first accident of every wet race; caution there repays many times over.',
       watch:'Turn 3. It looks simple. It catches everyone out at least once.' },
+
     { keys:['laguna seca','mazda raceway','weathertech'], name:'WeatherTech Raceway Laguna Seca', flag:'🇺🇸', loc:'Monterey, California, USA', km:'3.602',
       intros:['One corner defines Laguna Seca and that corner is unlike anything else in racing. The Corkscrew, a blind left-right dropping nine metres in elevation, is the most dramatic piece of road on the GTEC calendar.','Compact, technical and completely captivating. Laguna Seca rewards commitment and punishes hesitation at every corner. The Corkscrew is iconic, but the corners around it decide the race.','Don\'t be fooled by the short lap time. Laguna Seca is dense with technical challenge from the uphill run to Turn 1 through to the Corkscrew; drivers who string it together consistently are the ones who win.'],
-      corners:['Andretti Hairpin (T1)','Turns 3-4 Esses','Rainey Curve','The Corkscrew (T8-8a)','Bondurant (T11)'], ot:'Turn 1 under braking',
+      corners:['Andretti Hairpin (T1)','Turns 3-4 Esses','Rainey Curve','The Corkscrew (T8-8a)','Bondurant (T11)'],
+      sectors:['Sector 1 from Turn 1 through the Esses is the most technical sequence at Laguna Seca. The hairpin is the primary overtaking point; the Esses demand commitment and rhythm — they flow when you trust them and fight back when you don\'t.','Sector 2 from Rainey Curve to the bottom of the Corkscrew is where the circuit builds to its defining moment. Rainey Curve must be taken cleanly to set up the approach to Turn 8; an imperfect Rainey is an imperfect Corkscrew.','Sector 3 from the Corkscrew to the finish is the payoff. Nail the blind left-right drop, track out correctly at the bottom, and the momentum carries through Bondurant and onto the straight. This is where races are won or lost.'],
+      setup:'A high-mechanical-grip, medium-downforce setup works best at Laguna Seca. The Corkscrew\'s compression demands a car that stays planted over sudden elevation changes; aero-dependent setups unsettle on the drop.',
+      qualifying:'The Corkscrew is the Laguna Seca qualifying lap. Arriving blind at the correct spot, committing to the left-right sequence and tracking out at full throttle at the bottom — it is the most demanding single moment in qualifying on the GTEC calendar.',
+      ot:'Turn 1 under braking',
       tyre:'The Corkscrew\'s compression loads the front axle heavily. Front tyre management through the back section is the key to consistent lap times.',
+      wet:'Rain at Laguna Seca makes the Corkscrew entry genuinely hazardous — the braking reference is invisible in the dry and entirely guesswork in the wet. Intermediate tyres as early as possible is the correct response.',
       watch:'The Corkscrew, obviously. But Turn 1 catches more drivers cold than any other corner here.' },
+
     { keys:['bathurst','mount panorama','mt panorama'], name:'Mount Panorama Circuit', flag:'🇦🇺', loc:'Bathurst, NSW, Australia', km:'6.213',
       intros:['Mount Panorama is a public road that becomes the greatest circuit in the world when racing comes to town. The climb to Skyline, the drop through The Dipper and the flat-out run home are unlike anything else in motorsport.','Bathurst demands reverence before it demands pace. The mountain does not forgive; barriers are close, walls are concrete and one mistake on the descent can end a race that was won on the climb.','Six kilometres of pure drama. Learn the mountain, respect the mountain and the mountain rewards you. Ignore it and the barriers will finish your race.'],
-      corners:['Hell Corner','The Cutting','McPhillamy Park','The Dipper','Forrest\'s Elbow','The Chase'], ot:'Hell Corner on the opening lap and The Chase',
+      corners:['Hell Corner','The Cutting','McPhillamy Park','The Dipper','Forrest\'s Elbow','The Chase'],
+      sectors:['Sector 1 is the climb. From Hell Corner up through The Cutting, McPhillamy Park and to Skyline, the circuit rises steeply with blind crests and compressed corners. The barriers are close and patience is the fastest technique.','Sector 2 is the descent. The Dipper begins it — a compression that throws the car sideways before the fall to Forrest\'s Elbow. The downhill sequence generates enormous brake temperatures and front tyre loads; drivers who overcook the brakes here pay with degradation all race.','Sector 3 from Forrest\'s Elbow through The Chase to the pit straight is the flat-out run home. The Chase is a tight chicane that requires discipline on entry; a clean exit gives full access to the main straight and the first corner decision.'],
+      setup:'High mechanical grip and strong brake stability define the Bathurst setup. The mountain descent loads brakes to their limit lap after lap; brake ducts and setup choices here are as important as aerodynamic downforce. A stable, planted car on the descent is quicker than a fast but nervous one.',
+      qualifying:'The Mountain sector defines the Bathurst qualifying lap. McPhillamy Park and The Dipper taken with full commitment — knowing the blind entry point at the crest — is what separates the fast laps from the great ones.',
+      ot:'Hell Corner on the opening lap and The Chase',
       tyre:'The downhill section generates tremendous brake and front tyre heat. Managing temperatures on the descent preserves life for the flat-out run home.',
+      wet:'Rain on the mountain is extremely dangerous. The descent becomes treacherous as the circuit offers no run-off before the concrete walls. A wet Bathurst demands margins the dry version does not, and the safety car is a regular visitor.',
       watch:'The Dipper at full speed. It looks impossible. The best drivers make it look inevitable.' },
+
     { keys:['sardegna','sardinia','autodromo regionale'], name:'Autodromo Regionale di Sardegna', flag:'🇮🇹', loc:'Sardinia, Italy', km:'3.149',
       intros:['Nestled in the Sardinian hills, the Autodromo Regionale is one of GT7\'s most technical circuits: compact, demanding and relentless in the way it punishes drivers who try to force their way through its corners.','Don\'t underestimate Sardegna. The short lap conceals a demanding layout that punishes oversteer on exit and rewards smooth trail-braking into the hairpin complex.','The Autodromo Regionale grows on you. By lap three you know the layout; by lap ten you think you have it; by lap twenty you realise there is always another tenth waiting.'],
-      corners:['Turn 1 Hairpin','Double Apex Left','Chicane Complex','Final Hairpin'], ot:'Main hairpin under braking',
+      corners:['Turn 1 Hairpin','Double Apex Left','Chicane Complex','Final Hairpin'],
+      sectors:['Sector 1 from Turn 1 through the double-apex left is the opening challenge. The first hairpin rewards patience; diving in early closes the exit and damages the momentum for the entire first sector. The double-apex left must be linked smoothly to avoid running wide.','Sector 2 through the chicane complex is the technical heart of Sardegna. The chicane demands a precise braking point and a late apex — early turning is penalised by understeer that carries all the way to the next straight.','Sector 3 from the final hairpin to the start is the lap-defining moment. A clean, late hairpin entry with a sharp throttle application generates the straight-line speed that determines track position on the next lap.'],
+      setup:'Mechanical grip and braking stability are the priority at Sardegna. The compact, corner-dense layout means the car is rarely travelling fast enough for aerodynamic downforce to dominate; a balanced, planted platform is the right foundation.',
+      qualifying:'The chicane complex defines the Sardegna lap. Threading the entry and mid-section of the chicane without understeer — preserving exit speed — is the clearest single point of separation between lap times.',
+      ot:'Main hairpin under braking',
       tyre:'Repeated tight corners generate high steering inputs and front tyre wear. Smooth steering into the hairpins rather than correction mid-corner is the key to tyre longevity.',
+      wet:'Rain at Sardegna turns the hairpin complex into a significant challenge. The braking references that work in the dry lose validity under water; the short lap means any loss of confidence costs multiple positions very quickly.',
       watch:'The chicane complex. Rewards bravery on entry, punishes commitment at the apex.' },
+
     { keys:['cataluny','barcelona','catalunya'], name:'Circuit de Barcelona-Catalunya', flag:'🇪🇸', loc:'Montmeló, Spain', km:'4.675',
       intros:['Barcelona is the benchmark. Long straight, high-speed sweepers, technical chicanes and the punishing Turn 3, and it has everything; a car that is quick here is genuinely quick.','Catalunya is where setups are exposed. There is nowhere to hide a handling weakness across the range of corner types it presents.','The Swiss Army knife of motor racing venues. Technical and flowing by turns, placing equal demands on downforce efficiency, mechanical grip, tyre life and braking stability.'],
-      corners:['Turn 1 (Elf)','Turn 3','Repsol Chicane','New Holland Hairpin','La Caixa'], ot:'Turn 1 and into the final hairpin complex',
+      corners:['Turn 1 (Elf)','Turn 3','Repsol Chicane','New Holland Hairpin','La Caixa'],
+      sectors:['Sector 1 from Turn 1 through Turn 3 is the most important section at Barcelona. Turn 1 is a heavy-braking hairpin; Turn 3 is a long, sustained right-hander that front-left-loaded cars struggle through — it is both the hardest corner to drive and the biggest single generator of laptime.','Sector 2 through the Repsol Chicane and past the pits is a flowing sequence that rewards balance. The chicane requires smooth inputs without locking fronts; any lock-up here compromises the exit onto the back straight.','Sector 3 from New Holland through La Caixa to the finish is a technical, lower-speed section. La Caixa requires a patient approach — a clean exit onto the final straight is worth patience at the entry.'],
+      setup:'A high-downforce setup with particular attention to front-left loading is the Barcelona requirement. Turn 3 demands sustained front grip; a car that understands through that corner loses time every single lap.',
+      qualifying:'Turn 3 defines the Barcelona qualifying lap. Maximum commitment through the long right-hander, maintaining front grip throughout — one moment of understeer through that corner costs time that cannot be recovered.',
+      ot:'Turn 1 and into the final hairpin complex',
       tyre:'Barcelona is notorious for front-left wear. Turn 3 and the long right-handers punish understeer mercilessly. Mid-race front-left management is the key strategic battleground.',
+      wet:'Rain at Barcelona moves the entire grip hierarchy. Turn 3 becomes cautious rather than flat; the chicane that generates understeer in the dry becomes more manageable; and the entire circuit grip level drops enough to require patient rebuilding of confidence.',
       watch:'Turn 3. The most important corner on the circuit and the one most drivers get wrong under pressure.' },
+
     { keys:['goodwood'], name:'Goodwood Motor Circuit', flag:'🇬🇧', loc:'Chichester, West Sussex, UK', km:'3.860',
       intros:['Goodwood is old England in asphalt form: no chicanes, no unnecessary corners, just a flowing lap through the West Sussex countryside that rewards smoothness above everything else.','The Motor Circuit at Goodwood has barely changed since the 1950s. In GT7 that purity translates into a test of mechanical sympathy and consistent rhythm rather than setup aggression.','Soft walls, smooth surfaces and flowing rhythms. Goodwood is the antidote to modern circuit design. Its narrow track and close barriers make it trickier than its reputation suggests.'],
-      corners:['Madgwick','Fordwater','St Mary\'s','Lavant','Woodcote'], ot:'Madgwick and into the Woodcote chicane',
+      corners:['Madgwick','Fordwater','St Mary\'s','Lavant','Woodcote'],
+      sectors:['Sector 1 from the start through Madgwick and Fordwater is the flowing opening phase. Both corners reward the driver who commits early and carries the speed through; they are not where positions change but they define the car\'s momentum for the next section.','Sector 2 from St Mary\'s to Lavant is the most important section at Goodwood. St Mary\'s is a deceptively fast corner that compresses heavily on exit; Lavant is the fastest corner on the circuit and taken flat only when the car is properly balanced.','Sector 3 through Woodcote and past the pits is where the lap is concluded. Woodcote in its GT7 form is a flowing sequence that rewards smoothness; aggressive entries produce understeer that bleeds speed all the way to the line.'],
+      setup:'A smooth, balanced setup that prioritises mechanical grip and tyre stability. Goodwood does not have the high-speed sustained corners that demand maximum aerodynamic downforce; the circuit rewards a car that flows consistently rather than one that is fast on maximum-grip corners only.',
+      qualifying:'St Mary\'s defines the Goodwood lap. The compression and exit from St Mary\'s, taken cleanly and with full commitment on exit, is the gap between the front row and the back of the pack.',
+      ot:'Madgwick and into the Woodcote chicane',
       tyre:'The flowing layout generates consistent tyre loads. Wear is low to moderate; strategic timing matters more than rubber management here.',
+      wet:'Rain at Goodwood strips out what little run-off the circuit offers. The close barriers that make it atmospheric in the dry become threatening in the wet; smooth inputs and early exits from every corner are mandatory.',
       watch:'St Mary\'s. The compression on entry is deceptive and the car loads heavily on exit. Very little room for error.' },
+
     { keys:['dragon trail','seaside','gardens'], name:'Dragon Trail', flag:'🇭🇷', loc:'Adriatic Coast, Croatia', km:'3.788',
       intros:['Set along the Croatian Adriatic, Dragon Trail is the most visually striking venue on the calendar, and behind the scenery is a demanding circuit of long sweepers and commitment corners that punishes the hesitant.','Dragon Trail blends coastal beauty with genuine technical challenge. The long flowing segments reward aerodynamic balance; the hairpin complexes are where positions change hands.','Perched above the Adriatic, Dragon Trail is GT7\'s most distinctive circuit. Beautiful to watch from, demanding to drive; the opening sweepers set a pace that cannot be dropped.'],
-      corners:['Opening Hairpin','Long Sweeper Complex','Sea View Corner','Final Chicane'], ot:'Into the opening hairpin and through the final chicane',
+      corners:['Opening Hairpin','Long Sweeper Complex','Sea View Corner','Final Chicane'],
+      sectors:['Sector 1 from the start through the opening hairpin is the first decisive moment of every lap. The hairpin drops downhill and the braking reference compresses quickly; drivers who arrive a fraction late are immediately exposed to the following straight.','Sector 2 through the long sweeper complex is the aerodynamic heart of Dragon Trail. The sustained lateral loading through the sweepers builds tyre temperature progressively; a balanced car through here is faster in the second half of every stint than a car that builds heat too quickly.','Sector 3 from the sea-view corner through the final chicane is where the lap and the race are decided. The final chicane is tight and technical; an aggressive entry typically understeer the car wide and kills exit speed onto the main straight.'],
+      setup:'Medium-to-high aerodynamic downforce for the sweeper complex, balanced against manageable drag for the two main straights. A car that is too soft aerodynamically loses grip in the sustained corners; too stiff costs time on the straight.',
+      qualifying:'The sea-view right-hander defines the Dragon Trail lap. The fastest drivers carry maximum speed through it flat; a single lift costs three or four tenths and there is no recovery before the final chicane.',
+      ot:'Into the opening hairpin and through the final chicane',
       tyre:'Long sweeping sectors build sustained tyre load without sharp peaks. The outside shoulder degrades gradually; easy to miss until it is too late.',
+      wet:'Rain on the Adriatic coast creates a beautiful but treacherous circuit. The long sweepers that are taken flat in the dry become cautious, measured corners in the wet; the drainage on the outside of the sweeper complex is slow and puddles form quickly.',
       watch:'The sea-view right-hander. Flat in the best cars. Terrifying in the ones that are not.' },
 ];
 
@@ -4323,7 +4412,9 @@ function _openCircuitPicker(data, seasonId, seasonName) {
 async function generateCircuitGuide(eventId, circuitName, seasonId, seasonName, round) {
     document.querySelector('.modal-body').innerHTML = '<div class="loading-state">Building circuit guide…</div>';
     try {
-        const { data: ev } = await sb.from('events').select('id,name,circuit_name,round,starts_at,duration_hours').eq('id', eventId).maybeSingle();
+        const { data: ev } = await sb.from('events')
+            .select('id,name,circuit_name,round,starts_at,duration_hours,weather,time_of_day,time_multiplier,tyre_wear,fuel_consumption,mandatory_pit_stops,required_tyres,bop_enabled,damage_level,slipstream,starting_procedure,refuel_rate_lps,notes')
+            .eq('id', eventId).maybeSingle();
         const draft = _buildCircuitGuide(ev || { id:eventId, circuit_name:circuitName, round, starts_at:null, duration_hours:null }, seasonName);
         _openArticleEditor(`Circuit Guide: ${esc(circuitName)}`, draft);
     } catch (err) {
@@ -4394,27 +4485,186 @@ function _buildCalendarDrop({ season, seasonName, events }) {
 }
 
 function _buildCircuitGuide(ev, seasonName) {
-    const circuitName = ev.circuit_name||ev.name||'the venue';
+    const circuitName = ev.circuit_name || ev.name || 'the venue';
     const c = _detectCircuit(circuitName);
     const displayName = c?.name || circuitName;
-    const intro = c ? _psPick(c.intros) : `${circuitName} is the venue for Round ${ev.round||'?'} of ${seasonName}, a circuit that will test every facet of a driver\'s ability from the opening lap to the last.`;
-    const meta  = c ? `<p class="dateline">${c.flag} ${esc(displayName)} · ${esc(c.loc)} · ${ev.starts_at?_psDateStr(ev.starts_at):'TBC'}</p>` : `<p class="dateline">🏁 ${esc(displayName)} · ${ev.starts_at?_psDateStr(ev.starts_at):'TBC'}</p>`;
-    const dur   = ev.duration_hours ? `Round ${ev.round||'?'} of ${seasonName} visits ${displayName} for a ${ev.duration_hours}-hour race. Here is everything you need to know.` : '';
-    const cornersHtml = (c?.corners||[]).map(k =>
-        `<div style="padding:0.3rem 0 0.3rem 1rem;border-left:2px solid rgba(255,209,102,0.4)">${esc(k)}</div>`
-    ).join('');
+
+    const intro = c
+        ? _psPick(c.intros)
+        : `${circuitName} is the venue for Round ${ev.round||'?'} of ${seasonName}, a circuit that will test every facet of a driver\'s ability from the opening lap to the last.`;
+
+    const metaLine = c
+        ? `<p class="dateline">${c.flag} ${esc(displayName)} · ${esc(c.loc)} · ${c.km} km · ${ev.starts_at ? _psDateStr(ev.starts_at) : 'TBC'}</p>`
+        : `<p class="dateline">🏁 ${esc(displayName)} · ${ev.starts_at ? _psDateStr(ev.starts_at) : 'TBC'}</p>`;
+
+    // Race format grid
+    const fmtItems = [];
+    if (ev.duration_hours) fmtItems.push(`<strong>Duration:</strong> ${ev.duration_hours}h`);
+    if (ev.weather)            fmtItems.push(`<strong>Weather:</strong> ${esc(_hcWeather(ev.weather))}`);
+    if (ev.time_of_day)        fmtItems.push(`<strong>Start time:</strong> ${esc(_hcTimeOfDay(ev.time_of_day))}${ev.time_multiplier && ev.time_multiplier !== '1x' ? ` <span style="color:var(--muted)">(${esc(ev.time_multiplier)} progression)</span>` : ''}`);
+    if (ev.starting_procedure) fmtItems.push(`<strong>Start:</strong> ${esc(_hcStartProc(ev.starting_procedure))}`);
+    if (ev.tyre_wear)          fmtItems.push(`<strong>Tyre wear:</strong> ${esc(ev.tyre_wear)}`);
+    if (ev.fuel_consumption)   fmtItems.push(`<strong>Fuel:</strong> ${esc(ev.fuel_consumption)}`);
+    if (ev.mandatory_pit_stops != null && ev.mandatory_pit_stops > 0) fmtItems.push(`<strong>Mandatory stops:</strong> ${ev.mandatory_pit_stops}`);
+    if (ev.slipstream)         fmtItems.push(`<strong>Slipstream:</strong> ${esc(_hcSlipstream(ev.slipstream))}`);
+    if (ev.damage_level)       fmtItems.push(`<strong>Damage:</strong> ${esc(_hcDamage(ev.damage_level))}`);
+    if (ev.bop_enabled != null) fmtItems.push(`<strong>BoP:</strong> ${ev.bop_enabled ? 'On' : 'Off'}`);
+    if (ev.refuel_rate_lps)    fmtItems.push(`<strong>Refuel rate:</strong> ${ev.refuel_rate_lps} L/s`);
+    if (ev.required_tyres?.length) fmtItems.push(`<strong>Required tyres:</strong> ${ev.required_tyres.map(esc).join(', ')}`);
+
+    const raceFormatHtml = fmtItems.length ? `
+        <div style="margin:1.4rem 0">
+            <p style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700;margin-bottom:0.6rem">Race Format</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.35rem 1rem">
+                ${fmtItems.map(i => `<div style="font-size:0.875rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.06)">${i}</div>`).join('')}
+            </div>
+        </div>` : '';
+
+    // Key corners
+    const cornersHtml = (c?.corners || []).length ? `
+        <div style="margin:1.4rem 0">
+            <p style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700;margin-bottom:0.5rem">Key Corners</p>
+            ${c.corners.map(k => `<div style="padding:0.3rem 0 0.3rem 1rem;border-left:2px solid rgba(255,209,102,0.4)">${esc(k)}</div>`).join('')}
+        </div>` : '';
+
+    // Sector breakdown
+    const sectorsHtml = c?.sectors?.length ? `
+        <div style="margin:1.4rem 0">
+            <p style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700;margin-bottom:0.6rem">Sector Breakdown</p>
+            ${c.sectors.map((s, i) => `<div class="stat-card" style="margin:0.5rem 0"><p style="margin:0 0 0.2rem;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;color:var(--gold)">SECTOR ${i+1}</p><p style="margin:0;font-size:0.88rem">${esc(s)}</p></div>`).join('')}
+        </div>` : '';
+
+    // Overtaking
+    const otHtml = c?.ot ? `<p><strong>Overtaking opportunities:</strong> ${esc(c.ot)}.</p>` : '';
+
+    // Setup
+    const setupHtml = c?.setup ? `<p><strong>Setup focus:</strong> ${esc(c.setup)}</p>` : '';
+
+    // Qualifying key
+    const qualHtml = c?.qualifying ? `<p><strong>Qualifying key:</strong> ${esc(c.qualifying)}</p>` : '';
+
+    // Strategy section (combines circuit tyre data + event settings)
+    const stratHtml = _buildCircuitStrategySection(ev, c);
+
+    // Conditions section (weather, night, day-night transitions)
+    const condHtml = _buildCircuitConditionsSection(ev, c);
+
+    // Admin notes (free text from event)
+    const notesHtml = ev.notes ? `<p style="color:var(--muted);font-size:0.88rem;font-style:italic"><strong>Race director notes:</strong> ${esc(ev.notes)}</p>` : '';
+
+    // Watch moment pull quote
+    const watchHtml = c?.watch ? `<p class="pull-quote">${esc(c.watch)}</p>` : '';
+
     const body = [
-        `<p class="kicker">Circuit Guide · Round ${ev.round||'?'}</p>`,
+        `<p class="kicker">Circuit Guide · Round ${ev.round || '?'}</p>`,
         `<p class="dropcap">${esc(intro)}</p>`,
-        meta,
-        dur ? `<p>${esc(dur)}</p>` : '',
-        cornersHtml ? `<div style="margin:1rem 0"><p style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700;margin-bottom:0.5rem">Key Corners</p>${cornersHtml}</div>` : '',
-        c?.ot   ? `<p><strong>Overtaking:</strong> ${esc(c.ot)}.</p>` : '',
-        c?.tyre ? `<p><strong>Tyre strategy:</strong> ${esc(c.tyre)}</p>` : '',
-        c?.watch ? `<p class="pull-quote">${esc(c.watch)}</p>` : '',
+        metaLine,
+        ev.duration_hours ? `<p>Round ${ev.round||'?'} of ${esc(seasonName)} visits ${esc(displayName)} for a ${ev.duration_hours}-hour race. Here is everything you need to know.</p>` : '',
+        raceFormatHtml,
+        cornersHtml,
+        sectorsHtml,
+        otHtml,
+        setupHtml,
+        qualHtml,
+        stratHtml,
+        condHtml,
+        notesHtml,
+        watchHtml,
     ].filter(Boolean).join('\n');
-    const title = `Track Guide: ${displayName}, ${seasonName} Round ${ev.round||'?'}`;
-    return { title, slug:_psSlug(title), excerpt:`Everything you need to know ahead of the ${seasonName} round at ${displayName}.`, body };
+
+    const title = `Track Guide: ${displayName}, ${seasonName} Round ${ev.round || '?'}`;
+    return {
+        title,
+        slug: _psSlug(title),
+        excerpt: `Race format, strategy and circuit breakdown ahead of the ${esc(seasonName)} round at ${esc(displayName)}.`,
+        body,
+    };
+}
+
+function _hcWeather(w) {
+    const map = { clear:'Clear', sunny:'Clear skies', cloudy:'Cloudy', overcast:'Overcast', light_rain:'Light rain', rain:'Rain', heavy_rain:'Heavy rain', variable:'Variable', mixed:'Mixed conditions', dynamic:'Dynamic' };
+    return map[(w||'').toLowerCase().replace(/[\s-]+/g,'_')] || w;
+}
+function _hcTimeOfDay(t) {
+    const map = { day:'Daytime', morning:'Morning', afternoon:'Afternoon', evening:'Evening', dusk:'Dusk', night:'Night', dawn:'Dawn', midnight:'Midnight' };
+    return map[(t||'').toLowerCase()] || t;
+}
+function _hcStartProc(s) {
+    const map = { rolling:'Rolling start', standing:'Standing start', rolling_start:'Rolling start', standing_start:'Standing start' };
+    return map[(s||'').toLowerCase().replace(/[\s-]+/g,'_')] || s;
+}
+function _hcDamage(d) {
+    const map = { none:'Off', light:'Light', heavy:'Heavy', simulation:'Simulation' };
+    return map[(d||'').toLowerCase()] || d;
+}
+function _hcSlipstream(s) {
+    const map = { weak:'Weak', real:'Real', normal:'Normal', strong:'Strong', reduced:'Reduced' };
+    return map[(s||'').toLowerCase()] || s;
+}
+
+function _buildCircuitStrategySection(ev, c) {
+    const lines = [];
+    const wearNum = parseFloat((ev.tyre_wear || '').replace(/[xX]/g,'')) || 0;
+    const fuelNum = parseFloat((ev.fuel_consumption || '').replace(/[xX]/g,'')) || 0;
+    const stops = parseInt(ev.mandatory_pit_stops) || 0;
+
+    if (wearNum > 0 && c?.tyre) {
+        let wearCtx;
+        if (wearNum <= 1)      wearCtx = `At real-rate tyre wear, rubber management is a long-game concern. The circuit's natural degradation characteristics still apply — the tyre note above holds — but aggressive driving in the opening stints is sustainable.`;
+        else if (wearNum <= 2) wearCtx = `At ${ev.tyre_wear} wear rate, degradation is noticeable. A single pit stop should cover most strategies across this race distance, but how hard you push in the opening stint will determine whether a two-stopper is forced on you late.`;
+        else if (wearNum <= 4) wearCtx = `At ${ev.tyre_wear} wear rate, tyre management is the primary concern from lap one. Drivers who overdrive in the early stint will pay heavily in the closing phase — the pace is there in fresh rubber but it will not last.`;
+        else                   wearCtx = `At ${ev.tyre_wear} wear rate, tyres are a critical resource throughout the race. Multi-stop strategies are likely; tyre saving in the early phase is worth giving up lap time to achieve, and the pit window will be busy.`;
+        lines.push(wearCtx);
+        lines.push(c.tyre);
+    } else if (c?.tyre) {
+        lines.push(c.tyre);
+    }
+
+    if (stops > 0) {
+        lines.push(stops === 1
+            ? `One mandatory pit stop is required. Timing the obligatory stop around a safety car period — or splitting the strategy from the cars around you — can gain a lap's worth of track position without any pace advantage.`
+            : `${stops} mandatory pit stops are required. With multiple compulsory stops, undercut strategy becomes central. Watch for the first driver to pit and assess whether responding or extending is the right call based on tyre condition at that moment.`);
+    }
+
+    if (ev.required_tyres?.length > 1) {
+        lines.push(`Multiple required tyre compounds open the strategy window significantly. The order in which you run each compound can gain or cost time depending on conditions and degradation rate — teams that get the sequence right will find themselves ahead of the pace on corrected time.`);
+    } else if (ev.required_tyres?.length === 1) {
+        lines.push(`A single tyre compound is mandated, removing one variable from the strategy equation. The focus shifts entirely to timing: when you pit and how hard you push between stops.`);
+    }
+
+    if (fuelNum >= 2) {
+        lines.push(`Fuel consumption at ${ev.fuel_consumption} means fuel load is a significant strategic factor. A heavy opening fuel load slows lap times but gives more flexibility later; leaning aggressively on the fuel map early risks running short before the stop window.`);
+    }
+
+    if (!lines.length) return '';
+    return `<div style="margin:1.4rem 0">
+        <p style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700;margin-bottom:0.6rem">Strategy</p>
+        ${lines.map(l => `<p>${esc(l)}</p>`).join('')}
+    </div>`;
+}
+
+function _buildCircuitConditionsSection(ev, c) {
+    const lines = [];
+    const weather = (ev.weather || '').toLowerCase();
+    const tod = (ev.time_of_day || '').toLowerCase();
+    const tmNum = parseFloat((ev.time_multiplier || '1').replace(/[xX]/g,'')) || 1;
+
+    if (weather.includes('rain') || weather.includes('variable') || weather.includes('mixed') || weather.includes('dynamic')) {
+        lines.push(c?.wet || 'Wet conditions are a factor for this race. Tyre selection at the pit window will define positions — reading the track surface accurately is worth more than raw pace in the dry.');
+    }
+    if (tod.includes('night') || tod.includes('midnight')) {
+        lines.push(c?.night || 'Night racing adds a layer of complexity. Braking reference visibility changes under artificial light, traffic judgement is harder, and the circuit surface can drop in temperature mid-race. Allow a lap to recalibrate before pushing the limit in the dark.');
+    }
+    if (tmNum >= 5 && ev.duration_hours >= 2) {
+        const transition = tod.includes('dusk') || tod.includes('evening') ? 'day into night' : tod.includes('dawn') || tod.includes('morning') ? 'night into day' : 'light into dark';
+        lines.push(`With time progression at ${ev.time_multiplier}, the race will run from ${esc(_hcTimeOfDay(tod))} through changing light conditions. Grip levels and tyre temperatures shift as track temperature drops; adjusting driving style through the transition rather than fighting the car is the fastest approach.`);
+    }
+
+    if (!lines.length) return '';
+    return `<div style="margin:1.4rem 0">
+        <p style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700;margin-bottom:0.6rem">Conditions</p>
+        ${lines.map(l => `<p>${esc(l)}</p>`).join('')}
+    </div>`;
 }
 
 function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
