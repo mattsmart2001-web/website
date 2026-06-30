@@ -890,10 +890,10 @@
         </div>
 
         <div class="stat-strip reveal">
-            <div class="stat-cell"><div class="stat-num">8</div><div class="stat-label">Rounds</div></div>
-            <div class="stat-cell"><div class="stat-num">56h</div><div class="stat-label">Of Racing</div></div>
+            <div class="stat-cell"><div class="stat-num" data-count="8">8</div><div class="stat-label">Rounds</div></div>
+            <div class="stat-cell"><div class="stat-num" data-count="56" data-suffix="h">56h</div><div class="stat-label">Of Racing</div></div>
             <div class="stat-cell"><div class="stat-num">Gr.3</div><div class="stat-label">Class</div></div>
-            <div class="stat-cell"><div class="stat-num">26 Pts</div><div class="stat-label">Max / Race</div></div>
+            <div class="stat-cell"><div class="stat-num" data-count="26" data-suffix=" Pts">26 Pts</div><div class="stat-label">Max / Race</div></div>
         </div>
     </div>
 </section>
@@ -1102,12 +1102,27 @@
 
     /* Countdown target is fetched dynamically from Supabase (see post-config script below) */
 
-    /* ---- Scroll reveal ---- */
+    /* ---- Scroll reveal + stat counters ---- */
     (function () {
+        function animateCount(el) {
+            const target = parseInt(el.dataset.count, 10);
+            const suffix = el.dataset.suffix || '';
+            if (isNaN(target)) return;
+            const duration = 1200;
+            const start = performance.now();
+            function step(now) {
+                const progress = Math.min((now - start) / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(ease * target) + suffix;
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
         const obs = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 if (e.isIntersecting) {
                     e.target.classList.add('visible');
+                    e.target.querySelectorAll('[data-count]').forEach(animateCount);
                     obs.unobserve(e.target);
                 }
             });

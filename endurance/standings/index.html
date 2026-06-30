@@ -554,7 +554,7 @@ function renderDrivers(panel) {
             ? `<span class="leader-pip">LEADER</span>`
             : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>`;
         return `<tr class="driver-row ${rankCls(pos)}">
-            <td class="${posCls(pos)}">
+            <td class="${posCls(pos)}" style="${d.brand_color ? `border-left:3px solid ${esc(d.brand_color)}` : 'border-left:3px solid transparent'}">
                 <div class="pos-stack">
                     <span>${pos}</span>
                     ${movement}
@@ -613,7 +613,7 @@ function renderTeams(panel) {
             ? `<span class="leader-pip">LEADER</span>`
             : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>`;
         return `<tr class="${rankCls(pos)}">
-            <td class="${posCls(pos)}">
+            <td class="${posCls(pos)}" style="${t.brand_color ? `border-left:3px solid ${esc(t.brand_color)}` : 'border-left:3px solid transparent'}">
                 <div class="pos-stack"><span>${pos}</span></div>
             </td>
             <td>

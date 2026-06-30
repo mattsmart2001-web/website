@@ -156,6 +156,7 @@
         .driver-card {
             background: var(--bg-1);
             border: 1px solid var(--border);
+            border-top: 3px solid var(--border);
             border-radius: 12px;
             overflow: hidden;
             text-decoration: none;
@@ -181,7 +182,13 @@
             color: var(--muted);
             opacity: 0.4;
         }
-        .driver-card-body { padding: 0.9rem; }
+        .driver-card-body { padding: 0.9rem; position: relative; overflow: hidden; }
+        .driver-card-ghost {
+            position: absolute; top: -0.1rem; right: -0.1rem;
+            font-family: 'Orbitron', sans-serif; font-weight: 900;
+            font-size: 4.5rem; line-height: 1; letter-spacing: -0.03em;
+            color: rgba(255,255,255,0.045); pointer-events: none; user-select: none;
+        }
         .driver-card-num {
             font-family: 'Orbitron', sans-serif;
             font-size: 0.65rem;
@@ -678,10 +685,12 @@ async function showListing() {
         ].filter(Boolean).join(' ').toLowerCase();
         const pts    = pointsMap[d.id] || 0;
         const eloVal = ratingMap[d.id] != null ? Math.round(ratingMap[d.id]) : 0;
+        const mfrColor = d.manufacturers?.brand_color || '';
         return `
-        <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'">
+        <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-top-color:${esc(mfrColor)}` : ''}">
             <div class="driver-card-photo">${avatarHTML(d.photo_url, d.display_name, 'card')}</div>
             <div class="driver-card-body">
+                ${d.career_number ? `<div class="driver-card-ghost">${d.career_number}</div>` : ''}
                 ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
                 <div class="driver-card-name">${esc(d.display_name)}</div>
                 <div class="driver-card-meta">
