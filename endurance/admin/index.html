@@ -6507,31 +6507,31 @@ function renderGuide() {
             `)}
 
             ${s('15. Transfer Window &amp; Team Changes', `
-                <p>The transfer window opens and closes automatically — no admin action required.</p>
+                <p>The transfer window opens and closes automatically. No admin action required.</p>
                 ${table(['State','Window','What drivers can do'],[
                     ['Season active, no results yet (pre-season)', 'Open', 'Apply to teams, leave teams, leaders can approve'],
-                    ['Season active, results recorded (mid-season)', 'Closed', 'No team changes — applications and approvals are blocked'],
+                    ['Season active, results recorded (mid-season)', 'Closed', 'No team changes. Applications and approvals are blocked.'],
                     ['No active season (off-season)', 'Open', 'Apply to teams, leave teams, leaders can approve'],
                 ])}
                 ${h('How drivers change teams')}
                 <p>During an open window, drivers handle transfers themselves via their portal:</p>
                 ${ol([
-                    'Driver clicks <strong>Leave Team</strong> at the bottom of their team card — they become a free agent instantly.',
+                    'Driver clicks <strong>Leave Team</strong> at the bottom of their team card. They become a free agent instantly.',
                     'Their previous team leader is notified via the roster updating.',
                     'The driver can then apply to any team with an open seat from the <strong>Find a Team</strong> section.',
-                    'The new team leader approves — the driver is added to the roster.',
+                    'The new team leader approves and the driver is added to the roster.',
                 ])}
                 ${tip('If a team leader leaves, the system automatically promotes the next driver on the roster. If they were the only member, leadership is cleared.')}
                 ${h('End of season checklist')}
                 ${ol([
                     'Finalise all results and lock the last event.',
-                    'Mark the season <strong>Inactive</strong> — the transfer window opens immediately.',
+                    'Mark the season <strong>Inactive</strong>. The transfer window opens immediately.',
                     'Drivers may now leave and join teams freely.',
                     'When ready, create and activate Season 2, register teams, and add events.',
                     'The window stays open through pre-season setup.',
                     'The moment you record the <strong>first result</strong> of Season 2, the window closes automatically.',
                 ])}
-                ${warn('Never delete a completed season — this cascade-deletes all events, results, and standings. Only mark it inactive.')}
+                ${warn('Never delete a completed season. This cascade-deletes all events, results, and standings. Only mark it inactive.')}
             `)}
         </div>`;
 }
