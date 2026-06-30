@@ -6436,9 +6436,9 @@ async function viewMessage(id) {
            </div>`
         : '';
 
-    // For direct threads, fetch and render all posts
+    // For all non-broadcast messages, fetch and render thread posts
     let conversationSection = '';
-    if (m.is_direct) {
+    if (!m.is_broadcast) {
         const { data: posts } = await sb.from('message_thread_posts')
             .select('id, sender_type, content, created_at')
             .eq('message_id', id)
@@ -6480,15 +6480,12 @@ async function viewMessage(id) {
         conversationSection = replyHistory + driverReply;
     }
 
-    const replyField = m.is_direct
+    const replyField = !m.is_broadcast
         ? `<div class="form-group">
                <label>Add reply <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(appends to thread)</span></label>
                <textarea name="thread_reply" rows="4" placeholder="Write your reply…"></textarea>
            </div>`
-        : `<div class="form-group">
-               <label>Reply to driver <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(visible in their portal inbox)</span></label>
-               <textarea name="admin_reply" rows="5" placeholder="${m.admin_reply ? 'Update your reply…' : 'Write a reply…'}">${esc(m.admin_reply)}</textarea>
-           </div>`;
+        : '';
 
     openModal(`${m.is_direct ? 'Thread with' : 'Message from'} ${esc(m.drivers?.display_name) || 'Driver'}`, `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1.5rem;font-size:0.84rem;margin-bottom:1.25rem">
@@ -6514,7 +6511,7 @@ async function viewMessage(id) {
             </div>
         </form>`,
         `<button class="btn btn-ghost" onclick="closeModal()">Close</button>
-         <button class="btn btn-primary" onclick="saveMessageStatus('${m.id}', ${!!m.is_direct})">Save</button>`
+         <button class="btn btn-primary" onclick="saveMessageStatus('${m.id}', ${!m.is_broadcast})">Save</button>`
     );
 }
 
