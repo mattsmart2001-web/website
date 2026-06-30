@@ -7093,21 +7093,21 @@ async function renderHealthCheck() {
 
     // Fetch solo drivers (claimed, no team)
     const { data: soloDrivers, error: e1 } = await sb.from('drivers')
-        .select('id, display_name, psn_id, nationality, manufacturer_id, manufacturers(name), user_id')
+        .select('id, display_name, psn_id, user_id')
         .is('current_team_id', null)
         .not('user_id', 'is', null)
         .order('display_name');
 
-    // Fetch all teams with their driver count
+    // Fetch all drivers on teams to compute per-team counts
     const { data: allDriversOnTeams, error: e2 } = await sb.from('drivers')
         .select('id, current_team_id')
         .not('current_team_id', 'is', null);
 
     const { data: teams, error: e3 } = await sb.from('teams')
-        .select('id, name, slug, manufacturer_id, max_drivers, manufacturers(name)')
+        .select('id, name, manufacturer_id, max_drivers, manufacturers(name)')
         .order('name');
 
-    // Fetch pending applications so we can show in-flight requests
+    // Fetch pending applications to show in-flight counts
     const { data: pending, error: e4 } = await sb.from('team_join_requests')
         .select('driver_id, team_id')
         .eq('status', 'pending');
@@ -7140,31 +7140,27 @@ async function renderHealthCheck() {
         return filled < (t.max_drivers || 2);
     });
 
-    // Collect all manufacturer ids present in both lists for filter pills
-    const mfrMap = new Map(); // id -> name
-    (soloDrivers || []).forEach(d => { if (d.manufacturer_id && d.manufacturers) mfrMap.set(d.manufacturer_id, d.manufacturers.name); });
+    // Filter pills based on manufacturers of open teams only
+    const mfrMap = new Map();
     openTeams.forEach(t => { if (t.manufacturer_id && t.manufacturers) mfrMap.set(t.manufacturer_id, t.manufacturers.name); });
     const mfrList = Array.from(mfrMap.entries()).sort((a, b) => a[1].localeCompare(b[1]));
 
     const soloCount = (soloDrivers || []).length;
     const openCount = openTeams.length;
-    const matchCount = (soloDrivers || []).filter(d => d.manufacturer_id && openTeams.some(t => t.manufacturer_id === d.manufacturer_id)).length;
 
     const soloRows = !soloCount
         ? `<div class="empty-state" style="padding:2rem 1rem">All drivers are in teams.</div>`
         : (soloDrivers || []).map(d => {
-            const mfr = d.manufacturers?.name || '—';
-            const mfrId = d.manufacturer_id || '';
             const applied = pendingTeamsForDriver.get(d.id)?.size || 0;
             return `
-            <div class="hc-driver-card" data-mfr="${esc(mfrId)}">
+            <div class="hc-driver-card">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
                     <div>
                         <div style="font-weight:600">${esc(d.display_name)}</div>
-                        <div style="font-size:0.8rem;color:var(--muted)">${esc(d.psn_id) || '—'} &middot; ${esc(mfr)}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${esc(d.psn_id) || '—'}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                        ${applied ? `<span class="badge badge-gold" title="${applied} pending application${applied > 1 ? 's' : ''}">${applied} app${applied > 1 ? 's' : ''}</span>` : ''}
+                        ${applied ? `<span class="badge badge-gold">${applied} app${applied > 1 ? 's' : ''}</span>` : ''}
                         <button class="btn-icon" onclick="openDirectMessageModal('${d.id}','${esc(d.display_name)}')">Message</button>
                     </div>
                 </div>
@@ -7188,7 +7184,7 @@ async function renderHealthCheck() {
                         <div style="font-size:0.8rem;color:var(--muted)">${esc(mfr)} &middot; ${filled}/${max} driver${max > 1 ? 's' : ''}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                        ${inbound ? `<span class="badge badge-green" title="${inbound} pending application${inbound > 1 ? 's' : ''}">${inbound} pending</span>` : ''}
+                        ${inbound ? `<span class="badge badge-green">${inbound} pending</span>` : ''}
                         <span class="badge badge-muted">${open} seat${open > 1 ? 's' : ''} open</span>
                     </div>
                 </div>
@@ -7196,8 +7192,8 @@ async function renderHealthCheck() {
         }).join('');
 
     const pillsHtml = mfrList.length > 1 ? `
-        <div id="hc-pills" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem">
-            <button class="btn btn-ghost hc-pill active" data-mfr="" onclick="hcFilter('')">All</button>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem">
+            <button class="btn btn-ghost hc-pill active" data-mfr="" onclick="hcFilter('')">All teams</button>
             ${mfrList.map(([id, name]) => `<button class="btn btn-ghost hc-pill" data-mfr="${esc(id)}" onclick="hcFilter('${esc(id)}')">${esc(name)}</button>`).join('')}
         </div>` : '';
 
@@ -7206,13 +7202,12 @@ async function renderHealthCheck() {
             <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
                 <div class="hc-stat"><span class="hc-stat-num">${soloCount}</span><span class="hc-stat-label">Solo Drivers</span></div>
                 <div class="hc-stat"><span class="hc-stat-num">${openCount}</span><span class="hc-stat-label">Teams with Open Seats</span></div>
-                <div class="hc-stat hc-stat-highlight"><span class="hc-stat-num">${matchCount}</span><span class="hc-stat-label">Manufacturer Matches</span></div>
             </div>
             ${pillsHtml}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
                 <div>
                     <h3 style="margin:0 0 0.75rem;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Solo Drivers (${soloCount})</h3>
-                    <div id="hc-solo-list" style="display:flex;flex-direction:column;gap:0.5rem">${soloRows}</div>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem">${soloRows}</div>
                 </div>
                 <div>
                     <h3 style="margin:0 0 0.75rem;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Teams with Open Seats (${openCount})</h3>
@@ -7224,14 +7219,11 @@ async function renderHealthCheck() {
             .hc-stat { display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem 1.5rem;min-width:130px;text-align:center }
             .hc-stat-num { font-size:2rem;font-weight:700;line-height:1 }
             .hc-stat-label { font-size:0.78rem;color:var(--muted);margin-top:0.25rem }
-            .hc-stat-highlight { border-color:var(--gold);color:var(--gold) }
-            .hc-stat-highlight .hc-stat-label { color:var(--gold);opacity:0.75 }
             .hc-driver-card, .hc-team-card { background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem;transition:border-color 0.15s }
             .hc-driver-card:hover { border-color:var(--accent) }
             .hc-team-card:hover { border-color:var(--accent) }
             .hc-pill.active { background:var(--accent);color:#fff;border-color:var(--accent) }
             .hc-hidden { display:none !important }
-            @media(max-width:680px) { #hc-cols { grid-template-columns:1fr !important } }
         </style>`;
 }
 
