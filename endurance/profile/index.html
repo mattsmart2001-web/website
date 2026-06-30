@@ -1154,10 +1154,11 @@ async function loadTeamingSections(driver) {
         }
     }
 
-    // Outgoing requests (always show if any exist)
+    // Outgoing requests (always show if any exist, hide dismissed)
     const { data: myReqs } = await sb.from('team_join_requests')
         .select('id, status, message, created_at, teams(name, slug)')
         .eq('driver_id', driver.id)
+        .is('dismissed_at', null)
         .order('created_at', { ascending: false });
     if (myReqs?.length) {
         document.getElementById('card-my-requests').style.display = '';
@@ -1166,9 +1167,9 @@ async function loadTeamingSections(driver) {
         document.getElementById('my-requests-list').innerHTML = myReqs.map(r => {
             const pill = r.status === 'pending' ? 'pill-gold' :
                          r.status === 'approved' ? 'pill-green' : 'pill-muted';
-            const cancelBtn = r.status === 'pending'
+            const actionBtn = r.status === 'pending'
                 ? `<button class="btn-small danger" onclick="cancelMyRequest('${esc(r.id)}')">Cancel</button>`
-                : '';
+                : `<button class="btn-small" onclick="dismissMyRequest('${esc(r.id)}')" style="opacity:0.6">Dismiss</button>`;
             return `<div class="req-row">
                 <div style="flex:1;min-width:0">
                     <div class="open-team-name">${esc(r.teams?.name) || '—'}</div>
@@ -1178,7 +1179,7 @@ async function loadTeamingSections(driver) {
                         ${r.message ? '<br><em style="font-size:0.78rem">' + esc(r.message) + '</em>' : ''}
                     </div>
                 </div>
-                ${cancelBtn}
+                ${actionBtn}
             </div>`;
         }).join('');
     }
@@ -1251,6 +1252,14 @@ async function cancelMyRequest(requestId) {
     const { error } = await sb.from('team_join_requests').delete().eq('id', requestId);
     if (error) { toast(error.message, 'error'); return; }
     toast('Request cancelled.', 'success');
+    await loadTeamingSections(_currentDriver);
+}
+
+async function dismissMyRequest(requestId) {
+    const { error } = await sb.from('team_join_requests')
+        .update({ dismissed_at: new Date().toISOString() })
+        .eq('id', requestId);
+    if (error) { toast(error.message, 'error'); return; }
     await loadTeamingSections(_currentDriver);
 }
 
