@@ -6403,6 +6403,8 @@ async function viewMessage(id) {
         .eq('id', id).single();
     if (!m) { toast('Message not found.', 'error'); return; }
 
+    const fmtWhen = iso => iso ? new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+
     const statusOpts = ['new','in_progress','resolved','dismissed']
         .map(s => `<option value="${s}" ${m.status===s?'selected':''}>${s.replace('_',' ').replace(/^./, c => c.toUpperCase())}</option>`)
         .join('');
@@ -6418,37 +6420,72 @@ async function viewMessage(id) {
            </div>`
         : '';
 
-    const replyHistory = m.admin_reply
-        ? `<div style="margin-bottom:1rem;padding:0.85rem 1rem;background:rgba(255,209,102,0.06);border:1px solid rgba(255,209,102,0.2);border-radius:6px">
-              <div style="font-size:0.7rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:0.35rem">Previous Reply${m.replied_at ? ' · ' + new Date(m.replied_at).toLocaleString('en-GB') : ''}</div>
-              <div style="font-size:0.86rem;white-space:pre-wrap;line-height:1.5">${esc(m.admin_reply)}</div>
-              <div style="font-size:0.72rem;color:var(--muted);margin-top:0.45rem">${m.driver_read_reply_at ? '✓ Read by driver' : 'Unread by driver'}</div>
-           </div>`
-        : '';
+    // For direct threads, fetch and render all posts
+    let conversationSection = '';
+    if (m.is_direct) {
+        const { data: posts } = await sb.from('message_thread_posts')
+            .select('id, sender_type, content, created_at')
+            .eq('message_id', id)
+            .order('created_at', { ascending: true });
 
-    const driverReply = m.driver_reply
-        ? `<div style="margin-bottom:1rem;padding:0.85rem 1rem;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.22);border-left:3px solid #38bdf8;border-radius:6px">
-              <div style="font-size:0.7rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#38bdf8;margin-bottom:0.35rem">Driver's reply${m.driver_replied_at ? ' · ' + new Date(m.driver_replied_at).toLocaleString('en-GB') : ''}</div>
-              <div style="font-size:0.86rem;white-space:pre-wrap;line-height:1.5">${esc(m.driver_reply)}</div>
-           </div>`
-        : '';
+        const postsHtml = (posts || []).length
+            ? (posts || []).map(p => {
+                const isAdmin = p.sender_type === 'admin';
+                return `<div style="display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-start' : 'flex-end'}">
+                    <div style="max-width:85%;padding:0.55rem 0.8rem;border-radius:6px;${isAdmin
+                        ? 'background:rgba(255,209,102,0.07);border:1px solid rgba(255,209,102,0.2);border-left:3px solid var(--gold)'
+                        : 'background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.2);border-right:3px solid #38bdf8;text-align:right'}">
+                        <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${isAdmin ? 'var(--gold)' : '#38bdf8'};margin-bottom:0.2rem">${isAdmin ? '★ Admin' : 'Driver'} · ${fmtWhen(p.created_at)}</div>
+                        <div style="font-size:0.85rem;white-space:pre-wrap;line-height:1.5">${esc(p.content)}</div>
+                    </div>
+                </div>`;
+            }).join('')
+            : '<div style="font-size:0.8rem;color:var(--muted);font-style:italic">No posts yet.</div>';
 
-    openModal(`Message from ${esc(m.drivers?.display_name) || 'Driver'}`, `
+        conversationSection = `
+            <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Conversation</div>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;max-height:260px;overflow-y:auto;padding:0.65rem;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;margin-bottom:1rem">
+                ${postsHtml}
+            </div>`;
+    } else {
+        const replyHistory = m.admin_reply
+            ? `<div style="margin-bottom:1rem;padding:0.85rem 1rem;background:rgba(255,209,102,0.06);border:1px solid rgba(255,209,102,0.2);border-radius:6px">
+                  <div style="font-size:0.7rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:0.35rem">Previous Reply${m.replied_at ? ' · ' + new Date(m.replied_at).toLocaleString('en-GB') : ''}</div>
+                  <div style="font-size:0.86rem;white-space:pre-wrap;line-height:1.5">${esc(m.admin_reply)}</div>
+                  <div style="font-size:0.72rem;color:var(--muted);margin-top:0.45rem">${m.driver_read_reply_at ? '✓ Read by driver' : 'Unread by driver'}</div>
+               </div>`
+            : '';
+        const driverReply = m.driver_reply
+            ? `<div style="margin-bottom:1rem;padding:0.85rem 1rem;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.22);border-left:3px solid #38bdf8;border-radius:6px">
+                  <div style="font-size:0.7rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:#38bdf8;margin-bottom:0.35rem">Driver's reply${m.driver_replied_at ? ' · ' + new Date(m.driver_replied_at).toLocaleString('en-GB') : ''}</div>
+                  <div style="font-size:0.86rem;white-space:pre-wrap;line-height:1.5">${esc(m.driver_reply)}</div>
+               </div>`
+            : '';
+        conversationSection = replyHistory + driverReply;
+    }
+
+    const replyField = m.is_direct
+        ? `<div class="form-group">
+               <label>Add reply <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(appends to thread)</span></label>
+               <textarea name="thread_reply" rows="4" placeholder="Write your reply…"></textarea>
+           </div>`
+        : `<div class="form-group">
+               <label>Reply to driver <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(visible in their portal inbox)</span></label>
+               <textarea name="admin_reply" rows="5" placeholder="${m.admin_reply ? 'Update your reply…' : 'Write a reply…'}">${esc(m.admin_reply)}</textarea>
+           </div>`;
+
+    openModal(`${m.is_direct ? 'Thread with' : 'Message from'} ${esc(m.drivers?.display_name) || 'Driver'}`, `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1.5rem;font-size:0.84rem;margin-bottom:1.25rem">
             <div><span style="color:var(--muted)">Driver</span><br><strong>${esc(m.drivers?.display_name) || '—'}</strong> ${profileLink}</div>
             <div><span style="color:var(--muted)">PSN ID</span><br><strong>${esc(m.drivers?.psn_id) || '—'}</strong></div>
             <div><span style="color:var(--muted)">Subject</span><br><strong>${esc(m.subject) || '<em>(none)</em>'}</strong></div>
             <div><span style="color:var(--muted)">Sent</span><br><strong>${m.created_at ? new Date(m.created_at).toLocaleString('en-GB') : '—'}</strong></div>
         </div>
-        <div style="font-size:0.88rem;margin-bottom:1rem;padding:0.85rem 1rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;white-space:pre-wrap;line-height:1.55">${esc(m.message)}</div>
+        ${m.is_direct ? '' : `<div style="font-size:0.88rem;margin-bottom:1rem;padding:0.85rem 1rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;white-space:pre-wrap;line-height:1.55">${esc(m.message)}</div>`}
         ${incidentLink}
-        ${replyHistory}
-        ${driverReply}
+        ${conversationSection}
         <form id="entity-form">
-            <div class="form-group">
-                <label>Reply to driver <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(visible in their portal inbox)</span></label>
-                <textarea name="admin_reply" rows="5" placeholder="${m.admin_reply ? 'Update your reply…' : 'Write a reply…'}">${esc(m.admin_reply)}</textarea>
-            </div>
+            ${replyField}
             <div class="form-row">
                 <div class="form-group">
                     <label>Status</label>
@@ -6461,33 +6498,48 @@ async function viewMessage(id) {
             </div>
         </form>`,
         `<button class="btn btn-ghost" onclick="closeModal()">Close</button>
-         <button class="btn btn-primary" onclick="saveMessageStatus('${m.id}')">Save</button>`
+         <button class="btn btn-primary" onclick="saveMessageStatus('${m.id}', ${!!m.is_direct})">Save</button>`
     );
 }
 
-async function saveMessageStatus(id) {
+async function saveMessageStatus(id, isDirect = false) {
     const d = getFormData('entity-form');
-    const reply = (d.admin_reply || '').trim();
 
-    // Look up current reply to see if this is a NEW reply we should stamp
-    const { data: existing } = await sb.from('driver_contact_messages')
-        .select('admin_reply').eq('id', id).single();
-
-    const payload = {
-        status:     d.status,
-        admin_note: d.admin_note || null,
-        admin_reply: reply || null,
-    };
-    if (reply && (!existing?.admin_reply || existing.admin_reply !== reply)) {
-        const { data: u } = await sb.auth.getUser();
-        payload.replied_at = new Date().toISOString();
-        payload.replied_by = u.user?.id || null;
-        payload.driver_read_reply_at = null;  // reset read state for the new reply
+    if (isDirect) {
+        const reply = (d.thread_reply || '').trim();
+        if (reply) {
+            const { data, error } = await sb.rpc('admin_reply_to_thread', {
+                p_message_id: id,
+                p_content:    reply,
+            });
+            if (error)     { toast(error.message, 'error'); return; }
+            if (!data?.ok) { toast(data?.error || 'Could not send reply.', 'error'); return; }
+        }
+        const { error } = await sb.from('driver_contact_messages')
+            .update({ status: d.status, admin_note: d.admin_note || null })
+            .eq('id', id);
+        if (error) { toast(error.message, 'error'); return; }
+        toast(reply ? 'Reply sent.' : 'Updated.', 'success');
+    } else {
+        const reply = (d.admin_reply || '').trim();
+        const { data: existing } = await sb.from('driver_contact_messages')
+            .select('admin_reply').eq('id', id).single();
+        const payload = {
+            status:      d.status,
+            admin_note:  d.admin_note || null,
+            admin_reply: reply || null,
+        };
+        if (reply && (!existing?.admin_reply || existing.admin_reply !== reply)) {
+            const { data: u } = await sb.auth.getUser();
+            payload.replied_at           = new Date().toISOString();
+            payload.replied_by           = u.user?.id || null;
+            payload.driver_read_reply_at = null;
+        }
+        const { error } = await sb.from('driver_contact_messages').update(payload).eq('id', id);
+        if (error) { toast(error.message, 'error'); return; }
+        toast(reply ? 'Reply sent to driver.' : 'Message updated.', 'success');
     }
 
-    const { error } = await sb.from('driver_contact_messages').update(payload).eq('id', id);
-    if (error) { toast(error.message, 'error'); return; }
-    toast(reply ? 'Reply sent to driver.' : 'Message updated.', 'success');
     closeModal();
     await renderMessages();
     await refreshMsgsBadge();
