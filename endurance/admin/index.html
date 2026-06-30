@@ -874,6 +874,8 @@ const sb  = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
 let currentUser  = null;
 let currentSection = 'dashboard';
+const OWNER_EMAIL = 'mattsmart2001@gmail.com';
+function isOwner() { return currentUser?.email?.toLowerCase() === OWNER_EMAIL; }
 
 // Cached data for dropdowns
 let _manufacturers = [];
@@ -1167,10 +1169,12 @@ async function renderDashboard() {
                 <div style="font-size:0.85rem;color:var(--muted)">Rebuild Hall of Fame records from current career stats.</div>
                 <button class="btn btn-primary" onclick="refreshHallOfFame()">Refresh Hall of Fame</button>
             </div>
+            ${isOwner() ? `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding-top:0.85rem">
                 <div style="font-size:0.85rem;color:#fca5a5">Delete all race data — entries, results, qualifying, ratings, penalties, steward decisions, Hall of Fame. Events, drivers, teams, manufacturers and seasons are kept.</div>
                 <button class="btn-icon danger" onclick="resetAllStats()">Reset All Statistics</button>
             </div>
+            ` : ''}
         </div>
     `;
 }
@@ -6485,6 +6489,7 @@ function renderGuide() {
                 ${warn('This is irreversible. Only use it to wipe a test season before going live.')}
                 <p>Deletes: all entries, results, qualifying, ratings, penalties, steward decisions, and Hall of Fame data.</p>
                 <p>Does <strong>not</strong> delete: events, drivers, teams, manufacturers, or seasons.</p>
+                <p>This button and its underlying function are restricted to the site owner\'s account. Other admins will not see it.</p>
             `)}
 
             ${s('14. Warnings &amp; Common Mistakes', `
