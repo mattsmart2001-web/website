@@ -7472,7 +7472,7 @@ async function renderHealthCheck() {
                         <div style="font-size:0.8rem;color:var(--muted)">${esc(d.psn_id) || '—'}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                        ${appliedTeams.map(name => `<span class="badge badge-gold" title="Pending application">${esc(name)}</span>`).join('')}
+                        ${appliedTeams.map(name => `<span class="badge badge-gold">Applied to ${esc(name)}</span>`).join('')}
                         <button class="btn-icon" onclick="openDirectMessageModal('${d.id}','${esc(d.display_name)}')">Message</button>
                     </div>
                 </div>
