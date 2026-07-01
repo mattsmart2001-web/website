@@ -1628,7 +1628,7 @@ function teamForm(t = {}) {
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label>Manufacturer</label>
+                <label>Manufacturer <span class="required">*</span></label>
                 ${selectHTML('manufacturer_id', mfrOpts, t.manufacturer_id || '')}
                 <div class="form-hint">Current default — season lock set in Seasons.</div>
             </div>
@@ -1663,6 +1663,7 @@ async function editTeam(id) {
 async function saveTeam(id) {
     const d = getFormData('entity-form');
     if (!d.name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
+    if (!d.manufacturer_id) { toast('A manufacturer must be assigned before saving a team.', 'error'); return; }
     const dupName = checkTeamNameUnique(d.name, id);
     if (dupName) { toast(dupName, 'error'); return; }
     const payload = { name: d.name, slug: d.slug, manufacturer_id: d.manufacturer_id || null, home_country: d.home_country, founded_on: d.founded_on, bio: d.bio };
@@ -6029,6 +6030,7 @@ async function saveDriverFromApplication(appId) {
 async function saveTeamFromApplication(appId) {
     const d = getFormData('entity-form');
     if (!d.name || !d.slug) { toast('Name and slug are required.', 'error'); return; }
+    if (!d.manufacturer_id) { toast('A manufacturer must be assigned before saving a team.', 'error'); return; }
     const dupName = checkTeamNameUnique(d.name, null);
     if (dupName) { toast(dupName, 'error'); return; }
 
