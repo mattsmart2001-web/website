@@ -7586,7 +7586,7 @@ async function renderHealthCheck() {
 
     // Dead wood — all drivers sorted by least active
     const { data: activity } = await sb.rpc('driver_activity_report');
-    const inactiveDrivers = (activity || []).filter(d => d.total_entered === 0 || !d.last_raced_at);
+    const inactiveDrivers = (activity || []).filter(d => d.is_claimed && (d.total_entered === 0 || !d.last_raced_at));
     const inactiveCount = inactiveDrivers.length;
     const inactiveRows = !inactiveCount
         ? `<div class="empty-state" style="padding:2rem 1rem">All drivers have at least one race entry.</div>`
