@@ -521,7 +521,7 @@
     <!-- Delete account -->
     <div class="card" style="border-color:rgba(239,68,68,0.25)">
         <div class="card-title" style="color:#f87171">Delete Account</div>
-        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.25rem">Permanently removes your login access. Your race history and driver profile remain in the championship records.</p>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.25rem">Permanently removes your login access. Your race history and driver profile remain in the championship records. If you change your mind, contact an admin and you can be re-invited at any time.</p>
         <button class="btn-small danger" onclick="deleteMyAccount()">Delete My Account</button>
     </div>
 
@@ -670,6 +670,7 @@ async function deleteMyAccount() {
         'Delete your account?\n\n' +
         'Your login access will be removed permanently. ' +
         'Your race history and driver profile will remain in the championship records.\n\n' +
+        'If you change your mind, contact an admin — you can be re-invited at any time.\n\n' +
         'This cannot be undone.'
     );
     if (!confirmed) return;
