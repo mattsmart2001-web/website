@@ -666,6 +666,17 @@ async function changePassword() {
 }
 
 async function deleteMyAccount() {
+    // Block admins from accidentally deleting themselves
+    const { data: roleRow } = await sb.from('user_roles')
+        .select('role')
+        .eq('user_id', (await sb.auth.getUser()).data.user?.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+    if (roleRow) {
+        alert('Admin accounts cannot be deleted from the driver portal. If you need to remove your admin access, contact another administrator.');
+        return;
+    }
+
     const confirmed = confirm(
         'Delete your account?\n\n' +
         'Your login access will be removed permanently. ' +
