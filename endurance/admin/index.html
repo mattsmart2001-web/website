@@ -1477,9 +1477,9 @@ async function viewSeasonTeams(seasonId, seasonName) {
         <div class="section-card">
             <div class="section-card-header">
                 <span class="section-card-title">Team Registrations — ${esc(seasonName)}</span>
-                <button class="btn-add" onclick="openRegisterTeamModal('${seasonId}')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Register Team
+                <button class="btn-add" onclick="syncAllTeamsToSeason('${seasonId}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Sync All Teams
                 </button>
             </div>
             <table><thead><tr>
@@ -1488,38 +1488,22 @@ async function viewSeasonTeams(seasonId, seasonName) {
         </div>`;
 }
 
-async function openRegisterTeamModal(seasonId) {
+async function syncAllTeamsToSeason(seasonId) {
     const { data: existing } = await sb.from('team_seasons').select('team_id').eq('season_id', seasonId);
     const registered = new Set((existing || []).map(r => r.team_id));
-    const teamOpts = _teams.filter(t => !registered.has(t.id)).map(t => ({ value: t.id, label: t.name }));
-    const mfrOpts  = _manufacturers.map(m => ({ value: m.id, label: m.name + (m.car_name ? ' — ' + m.car_name : '') }));
-    openModal('Register Team for Season',
-        `<form id="entity-form">
-            <div class="form-group">
-                <label>Team <span class="required">*</span></label>
-                ${selectHTML('team_id', teamOpts)}
-            </div>
-            <div class="form-group">
-                <label>Manufacturer (season-locked) <span class="required">*</span></label>
-                ${selectHTML('manufacturer_id', mfrOpts)}
-                <div class="form-hint">This locks the team to this manufacturer for the entire season.</div>
-            </div>
-            <input type="hidden" name="season_id" value="${seasonId}">
-        </form>`,
-        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-         <button class="btn btn-primary" onclick="registerTeamForSeason('${seasonId}')">Register</button>`
-    );
-}
+    const toSync = _teams.filter(t => !registered.has(t.id) && t.manufacturer_id);
+    const noMfr  = _teams.filter(t => !registered.has(t.id) && !t.manufacturer_id);
 
-async function registerTeamForSeason(seasonId) {
-    const d = getFormData('entity-form');
-    if (!d.team_id || !d.manufacturer_id) { toast('Select a team and manufacturer.', 'error'); return; }
-    const { error } = await sb.from('team_seasons').insert({
-        team_id: d.team_id, season_id: seasonId, manufacturer_id: d.manufacturer_id
-    });
+    if (!toSync.length && !noMfr.length) { toast('All teams already registered for this season.', 'success'); return; }
+
+    let msg = `Sync ${toSync.length} team${toSync.length !== 1 ? 's' : ''} to this season using their current manufacturer?`;
+    if (noMfr.length) msg += `\n\n${noMfr.map(t => t.name).join(', ')} ${noMfr.length === 1 ? 'has' : 'have'} no manufacturer set and will be skipped.`;
+    if (!confirm(msg)) return;
+
+    const rows = toSync.map(t => ({ season_id: seasonId, team_id: t.id, manufacturer_id: t.manufacturer_id }));
+    const { error } = await sb.from('team_seasons').upsert(rows, { onConflict: 'team_id,season_id' });
     if (error) { toast(error.message, 'error'); return; }
-    toast('Team registered for season.', 'success');
-    closeModal();
+    toast(`${toSync.length} team${toSync.length !== 1 ? 's' : ''} synced.`, 'success');
     const { data: s } = await sb.from('seasons').select('name').eq('id', seasonId).single();
     await viewSeasonTeams(seasonId, s?.name || '');
 }
@@ -2510,7 +2494,8 @@ async function viewEventEntries(eventId, eventName, seasonId) {
     (data || []).forEach(en => (en.entry_drivers || []).forEach(ed => enteredDriverIds.add(ed.driver_id ?? ed.drivers?.id)));
     const { data: freeAgents } = await sb.from('drivers')
         .select('id, display_name, career_number')
-        .is('current_team_id', null);
+        .is('current_team_id', null)
+        .not('user_id', 'is', null);
     const unregisteredFreeAgents = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id));
 
     // Existing team entries with zero drivers — left from earlier bulk
