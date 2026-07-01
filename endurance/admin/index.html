@@ -6538,6 +6538,20 @@ function renderGuide() {
                 ])}
                 ${warn('Never delete a completed season. This cascade-deletes all events, results, and standings. Only mark it inactive.')}
             `)}
+
+            ${s('16. Driver Team Health Check', `
+                <p>The Health Check page gives you a live overview of roster health. It runs six checks every time you open it.</p>
+                ${table(['Tile', 'What it flags', 'Action'], [
+                    ['Solo Drivers', 'Claimed drivers with no team', 'Message them or monitor their applications'],
+                    ['Open Seats', 'Teams with spare capacity', 'Chase solo drivers to apply'],
+                    ['Unclaimed', 'Driver profiles with no linked account', 'Go to Drivers and send a fresh claim link'],
+                    ['No Team Leader', 'Teams where the leader slot is empty', 'Go to Teams and assign a leader so join requests can be approved'],
+                    ['No-Show Watch', 'Drivers who missed 2 or more of the last 5 races', 'Message them. Consider granting the Ghost badge if it becomes a pattern'],
+                    ['Never Raced', 'Drivers on the roster with zero race entries all time', 'Chase up or remove if they are no longer participating'],
+                ])}
+                ${tip('The No-Show Watch looks at the last 5 completed events. A driver only appears here if they were actually entered for those events but did not produce a result. Drivers who were never entered will not show up here — they appear under Never Raced instead.')}
+                ${tip('The Ghost badge (Secrets category) can be granted manually from the driver edit form. It appears on their public driver card as a secret badge.')}
+            `)}
         </div>`;
 }
 
