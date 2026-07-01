@@ -518,6 +518,13 @@
         </div>
     </div>
 
+    <!-- Delete account -->
+    <div class="card" style="border-color:rgba(239,68,68,0.25)">
+        <div class="card-title" style="color:#f87171">Delete Account</div>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.25rem">Permanently removes your login access. Your race history and driver profile remain in the championship records.</p>
+        <button class="btn-small danger" onclick="deleteMyAccount()">Delete My Account</button>
+    </div>
+
 </div>
 
 <div class="toast-container" id="toasts"></div>
@@ -656,6 +663,22 @@ async function changePassword() {
     if (error) { toast(error.message, 'error'); return; }
     pwEl.value = ''; cfEl.value = '';
     toast('Password updated.', 'success');
+}
+
+async function deleteMyAccount() {
+    const confirmed = confirm(
+        'Delete your account?\n\n' +
+        'Your login access will be removed permanently. ' +
+        'Your race history and driver profile will remain in the championship records.\n\n' +
+        'This cannot be undone.'
+    );
+    if (!confirmed) return;
+    const phrase = prompt('Type DELETE to confirm:');
+    if (phrase !== 'DELETE') { toast('Cancelled.', 'error'); return; }
+    const { data, error } = await sb.rpc('delete_my_account');
+    if (error || data?.error) { toast(error?.message || data.error, 'error'); return; }
+    await sb.auth.signOut().catch(() => {});
+    window.location.replace('/endurance/');
 }
 
 // Live availability check on the career-number input. Greens up when
