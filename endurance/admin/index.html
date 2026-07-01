@@ -7426,7 +7426,7 @@ async function renderHealthCheck() {
 
     // Unclaimed drivers (no user_id — profile exists but not yet claimed)
     const { data: unclaimedDrivers, error: e5 } = await sb.from('drivers')
-        .select('id, display_name, psn_id, current_team_id, teams(name)')
+        .select('id, display_name, psn_id, current_team_id, teams!current_team_id(name)')
         .is('user_id', null)
         .order('display_name');
 
