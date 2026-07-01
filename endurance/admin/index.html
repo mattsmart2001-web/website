@@ -1477,7 +1477,7 @@ async function viewSeasonTeams(seasonId, seasonName) {
         <div class="section-card">
             <div class="section-card-header">
                 <span class="section-card-title">Team Registrations — ${esc(seasonName)}</span>
-                <button class="btn-add" onclick="openRegisterTeamModal('${seasonId}', ${JSON.stringify(data.map(ts => ts.team_id))})">
+                <button class="btn-add" onclick="openRegisterTeamModal('${seasonId}')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Register Team
                 </button>
@@ -1488,8 +1488,9 @@ async function viewSeasonTeams(seasonId, seasonName) {
         </div>`;
 }
 
-function openRegisterTeamModal(seasonId, registeredTeamIds = []) {
-    const registered = new Set(registeredTeamIds);
+async function openRegisterTeamModal(seasonId) {
+    const { data: existing } = await sb.from('team_seasons').select('team_id').eq('season_id', seasonId);
+    const registered = new Set((existing || []).map(r => r.team_id));
     const teamOpts = _teams.filter(t => !registered.has(t.id)).map(t => ({ value: t.id, label: t.name }));
     const mfrOpts  = _manufacturers.map(m => ({ value: m.id, label: m.name + (m.car_name ? ' — ' + m.car_name : '') }));
     openModal('Register Team for Season',
