@@ -7416,7 +7416,7 @@ async function renderHealthCheck() {
         .not('current_team_id', 'is', null);
 
     const { data: teams, error: e3 } = await sb.from('teams')
-        .select('id, name, manufacturer_id, max_drivers, manufacturers(name)')
+        .select('id, name, manufacturer_id, max_drivers, leader_driver_id, manufacturers(name)')
         .order('name');
 
     // Fetch pending applications to show in-flight counts
@@ -7424,10 +7424,16 @@ async function renderHealthCheck() {
         .select('driver_id, team_id, teams(name)')
         .eq('status', 'pending');
 
-    if (e1 || e2 || e3 || e4) {
-        const err = e1 || e2 || e3 || e4;
+    // Unclaimed drivers (no user_id — profile exists but not yet claimed)
+    const { data: unclaimedDrivers, error: e5 } = await sb.from('drivers')
+        .select('id, display_name, psn_id, current_team_id, teams(name)')
+        .is('user_id', null)
+        .order('display_name');
+
+    if (e1 || e2 || e3 || e4 || e5) {
+        const err = e1 || e2 || e3 || e4 || e5;
         content.innerHTML = `<div class="empty-state">Failed to load health check data: ${esc(err.message)}</div>`;
-        console.error('Health check errors:', { e1, e2, e3, e4 });
+        console.error('Health check errors:', { e1, e2, e3, e4, e5 });
         return;
     }
 
@@ -7509,6 +7515,40 @@ async function renderHealthCheck() {
             ${mfrList.map(([id, name]) => `<button class="btn btn-ghost hc-pill" data-mfr="${esc(id)}" onclick="hcFilter('${esc(id)}')">${esc(name)}</button>`).join('')}
         </div>` : '';
 
+    // Teams without a leader
+    const leaderlessTeams = (teams || []).filter(t => !t.leader_driver_id);
+    const leaderlessCount = leaderlessTeams.length;
+    const leaderlessRows = !leaderlessCount
+        ? `<div class="empty-state" style="padding:2rem 1rem">All teams have a leader assigned.</div>`
+        : leaderlessTeams.map(t => {
+            const filled = driverCountByTeam.get(t.id) || 0;
+            return `
+            <div class="hc-driver-card" style="border-color:rgba(239,68,68,0.4)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+                    <div>
+                        <div style="font-weight:600">${esc(t.name)}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${esc(t.manufacturers?.name || '—')} &middot; ${filled} driver${filled !== 1 ? 's' : ''}</div>
+                    </div>
+                    <span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);flex-shrink:0">No leader</span>
+                </div>
+            </div>`;
+        }).join('');
+
+    // Unclaimed drivers
+    const unclaimedCount = (unclaimedDrivers || []).length;
+    const unclaimedRows = !unclaimedCount
+        ? `<div class="empty-state" style="padding:2rem 1rem">All drivers have claimed their profile.</div>`
+        : (unclaimedDrivers || []).map(d => `
+            <div class="hc-driver-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+                    <div>
+                        <div style="font-weight:600">${esc(d.display_name)}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${d.teams?.name ? esc(d.teams.name) : 'No team'} &middot; ${esc(d.psn_id || '—')}</div>
+                    </div>
+                    <span class="badge badge-muted" style="flex-shrink:0">Unclaimed</span>
+                </div>
+            </div>`).join('');
+
     // No-show watch
     const { data: noShows } = await sb.rpc('driver_no_show_watch', { p_lookback: 5 });
     const noShowCount = (noShows || []).length;
@@ -7553,6 +7593,8 @@ async function renderHealthCheck() {
             <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
                 <div class="hc-stat"><span class="hc-stat-num">${soloCount}</span><span class="hc-stat-label">Solo Drivers</span></div>
                 <div class="hc-stat"><span class="hc-stat-num">${openCount}</span><span class="hc-stat-label">Open Seats</span></div>
+                <div class="hc-stat" style="${unclaimedCount ? 'border-color:rgba(251,146,60,0.4)' : ''}"><span class="hc-stat-num" style="${unclaimedCount ? 'color:#fb923c' : ''}">${unclaimedCount}</span><span class="hc-stat-label">Unclaimed</span></div>
+                <div class="hc-stat" style="${leaderlessCount ? 'border-color:rgba(239,68,68,0.4)' : ''}"><span class="hc-stat-num" style="${leaderlessCount ? 'color:#f87171' : ''}">${leaderlessCount}</span><span class="hc-stat-label">No Team Leader</span></div>
                 <div class="hc-stat" style="${noShowCount ? 'border-color:rgba(251,146,60,0.4)' : ''}"><span class="hc-stat-num" style="${noShowCount ? 'color:#fb923c' : ''}">${noShowCount}</span><span class="hc-stat-label">No-Show Watch</span></div>
                 <div class="hc-stat" style="${inactiveCount ? 'border-color:rgba(239,68,68,0.3)' : ''}"><span class="hc-stat-num" style="${inactiveCount ? 'color:#f87171' : ''}">${inactiveCount}</span><span class="hc-stat-label">Never Raced</span></div>
             </div>
@@ -7565,6 +7607,17 @@ async function renderHealthCheck() {
                 <div>
                     <h3 style="margin:0 0 0.75rem;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Teams with Open Seats (${openCount})</h3>
                     <div id="hc-team-list" style="display:flex;flex-direction:column;gap:0.5rem">${teamRows}</div>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;margin-bottom:2rem">
+                <div>
+                    <h3 style="margin:0 0 0.75rem;font-size:1rem;color:#fb923c;text-transform:uppercase;letter-spacing:0.05em">Unclaimed Profiles (${unclaimedCount})</h3>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem">${unclaimedRows}</div>
+                </div>
+                <div>
+                    <h3 style="margin:0 0 0.75rem;font-size:1rem;color:#f87171;text-transform:uppercase;letter-spacing:0.05em">Teams Without a Leader (${leaderlessCount})</h3>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem">${leaderlessRows}</div>
                 </div>
             </div>
 
