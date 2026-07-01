@@ -112,6 +112,8 @@
                   evalFn: s => !!(s.secretBadges || {}).last_to_first },
                 { key: 'mr_consistent',       name: 'Mr Consistent',       icon: '🎯', blurb: 'Finish top 10 in 5 consecutive races',
                   evalFn: s => !!(s.secretBadges || {}).mr_consistent },
+                { key: 'ghost',               name: 'Ghost',               icon: '👻', blurb: 'Consistently absent from the grid',
+                  evalFn: s => !!(s.secretBadges || {}).ghost },
             ],
         },
         {

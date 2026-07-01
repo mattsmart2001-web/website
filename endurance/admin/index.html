@@ -7509,14 +7509,55 @@ async function renderHealthCheck() {
             ${mfrList.map(([id, name]) => `<button class="btn btn-ghost hc-pill" data-mfr="${esc(id)}" onclick="hcFilter('${esc(id)}')">${esc(name)}</button>`).join('')}
         </div>` : '';
 
+    // No-show watch
+    const { data: noShows } = await sb.rpc('driver_no_show_watch', { p_lookback: 5 });
+    const noShowCount = (noShows || []).length;
+    const noShowRows = !noShowCount
+        ? `<div class="empty-state" style="padding:2rem 1rem">No drivers have missed 2 or more of the last 5 races.</div>`
+        : (noShows || []).map(d => `
+            <div class="hc-driver-card" style="${d.no_shows >= 4 ? 'border-color:rgba(239,68,68,0.4)' : 'border-color:rgba(251,146,60,0.3)'}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+                    <div>
+                        <div style="font-weight:600">${esc(d.display_name)}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${esc(d.psn_id || '—')}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
+                        <span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)">${d.no_shows} missed / ${d.events_entered}</span>
+                        <button class="btn-icon" onclick="openDirectMessageModal('${d.driver_id}','${esc(d.display_name)}')">Message</button>
+                    </div>
+                </div>
+            </div>`).join('');
+
+    // Dead wood — all drivers sorted by least active
+    const { data: activity } = await sb.rpc('driver_activity_report');
+    const inactiveDrivers = (activity || []).filter(d => d.total_entered === 0 || !d.last_raced_at);
+    const inactiveCount = inactiveDrivers.length;
+    const inactiveRows = !inactiveCount
+        ? `<div class="empty-state" style="padding:2rem 1rem">All drivers have at least one race entry.</div>`
+        : inactiveDrivers.map(d => `
+            <div class="hc-driver-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+                    <div>
+                        <div style="font-weight:600">${esc(d.display_name)}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${d.is_claimed ? 'Claimed' : '<span style="color:#f87171">Unclaimed</span>'}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
+                        <span class="badge badge-muted">0 races</span>
+                        ${d.is_claimed ? `<button class="btn-icon" onclick="openDirectMessageModal('${d.driver_id}','${esc(d.display_name)}')">Message</button>` : ''}
+                    </div>
+                </div>
+            </div>`).join('');
+
     content.innerHTML = `
         <div style="max-width:1100px">
             <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">
                 <div class="hc-stat"><span class="hc-stat-num">${soloCount}</span><span class="hc-stat-label">Solo Drivers</span></div>
-                <div class="hc-stat"><span class="hc-stat-num">${openCount}</span><span class="hc-stat-label">Teams with Open Seats</span></div>
+                <div class="hc-stat"><span class="hc-stat-num">${openCount}</span><span class="hc-stat-label">Open Seats</span></div>
+                <div class="hc-stat" style="${noShowCount ? 'border-color:rgba(251,146,60,0.4)' : ''}"><span class="hc-stat-num" style="${noShowCount ? 'color:#fb923c' : ''}">${noShowCount}</span><span class="hc-stat-label">No-Show Watch</span></div>
+                <div class="hc-stat" style="${inactiveCount ? 'border-color:rgba(239,68,68,0.3)' : ''}"><span class="hc-stat-num" style="${inactiveCount ? 'color:#f87171' : ''}">${inactiveCount}</span><span class="hc-stat-label">Never Raced</span></div>
             </div>
             ${pillsHtml}
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;margin-bottom:2rem">
                 <div>
                     <h3 style="margin:0 0 0.75rem;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Solo Drivers (${soloCount})</h3>
                     <div style="display:flex;flex-direction:column;gap:0.5rem">${soloRows}</div>
@@ -7525,6 +7566,16 @@ async function renderHealthCheck() {
                     <h3 style="margin:0 0 0.75rem;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Teams with Open Seats (${openCount})</h3>
                     <div id="hc-team-list" style="display:flex;flex-direction:column;gap:0.5rem">${teamRows}</div>
                 </div>
+            </div>
+
+            <div style="margin-bottom:2rem">
+                <h3 style="margin:0 0 0.25rem;font-size:1rem;color:#fb923c;text-transform:uppercase;letter-spacing:0.05em">No-Show Watch <span style="font-size:0.75rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">&mdash; missed 2+ of the last 5 completed races</span></h3>
+                <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.75rem">${noShowRows}</div>
+            </div>
+
+            <div>
+                <h3 style="margin:0 0 0.25rem;font-size:1rem;color:#f87171;text-transform:uppercase;letter-spacing:0.05em">Never Raced <span style="font-size:0.75rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">&mdash; on the roster but no race entries yet</span></h3>
+                <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.75rem">${inactiveRows}</div>
             </div>
         </div>
         <style>
