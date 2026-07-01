@@ -7421,7 +7421,7 @@ async function renderHealthCheck() {
 
     // Fetch pending applications to show in-flight counts
     const { data: pending, error: e4 } = await sb.from('team_join_requests')
-        .select('driver_id, team_id')
+        .select('driver_id, team_id, teams(name)')
         .eq('status', 'pending');
 
     if (e1 || e2 || e3 || e4) {
@@ -7437,14 +7437,14 @@ async function renderHealthCheck() {
     });
 
     const pendingDriversForTeam = new Map();
-    const pendingTeamsForDriver = new Map();
+    const pendingTeamNamesForDriver = new Map();
     (pending || []).forEach(p => {
         const td = pendingDriversForTeam.get(p.team_id) || new Set();
         td.add(p.driver_id);
         pendingDriversForTeam.set(p.team_id, td);
-        const dt = pendingTeamsForDriver.get(p.driver_id) || new Set();
-        dt.add(p.team_id);
-        pendingTeamsForDriver.set(p.driver_id, dt);
+        const names = pendingTeamNamesForDriver.get(p.driver_id) || [];
+        names.push(p.teams?.name || 'Unknown team');
+        pendingTeamNamesForDriver.set(p.driver_id, names);
     });
 
     const openTeams = (teams || []).filter(t => {
@@ -7463,7 +7463,7 @@ async function renderHealthCheck() {
     const soloRows = !soloCount
         ? `<div class="empty-state" style="padding:2rem 1rem">All drivers are in teams.</div>`
         : (soloDrivers || []).map(d => {
-            const applied = pendingTeamsForDriver.get(d.id)?.size || 0;
+            const appliedTeams = pendingTeamNamesForDriver.get(d.id) || [];
             return `
             <div class="hc-driver-card">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
@@ -7472,7 +7472,7 @@ async function renderHealthCheck() {
                         <div style="font-size:0.8rem;color:var(--muted)">${esc(d.psn_id) || '—'}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                        ${applied ? `<span class="badge badge-gold">${applied} app${applied > 1 ? 's' : ''}</span>` : ''}
+                        ${appliedTeams.map(name => `<span class="badge badge-gold" title="Pending application">${esc(name)}</span>`).join('')}
                         <button class="btn-icon" onclick="openDirectMessageModal('${d.id}','${esc(d.display_name)}')">Message</button>
                     </div>
                 </div>
