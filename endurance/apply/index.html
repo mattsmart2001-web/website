@@ -96,6 +96,8 @@
         select option { background: #0d1320; }
         textarea { resize: vertical; min-height: 100px; line-height: 1.55; }
         .hint { font-size: 0.73rem; color: var(--muted); margin-top: 0.2rem; }
+        .hint--ok    { color: #4ade80; }
+        .hint--taken { color: #f87171; }
 
         /* Team-only fields */
         .team-only { display: none; }
@@ -231,8 +233,8 @@
                     </div>
                     <div class="form-group">
                         <label for="field-career-num">Preferred Career Number</label>
-                        <input type="number" id="field-career-num" name="preferred_career_number" placeholder="e.g. 7" min="1" max="999">
-                        <div class="hint">Optional. We'll honour it if it's still available.</div>
+                        <input type="number" id="field-career-num" name="preferred_career_number" placeholder="e.g. 7" min="1" max="999" oninput="checkCareerNumber(this)">
+                        <div class="hint" id="career-num-hint">Optional. We'll honour it if it's still available.</div>
                     </div>
                     <div class="form-group">
                         <label for="field-timezone">Timezone <span class="req">*</span></label>
@@ -451,6 +453,34 @@ document.getElementById('field-nationality').innerHTML = window.gtecCountryOptio
         sel.appendChild(opt);
     });
 })();
+
+// Load taken career numbers for inline validation
+const _takenNumbers = new Map(); // number -> driver display_name
+(async () => {
+    const { data: drivers } = await sb.from('drivers')
+        .select('display_name, career_number')
+        .not('career_number', 'is', null);
+    (drivers || []).forEach(d => _takenNumbers.set(d.career_number, d.display_name));
+})();
+
+function checkCareerNumber(input) {
+    const hint = document.getElementById('career-num-hint');
+    if (!hint) return;
+    const val = parseInt(input.value, 10);
+    if (!val || val < 1 || val > 999) {
+        hint.textContent = 'Optional. We\'ll honour it if it\'s still available.';
+        hint.className = 'hint';
+        return;
+    }
+    const owner = _takenNumbers.get(val);
+    if (owner) {
+        hint.textContent = `#${val} is already taken by ${owner} — please choose a different number.`;
+        hint.className = 'hint hint--taken';
+    } else {
+        hint.textContent = `#${val} looks available.`;
+        hint.className = 'hint hint--ok';
+    }
+}
 
 function setType(type) {
     document.getElementById('field-type').value = type;
