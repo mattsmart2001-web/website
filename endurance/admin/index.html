@@ -2534,17 +2534,19 @@ async function viewEventEntries(eventId, eventName, seasonId) {
 }
 
 async function registerAllSeasonTeams(eventId, eventName, seasonId) {
-    const [{ data: ts }, { data: existing }, { data: freeAgents }, { data: entryDrivers }, { data: anyDrivers }] = await Promise.all([
+    const [{ data: ts }, { data: existing }, { data: freeAgents }, { data: entryDrivers }, { data: anyDrivers }, { data: absenceRows }] = await Promise.all([
         sb.from('team_seasons').select('team_id, manufacturer_id, manufacturers(name)').eq('season_id', seasonId),
         sb.from('entries').select('id, team_id, car_number').eq('event_id', eventId),
         sb.from('drivers').select('id, display_name, career_number, current_manufacturer_id, manufacturers(name,car_name)').is('current_team_id', null).not('user_id', 'is', null),
         sb.from('entry_drivers').select('driver_id, entry_id, entries!inner(event_id)').eq('entries.event_id', eventId),
         sb.from('drivers').select('current_team_id, teams!current_team_id(id, name, manufacturer_id, manufacturers(name))').not('current_team_id', 'is', null),
+        sb.from('driver_event_absences').select('driver_id').eq('event_id', eventId),
     ]);
 
     const existingTeamIds  = new Set((existing || []).map(e => e.team_id).filter(Boolean));
     const enteredDriverIds = new Set((entryDrivers || []).map(ed => ed.driver_id));
     const seasonRegisteredTeamIds = new Set((ts || []).map(r => r.team_id));
+    const absentDriverIds  = new Set((absenceRows || []).map(r => r.driver_id));
 
     // Auto-register any team that has drivers but isn't yet in team_seasons,
     // using the team's own manufacturer. Skip teams with no manufacturer set.
@@ -2600,7 +2602,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
         status:          'confirmed',
     }));
 
-    const soloToInsert = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id));
+    const soloToInsert = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id) && !absentDriverIds.has(d.id));
 
     if (!teamsToInsert.length && !soloToInsert.length && !emptyTeamEntries.length) {
         toast('All teams and free-agent drivers already registered.', 'success');
@@ -2635,7 +2637,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
             const driverLinks = [];
             const carNumberUpdates = [];
             for (const en of createdTeamEntries) {
-                const drivers = byTeam.get(en.team_id) || [];
+                const drivers = (byTeam.get(en.team_id) || []).filter(d => !absentDriverIds.has(d.id));
                 drivers.forEach(d => {
                     driverLinks.push({ entry_id: en.id, driver_id: d.id, stint_role: 'starting' });
                 });
@@ -7552,6 +7554,56 @@ async function renderHealthCheck() {
                 </div>
             </div>`).join('');
 
+    // Drivers who flagged themselves unable to attend upcoming scheduled events
+    const { data: activeSeason } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+    let absentPanelRows = '';
+    let absentTotalCount = 0;
+    if (activeSeason) {
+        const { data: upcomingEvs } = await sb.from('events')
+            .select('id, name, round, starts_at')
+            .eq('season_id', activeSeason.id)
+            .eq('status', 'scheduled')
+            .gte('starts_at', new Date().toISOString())
+            .order('starts_at');
+        if (upcomingEvs?.length) {
+            const { data: absRows } = await sb.from('driver_event_absences')
+                .select('driver_id, event_id, drivers(display_name, psn_id, current_team_id, teams!current_team_id(name))')
+                .in('event_id', upcomingEvs.map(e => e.id));
+            const byEvent = new Map();
+            (absRows || []).forEach(r => {
+                const list = byEvent.get(r.event_id) || [];
+                list.push(r);
+                byEvent.set(r.event_id, list);
+            });
+            absentTotalCount = (absRows || []).length;
+            const eventSections = upcomingEvs.map(ev => {
+                const drivers = byEvent.get(ev.id) || [];
+                if (!drivers.length) return '';
+                const driverCards = drivers.map(r => {
+                    const d = r.drivers;
+                    return `<div class="hc-driver-card" style="border-color:rgba(239,68,68,0.3)">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+                            <div>
+                                <div style="font-weight:600">${esc(d?.display_name || '—')}</div>
+                                <div style="font-size:0.8rem;color:var(--muted)">${esc(d?.teams?.name || 'No team')} &middot; ${esc(d?.psn_id || '—')}</div>
+                            </div>
+                            <button class="btn-icon" onclick="openDirectMessageModal('${r.driver_id}','${esc(d?.display_name || '')}')">Message</button>
+                        </div>
+                    </div>`;
+                }).join('');
+                return `<div style="margin-bottom:1rem">
+                    <div style="font-size:0.8rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem">R${ev.round} — ${esc(ev.name)} <span style="font-weight:400">(${new Date(ev.starts_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })})</span></div>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem">${driverCards}</div>
+                </div>`;
+            }).filter(Boolean).join('');
+            absentPanelRows = eventSections || `<div class="empty-state" style="padding:2rem 1rem">No drivers have flagged themselves as unable to attend.</div>`;
+        } else {
+            absentPanelRows = `<div class="empty-state" style="padding:2rem 1rem">No upcoming events in the active season.</div>`;
+        }
+    } else {
+        absentPanelRows = `<div class="empty-state" style="padding:2rem 1rem">No active season.</div>`;
+    }
+
     // No-show watch
     const { data: noShows } = await sb.rpc('driver_no_show_watch', { p_lookback: 5 });
     const noShowCount = (noShows || []).length;
@@ -7600,6 +7652,7 @@ async function renderHealthCheck() {
                 <div class="hc-stat" style="${leaderlessCount ? 'border-color:rgba(239,68,68,0.4)' : ''}"><span class="hc-stat-num" style="${leaderlessCount ? 'color:#f87171' : ''}">${leaderlessCount}</span><span class="hc-stat-label">No Team Leader</span></div>
                 <div class="hc-stat" style="${noShowCount ? 'border-color:rgba(251,146,60,0.4)' : ''}"><span class="hc-stat-num" style="${noShowCount ? 'color:#fb923c' : ''}">${noShowCount}</span><span class="hc-stat-label">No-Show Watch</span></div>
                 <div class="hc-stat" style="${inactiveCount ? 'border-color:rgba(239,68,68,0.3)' : ''}"><span class="hc-stat-num" style="${inactiveCount ? 'color:#f87171' : ''}">${inactiveCount}</span><span class="hc-stat-label">Never Raced</span></div>
+                <div class="hc-stat" style="${absentTotalCount ? 'border-color:rgba(239,68,68,0.4)' : ''}"><span class="hc-stat-num" style="${absentTotalCount ? 'color:#f87171' : ''}">${absentTotalCount}</span><span class="hc-stat-label">Unable to Attend</span></div>
             </div>
             ${pillsHtml}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;margin-bottom:2rem">
@@ -7632,6 +7685,11 @@ async function renderHealthCheck() {
             <div>
                 <h3 style="margin:0 0 0.25rem;font-size:1rem;color:#f87171;text-transform:uppercase;letter-spacing:0.05em">Never Raced <span style="font-size:0.75rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">&mdash; on the roster but no race entries yet</span></h3>
                 <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.75rem">${inactiveRows}</div>
+            </div>
+
+            <div style="margin-top:2rem">
+                <h3 style="margin:0 0 0.25rem;font-size:1rem;color:#f87171;text-transform:uppercase;letter-spacing:0.05em">Unable to Attend <span style="font-size:0.75rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">&mdash; self-declared for upcoming events</span></h3>
+                <div style="margin-top:0.75rem">${absentPanelRows}</div>
             </div>
         </div>
         <style>

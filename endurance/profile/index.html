@@ -196,11 +196,15 @@
 
         /* Upcoming events */
         .upcoming-list { display: flex; flex-direction: column; gap: 0.6rem; }
-        .upcoming-row { display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 0.85rem; background: var(--bg-2); border-radius: 8px; border-left: 3px solid var(--gold); }
+        .upcoming-row { display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 0.85rem; background: var(--bg-2); border-radius: 8px; border-left: 3px solid var(--gold); transition: border-color 0.2s; }
+        .upcoming-row.absent { border-left-color: var(--red, #ef4444); opacity: 0.65; }
         .upcoming-round { font-family: 'Anton', sans-serif; font-size: 1.4rem; color: var(--gold); min-width: 28px; text-align: center; }
         .upcoming-info { flex: 1; }
         .upcoming-name { font-size: 0.86rem; font-weight: 600; }
         .upcoming-meta { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
+        .upcoming-absent-toggle { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; flex-shrink: 0; cursor: pointer; }
+        .upcoming-absent-toggle input[type=checkbox] { width: 16px; height: 16px; accent-color: #ef4444; cursor: pointer; }
+        .upcoming-absent-toggle span { font-size: 0.65rem; color: var(--muted); white-space: nowrap; }
 
         /* Edit form */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -875,15 +879,42 @@ async function loadUpcoming(driverId) {
         .gte('starts_at', new Date().toISOString())
         .order('starts_at').limit(3);
     if (!events?.length) return;
+
+    const eventIds = events.map(e => e.id);
+    const { data: absenceRows } = await sb.from('driver_event_absences')
+        .select('event_id')
+        .eq('driver_id', driverId)
+        .in('event_id', eventIds);
+    const absentSet = new Set((absenceRows || []).map(r => r.event_id));
+
     document.getElementById('card-upcoming').style.display = '';
-    document.getElementById('upcoming-list').innerHTML = events.map(e => `
-        <div class="upcoming-row">
+    document.getElementById('upcoming-list').innerHTML = events.map(e => {
+        const isAbsent = absentSet.has(e.id);
+        return `
+        <div class="upcoming-row${isAbsent ? ' absent' : ''}" id="upcoming-row-${e.id}">
             <div class="upcoming-round">${e.round}</div>
             <div class="upcoming-info">
                 <div class="upcoming-name">${esc(e.name)}</div>
                 <div class="upcoming-meta">${flag(e.circuit_country)} ${esc(e.circuit_name)} · ${fmtDate(e.starts_at)} · ${e.duration_hours}h</div>
             </div>
-        </div>`).join('');
+            <label class="upcoming-absent-toggle" title="Flag yourself as unable to attend this event">
+                <input type="checkbox" ${isAbsent ? 'checked' : ''} onchange="toggleAbsence('${e.id}','${driverId}',this)">
+                <span>Can't attend</span>
+            </label>
+        </div>`;
+    }).join('');
+}
+
+async function toggleAbsence(eventId, driverId, checkbox) {
+    if (checkbox.checked) {
+        const { error } = await sb.from('driver_event_absences').upsert({ driver_id: driverId, event_id: eventId }, { onConflict: 'driver_id,event_id' });
+        if (error) { toast('Could not save — please try again.', 'error'); checkbox.checked = false; return; }
+    } else {
+        const { error } = await sb.from('driver_event_absences').delete().eq('driver_id', driverId).eq('event_id', eventId);
+        if (error) { toast('Could not save — please try again.', 'error'); checkbox.checked = true; return; }
+    }
+    const row = document.getElementById(`upcoming-row-${eventId}`);
+    if (row) row.classList.toggle('absent', checkbox.checked);
 }
 
 async function loadBadges(driverId) {
