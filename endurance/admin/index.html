@@ -4762,36 +4762,178 @@ function _buildCircuitConditionsSection(ev, c) {
 }
 
 function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
-    if (!drivers.length) throw new Error('No drivers confirmed yet — add entries to this season\'s events first.');
+    if (!drivers.length) throw new Error('No drivers confirmed yet. Add entries to this season\'s events first.');
     const ranked = drivers.map(d => {
         const elo  = driverRatings.get(d.id);
         const seed = drSrSeed(d.gt7_dr_rating, d.gt7_sr_rating);
-        // elo === 1500 is the uninitialised default — treat as unrated
+        // elo === 1500 is the uninitialised default, treat as unrated
         const hasElo = !!elo && elo !== 1500;
         return { ...d, skill: hasElo ? elo : seed, hasElo };
     }).sort((a,b) => b.skill - a.skill).slice(0, Math.min(5, drivers.length));
-    const intro = _psPick([
-        `${seasonName} is shaping up to be the most competitive season in GTEC history. With the grid confirmed, here are the five drivers who arrive with the strongest credentials, with the biggest targets on their backs.`,
-        `The ${seasonName} field is deep. Every driver has earned their place, but five arrive with a particular claim to championship contention. Here is who to watch from Round 1.`,
-        `Championships are won over a full season, not in a single race, but these five drivers enter ${seasonName} as the ones most likely to be in the fight when the final round arrives.`,
-    ]);
-    const descriptors = ['the benchmark to beat','the driver everyone is watching','a proven frontrunner','one of the sharpest talents in the field','a driver with a point to prove','a consistent performer who peaks under pressure','the wildcard with the pace to win'];
+
+    const intros = [
+        `${seasonName} is shaping up to be the most competitive season in GTEC history. Every driver on the grid has earned their place, but five arrive carrying the weight of expectation more than most. These are the names the rest of the field will be watching from Round 1.`,
+        `The ${seasonName} grid is confirmed and the question everyone is asking is the same one it always is before a season begins: who wins? Championships are not decided in preview articles, but some drivers arrive with stronger claims than others. Here are the five who matter most.`,
+        `Not every driver who lines up for Round 1 of ${seasonName} is a championship contender. Most are racing for results, for improvement, for the experience of competing at this level. But five of them arrive as genuine title threats, and this is what makes each of them dangerous.`,
+    ];
+    const intro = _psPick(intros);
+
+    const slotFrames = [
+        // slot 0: the favourite
+        {
+            labels: ['The Favourite','The Benchmark','The One to Beat'],
+            openers: [
+                (n,t) => `${n} arrives in ${seasonName} as the name at the top of every prediction list${t ? ` and ${t} will be hoping that translates into results` : ''}. The rating numbers back up the hype, but this is motorsport, and reputations count for nothing once the lights go out.`,
+                (n,t) => `If you had to pick one driver to back before a wheel has turned in ${seasonName}, most people would put their money on ${n}${t ? ` of ${t}` : ''}. That kind of expectation is either fuel or pressure, depending on the driver. The next few months will reveal which it is for this one.`,
+                (n,t) => `${n} comes into this season with the strongest credentials on the grid${t ? `, representing ${t}` : ''}. The target on the back of that car is bigger than any other, and that is exactly the kind of challenge that separates the contenders from the champions.`,
+            ],
+            bodies: [
+                (dr,sr) => `Carrying a GT7 rating of ${dr ? `DR-${dr}` : 'top tier'}${sr ? ` and SR-${sr}` : ''}, the raw pace is not in question. What ${seasonName} will test is consistency across a full calendar, managing pressure when the results matter most, and handling a grid that will not make things easy.`,
+                (dr,sr) => `The ${dr ? `DR-${dr}` : 'elite'} rating${sr ? ` and SR-${sr} sportsmanship score` : ''} tell one part of the story. The other part gets written across eight rounds of racing. Pace without points is just noise, and this driver will know that better than most.`,
+                (dr,sr) => `With a ${dr ? `DR-${dr}` : 'high'} pace rating${sr ? ` and SR-${sr}` : ''} to their name, the talent is undeniable. But endurance racing rewards more than raw speed. Race management, tyre conservation, consistent lap times under pressure: all of it matters, and all of it will be tested.`,
+            ],
+            closers: [
+                'The favourite rarely wins as easily as the predictions suggest. But they win often enough to be worth watching.',
+                'Frontrunners fall. But they fall less often than everyone hopes. Watch this number all season.',
+                'The pressure of being the driver to beat is real. Some thrive under it. The season will tell us which category this driver falls into.',
+            ],
+        },
+        // slot 1: the challenger
+        {
+            labels: ['The Challenger','The Closest Rival','The Pressure'],
+            openers: [
+                (n,t) => `Every favourite needs a rival, and ${n}${t ? ` of ${t}` : ''} arrives in ${seasonName} as exactly that. The gap between first and second in the pre-season ratings is not large, and on any given race day, that gap can close to nothing.`,
+                (n,t) => `${n}${t ? `, racing for ${t},` : ''} is the driver most likely to make life difficult for the frontrunner. Close in pace, motivated, and with something to prove across a full season. That combination is always dangerous.`,
+                (n,t) => `The second name on this list is not here by coincidence. ${n}${t ? ` and ${t}` : ''} come into ${seasonName} with the pace to push the favourite all the way, and enough consistency to back it up over a full calendar.`,
+            ],
+            bodies: [
+                (dr,sr) => `A ${dr ? `DR-${dr}` : 'strong'} rating${sr ? ` with SR-${sr}` : ''} reflects genuine ability at the wheel. The question for this driver is not whether the pace is there; it clearly is. The question is whether it can be converted into the kind of points return that builds a championship challenge round by round.`,
+                (dr,sr) => `Rated at ${dr ? `DR-${dr}` : 'a high level'}${sr ? ` and SR-${sr}` : ''}, this is a driver who does not make many mistakes. In a championship fight, it is often the driver who makes the fewest errors, not the one with the most outright speed, who collects the title at the end.`,
+                (dr,sr) => `The ${dr ? `DR-${dr}` : 'high pace'} rating${sr ? ` alongside SR-${sr}` : ''} says this is a driver built for the front of the grid. If the season goes to plan, this one will be in the fight until the final round.`,
+            ],
+            closers: [
+                'The best rivalries in motorsport are close ones. This driver has the tools to make sure this season is exactly that.',
+                'Championships are sometimes decided by a single point. Keep an eye on how this one manages the points-paying positions across the season.',
+                'A challenger who does not make headlines until it is too late for everyone else. The quiet ones are always worth watching.',
+            ],
+        },
+        // slot 2: the dark horse
+        {
+            labels: ['The Dark Horse','The Wildcard','The Surprise Package'],
+            openers: [
+                (n,t) => `${n}${t ? ` of ${t}` : ''} is the driver on this list who might surprise people. The rating numbers are strong, but it is what does not show up on paper that makes this entry interesting. There is something unpredictable about this one, and in motorsport, unpredictable can mean dangerous.`,
+                (n,t) => `Not everyone would put ${n}${t ? ` from ${t}` : ''} in a list of title contenders before the season starts. That might be exactly what makes them one. Drivers who arrive without the weight of expectation sometimes find it easier to produce their best work.`,
+                (n,t) => `This is the name on the list that some people will question. ${n}${t ? `, representing ${t},` : ''} arrives without the profile of the top two, but with enough pace on paper to make the season awkward for anyone who underestimates them.`,
+            ],
+            bodies: [
+                (dr,sr) => `${dr ? `DR-${dr}` : 'Strong pace'} and ${sr ? `SR-${sr}` : 'clean racing'} tell us this is a driver who can be fast and disciplined at the same time. That combination tends to produce results in endurance formats, where consistency across multiple hours counts for more than a single explosive lap.`,
+                (dr,sr) => `The ${dr ? `DR-${dr}` : 'pace'} rating${sr ? ` and SR-${sr} sportsmanship score` : ''} are both worth noting. Pace without racecraft is a handicap in this format. This driver appears to have both, and that makes them a genuine factor rather than just a name to fill out the list.`,
+                (dr,sr) => `Rated ${dr ? `DR-${dr}` : 'strongly'}${sr ? ` with SR-${sr}` : ''}, this is not a passenger filling out the grid. The numbers suggest genuine top-five pace, and in a field this competitive, top-five pace on every round is what a championship is built from.`,
+            ],
+            closers: [
+                'The dark horse rarely wins the championship. But they often decide who does. Watch where this one finishes when it matters.',
+                'Underestimate this driver at your peril. The season is long and the points are shared equally regardless of who was expected to earn them.',
+                'If ${seasonName} has a surprise package, this driver is the most likely candidate.',
+            ],
+        },
+        // slot 3: the consistent performer
+        {
+            labels: ['The Points Machine','The Consistent One','The Accumulator'],
+            openers: [
+                (n,t) => `Championships are not always won by the fastest driver. Sometimes they go to the most consistent one, and ${n}${t ? ` of ${t}` : ''} is the driver on this list who most fits that profile. Round by round, result by result, points add up.`,
+                (n,t) => `${n}${t ? `, lining up for ${t},` : ''} may not be the name that generates the most headlines, but in endurance racing, headlines are worth nothing and points are worth everything. This is a driver who understands that.`,
+                (n,t) => `The fourth name on this list is here for a different reason than the others. ${n}${t ? ` of ${t}` : ''} is not necessarily the quickest driver in the field, but a podium every round and no incidents adds up to a championship challenge before most people have noticed.`,
+            ],
+            bodies: [
+                (dr,sr) => `A ${dr ? `DR-${dr}` : 'solid'} pace rating${sr ? ` and SR-${sr}` : ''} reflects a driver who has earned their place through results rather than hype. That kind of foundation tends to hold up better under pressure than raw speed alone.`,
+                (dr,sr) => `${dr ? `DR-${dr}` : 'Consistent pace'}${sr ? ` and SR-${sr}` : ''} paints a picture of a complete package. Quick enough to fight at the front, disciplined enough to bring the car home cleanly. Across eight rounds of racing, that is a very difficult combination to beat.`,
+                (dr,sr) => `The ${dr ? `DR-${dr}` : 'pace'} rating${sr ? ` paired with SR-${sr}` : ''} suggests a driver who does not throw points away. In a season where attrition will play a role, finishing every round in the top five is worth more than winning two races and retiring from three.`,
+            ],
+            closers: [
+                'Consistency wins championships. It is boring to say, and completely true.',
+                'Watch the gap in the standings after Round 3. If this driver is in the top three, the rest of the grid has a serious problem.',
+                'The season rewards patience, and this driver has it. That is more dangerous than it sounds.',
+            ],
+        },
+        // slot 4: the outside bet
+        {
+            labels: ['The Outside Bet','The Underdog','The One With Something to Prove'],
+            openers: [
+                (n,t) => `The fifth name on this list is the most interesting one. ${n}${t ? ` of ${t}` : ''} arrives in ${seasonName} as an outside bet, but outside bets have a habit of coming good when no one is watching them closely enough.`,
+                (n,t) => `${n}${t ? `, racing under the ${t} banner,` : ''} completes this list as the name with the most to prove and, arguably, the most to gain. An open season is an opportunity, and this driver looks ready to take it.`,
+                (n,t) => `${n}${t ? ` of ${t}` : ''} rounds out the five as the driver the rest of the grid would most prefer to underestimate. That is usually a mistake. Drivers who arrive with a chip on their shoulder and something to prove are exactly the kind of factor that disrupts a championship.`,
+            ],
+            bodies: [
+                (dr,sr) => `${dr ? `DR-${dr}` : 'Solid pace'}${sr ? ` and SR-${sr}` : ''} are the foundation. From there, it is about taking the opportunities when they come and making the most of them before the leaders establish a gap. This is a driver who will need to be perfect on their best days and incident-free on the others.`,
+                (dr,sr) => `A ${dr ? `DR-${dr}` : 'competitive'} rating${sr ? ` and SR-${sr}` : ''} means this driver belongs at the front. The question is not about pace; the question is about whether everything clicks at the right moment across a full season. When it does, the results will be there.`,
+                (dr,sr) => `Rated at ${dr ? `DR-${dr}` : 'a competitive level'}${sr ? ` with SR-${sr}` : ''}, this is not a driver here to make up the numbers. They are here to race. If ${seasonName} runs long and tight, this entry could be exactly the kind of factor that nobody accounted for in their pre-season predictions.`,
+            ],
+            closers: [
+                'The outside bet does not always come in. But it comes in often enough that ignoring it is the riskiest thing the rest of the grid can do.',
+                'Five rounds in, this will either look like a very smart prediction or a very optimistic one. Either way, it is worth watching.',
+                'Do not sleep on this one. The championship table does not care who was expected to be in it.',
+            ],
+        },
+    ];
+
+    // Build a lookup of all team drivers for teammate display
+    const teamDriverMap = new Map();
+    drivers.forEach(dr => {
+        const tid = dr.team?.id;
+        if (!tid) return;
+        if (!teamDriverMap.has(tid)) teamDriverMap.set(tid, []);
+        teamDriverMap.get(tid).push(dr);
+    });
+
     const profiles = ranked.map((d, i) => {
-        const tier = !d.hasElo && d.gt7_dr_rating ? ` <span style="font-size:0.72rem;padding:0.1rem 0.4rem;border-radius:4px;background:rgba(255,255,255,0.07);color:var(--muted)">DR-${d.gt7_dr_rating}</span>` : '';
-        const team = d.team?.name ? ` <span style="color:var(--muted);font-size:0.82rem">${esc(d.team.name)}</span>` : '';
-        const stat = d.hasElo ? `Race Elo of <strong>${Math.round(d.skill)}</strong> heading in.` : `Ranked by GT7 DR rating: <strong>DR-${d.gt7_dr_rating||'?'} / SR-${d.gt7_sr_rating||'?'}</strong>.`;
-        return `<div class="stat-card" style="margin:0.85rem 0">
-            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem">
-                ${d.career_number?`<span style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.75rem">#${d.career_number}</span>`:''}
-                <strong>${esc(d.display_name)}</strong>${team}${tier}
+        const frame    = slotFrames[Math.min(i, slotFrames.length - 1)];
+        const label    = _psPick(frame.labels);
+        const teamName = d.team?.name || null;
+        const mfr      = d.team?.manufacturers?.name || null;
+        const teamCtx  = teamName && mfr ? `${teamName} (${mfr})` : (teamName || null);
+        const opener   = _psPick(frame.openers)(esc(d.display_name), teamCtx ? esc(teamCtx) : null);
+        const body     = _psPick(frame.bodies)(d.gt7_dr_rating || null, d.gt7_sr_rating || null);
+        let closer     = _psPick(frame.closers);
+        closer = closer.replace(/\$\{seasonName\}/g, seasonName);
+
+        // Team info block: all drivers on this team with their DR/SR
+        const teammates = d.team?.id ? (teamDriverMap.get(d.team.id) || []) : [];
+        const driverRows = teammates.map(td =>
+            `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.2rem 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+                ${td.career_number ? `<span style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.72rem;min-width:2.2rem">#${td.career_number}</span>` : ''}
+                <span style="flex:1;font-size:0.83rem">${esc(td.display_name)}</span>
+                <span style="font-size:0.75rem;color:var(--muted)">${td.gt7_dr_rating ? `DR-${td.gt7_dr_rating}` : ''}${td.gt7_sr_rating ? ` / SR-${td.gt7_sr_rating}` : ''}</span>
+            </div>`
+        ).join('');
+
+        const teamBlock = teamName ? `
+            <div style="margin:0.8rem 0 0;padding:0.6rem 0.75rem;background:rgba(255,255,255,0.04);border-radius:6px;border-left:2px solid ${mfr ? 'var(--gold)' : 'var(--border)'}">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700;margin-bottom:0.4rem">${esc(teamName)}${mfr ? ` <span style="color:var(--gold)">${esc(mfr)}</span>` : ''}</div>
+                ${driverRows}
+            </div>` : '';
+
+        const ratingLine = d.hasElo
+            ? `<span style="font-size:0.78rem;color:var(--muted)">Race Elo: <strong style="color:var(--text)">${Math.round(d.skill)}</strong></span>`
+            : `<span style="font-size:0.78rem;color:var(--muted)">GT7: <strong style="color:var(--text)">DR-${d.gt7_dr_rating||'?'} / SR-${d.gt7_sr_rating||'?'}</strong></span>`;
+
+        return `<div class="stat-card" style="margin:1.25rem 0">
+            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem;flex-wrap:wrap">
+                ${d.career_number ? `<span style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.78rem;font-weight:700">#${d.career_number}</span>` : ''}
+                <strong style="font-size:1rem">${esc(d.display_name)}</strong>
+                ${ratingLine}
+                <span style="margin-left:auto;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--gold);font-weight:700">${esc(label)}</span>
             </div>
-            <p style="margin:0;font-size:0.88rem;color:var(--muted)">${_psPick(descriptors).charAt(0).toUpperCase() + _psPick(descriptors).slice(1)}. ${stat}</p>
+            ${teamBlock}
+            <p style="margin:0.85rem 0 0;font-size:0.88rem;line-height:1.7">${opener}</p>
+            <p style="margin:0.55rem 0 0;font-size:0.88rem;line-height:1.7;color:rgba(255,255,255,0.75)">${body}</p>
+            <p style="margin:0.55rem 0 0;font-size:0.84rem;font-style:italic;color:var(--muted)">${closer}</p>
         </div>`;
     }).join('');
+
     const closer = _psPick([
-        'Five names. One championship. The answer will be decided on track.',
-        `Predictions are just predictions. ${seasonName} will have its own story to tell.`,
-        'The title will not be decided in a preview article. But these are the five drivers who will be in the conversation when it is.',
+        `Five names. One championship. ${seasonName} will decide the rest.`,
+        `Predictions are just predictions. ${seasonName} will write its own story, and it will not follow this script. But these are the five drivers who will be in the argument when it matters.`,
+        `The title will not be decided in a preview article. But when the final round arrives, at least one of these five will be in contention for it. The grid has been warned.`,
     ]);
     const title = `${seasonName}: Five Drivers to Watch`;
     return { title, slug:_psSlug(title), excerpt:intro,
