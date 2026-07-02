@@ -266,9 +266,7 @@ async function loadListing() {
     const cards = data.map(n => `
         <a class="news-card" href="/endurance/news/?slug=${encodeURIComponent(n.slug)}">
             <div class="news-card-img">
-                ${n.cover_url
-                    ? `<img src="${esc(n.cover_url)}" alt="${esc(n.title)}" loading="lazy">`
-                    : `<div class="news-card-placeholder">GTEC</div>`}
+                <img src="${esc(n.cover_url || '/endurance/assets/og-card.png')}" alt="${esc(n.title)}" loading="lazy">
             </div>
             <div class="news-card-body">
                 ${newsTagPill(n.tags)}
@@ -304,7 +302,7 @@ async function loadArticle(slug) {
 
     const isReport = Array.isArray(data.tags) && data.tags.includes('race-report');
     const eyebrow  = isReport ? 'Race Report' : 'News';
-    const cover    = data.cover_url || (isReport ? '/endurance/assets/icon-512.png' : '');
+    const cover    = data.cover_url || '/endurance/assets/og-card.png';
 
     app.innerHTML = `
     <div class="page-wrap">
