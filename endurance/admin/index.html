@@ -4765,8 +4765,8 @@ function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
     if (!drivers.length) throw new Error('No drivers confirmed yet — add entries to this season\'s events first.');
     const ranked = drivers.map(d => {
         const elo  = driverRatings.get(d.id);
-        const seed = window.eloDrSrSeed ? window.eloDrSrSeed(d.gt7_dr_rating, d.gt7_sr_rating) : 1500;
-        return { ...d, skill: elo ?? seed ?? 1500, hasElo: !!elo };
+        const seed = drSrSeed(d.gt7_dr_rating, d.gt7_sr_rating);
+        return { ...d, skill: elo ?? seed, hasElo: !!elo };
     }).sort((a,b) => b.skill - a.skill).slice(0, Math.min(5, drivers.length));
     const intro = _psPick([
         `${seasonName} is shaping up to be the most competitive season in GTEC history. With the grid confirmed, here are the five drivers who arrive with the strongest credentials, with the biggest targets on their backs.`,
@@ -4775,9 +4775,9 @@ function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
     ]);
     const descriptors = ['the benchmark to beat','the driver everyone is watching','a proven frontrunner','one of the sharpest talents in the field','a driver with a point to prove','a consistent performer who peaks under pressure','the wildcard with the pace to win'];
     const profiles = ranked.map((d, i) => {
-        const tier = window.eloTierBadge ? window.eloTierBadge(d.skill, { provisional: !d.hasElo }) : '';
+        const tier = !d.hasElo && d.gt7_dr_rating ? ` <span style="font-size:0.72rem;padding:0.1rem 0.4rem;border-radius:4px;background:rgba(255,255,255,0.07);color:var(--muted)">DR-${d.gt7_dr_rating}</span>` : '';
         const team = d.team?.name ? ` <span style="color:var(--muted);font-size:0.82rem">${esc(d.team.name)}</span>` : '';
-        const stat = d.hasElo ? `Elo rating of <strong>${Math.round(d.skill)}</strong> heading in.` : `Arrives on DR-${d.gt7_dr_rating||'?'} / SR-${d.gt7_sr_rating||'?'}.`;
+        const stat = d.hasElo ? `Race Elo of <strong>${Math.round(d.skill)}</strong> heading in.` : `Ranked by GT7 DR rating: <strong>DR-${d.gt7_dr_rating||'?'} / SR-${d.gt7_sr_rating||'?'}</strong>.`;
         return `<div class="stat-card" style="margin:0.85rem 0">
             <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem">
                 ${d.career_number?`<span style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.75rem">#${d.career_number}</span>`:''}
@@ -4813,7 +4813,7 @@ function _buildSeasonPreview({ season, seasonName, drivers, teams, events, drive
         <p style="margin:0 0 0.35rem;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700">The Grid</p>
         <p style="margin:0">${dCount} driver${dCount===1?'':'s'} confirmed across ${tCount} team${tCount===1?'':'s'}. ${_psPick(['The field is the deepest it has ever been.','Competition for places was fierce this season.','From experienced frontrunners to promising newcomers, the grid covers every tier.'])}</p>
     </div>`;
-    const top3 = drivers.map(d => ({ ...d, skill: driverRatings.get(d.id) ?? (window.eloDrSrSeed?window.eloDrSrSeed(d.gt7_dr_rating,d.gt7_sr_rating):1500) ?? 1500 }))
+    const top3 = drivers.map(d => ({ ...d, skill: driverRatings.get(d.id) ?? drSrSeed(d.gt7_dr_rating, d.gt7_sr_rating) }))
         .sort((a,b)=>b.skill-a.skill).slice(0,3);
     const contCard = top3.length ? `<div class="stat-card" style="margin:1rem 0">
         <p style="margin:0 0 0.35rem;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700">Ones to Watch</p>
