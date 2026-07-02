@@ -4432,19 +4432,18 @@ async function _fetchPreSeasonData(seasonId, seasonName) {
         });
     }
 
-    // Fallback: if no entries yet, build from team_seasons + current driver assignments
-    if (dMap.size === 0 && teamSeasonRows.length) {
-        const teamIds = teamSeasonRows.map(ts => ts.team_id).filter(Boolean);
+    // Fallback: if no entries yet, fetch all drivers + their current team (includes solos)
+    if (dMap.size === 0) {
+        // Seed tMap from team_seasons so registered teams always appear
         teamSeasonRows.forEach(ts => { if (ts.teams?.id) tMap.set(ts.teams.id, ts.teams); });
-        if (teamIds.length) {
-            const { data: teamDrivers } = await sb.from('drivers')
-                .select('id,display_name,career_number,gt7_dr_rating,gt7_sr_rating,current_team_id,teams!current_team_id(id,name,manufacturers(name,brand_color))')
-                .in('current_team_id', teamIds);
-            (teamDrivers || []).forEach(d => {
-                dMap.set(d.id, { ...d, team: d.teams });
-                if (d.teams?.id) tMap.set(d.teams.id, d.teams);
-            });
-        }
+        const { data: allDrivers } = await sb.from('drivers')
+            .select('id,display_name,career_number,gt7_dr_rating,gt7_sr_rating,current_team_id,teams!current_team_id(id,name,manufacturers(name,brand_color))')
+            .order('display_name');
+        (allDrivers || []).forEach(d => {
+            if (!d.display_name) return; // skip unclaimed slots
+            dMap.set(d.id, { ...d, team: d.teams || null });
+            if (d.teams?.id) tMap.set(d.teams.id, d.teams);
+        });
     }
 
     drivers = Array.from(dMap.values());
