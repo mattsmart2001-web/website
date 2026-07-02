@@ -2138,8 +2138,11 @@ async function renderEvents() {
 function formatDatetime(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
-    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-        + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const tz = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', timeZoneName: 'short' })
+        .formatToParts(d).find(p => p.type === 'timeZoneName')?.value || 'UK';
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/London' })
+        + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })
+        + ' ' + tz;
 }
 
 function toDatetimeLocal(iso) {

@@ -408,12 +408,16 @@ function esc(s) {
 
 function fmtDate(iso) {
     if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+    return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', timeZone:'Europe/London' });
 }
 
 function fmtTime(iso) {
     if (!iso) return '';
-    return new Date(iso).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) + ' UTC';
+    const dt = new Date(iso);
+    const time = dt.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/London' });
+    const tz = new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/London', timeZoneName:'short' })
+        .formatToParts(dt).find(p => p.type === 'timeZoneName')?.value || 'UK';
+    return `${time} ${tz}`;
 }
 
 async function load() {
