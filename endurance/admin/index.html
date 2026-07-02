@@ -1666,6 +1666,8 @@ async function saveTeam(id) {
     if (!d.manufacturer_id) { toast('A manufacturer must be assigned before saving a team.', 'error'); return; }
     const dupName = checkTeamNameUnique(d.name, id);
     if (dupName) { toast(dupName, 'error'); return; }
+    const dupSlug = checkTeamSlugUnique(d.slug, id);
+    if (dupSlug) { toast(dupSlug, 'error'); return; }
     const payload = { name: d.name, slug: d.slug, manufacturer_id: d.manufacturer_id || null, home_country: d.home_country, founded_on: d.founded_on, bio: d.bio };
     const { error } = id
         ? await sb.from('teams').update(payload).eq('id', id)
@@ -1955,6 +1957,23 @@ function checkTeamNameUnique(name, ignoreId) {
         (team.name || '').trim().toLowerCase() === t && team.id !== ignoreId
     );
     return clash ? `Team name "${name}" is already taken.` : null;
+}
+
+function checkTeamSlugUnique(slug, ignoreId) {
+    const s = (slug || '').trim().toLowerCase();
+    if (!s) return null;
+    const clash = _teams.find(team =>
+        (team.slug || '').trim().toLowerCase() === s && team.id !== ignoreId
+    );
+    return clash ? `Slug "${slug}" is already in use by "${clash.name}" — edit the slug field to make it unique.` : null;
+}
+
+function uniqueTeamSlug(base) {
+    const existing = new Set(_teams.map(t => (t.slug || '').toLowerCase()));
+    if (!existing.has(base)) return base;
+    let n = 2;
+    while (existing.has(`${base}-${n}`)) n++;
+    return `${base}-${n}`;
 }
 
 function checkPsnUnique(psn, ignoreId) {
@@ -6038,6 +6057,7 @@ async function saveTeamFromApplication(appId) {
     if (!d.manufacturer_id) { toast('A manufacturer must be assigned before saving a team.', 'error'); return; }
     const dupName = checkTeamNameUnique(d.name, null);
     if (dupName) { toast(dupName, 'error'); return; }
+    d.slug = uniqueTeamSlug(d.slug);
 
     // Load the application — we'll spin up the applicant as the team leader.
     const { data: app } = await sb.from('applications').select('*').eq('id', appId).single();
