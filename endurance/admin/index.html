@@ -352,6 +352,8 @@
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: rgba(255,255,255,0.02); }
         .td-muted { color: var(--muted); font-size: 0.82rem; }
+        .season-driver-list { margin: 0.35rem 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.15rem; }
+        .season-driver-list li { font-size: 0.8rem; color: var(--muted); }
         th.th-sort { cursor: pointer; user-select: none; }
         th.th-sort:hover { color: var(--text); }
         th.th-sort::after { content: ' ⇅'; color: rgba(255,255,255,0.18); font-size: 0.65rem; }
@@ -1452,17 +1454,42 @@ async function viewSeasonTeams(seasonId, seasonName) {
     const panel = document.getElementById('season-teams-panel');
     panel.innerHTML = '<div class="loading-state">Loading registrations…</div>';
 
-    const { data, error } = await sb.from('team_seasons')
-        .select('*, teams(name), manufacturers(name,brand_color)')
-        .eq('season_id', seasonId)
-        .order('registered_at');
+    const [tsRes, drvRes] = await Promise.all([
+        sb.from('team_seasons')
+            .select('*, teams(id,name), manufacturers(name,brand_color)')
+            .eq('season_id', seasonId)
+            .order('registered_at'),
+        sb.from('drivers')
+            .select('id,display_name,career_number,current_team_id')
+            .order('display_name'),
+    ]);
 
-    if (error) { panel.innerHTML = `<div class="loading-state">${esc(error.message)}</div>`; return; }
+    if (tsRes.error) { panel.innerHTML = `<div class="loading-state">${esc(tsRes.error.message)}</div>`; return; }
+
+    const data = tsRes.data || [];
+    const allDrivers = drvRes.data || [];
+
+    // Group drivers by their current_team_id
+    const driversByTeam = new Map();
+    allDrivers.forEach(d => {
+        if (!d.current_team_id) return;
+        if (!driversByTeam.has(d.current_team_id)) driversByTeam.set(d.current_team_id, []);
+        driversByTeam.get(d.current_team_id).push(d);
+    });
 
     const rows = data.length === 0 ? `<tr><td colspan="4"><div class="empty-state">No teams registered for this season yet.</div></td></tr>` :
-        data.map(ts => `
+        data.map(ts => {
+            const teamId = ts.teams?.id;
+            const drivers = teamId ? (driversByTeam.get(teamId) || []) : [];
+            const driverList = drivers.length
+                ? `<ul class="season-driver-list">${drivers.map(d => `<li>#${d.career_number || '??'} ${esc(d.display_name)}</li>`).join('')}</ul>`
+                : `<span class="td-muted" style="font-size:.8rem">No drivers assigned</span>`;
+            return `
             <tr>
-                <td><strong>${esc(ts.teams?.name)}</strong></td>
+                <td>
+                    <strong>${esc(ts.teams?.name)}</strong>
+                    ${driverList}
+                </td>
                 <td>
                     ${ts.manufacturers?.brand_color ? `<div class="color-swatch"><div class="swatch" style="background:${esc(ts.manufacturers.brand_color)}"></div></div>` : ''}
                     ${esc(ts.manufacturers?.name) || '—'}
@@ -1471,7 +1498,8 @@ async function viewSeasonTeams(seasonId, seasonName) {
                 <td><div class="row-actions">
                     <button class="btn-icon danger" onclick="removeTeamSeason('${ts.id}')">Remove</button>
                 </div></td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
 
     panel.innerHTML = `
         <div class="section-card">
@@ -1483,7 +1511,7 @@ async function viewSeasonTeams(seasonId, seasonName) {
                 </button>
             </div>
             <table><thead><tr>
-                <th>Team</th><th>Manufacturer (locked)</th><th>Registered</th><th></th>
+                <th>Team &amp; Drivers</th><th>Manufacturer (locked)</th><th>Registered</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
 }
@@ -4362,30 +4390,50 @@ async function generatePreSeasonContent(type, seasonId, seasonName) {
 }
 
 async function _fetchPreSeasonData(seasonId, seasonName) {
-    const [seasonRes, eventsRes] = await Promise.all([
+    const [seasonRes, eventsRes, teamSeasonsRes] = await Promise.all([
         sb.from('seasons').select('*').eq('id', seasonId).single(),
         sb.from('events').select('id,name,round,circuit_name,starts_at,duration_hours').eq('season_id', seasonId).order('round'),
+        sb.from('team_seasons').select('team_id, teams(id,name,manufacturers(name,brand_color))').eq('season_id', seasonId).order('registered_at'),
     ]);
     const season = seasonRes.data || {};
     const events = eventsRes.data || [];
+    const teamSeasonRows = teamSeasonsRes.data || [];
     let drivers = [], teams = [], driverRatings = new Map();
+    const dMap = new Map(), tMap = new Map();
+
+    // Primary: pull from event entries (works once entries have been created)
     const eventIds = events.map(e => e.id);
     if (eventIds.length) {
         const { data: entries } = await sb.from('entries')
             .select('id,teams(id,name,manufacturers(name,brand_color)),entry_drivers(drivers(id,display_name,career_number,gt7_dr_rating,gt7_sr_rating))')
             .in('event_id', eventIds);
-        const dMap = new Map(), tMap = new Map();
         (entries || []).forEach(en => {
             if (en.teams?.id) tMap.set(en.teams.id, en.teams);
             (en.entry_drivers || []).forEach(ed => { if (ed.drivers?.id) dMap.set(ed.drivers.id, { ...ed.drivers, team: en.teams }); });
         });
-        drivers = Array.from(dMap.values());
-        teams   = Array.from(tMap.values());
-        const dIds = drivers.map(d => d.id).filter(Boolean);
-        if (dIds.length) {
-            const { data: ratings } = await sb.from('driver_current_ratings').select('driver_id,rating').in('driver_id', dIds);
-            (ratings || []).forEach(r => driverRatings.set(r.driver_id, r.rating));
+    }
+
+    // Fallback: if no entries yet, build from team_seasons + current driver assignments
+    if (dMap.size === 0 && teamSeasonRows.length) {
+        const teamIds = teamSeasonRows.map(ts => ts.team_id).filter(Boolean);
+        teamSeasonRows.forEach(ts => { if (ts.teams?.id) tMap.set(ts.teams.id, ts.teams); });
+        if (teamIds.length) {
+            const { data: teamDrivers } = await sb.from('drivers')
+                .select('id,display_name,career_number,gt7_dr_rating,gt7_sr_rating,current_team_id,teams!current_team_id(id,name,manufacturers(name,brand_color))')
+                .in('current_team_id', teamIds);
+            (teamDrivers || []).forEach(d => {
+                dMap.set(d.id, { ...d, team: d.teams });
+                if (d.teams?.id) tMap.set(d.teams.id, d.teams);
+            });
         }
+    }
+
+    drivers = Array.from(dMap.values());
+    teams   = Array.from(tMap.values());
+    const dIds = drivers.map(d => d.id).filter(Boolean);
+    if (dIds.length) {
+        const { data: ratings } = await sb.from('driver_current_ratings').select('driver_id,rating').in('driver_id', dIds);
+        (ratings || []).forEach(r => driverRatings.set(r.driver_id, r.rating));
     }
     return { season, seasonName, events, drivers, teams, driverRatings };
 }
