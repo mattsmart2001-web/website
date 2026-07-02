@@ -4950,23 +4950,41 @@ function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
                 'One to track. The best version of this driver might still be ahead of them.',
             ],
         },
-        // slot 9+: generic pool for deeper grid entries
+        // slot 9+: generic pool for deeper grid entries — large enough to avoid repetition
         {
-            labels: ['One to Watch','A Driver to Follow','In the Mix','Worth Watching'],
+            labels: ['One to Watch','A Driver to Follow','In the Mix','Worth Watching','A Name to Note','On the Radar'],
             openers: [
-                (n,t) => `${n}${t ? ` of ${t}` : ''} rounds out this section of the grid preview as a driver with enough ability to make their presence felt across ${seasonName}. The numbers are not at the very top, but the gap is smaller than standings alone might eventually suggest.`,
-                (n,t) => `${n}${t ? `, part of the ${t} entry,` : ''} arrives in ${seasonName} as a driver capable of more than their pre-season position might indicate. Racing is about execution, and execution on the day counts for more than any pre-season assessment.`,
-                (n,t) => `Do not write off ${n}${t ? ` of ${t}` : ''} before the season has started. The grid is deep, the gaps are small, and any driver who puts together a clean run of results can find themselves in territory they were not expected to reach.`,
+                (n,t) => `${n}${t ? ` of ${t}` : ''} arrives in ${seasonName} as a driver capable of more than their pre-season billing might suggest. Racing is about execution, and on the right weekend, execution counts for more than any rating.`,
+                (n,t) => `${n}${t ? `, part of the ${t} entry,` : ''} is the kind of driver who makes more sense as a threat once the season is underway than on paper before it. The numbers are solid. The potential is higher than the numbers.`,
+                (n,t) => `The entry from ${n}${t ? ` of ${t}` : ''} is one to watch across the full season rather than just Round 1. Drivers who build momentum through a calendar can end up somewhere very different from where they started it.`,
+                (n,t) => `${n}${t ? ` racing for ${t}` : ''} has earned their place on this grid, and that matters more than where the pre-season numbers put them. Points are scored on track, not in preview articles.`,
+                (n,t) => `There is genuine pace behind the ${n}${t ? ` and ${t}` : ''} entry. Whether it translates into the kind of results that change a standings picture depends on a clean run of races, and that is a question only the season itself can answer.`,
+                (n,t) => `${n}${t ? ` of ${t}` : ''} is the kind of driver who accumulates. Not the loudest name heading into Round 1, but often a more meaningful presence in the standings by the time Round 4 or 5 comes around.`,
+                (n,t) => `Assessing ${n}${t ? ` from ${t}` : ''} on paper only gets you so far. This is a driver whose best work tends to show up in the race itself, under pressure, in the moments that decide where points end up.`,
+                (n,t) => `${n}${t ? `, lining up with ${t},` : ''} should not be filed under any category yet. A season is long, circumstances change, and this driver has the tools to take advantage of the moments when they arrive.`,
+                (n,t) => `Put ${n}${t ? ` of ${t}` : ''} on the list of drivers worth following through the season. The headline rating is not the ceiling. The real ceiling will become clearer once the racing begins.`,
             ],
             bodies: [
-                (dr,sr) => `${dr ? `DR-${dr}` : 'Solid'}${sr ? ` and SR-${sr}` : ''} credentials give this driver a foundation to work from. Endurance racing is less predictable than the numbers suggest, and the gap between the front of the grid and the midfield is never as large on track as it looks on a spreadsheet.`,
-                (dr,sr) => `The ${dr ? `DR-${dr}` : 'pace'} rating${sr ? ` and SR-${sr}` : ''} tell a partial story. The full story gets told across eight rounds of racing. In a season where the frontrunners are this closely matched, any result can happen on any given weekend.`,
-                (dr,sr) => `Rated ${dr ? `DR-${dr}` : 'competitively'}${sr ? ` with SR-${sr}` : ''}: enough to be competitive, enough to cause an upset on the right day. The field is not sorted by the numbers. It gets sorted on track.`,
+                (dr,sr) => `${dr ? `DR-${dr}` : 'Solid'}${sr ? ` and SR-${sr}` : ''} credentials give a starting point. Endurance racing is less predictable than the numbers suggest, and the gap between the midfield and the front is never as fixed on track as it looks in pre-season assessments.`,
+                (dr,sr) => `The ${dr ? `DR-${dr}` : 'pace'} rating${sr ? ` alongside SR-${sr}` : ''} tells a partial story. The full version gets written across eight rounds of racing, and in a season where the frontrunners are closely matched, any result can happen on any given weekend.`,
+                (dr,sr) => `Rated ${dr ? `DR-${dr}` : 'competitively'}${sr ? ` with SR-${sr}` : ''}: enough to be a factor, enough to cause an upset when conditions align. The field is not settled by pre-season numbers. It settles on track.`,
+                (dr,sr) => `${dr ? `DR-${dr}` : 'Competent pace'}${sr ? ` and SR-${sr}` : ''} represent a solid baseline. What matters from here is how that baseline holds up under race pressure, in traffic, in the closing stages of an endurance event when the margins tighten.`,
+                (dr,sr) => `A ${dr ? `DR-${dr}` : 'competitive'} rating${sr ? ` with SR-${sr}` : ''} says this driver belongs on this grid. The seasons that produce the biggest surprises are usually the ones where drivers who belonged on the grid found out they could do more than just belong.`,
+                (dr,sr) => `${dr ? `DR-${dr}` : 'Rated solidly'}${sr ? ` and SR-${sr}` : ''} coming in. Ratings describe the past. Races write the future, and the gap between where a driver is rated and where they finish is where the interesting stories in a championship come from.`,
+                (dr,sr) => `The ${dr ? `DR-${dr}` : 'pace'} number${sr ? ` and SR-${sr}` : ''} provide context but not conclusions. Context says this driver is competitive. Conclusions get drawn at the chequered flag, not before it.`,
+                (dr,sr) => `${dr ? `DR-${dr}` : 'Strong enough'}${sr ? ` alongside SR-${sr}` : ''} to feature. Endurance formats tend to compress the field as the hours pass, and drivers who are fast and clean across a full race distance are worth more than their entry position suggests.`,
+                (dr,sr) => `Rated ${dr ? `DR-${dr}` : 'competitively'}${sr ? ` with SR-${sr}` : ''}, which puts them in the mix. Being in the mix at the start of a season is exactly the position from which championships are occasionally won by drivers nobody had originally shortlisted.`,
             ],
             closers: [
-                'Every driver on this list has earned their entry. The season will sort the rest.',
-                'The championship is long. Points won in the early rounds count the same as points won in the final one.',
-                'A clean season from this driver could produce a result that surprises people. That is all any of them can ask for.',
+                'Every driver on this grid has earned their entry. The season will do the sorting.',
+                'The championship is long. Points scored in the early rounds count the same as points scored in the final one.',
+                'A clean season from this driver could produce a result that surprises people. That is all any of them can ask for heading in.',
+                'Watch the mid-season form. That is when the real shape of a championship starts to become clear.',
+                'Underestimating the midfield is always a mistake. Do not make it here.',
+                'The drivers who finish every race score every round. That adds up faster than most people expect.',
+                'Some of the best seasons in this championship have come from drivers nobody had near the top of their pre-season lists.',
+                'Keep this name in mind for Round 4 onwards. That is when the season starts to take shape.',
+                'Racing does not always follow the pre-season script. This driver may well be one of the reasons why.',
             ],
         },
     ];
@@ -4980,16 +4998,27 @@ function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
         teamDriverMap.get(tid).push(dr);
     });
 
+    // Cycle through each pool by index so no two drivers in the same article share text
+    const _pick = (arr, idx, offset = 0) => arr[(idx + offset) % arr.length];
+
     const genericFrame = slotFrames[slotFrames.length - 1];
     const profiles = ranked.map((d, i) => {
         const frame    = i < slotFrames.length - 1 ? slotFrames[i] : genericFrame;
-        const label    = _psPick(frame.labels);
+        // For named slots (0-8) the pool is small and used once — use random for variety across runs
+        // For the generic slot (9+) use index cycling so each driver gets distinct text
+        const isGeneric = i >= slotFrames.length - 1;
+        const gi       = isGeneric ? (i - (slotFrames.length - 1)) : i;
+        const label    = isGeneric ? _pick(frame.labels, gi, 0) : _psPick(frame.labels);
         const teamName = d.team?.name || null;
         const mfr      = d.team?.manufacturers?.name || null;
         const teamCtx  = teamName && mfr ? `${teamName} (${mfr})` : (teamName || null);
-        const opener   = _psPick(frame.openers)(esc(d.display_name), teamCtx ? esc(teamCtx) : null);
-        const body     = _psPick(frame.bodies)(d.gt7_dr_rating || null, d.gt7_sr_rating || null);
-        let closer     = _psPick(frame.closers);
+        const opener   = isGeneric
+            ? _pick(frame.openers, gi, 0)(esc(d.display_name), teamCtx ? esc(teamCtx) : null)
+            : _psPick(frame.openers)(esc(d.display_name), teamCtx ? esc(teamCtx) : null);
+        const body     = isGeneric
+            ? _pick(frame.bodies, gi, 3)(d.gt7_dr_rating || null, d.gt7_sr_rating || null)
+            : _psPick(frame.bodies)(d.gt7_dr_rating || null, d.gt7_sr_rating || null);
+        let closer     = isGeneric ? _pick(frame.closers, gi, 6) : _psPick(frame.closers);
         closer = closer.replace(/\$\{seasonName\}/g, seasonName);
 
         // Team info block: all drivers on this team with their DR/SR
