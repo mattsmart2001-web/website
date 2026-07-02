@@ -4766,7 +4766,9 @@ function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
     const ranked = drivers.map(d => {
         const elo  = driverRatings.get(d.id);
         const seed = drSrSeed(d.gt7_dr_rating, d.gt7_sr_rating);
-        return { ...d, skill: elo ?? seed, hasElo: !!elo };
+        // elo === 1500 is the uninitialised default — treat as unrated
+        const hasElo = !!elo && elo !== 1500;
+        return { ...d, skill: hasElo ? elo : seed, hasElo };
     }).sort((a,b) => b.skill - a.skill).slice(0, Math.min(5, drivers.length));
     const intro = _psPick([
         `${seasonName} is shaping up to be the most competitive season in GTEC history. With the grid confirmed, here are the five drivers who arrive with the strongest credentials, with the biggest targets on their backs.`,
@@ -4813,7 +4815,7 @@ function _buildSeasonPreview({ season, seasonName, drivers, teams, events, drive
         <p style="margin:0 0 0.35rem;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700">The Grid</p>
         <p style="margin:0">${dCount} driver${dCount===1?'':'s'} confirmed across ${tCount} team${tCount===1?'':'s'}. ${_psPick(['The field is the deepest it has ever been.','Competition for places was fierce this season.','From experienced frontrunners to promising newcomers, the grid covers every tier.'])}</p>
     </div>`;
-    const top3 = drivers.map(d => ({ ...d, skill: driverRatings.get(d.id) ?? drSrSeed(d.gt7_dr_rating, d.gt7_sr_rating) }))
+    const top3 = drivers.map(d => { const e = driverRatings.get(d.id); return { ...d, skill: (e && e !== 1500) ? e : drSrSeed(d.gt7_dr_rating, d.gt7_sr_rating) }; })
         .sort((a,b)=>b.skill-a.skill).slice(0,3);
     const contCard = top3.length ? `<div class="stat-card" style="margin:1rem 0">
         <p style="margin:0 0 0.35rem;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700">Ones to Watch</p>
