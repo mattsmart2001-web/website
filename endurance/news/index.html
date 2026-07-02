@@ -266,7 +266,7 @@ async function loadListing() {
     const cards = data.map(n => `
         <a class="news-card" href="/endurance/news/?slug=${encodeURIComponent(n.slug)}">
             <div class="news-card-img">
-                <img src="${esc(n.cover_url || '/endurance/assets/og-card.png')}" alt="${esc(n.title)}" loading="lazy">
+                <img src="${esc(n.cover_url || '/endurance/assets/og-card.png')}" alt="${esc(n.title)}" loading="lazy" onerror="this.onerror=null;this.src='/endurance/assets/og-card.png'">
             </div>
             <div class="news-card-body">
                 ${newsTagPill(n.tags)}
@@ -307,7 +307,7 @@ async function loadArticle(slug) {
     app.innerHTML = `
     <div class="page-wrap">
         <a class="article-back" href="/endurance/news/">← Back to News</a>
-        ${cover ? `<img class="article-cover" src="${esc(cover)}" alt="${esc(data.title)}">` : ''}
+        ${cover ? `<img class="article-cover" src="${esc(cover)}" alt="${esc(data.title)}" onerror="this.onerror=null;this.src='/endurance/assets/og-card.png'">` : ''}
         <div class="article-eyebrow">${eyebrow}</div>
         <h1 class="article-title">${esc(data.title)}</h1>
         <div class="article-meta">

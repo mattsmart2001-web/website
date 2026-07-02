@@ -7051,7 +7051,7 @@ function newsForm(n = {}) {
             <input type="text" name="excerpt" value="${esc(n.excerpt)}" placeholder="Short teaser shown in article listings…">
         </div>
         <div class="form-group">
-            <label>Cover Image URL</label>
+            <label>Cover Image URL <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">— must be a direct image link (.jpg/.png/.webp). Many sites block hotlinking; upload to Supabase Storage for reliability.</span></label>
             <input type="url" name="cover_url" value="${esc(n.cover_url)}" placeholder="https://…">
         </div>
         <div class="form-group">
