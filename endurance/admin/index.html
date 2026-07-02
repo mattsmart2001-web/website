@@ -1469,12 +1469,17 @@ async function viewSeasonTeams(seasonId, seasonName) {
     const data = tsRes.data || [];
     const allDrivers = drvRes.data || [];
 
-    // Group drivers by their current_team_id
+    // Group drivers by their current_team_id; collect unaffiliated separately
+    const registeredTeamIds = new Set(data.map(ts => ts.teams?.id).filter(Boolean));
     const driversByTeam = new Map();
+    const soloDrivers = [];
     allDrivers.forEach(d => {
-        if (!d.current_team_id) return;
-        if (!driversByTeam.has(d.current_team_id)) driversByTeam.set(d.current_team_id, []);
-        driversByTeam.get(d.current_team_id).push(d);
+        if (d.current_team_id && registeredTeamIds.has(d.current_team_id)) {
+            if (!driversByTeam.has(d.current_team_id)) driversByTeam.set(d.current_team_id, []);
+            driversByTeam.get(d.current_team_id).push(d);
+        } else if (!d.current_team_id) {
+            soloDrivers.push(d);
+        }
     });
 
     const rows = data.length === 0 ? `<tr><td colspan="4"><div class="empty-state">No teams registered for this season yet.</div></td></tr>` :
@@ -1501,6 +1506,19 @@ async function viewSeasonTeams(seasonId, seasonName) {
             </tr>`;
         }).join('');
 
+    const soloSection = soloDrivers.length ? `
+        <div class="section-card" style="margin-top:1rem">
+            <div class="section-card-header">
+                <span class="section-card-title">Solo / Unaffiliated Drivers (${soloDrivers.length})</span>
+            </div>
+            <table><thead><tr><th>Driver</th><th>Number</th></tr></thead><tbody>
+                ${soloDrivers.map(d => `<tr>
+                    <td>${esc(d.display_name)}</td>
+                    <td>${d.career_number ? `<span class="badge badge-gold">#${d.career_number}</span>` : '<span class="td-muted">—</span>'}</td>
+                </tr>`).join('')}
+            </tbody></table>
+        </div>` : '';
+
     panel.innerHTML = `
         <div class="section-card">
             <div class="section-card-header">
@@ -1513,7 +1531,8 @@ async function viewSeasonTeams(seasonId, seasonName) {
             <table><thead><tr>
                 <th>Team &amp; Drivers</th><th>Manufacturer (locked)</th><th>Registered</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
-        </div>`;
+        </div>
+        ${soloSection}`;
 }
 
 async function syncAllTeamsToSeason(seasonId) {
