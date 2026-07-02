@@ -4378,7 +4378,7 @@ function openPreSeasonModal(seasonId, seasonName) {
         { key:'grid',       icon:'🏁', title:'Grid Reveal',      desc:'Full confirmed driver and team lineup' },
         { key:'calendar',   icon:'📅', title:'Calendar Drop',    desc:'Season schedule with all rounds and circuits' },
         { key:'circuit',    icon:'🗺️', title:'Circuit Guide',   desc:'Detailed GT7 track preview for an event' },
-        { key:'contenders', icon:'🏆', title:'Title Contenders', desc:'Five drivers to watch based on Elo and GT7 rating' },
+        { key:'contenders', icon:'🏆', title:'Title Contenders', desc:'Five drivers to watch based on GT7 DR and SR rating' },
         { key:'preview',    icon:'📰', title:'Season Preview',   desc:'Full editorial combining calendar, grid and picks' },
     ];
     openModal(`Pre-Season: ${esc(seasonName)}`,
@@ -6550,7 +6550,7 @@ function renderGuide() {
                     ['&#127945; Grid Reveal','Full driver and team lineup','Drivers assigned to entries'],
                     ['&#128197; Calendar Drop','Season schedule with rounds and circuits','All events created'],
                     ['&#128506;&#65039; Circuit Guide','Detailed track preview for one event','Select which event'],
-                    ['&#127942; Title Contenders','Top 5 drivers to watch by rating','Drivers with ratings set'],
+                    ['&#127942; Title Contenders','Top 5 drivers to watch by GT7 DR / SR rating','Drivers with DR/SR set'],
                     ['&#128240; Season Preview','Combined calendar, grid and picks','All of the above'],
                 ])}
             `)}
