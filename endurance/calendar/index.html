@@ -491,7 +491,8 @@ async function load() {
                            e.starting_procedure || e.mandatory_pit_stops != null || e.race_details ||
                            e.bop_enabled != null || e.damage_level ||
                            e.refuel_rate_lps != null || e.slipstream ||
-                           (Array.isArray(e.required_tyres) && e.required_tyres.length);
+                           (Array.isArray(e.required_tyres) && e.required_tyres.length) ||
+                           e.quali_same_as_race != null || e.quali_notes;
         const detailsBtn = hasDetails
             ? `<button class="btn-results" onclick="openRaceDetails('${esc(e.id)}','${esc(e.name)}')">Race Details</button>`
             : '';
@@ -631,7 +632,22 @@ function openRaceDetails(eventId, eventName) {
     const briefingHTML = e.race_details
         ? `<div class="details-briefing"><div class="details-key">Briefing</div><div class="details-briefing-body">${esc(e.race_details)}</div></div>`
         : '';
-    document.getElementById('details-body').innerHTML = (fieldHTML + briefingHTML) || '<div class="grid-loading">No race details have been published for this event yet.</div>';
+
+    // Qualifying section
+    let qualiHTML = '';
+    if (e.quali_same_as_race != null || e.quali_notes) {
+        const qualiBody = e.quali_same_as_race !== false
+            ? `<div class="details-val" style="color:var(--muted);font-size:0.85rem">Same settings as the race — no changes to the lobby required between sessions.</div>`
+            : (e.quali_notes
+                ? `<div class="details-briefing-body">${esc(e.quali_notes)}</div>`
+                : `<div class="details-val" style="color:var(--muted);font-size:0.85rem">See briefing for qualifying details.</div>`);
+        qualiHTML = `<div class="details-briefing" style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+            <div class="details-key" style="margin-bottom:0.4rem">Qualifying</div>
+            ${qualiBody}
+        </div>`;
+    }
+
+    document.getElementById('details-body').innerHTML = (fieldHTML + briefingHTML + qualiHTML) || '<div class="grid-loading">No race details have been published for this event yet.</div>';
     document.getElementById('details-overlay').classList.add('open');
 }
 function closeRaceDetails() {
