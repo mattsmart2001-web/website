@@ -7909,7 +7909,7 @@ async function renderHealthCheck() {
 
     // Unclaimed drivers (no user_id — profile exists but not yet claimed)
     const { data: unclaimedDrivers, error: e5 } = await sb.from('drivers')
-        .select('id, display_name, psn_id, current_team_id, teams!current_team_id(name), driver_claim_tokens(expires_at, used_at, created_at)')
+        .select('id, display_name, psn_id, discord_username, current_team_id, teams!current_team_id(name), driver_claim_tokens(expires_at, used_at, created_at)')
         .is('user_id', null)
         .order('display_name');
 
@@ -8033,7 +8033,7 @@ async function renderHealthCheck() {
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
                     <div style="min-width:0">
                         <div style="font-weight:600">${esc(d.display_name)}</div>
-                        <div style="font-size:0.8rem;color:var(--muted)">${d.teams?.name ? esc(d.teams.name) : 'No team'} &middot; ${esc(d.psn_id || '—')}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${d.teams?.name ? esc(d.teams.name) : 'No team'} &middot; ${esc(d.psn_id || '—')}${d.discord_username ? ` &middot; ${esc(d.discord_username)}` : ''}</div>
                         ${expiryDate}
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
