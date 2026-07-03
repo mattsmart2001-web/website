@@ -1747,11 +1747,12 @@ async function renderDrivers() {
         .order('display_name');
     if (error) { toast(error.message, 'error'); return; }
 
-    const rows = data.length === 0 ? `<tr><td colspan="7"><div class="empty-state">No drivers yet.</div></td></tr>` :
+    const rows = data.length === 0 ? `<tr><td colspan="8"><div class="empty-state">No drivers yet.</div></td></tr>` :
         data.map(d => `
             <tr>
                 <td><strong>${esc(d.display_name)}</strong>${d.career_number ? ` <span class="badge badge-gold">#${d.career_number}</span>` : ''}</td>
                 <td class="td-muted">${esc(d.psn_id) || '—'}</td>
+                <td class="td-muted">${esc(d.discord_username) || '—'}</td>
                 <td class="td-muted">${esc(d.nationality) || '—'}</td>
                 <td class="td-muted">${esc(d.teams?.name) || '—'}</td>
                 <td class="td-muted">${esc(d.manufacturers?.name) || '—'}</td>
@@ -1772,6 +1773,7 @@ async function renderDrivers() {
             <table id="drivers-table"><thead><tr>
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">Name</th>
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">PSN ID</th>
+                <th class="th-sort" onclick="thSort(this,'drivers-table')">Discord</th>
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">Nationality</th>
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">Team</th>
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">Manufacturer</th>
