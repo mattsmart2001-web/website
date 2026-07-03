@@ -267,7 +267,8 @@
         .grid-lobby { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem 1rem; }
         .grid-lobby-title { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: baseline; }
         .grid-lobby-count { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 0.15em; color: var(--muted); font-weight: 700; }
-        .grid-row { display: grid; grid-template-columns: 42px 1fr; column-gap: 0.5rem; padding: 0.4rem 0; border-top: 1px solid var(--border); }
+        .grid-row { display: grid; grid-template-columns: 42px 1fr auto; column-gap: 0.5rem; padding: 0.4rem 0; border-top: 1px solid var(--border); align-items: center; }
+        .grid-mfr-logo { width: 28px; height: 28px; object-fit: contain; opacity: 0.7; flex-shrink: 0; }
         .grid-row:first-of-type { border-top: none; padding-top: 0; }
         .grid-car { font-family: 'Anton', sans-serif; color: var(--gold); font-size: 0.95rem; }
         .grid-team a { color: inherit; text-decoration: none; font-weight: 600; }
@@ -531,7 +532,7 @@ async function openGrid(eventId, eventName) {
     overlay.classList.add('open');
 
     const { data: entries, error } = await sb.from('entries')
-        .select('id, car_number, car_model, lobby_number, status, teams(name, slug), manufacturers(name, brand_color, car_name), entry_drivers(stint_role, drivers(display_name, slug, career_number))')
+        .select('id, car_number, car_model, lobby_number, status, teams(name, slug), manufacturers(name, brand_color, car_name, logo_url), entry_drivers(stint_role, drivers(display_name, slug, career_number))')
         .eq('event_id', eventId)
         .in('status', ['confirmed']);
 
@@ -581,12 +582,17 @@ async function openGrid(eventId, eventName) {
             const driverName = d?.display_name
                 ? (d.slug ? `<a href="/endurance/drivers/?slug=${esc(d.slug)}" style="color:inherit;text-decoration:none">${esc(d.display_name)}</a>` : esc(d.display_name))
                 : '<em>No driver</em>';
+            const logoUrl = en.manufacturers?.logo_url;
+            const logoHtml = logoUrl
+                ? `<img class="grid-mfr-logo" src="${esc(logoUrl)}" alt="${esc(mfrName)}" loading="lazy">`
+                : `<span style="width:28px;display:inline-block"></span>`;
             return `<div class="grid-row">
                 <span class="grid-car">${number != null ? '#' + number : '—'}</span>
                 <div class="grid-info">
                     <div class="grid-driver-name">${driverName}</div>
                     <div class="grid-driver-meta">${teamCell}${mfrName ? ' · <span class="grid-mfr-name">' + esc(mfrName) + (en.manufacturers?.car_name ? ' — ' + esc(en.manufacturers.car_name) : '') + '</span>' : ''}</div>
                 </div>
+                ${logoHtml}
             </div>`;
         }).join('');
         return `<div class="grid-lobby">
