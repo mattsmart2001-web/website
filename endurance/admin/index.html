@@ -885,6 +885,7 @@ let _seasons       = [];
 let _teams         = [];
 let _pointsSystems = [];
 let _drivers       = [];
+let _hcTimer       = null;
 
 
 // ============================================================
@@ -1008,6 +1009,7 @@ function setupNav() {
 }
 
 async function navigate(section, pushHash = true) {
+    clearInterval(_hcTimer);
     currentSection = section;
     if (pushHash) window.location.hash = section;
 
@@ -7829,6 +7831,56 @@ function thSort(th, tableId) {
 // ============================================================
 // 11e. Pre-Season Health Check
 // ============================================================
+
+function _hcActiveToken(tokens) {
+    if (!tokens || !tokens.length) return null;
+    return tokens
+        .filter(t => !t.used_at)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || null;
+}
+
+function _hcFmtDate(iso) {
+    const d = new Date(iso);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+}
+
+function _hcExpiryBadge(token) {
+    if (!token) return `<span class="badge badge-muted hc-expiry-badge" style="flex-shrink:0">No link sent</span>`;
+    const msLeft = new Date(token.expires_at).getTime() - Date.now();
+    if (msLeft <= 0) {
+        return `<span class="badge hc-expiry-badge" style="background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25);flex-shrink:0">Link expired</span>`;
+    }
+    const h = Math.floor(msLeft / 3600000);
+    const m = Math.floor((msLeft % 3600000) / 60000);
+    const style = msLeft < 3600000
+        ? 'background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25)'
+        : msLeft < 14400000
+        ? 'background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.25)'
+        : 'background:rgba(255,209,102,0.1);color:#ffd166;border:1px solid rgba(255,209,102,0.2)';
+    return `<span class="badge hc-expiry-badge" data-expires="${esc(token.expires_at)}" style="${style};flex-shrink:0">Expires in ${h}h ${m}m</span>`;
+}
+
+function hcStartCountdown() {
+    _hcTimer = setInterval(() => {
+        document.querySelectorAll('.hc-expiry-badge[data-expires]').forEach(el => {
+            const msLeft = new Date(el.dataset.expires).getTime() - Date.now();
+            if (msLeft <= 0) {
+                el.textContent = 'Link expired';
+                el.style.cssText = 'background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25);flex-shrink:0';
+                el.removeAttribute('data-expires');
+            } else {
+                const h = Math.floor(msLeft / 3600000);
+                const m = Math.floor((msLeft % 3600000) / 60000);
+                el.textContent = `Expires in ${h}h ${m}m`;
+                if (msLeft < 3600000) el.style.color = '#f87171';
+                else if (msLeft < 14400000) el.style.color = '#fb923c';
+            }
+        });
+    }, 30000);
+}
+
 async function renderHealthCheck() {
     const content = document.getElementById('content');
 
@@ -7855,7 +7907,7 @@ async function renderHealthCheck() {
 
     // Unclaimed drivers (no user_id — profile exists but not yet claimed)
     const { data: unclaimedDrivers, error: e5 } = await sb.from('drivers')
-        .select('id, display_name, psn_id, current_team_id, teams!current_team_id(name)')
+        .select('id, display_name, psn_id, current_team_id, teams!current_team_id(name), driver_claim_tokens(expires_at, used_at, created_at)')
         .is('user_id', null)
         .order('display_name');
 
@@ -7967,16 +8019,28 @@ async function renderHealthCheck() {
     const unclaimedCount = (unclaimedDrivers || []).length;
     const unclaimedRows = !unclaimedCount
         ? `<div class="empty-state" style="padding:2rem 1rem">All drivers have claimed their profile.</div>`
-        : (unclaimedDrivers || []).map(d => `
+        : (unclaimedDrivers || []).map(d => {
+            const token = _hcActiveToken(d.driver_claim_tokens);
+            const expiryBadge = _hcExpiryBadge(token);
+            const hasActive = token && new Date(token.expires_at).getTime() > Date.now();
+            const expiryDate = hasActive
+                ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:2px">Expires ${_hcFmtDate(token.expires_at)}</div>`
+                : '';
+            return `
             <div class="hc-driver-card">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
-                    <div>
+                    <div style="min-width:0">
                         <div style="font-weight:600">${esc(d.display_name)}</div>
                         <div style="font-size:0.8rem;color:var(--muted)">${d.teams?.name ? esc(d.teams.name) : 'No team'} &middot; ${esc(d.psn_id || '—')}</div>
+                        ${expiryDate}
                     </div>
-                    <span class="badge badge-muted" style="flex-shrink:0">Unclaimed</span>
+                    <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
+                        ${expiryBadge}
+                        <button class="btn-icon" onclick="generateClaimLink('${d.id}','${esc(d.display_name)}')">New link</button>
+                    </div>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
 
     // Drivers who flagged themselves unable to attend upcoming scheduled events
     const { data: activeSeason } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
@@ -8181,6 +8245,8 @@ async function renderHealthCheck() {
             .hc-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
             .hc-hidden { display: none !important; }
         </style>`;
+
+    if (unclaimedCount) hcStartCountdown();
 }
 
 function hcFilter(mfrId) {
