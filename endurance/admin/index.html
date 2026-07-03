@@ -3207,7 +3207,7 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const lobbySize = Math.max(2, Math.min(32, parseInt(sizeInput?.value, 10) || 16));
 
     const { data: entries } = await sb.from('entries')
-        .select(`id, car_number, entry_drivers(driver_id, drivers(id, career_number, gt7_dr_rating, gt7_sr_rating, willing_host))`)
+        .select(`id, car_number, entry_drivers(driver_id, drivers(id, career_number, gt7_dr_rating, gt7_sr_rating, willing_host, display_name))`)
         .eq('event_id', eventId)
         .neq('status', 'withdrawn');
     if (!entries?.length) { toast('No entries to allocate.', 'error'); return; }
@@ -3304,14 +3304,15 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const totalLobbiesUsed = currentLobby;
 
     // Host selection — pick the highest-rated willing driver per lobby.
-    // Group entries by lobby, find the best willing candidate, and tag their entry.
+    // SparksTheory is always host if present in the lobby, regardless of willing_host flag.
     const lobbyMap = new Map();
     entries.forEach(en => {
         const ln = en._lobby;
         if (!ln) return;
         (en.entry_drivers || []).forEach(ed => {
-            if (!ed.drivers?.willing_host) return;
-            const skill = skillFor(ed);
+            const isSparks = ed.drivers?.display_name === 'SparksTheory';
+            if (!ed.drivers?.willing_host && !isSparks) return;
+            const skill = isSparks ? Infinity : skillFor(ed);
             const cur = lobbyMap.get(ln);
             if (!cur || skill > cur.skill) lobbyMap.set(ln, { entryId: en.id, driverId: ed.driver_id, skill });
         });
