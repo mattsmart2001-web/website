@@ -8151,7 +8151,7 @@ async function renderHealthCheck() {
         </div>`;
 
     const pillsInline = mfrList.length > 1 ? `
-        <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem">
             <button class="btn btn-ghost hc-pill active" style="padding:0.2rem 0.6rem;font-size:0.72rem" data-mfr="" onclick="hcFilter('')">All</button>
             ${mfrList.map(([id, name]) => `<button class="btn btn-ghost hc-pill" style="padding:0.2rem 0.6rem;font-size:0.72rem" data-mfr="${esc(id)}" onclick="hcFilter('${esc(id)}')">${esc(name)}</button>`).join('')}
         </div>` : '';
@@ -8192,7 +8192,7 @@ async function renderHealthCheck() {
 
             <div class="hc-grid-2">
                 ${hcSection('neutral', 'Solo Drivers', 'Registered drivers not currently in a team', soloCount, soloRows)}
-                ${hcSection('neutral', 'Teams with Open Seats', 'Teams with capacity for more drivers', openCount, `<div id="hc-team-list" style="display:flex;flex-direction:column;gap:0.5rem">${teamRows}</div>`, pillsInline)}
+                ${hcSection('neutral', 'Teams with Open Seats', 'Teams with capacity for more drivers', openCount, `${pillsInline}<div id="hc-team-list" style="display:flex;flex-direction:column;gap:0.5rem">${teamRows}</div>`)}
             </div>
 
             <div class="hc-grid-2">
