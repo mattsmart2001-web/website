@@ -647,7 +647,7 @@ function openRaceDetails(eventId, eventName) {
         </div>`;
     }
 
-    document.getElementById('details-body').innerHTML = (fieldHTML + briefingHTML + qualiHTML) || '<div class="grid-loading">No race details have been published for this event yet.</div>';
+    document.getElementById('details-body').innerHTML = (fieldHTML + qualiHTML + briefingHTML) || '<div class="grid-loading">No race details have been published for this event yet.</div>';
     document.getElementById('details-overlay').classList.add('open');
 }
 function closeRaceDetails() {
