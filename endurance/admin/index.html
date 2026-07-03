@@ -2400,6 +2400,23 @@ function eventForm(e = {}) {
                 <textarea name="race_details" rows="4" placeholder="Anything else drivers need to know — track limits, BoP, formation lap, etc.">${esc(e.race_details)}</textarea>
             </div>
         </div>
+
+        <div style="margin-top:1rem;padding-top:0.85rem;border-top:1px solid var(--border)">
+            <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.15em;color:var(--gold);text-transform:uppercase;margin-bottom:0.85rem">Qualifying Settings</div>
+            <div class="form-group">
+                <label style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer">
+                    <input type="checkbox" name="quali_same_as_race" id="ev-quali-same" ${(e.quali_same_as_race !== false) ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px" onchange="document.getElementById('ev-quali-notes-row').style.display=this.checked?'none':'block'">
+                    <span>Qualifying settings the same as race settings</span>
+                </label>
+                <div class="form-hint">When ticked, the lobby host will be told qualifying uses identical lobby settings to the race.</div>
+            </div>
+            <div id="ev-quali-notes-row" style="display:${(e.quali_same_as_race !== false) ? 'none' : 'block'}">
+                <div class="form-group">
+                    <label>Qualifying Settings Notes <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(sent to the lobby host)</span></label>
+                    <textarea name="quali_notes" rows="3" placeholder="e.g. Qualifying: 15 mins, dry weather, Racing Soft only. All other settings as per race.">${esc(e.quali_notes)}</textarea>
+                </div>
+            </div>
+        </div>
     </form>`;
 }
 
@@ -2450,6 +2467,8 @@ async function saveEvent(id) {
         slipstream:         d.slipstream || null,
         required_tyres:     requiredTyres.length ? requiredTyres : null,
         race_details:       d.race_details || null,
+        quali_same_as_race: !!document.getElementById('ev-quali-same')?.checked,
+        quali_notes:        d.quali_notes || null,
     };
     const { error } = id
         ? await sb.from('events').update(payload).eq('id', id)
@@ -3324,7 +3343,7 @@ async function notifyLobbies(eventId, eventName, seasonId) {
         const { data: { session: hostSession } } = await sb.auth.getSession();
         if (hostSession?.access_token) {
             const { data: ev } = await sb.from('events')
-                .select('round, starts_at')
+                .select('round, starts_at, tyre_wear, fuel_consumption, time_multiplier, weather, time_of_day, damage_level, slipstream, bop_enabled, quali_same_as_race, quali_notes')
                 .eq('id', eventId).maybeSingle();
             const { data: hostEntries } = await sb.from('entries')
                 .select('lobby_number, host_driver_id')
@@ -3343,6 +3362,18 @@ async function notifyLobbies(eventId, eventName, seasonId) {
                                 round:        ev?.round ?? null,
                                 lobby_number: en.lobby_number,
                                 starts_at:    ev?.starts_at ?? null,
+                                race_settings: {
+                                    tyre_wear:       ev?.tyre_wear       ?? null,
+                                    fuel_consumption:ev?.fuel_consumption ?? null,
+                                    time_multiplier: ev?.time_multiplier  ?? null,
+                                    weather:         ev?.weather          ?? null,
+                                    time_of_day:     ev?.time_of_day      ?? null,
+                                    damage_level:    ev?.damage_level     ?? null,
+                                    slipstream:      ev?.slipstream       ?? null,
+                                    bop_enabled:     ev?.bop_enabled      ?? false,
+                                },
+                                quali_same_as_race: ev?.quali_same_as_race !== false,
+                                quali_notes:        ev?.quali_notes        ?? null,
                             }),
                         });
                         if (res.ok) hostEmailsSent++;

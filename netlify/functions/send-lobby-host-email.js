@@ -55,11 +55,38 @@ function formatRaceTime(startsAt) {
     } catch { return startsAt; }
 }
 
-function buildEmail(driverName, eventName, round, lobbyNumber, startsAt) {
+function buildRaceSettingsTable(rs) {
+    if (!rs) return '';
+    const rows = [
+        rs.weather         && ['Weather',          rs.weather],
+        rs.time_of_day     && ['Time of Day',      rs.time_of_day],
+        rs.tyre_wear       && ['Tyre Wear',        rs.tyre_wear],
+        rs.fuel_consumption&& ['Fuel Consumption', rs.fuel_consumption],
+        rs.time_multiplier && ['Time Multiplier',  rs.time_multiplier],
+        rs.damage_level    && ['Damage',           rs.damage_level.charAt(0).toUpperCase() + rs.damage_level.slice(1)],
+        rs.slipstream      && ['Slipstream',       rs.slipstream.charAt(0).toUpperCase() + rs.slipstream.slice(1)],
+        rs.bop_enabled     && ['Balance of Performance', 'Enabled'],
+    ].filter(Boolean);
+    if (!rows.length) return '';
+    return `<table style="width:100%;border-collapse:collapse;margin:10px 0 0">
+        ${rows.map(([k, v]) => `<tr>
+            <td style="padding:5px 10px 5px 0;font-size:13px;color:#94a3b8;white-space:nowrap;vertical-align:top">${esc(k)}</td>
+            <td style="padding:5px 0;font-size:13px;color:#f1f5f9;font-weight:600">${esc(String(v))}</td>
+        </tr>`).join('')}
+    </table>`;
+}
+
+function buildEmail(driverName, eventName, round, lobbyNumber, startsAt, raceSettings, qualiSameAsRace, qualiNotes) {
     const name       = esc(driverName || 'Driver');
     const event      = esc(eventName  || 'the upcoming race');
     const raceTime   = formatRaceTime(startsAt);
     const splitLabel = lobbyNumber ? `Split ${lobbyNumber}` : 'your split';
+    const settingsTable = buildRaceSettingsTable(raceSettings);
+    const qualiBlock = qualiSameAsRace !== false
+        ? `<p style="background:rgba(255,209,102,0.06);border:1px solid rgba(255,209,102,0.15);border-radius:8px;padding:0.75rem 1rem;font-size:14px;color:#ffd166;margin:0">Qualifying uses the same lobby settings as the race. No changes needed between sessions.</p>`
+        : (qualiNotes
+            ? `<p style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0.75rem 1rem;font-size:14px;color:#cbd5e1;margin:0">${esc(qualiNotes)}</p>`
+            : `<p style="font-size:14px;color:#94a3b8;margin:0">Check the race calendar for qualifying-specific settings.</p>`);
 
     return {
         subject: `You're hosting ${splitLabel} — GTEC Round ${round || ''}`.trim().replace(/\s+/g, ' '),
@@ -70,11 +97,20 @@ function buildEmail(driverName, eventName, round, lobbyNumber, startsAt) {
             <p><strong style="color:#f1f5f9">What you need to do:</strong></p>
             <ol style="padding-left:1.25rem;color:#cbd5e1;line-height:1.9">
                 <li>Create a <strong>Custom Race</strong> lobby in Gran Turismo 7 before the race start time.</li>
-                <li>Set the race settings exactly as specified in the race briefing on your <a href="${SITE_URL}/endurance/calendar/" style="color:#ffd166">portal calendar</a>.</li>
+                <li>Set the lobby settings as below for qualifying, then update for the race once qualifying is complete.</li>
                 <li>Share the lobby password with your split's drivers via the Discord <strong style="color:#f1f5f9">${lobbyNumber ? `#split-${lobbyNumber}` : 'split'}</strong> channel.</li>
                 <li>Start the lobby on time — aim to have everyone in the room <strong>15 minutes</strong> before the scheduled start.</li>
                 <li>If any driver disconnects within the <strong>first lap</strong>, a restart is allowed. Call it in the Discord channel and requeue everyone.</li>
             </ol>
+            ${settingsTable ? `
+            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px 20px;margin:16px 0">
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#94a3b8;margin-bottom:6px">Race Settings</div>
+                ${settingsTable}
+            </div>` : ''}
+            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px 20px;margin:16px 0">
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#94a3b8;margin-bottom:10px">Qualifying Settings</div>
+                ${qualiBlock}
+            </div>
             <p>If you have any problems or cannot host, contact an admin as soon as possible so we can arrange a replacement host.</p>
             <p style="margin:24px 0"><a href="${SITE_URL}/endurance/calendar/" style="display:inline-block;background:#ffd166;color:#000000;text-decoration:none;padding:13px 26px;border-radius:999px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;font-size:13px">View Race Details</a></p>
             <p style="font-size:13px;color:#94a3b8">Thank you for helping make the championship run smoothly.</p>
@@ -103,7 +139,7 @@ exports.handler = async (event) => {
     try { body = JSON.parse(event.body || '{}'); }
     catch { return { statusCode: 400, body: 'Invalid JSON body' }; }
 
-    const { driver_id, event_name, round, lobby_number, starts_at } = body;
+    const { driver_id, event_name, round, lobby_number, starts_at, race_settings, quali_same_as_race, quali_notes } = body;
     if (!driver_id) {
         return { statusCode: 400, body: 'driver_id is required' };
     }
@@ -144,7 +180,7 @@ exports.handler = async (event) => {
         return { statusCode: 404, body: `No email address found for driver ${driver_id}` };
     }
 
-    const tpl = buildEmail(driverName, event_name, round, lobby_number, starts_at);
+    const tpl = buildEmail(driverName, event_name, round, lobby_number, starts_at, race_settings, quali_same_as_race, quali_notes);
 
     // Send via Resend
     const resendRes = await fetch('https://api.resend.com/emails', {
