@@ -191,7 +191,19 @@
 
         /* ---------- bottom info block ---------- */
         const leftX = 50;
-        let curY = Math.round(H * 0.62);  // ~893
+        let curY = Math.round(H * 0.60);  // ~864
+
+        // Pre-compute name font size first so the career-number advance
+        // is large enough that the name's tall cap height can't reach up
+        // and overlap it.
+        const nameText = (driver.display_name || '').toUpperCase();
+        let nameFs = 128;
+        ctx.textAlign = 'left';
+        while (nameFs > 58) {
+            ctx.font = `900 ${nameFs}px "Anton", Impact, sans-serif`;
+            if (ctx.measureText(nameText).width < W - leftX - 36) break;
+            nameFs -= 3;
+        }
 
         // #number line
         if (driver.career_number != null) {
@@ -201,21 +213,17 @@
             setLS('0.12em');
             ctx.fillText('#' + driver.career_number, leftX, curY);
             setLS('0px');
-            curY += 58;
+            // Advance by ~85% of nameFs so the name cap (75% of font size)
+            // stays below the career-number baseline with room to spare.
+            curY += Math.round(nameFs * 0.85) + 16;
         } else {
             curY += 18;
         }
 
-        // Driver name (auto-shrink)
-        const nameText = (driver.display_name || '').toUpperCase();
-        let nameFs = 128;
-        ctx.textAlign = 'left';
-        while (nameFs > 58) {
-            ctx.font = `900 ${nameFs}px "Anton", Impact, sans-serif`;
-            if (ctx.measureText(nameText).width < W - leftX - 36) break;
-            nameFs -= 3;
-        }
+        // Driver name
+        ctx.font = `900 ${nameFs}px "Anton", Impact, sans-serif`;
         ctx.fillStyle = '#f1f5f9';
+        ctx.textAlign = 'left';
         ctx.fillText(nameText, leftX, curY);
         curY += nameFs + 24;
 
