@@ -7039,6 +7039,30 @@ function renderGuide() {
                 ${tip('The No-Show Watch looks at the last 5 completed events. A driver only appears here if they were actually entered for those events but did not produce a result. Drivers who were never entered will not show up here — they appear under Never Raced instead.')}
                 ${tip('The Ghost badge (Secrets category) can be granted manually from the driver edit form. It appears on their public driver card as a secret badge.')}
             `)}
+
+            ${s('17. DR / SR to ELO Seed Reference', `
+                <p>Before a driver has any race history in GTEC, the auto-allocator uses their Gran Turismo DR and SR ratings to estimate their skill level. This table shows exactly what ELO seed each DR letter maps to, and how SR adjusts it.</p>
+                ${h('DR Rating → Base ELO')}
+                ${table(['DR Rating', 'Base ELO Seed'], [
+                    ['D',  '1100'],
+                    ['C',  '1300'],
+                    ['B',  '1500'],
+                    ['A',  '1700'],
+                    ['A+', '1850'],
+                ])}
+                ${h('SR Rating → Adjustment')}
+                ${table(['SR Rating', 'Adjustment'], [
+                    ['E', '&minus;75'],
+                    ['D', '&minus;45'],
+                    ['C', '&minus;15'],
+                    ['B', '+15'],
+                    ['A', '+45'],
+                    ['S', '+75'],
+                ])}
+                <p>The final seed is <strong>DR base + SR adjustment</strong>. For example, a DR-A / SR-S driver seeds at <strong>1745</strong> (1700 + 45), while a DR-B / SR-B driver seeds at <strong>1515</strong> (1500 + 15).</p>
+                ${tip('Once a driver has completed at least one race in GTEC their earned ELO replaces the DR/SR seed entirely. The seed is only used when no race history exists — for example, Race 1 or a driver joining mid-season who missed earlier rounds.')}
+                ${tip('DR ratings in GT7 can be inflated. Always review auto-allocated splits manually before notifying drivers, particularly for anyone seeding unusually high on DR alone.')}
+            `)}
         </div>`;
 }
 
