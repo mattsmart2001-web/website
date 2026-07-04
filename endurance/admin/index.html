@@ -2121,9 +2121,41 @@ async function generateClaimLink(driverId, driverName) {
         </div>
         <p style="color:var(--muted);font-size:0.75rem;margin-top:0.75rem">
             The driver visits this link, creates an account, and their profile is linked automatically.
-        </p>`,
+        </p>
+        <hr style="border:none;border-top:1px solid var(--border);margin:1rem 0">
+        <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.75rem">
+            Or send the link directly to the driver by email (uses the address from their accepted application).
+        </p>
+        <button class="btn btn-primary" id="send-claim-email-btn" onclick="sendClaimEmail('${esc(driverId)}','${esc(driverName)}')">Send email</button>`,
         `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`
     );
+}
+
+async function sendClaimEmail(driverId, driverName) {
+    const btn = document.getElementById('send-claim-email-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+    try {
+        const session = (await sb.auth.getSession()).data.session;
+        const res = await fetch('/.netlify/functions/resend-claim-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ driver_id: driverId }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            toast(json.error || json || 'Failed to send email.', 'error');
+            if (btn) { btn.disabled = false; btn.textContent = 'Send email'; }
+        } else {
+            toast(`Email sent to ${json.sent_to || driverName}.`, 'success');
+            if (btn) { btn.textContent = 'Sent'; }
+        }
+    } catch (err) {
+        toast(err.message || 'Failed to send email.', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = 'Send email'; }
+    }
 }
 
 function copyClaimUrl() {
