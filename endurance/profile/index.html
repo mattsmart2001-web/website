@@ -861,8 +861,9 @@ function armShareButton() {
             career_number:     _shareDriver.career_number,
             nationality:       _shareDriver.nationality,
             photo_url:         _shareDriver.photo_url,
-            team_name:         _shareDriver.teams?.name || null,
-            manufacturer_name: _shareDriver.manufacturers?.name || null,
+            team_name:          _shareDriver.teams?.name || null,
+            manufacturer_name:  _shareDriver.manufacturers?.name || null,
+            manufacturer_color: _shareDriver.manufacturers?.brand_color || null,
         },
         stats: _shareStats,
         buttonEl: btn,
@@ -1022,7 +1023,7 @@ async function init() {
     }
 
     const { data: driver, error } = await sb.from('drivers')
-        .select('*, teams!current_team_id(name,slug,leader_driver_id), manufacturers(name,car_name)')
+        .select('*, teams!current_team_id(name,slug,leader_driver_id), manufacturers(name,car_name,brand_color)')
         .eq('user_id', session.user.id).single();
 
     if (error || !driver) { document.getElementById('auth-loading').textContent = 'Could not load driver profile.'; return; }

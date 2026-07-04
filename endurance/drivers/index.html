@@ -1448,13 +1448,14 @@ async function showProfile() {
         const tier = window.eloTier ? (window.eloTier(currentRating)?.name || null) : null;
         shareBtn.addEventListener('click', () => window.gtecShareCard({
             driver: {
-                display_name:      driver.display_name,
-                slug:              driver.slug,
-                career_number:     driver.career_number,
-                nationality:       driver.nationality,
-                photo_url:         driver.photo_url,
-                team_name:         driver.teams?.name || null,
-                manufacturer_name: driver.manufacturers?.name || null,
+                display_name:       driver.display_name,
+                slug:               driver.slug,
+                career_number:      driver.career_number,
+                nationality:        driver.nationality,
+                photo_url:          driver.photo_url,
+                team_name:          driver.teams?.name || null,
+                manufacturer_name:  driver.manufacturers?.name || null,
+                manufacturer_color: driver.manufacturers?.brand_color || null,
             },
             stats: {
                 elo:     Number.isFinite(currentRating) ? currentRating : null,

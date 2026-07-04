@@ -15,7 +15,7 @@
     'use strict';
 
     const W = 1080;
-    const H = 1080;
+    const H = 1440;
     const SITE_URL = 'https://sparkstheory.co.uk/endurance/';
 
     // Wait for the brand fonts so Canvas can use them. document.fonts is
@@ -65,223 +65,230 @@
         canvas.width  = W;
         canvas.height = H;
         const ctx = canvas.getContext('2d');
+        const hasLS = ('letterSpacing' in ctx);
+        const setLS = (v) => { if (hasLS) ctx.letterSpacing = v; };
 
-        /* ---------- background ---------- */
-        const bg = ctx.createLinearGradient(0, 0, 0, H);
-        bg.addColorStop(0,    '#0a0e15');
-        bg.addColorStop(1,    '#050608');
-        ctx.fillStyle = bg;
+        /* ---------- dark background ---------- */
+        ctx.fillStyle = '#050608';
         ctx.fillRect(0, 0, W, H);
 
-        // Subtle starfield speckle for texture.
-        ctx.fillStyle = 'rgba(255,209,102,0.18)';
-        for (let i = 0; i < 90; i++) {
-            const x = Math.random() * W;
-            const y = Math.random() * H;
-            const r = Math.random() * 1.5 + 0.4;
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // Inner gold rim.
-        ctx.strokeStyle = 'rgba(255,209,102,0.32)';
-        ctx.lineWidth = 2;
-        roundRect(ctx, 40, 40, W - 80, H - 80, 36);
-        ctx.stroke();
-
-        /* ---------- top bar: GTEC + tagline ---------- */
-        const logo = await loadImage('/endurance/assets/gtec-logo.png');
-        if (logo) {
-            const lw = 360, lh = lw * (logo.height / logo.width);
-            ctx.drawImage(logo, (W - lw) / 2, 80, lw, lh);
-        }
-        ctx.fillStyle = 'rgba(148,163,184,0.7)';
-        ctx.font = '800 22px "Orbitron", system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.letterSpacing = '0.35em';
-        ctx.fillText('A GRAN TURISMO 7 ENDURANCE CHAMPIONSHIP', W / 2, 200);
-
-        /* ---------- driver photo ---------- */
-        const photoR  = 150;
-        const photoCx = W / 2;
-        const photoCy = 380;
-        const photo   = driver.photo_url ? await loadImage(driver.photo_url) : null;
-
-        // Gold halo ring.
-        ctx.strokeStyle = 'rgba(255,209,102,0.85)';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(photoCx, photoCy, photoR + 8, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(photoCx, photoCy, photoR, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
+        /* ---------- driver photo — full bleed, top-anchored ---------- */
+        const photo = driver.photo_url ? await loadImage(driver.photo_url) : null;
         if (photo) {
-            // Cover-fit
             const ar = photo.width / photo.height;
-            let dw, dh;
-            if (ar > 1) { dh = photoR * 2; dw = dh * ar; }
-            else        { dw = photoR * 2; dh = dw / ar; }
-            ctx.drawImage(photo, photoCx - dw / 2, photoCy - dh / 2, dw, dh);
+            const canvasAr = W / H;
+            let dw, dh, dx, dy;
+            if (ar > canvasAr) {
+                dh = H; dw = dh * ar;
+                dx = (W - dw) / 2; dy = 0;
+            } else {
+                dw = W; dh = dw / ar;
+                dx = 0; dy = 0;
+            }
+            ctx.drawImage(photo, dx, dy, dw, dh);
         } else {
-            // Initials avatar fallback.
-            ctx.fillStyle = '#11161f';
-            ctx.fillRect(photoCx - photoR, photoCy - photoR, photoR * 2, photoR * 2);
-            ctx.fillStyle = '#ffd166';
-            ctx.font = '900 120px "Anton", Impact, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            const initials = (driver.display_name || '?').split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase();
-            ctx.fillText(initials, photoCx, photoCy + 4);
-        }
-        ctx.restore();
-        ctx.textBaseline = 'alphabetic';
-
-        /* ---------- career number badge (top-right of photo) ---------- */
-        if (driver.career_number != null) {
-            const numText = '#' + driver.career_number;
-            // Auto-size the coin so a 3-digit number doesn't blow it out
-            // and a 1-digit number doesn't leave a yawning gap.
-            let coinR  = 32;
-            let coinFs = 26;
-            if (numText.length === 4) { coinR = 36; coinFs = 24; }  // e.g. #888
-            if (numText.length >= 5)  { coinR = 40; coinFs = 22; }  // 4-digit numbers
-            const numCx = photoCx + photoR - coinR + 24;
-            const numCy = photoCy - photoR + coinR - 8;
-            // Dark inner ring so the coin reads as separate from the halo.
             ctx.fillStyle = '#0a0e15';
-            ctx.beginPath();
-            ctx.arc(numCx, numCy, coinR + 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#ffd166';
-            ctx.beginPath();
-            ctx.arc(numCx, numCy, coinR, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#1a1300';
-            ctx.font = `900 ${coinFs}px "Anton", Impact, sans-serif`;
+            ctx.fillRect(0, 0, W, Math.round(H * 0.65));
+            const ini = (driver.display_name || '?').split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase();
+            ctx.fillStyle = 'rgba(255,209,102,0.07)';
+            ctx.font = '900 300px "Anton", Impact, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(numText, numCx, numCy + 1);
+            ctx.fillText(ini, W / 2, Math.round(H * 0.32));
             ctx.textBaseline = 'alphabetic';
         }
 
-        /* ---------- driver name + tags ---------- */
-        ctx.fillStyle = '#f1f5f9';
-        ctx.textAlign = 'center';
-        ctx.font = '900 96px "Anton", Impact, sans-serif';
-        // Auto-shrink the name to fit if it's too long.
-        let nameFs = 96;
-        let nameText = (driver.display_name || '').toUpperCase();
-        while (nameFs > 48) {
-            ctx.font = `900 ${nameFs}px "Anton", Impact, sans-serif`;
-            if (ctx.measureText(nameText).width < W - 160) break;
-            nameFs -= 4;
-        }
-        ctx.fillText(nameText, W / 2, photoCy + photoR + 110);
-
-        // Country flag + team / manufacturer line.
-        const tagParts = [];
-        if (driver.nationality)       tagParts.push(driver.nationality);
-        if (driver.team_name)         tagParts.push(driver.team_name);
-        if (driver.manufacturer_name) tagParts.push(driver.manufacturer_name);
-        const tagLine = tagParts.join('  ·  ');
-        ctx.fillStyle = 'rgba(148,163,184,0.95)';
-        ctx.font = '600 26px "Inter", system-ui, sans-serif';
-        ctx.fillText(tagLine, W / 2, photoCy + photoR + 160);
-
-        /* ---------- stats grid ---------- */
-        const grid = [];
-        if (stats.elo != null)     grid.push({ k: 'ELO',     v: String(stats.elo),     sub: stats.tier || '' });
-        if (stats.points != null)  grid.push({ k: 'POINTS',  v: String(stats.points) });
-        if (stats.wins != null)    grid.push({ k: 'WINS',    v: String(stats.wins) });
-        if (stats.podiums != null) grid.push({ k: 'PODIUMS', v: String(stats.podiums) });
-        if (stats.races != null)   grid.push({ k: 'RACES',   v: String(stats.races) });
-
-        const gridY     = photoCy + photoR + 230;
-        const gridH     = 200;
-        const colCount  = grid.length || 1;
-        const colW      = (W - 160) / colCount;
-
-        // Frame.
-        ctx.strokeStyle = 'rgba(255,209,102,0.35)';
-        ctx.lineWidth = 1.5;
-        roundRect(ctx, 80, gridY, W - 160, gridH, 18);
-        ctx.stroke();
-
-        const maxW = colW - 30;
-        const eloIdx = grid.findIndex(c => c.k === 'ELO');
-        const hasLetterSpacing = ('letterSpacing' in ctx);
-
-        // Helper: measure a value with the right kerning for its column.
-        // ELO uses tighter letter-spacing so a 4-digit number fits at
-        // roughly the same visual size as the single-digit values.
-        const measureVal = (text, fs, tight) => {
-            ctx.font = `900 ${fs}px "Anton", Impact, sans-serif`;
-            if (hasLetterSpacing) ctx.letterSpacing = tight ? '-2px' : '0px';
-            const w = ctx.measureText(text).width;
-            if (hasLetterSpacing) ctx.letterSpacing = '0px';
-            return w;
-        };
-
-        // Pick a single font size that lets *every* value fit, so the
-        // ELO doesn't end up much smaller than the WINS / PODIUMS cells
-        // because of auto-shrink. Start big, shrink uniformly.
-        let valFs = 78;
-        while (valFs > 36) {
-            const allFit = grid.every((c, idx) => measureVal(c.v, valFs, idx === eloIdx) <= maxW);
-            if (allFit) break;
-            valFs -= 2;
-        }
-
-        grid.forEach((cell, i) => {
-            const cx = 80 + colW * i + colW / 2;
-            // Divider line (skip on first cell). Made more prominent —
-            // the previous 0.18 alpha was so faint it disappeared, so
-            // long Elo values flowed visually into the next cell.
-            if (i > 0) {
-                ctx.strokeStyle = 'rgba(255,209,102,0.32)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(80 + colW * i, gridY + 30);
-                ctx.lineTo(80 + colW * i, gridY + gridH - 30);
-                ctx.stroke();
-            }
-            // Value — uniform font size across every cell, with tighter
-            // kerning on the ELO so its 4-digit number reads at the same
-            // visual size as the single-digit ones beside it.
-            const tight = (i === eloIdx);
-            ctx.font = `900 ${valFs}px "Anton", Impact, sans-serif`;
-            if (hasLetterSpacing) ctx.letterSpacing = tight ? '-2px' : '0px';
-            ctx.fillStyle = '#ffd166';
+        /* ---------- ghost race number ---------- */
+        if (driver.career_number != null) {
+            const numStr = String(driver.career_number);
+            const ghostFs = numStr.length <= 2 ? 480 : numStr.length === 3 ? 360 : 280;
+            ctx.save();
+            ctx.globalAlpha = 0.055;
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `900 ${ghostFs}px "Orbitron", system-ui, sans-serif`;
             ctx.textAlign = 'center';
-            ctx.fillText(cell.v, cx, gridY + 108);
-            if (hasLetterSpacing) ctx.letterSpacing = '0px';
-            // Label
+            ctx.textBaseline = 'middle';
+            ctx.fillText(numStr, W / 2, Math.round(H * 0.36));
+            ctx.restore();
+        }
+
+        /* ---------- gradient overlays ---------- */
+        // Top vignette (keeps top badges readable)
+        const topG = ctx.createLinearGradient(0, 0, 0, 210);
+        topG.addColorStop(0, 'rgba(5,6,8,0.68)');
+        topG.addColorStop(1, 'rgba(5,6,8,0)');
+        ctx.fillStyle = topG;
+        ctx.fillRect(0, 0, W, 210);
+
+        // Bottom gradient fading photo to near-black for the info block
+        const botG = ctx.createLinearGradient(0, Math.round(H * 0.38), 0, H);
+        botG.addColorStop(0,    'rgba(5,6,8,0)');
+        botG.addColorStop(0.4,  'rgba(5,6,8,0.8)');
+        botG.addColorStop(1,    'rgba(5,6,8,0.98)');
+        ctx.fillStyle = botG;
+        ctx.fillRect(0, 0, W, H);
+
+        /* ---------- manufacturer colour strip (left edge) ---------- */
+        ctx.fillStyle = driver.manufacturer_color || 'rgba(255,209,102,0.75)';
+        ctx.fillRect(0, 0, 10, H);
+
+        /* ---------- ELO badge — glass pill, top-left ---------- */
+        if (stats.elo != null) {
+            const label = 'ELO', value = String(stats.elo);
+            const bh = 60, br = 10, padH = 18, gap = 12;
+            ctx.font = '700 20px "Orbitron", system-ui, sans-serif';
+            const lw = ctx.measureText(label).width;
+            ctx.font = '900 36px "Anton", Impact, sans-serif';
+            const vw = ctx.measureText(value).width;
+            const bw = padH + lw + gap + vw + padH;
+            const bx = 28, by = 28;
+            ctx.fillStyle = 'rgba(5,6,8,0.72)';
+            roundRect(ctx, bx, by, bw, bh, br); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,209,102,0.28)'; ctx.lineWidth = 1.5;
+            roundRect(ctx, bx, by, bw, bh, br); ctx.stroke();
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
             ctx.fillStyle = 'rgba(148,163,184,0.85)';
-            ctx.font = '800 18px "Orbitron", system-ui, sans-serif';
-            ctx.fillText(cell.k, cx, gridY + 148);
-            // Optional sub-line (tier under Elo) — auto-shrink too.
-            if (cell.sub) {
-                let subFs = 16;
-                ctx.font = `700 ${subFs}px "Orbitron", system-ui, sans-serif`;
-                while (ctx.measureText(cell.sub.toUpperCase()).width > maxW && subFs > 10) {
-                    subFs -= 1;
-                    ctx.font = `700 ${subFs}px "Orbitron", system-ui, sans-serif`;
+            ctx.font = '700 20px "Orbitron", system-ui, sans-serif';
+            ctx.fillText(label, bx + padH, by + bh / 2);
+            ctx.fillStyle = '#ffd166';
+            ctx.font = '900 36px "Anton", Impact, sans-serif';
+            ctx.fillText(value, bx + padH + lw + gap, by + bh / 2 + 2);
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        /* ---------- PTS badge — glass pill, top-right ---------- */
+        if (stats.points != null) {
+            const label = 'PTS', value = String(stats.points);
+            const bh = 60, br = 10, padH = 18, gap = 12;
+            ctx.font = '700 20px "Orbitron", system-ui, sans-serif';
+            const lw = ctx.measureText(label).width;
+            ctx.font = '900 36px "Anton", Impact, sans-serif';
+            const vw = ctx.measureText(value).width;
+            const bw = padH + lw + gap + vw + padH;
+            const bx = W - 28 - bw, by = 28;
+            ctx.fillStyle = 'rgba(5,6,8,0.72)';
+            roundRect(ctx, bx, by, bw, bh, br); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,209,102,0.28)'; ctx.lineWidth = 1.5;
+            roundRect(ctx, bx, by, bw, bh, br); ctx.stroke();
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(148,163,184,0.85)';
+            ctx.font = '700 20px "Orbitron", system-ui, sans-serif';
+            ctx.fillText(label, bx + padH, by + bh / 2);
+            ctx.fillStyle = '#ffd166';
+            ctx.font = '900 36px "Anton", Impact, sans-serif';
+            ctx.fillText(value, bx + padH + lw + gap, by + bh / 2 + 2);
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        /* ---------- GTEC wordmark — top centre ---------- */
+        ctx.fillStyle = 'rgba(255,209,102,0.5)';
+        ctx.font = '700 26px "Orbitron", system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        setLS('0.4em');
+        ctx.fillText('GTEC', W / 2, 76);
+        setLS('0px');
+
+        /* ---------- bottom info block ---------- */
+        const leftX = 50;
+        let curY = Math.round(H * 0.62);  // ~893
+
+        // #number line
+        if (driver.career_number != null) {
+            ctx.fillStyle = '#ffd166';
+            ctx.font = '700 34px "Orbitron", system-ui, sans-serif';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+            setLS('0.12em');
+            ctx.fillText('#' + driver.career_number, leftX, curY);
+            setLS('0px');
+            curY += 58;
+        } else {
+            curY += 18;
+        }
+
+        // Driver name (auto-shrink)
+        const nameText = (driver.display_name || '').toUpperCase();
+        let nameFs = 128;
+        ctx.textAlign = 'left';
+        while (nameFs > 58) {
+            ctx.font = `900 ${nameFs}px "Anton", Impact, sans-serif`;
+            if (ctx.measureText(nameText).width < W - leftX - 36) break;
+            nameFs -= 3;
+        }
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fillText(nameText, leftX, curY);
+        curY += nameFs + 24;
+
+        // Nationality · Team
+        const tagParts = [];
+        if (driver.nationality) tagParts.push(driver.nationality);
+        if (driver.team_name)   tagParts.push(driver.team_name);
+        if (tagParts.length) {
+            ctx.fillStyle = 'rgba(148,163,184,0.88)';
+            ctx.font = '400 34px "Inter", system-ui, sans-serif';
+            ctx.fillText(tagParts.join('  ·  '), leftX, curY);
+            curY += 54;
+        }
+
+        // Tier pill
+        if (stats.tier) {
+            curY += 14;
+            const tierText = stats.tier.toUpperCase();
+            ctx.font = '700 20px "Orbitron", system-ui, sans-serif';
+            const tw = ctx.measureText(tierText).width;
+            const px = 22, pillH = 46, br = 9;
+            ctx.fillStyle = 'rgba(255,209,102,0.1)';
+            roundRect(ctx, leftX, curY, tw + px * 2, pillH, br); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,209,102,0.38)'; ctx.lineWidth = 1;
+            roundRect(ctx, leftX, curY, tw + px * 2, pillH, br); ctx.stroke();
+            ctx.fillStyle = '#ffd166';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(tierText, leftX + px, curY + pillH / 2);
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        /* ---------- stats strip ---------- */
+        const statItems = [];
+        if (stats.wins    != null) statItems.push({ k: 'WINS',    v: String(stats.wins) });
+        if (stats.podiums != null) statItems.push({ k: 'PODIUMS', v: String(stats.podiums) });
+        if (stats.races   != null) statItems.push({ k: 'RACES',   v: String(stats.races) });
+
+        if (statItems.length) {
+            const stripY = H - 185, stripH = 138;
+            const stripX = 28, stripW = W - 56;
+            ctx.strokeStyle = 'rgba(255,209,102,0.22)'; ctx.lineWidth = 1;
+            roundRect(ctx, stripX, stripY, stripW, stripH, 14); ctx.stroke();
+            ctx.fillStyle = 'rgba(5,6,8,0.35)';
+            roundRect(ctx, stripX, stripY, stripW, stripH, 14); ctx.fill();
+
+            const colW = stripW / statItems.length;
+            statItems.forEach((cell, i) => {
+                const cx = stripX + colW * i + colW / 2;
+                if (i > 0) {
+                    ctx.strokeStyle = 'rgba(255,209,102,0.2)'; ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(stripX + colW * i, stripY + 24);
+                    ctx.lineTo(stripX + colW * i, stripY + stripH - 24);
+                    ctx.stroke();
                 }
-                ctx.fillStyle = 'rgba(255,209,102,0.85)';
-                ctx.fillText(cell.sub.toUpperCase(), cx, gridY + 174);
-            }
-        });
+                ctx.fillStyle = '#ffd166';
+                ctx.font = '900 62px "Anton", Impact, sans-serif';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(cell.v, cx, stripY + stripH / 2 - 10);
+                ctx.fillStyle = 'rgba(148,163,184,0.8)';
+                ctx.font = '700 17px "Orbitron", system-ui, sans-serif';
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillText(cell.k, cx, stripY + stripH - 16);
+            });
+        }
 
         /* ---------- footer URL ---------- */
-        ctx.fillStyle = 'rgba(148,163,184,0.7)';
-        ctx.font = '700 24px "Orbitron", system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('SPARKSTHEORY.CO.UK/ENDURANCE', W / 2, H - 80);
+        ctx.fillStyle = 'rgba(148,163,184,0.5)';
+        ctx.font = '700 22px "Orbitron", system-ui, sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+        setLS('0.15em');
+        ctx.fillText('SPARKSTHEORY.CO.UK/ENDURANCE', W / 2, H - 22);
+        setLS('0px');
 
         return canvas;
     }
@@ -345,7 +352,7 @@
             .gtec-share-close:hover { color: var(--text, #f1f5f9); }
             .gtec-share-preview {
                 width: 100%;
-                aspect-ratio: 1 / 1;
+                aspect-ratio: 3 / 4;
                 border-radius: 10px;
                 overflow: hidden;
                 margin-bottom: 1rem;
