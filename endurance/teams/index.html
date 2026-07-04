@@ -311,7 +311,7 @@ async function showListing() {
         ].filter(Boolean).join(' ').toLowerCase();
         const pts = pointsMap[t.id] || 0;
         return `
-        <div class="team-card" data-search="${esc(search)}" data-name="${esc(t.name)}" data-points="${pts}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'" style="${mfr?.brand_color ? `border-top-color:${esc(mfr.brand_color)}` : ''}">
+        <div class="team-card" data-search="${esc(search)}" data-name="${esc(t.name)}" data-points="${pts}" data-mfr="${esc(mfr?.name || '')}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'" style="${mfr?.brand_color ? `border-top-color:${esc(mfr.brand_color)}` : ''}">
             ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}</div>` : ''}
             <div class="team-card-name">${esc(t.name)}</div>
             <div class="team-card-meta">
@@ -340,6 +340,7 @@ async function showListing() {
                     <span class="sort-label">Sort:</span>
                     <button class="sort-btn sort-btn-active" data-sort="alpha" onclick="sortCards('.team-grid','.team-card','alpha')">A–Z</button>
                     <button class="sort-btn" data-sort="points" onclick="sortCards('.team-grid','.team-card','points')">Points</button>
+                    <button class="sort-btn" data-sort="mfr" onclick="sortCards('.team-grid','.team-card','mfr')">Manufacturer</button>
                 </div>
                 <div class="team-grid">${cards}</div>
                 <div class="empty-msg" id="teams-empty" style="display:none">No teams match your search.</div>
@@ -378,6 +379,9 @@ function sortCards(gridSel, cardSel, sortKey) {
     cards.sort((a, b) => {
         if (sortKey === 'alpha') {
             return (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' });
+        }
+        if (sortKey === 'mfr') {
+            return (a.dataset.mfr || '').localeCompare(b.dataset.mfr || '', undefined, { sensitivity: 'base' });
         }
         return (Number(b.dataset[sortKey]) || 0) - (Number(a.dataset[sortKey]) || 0);
     });
