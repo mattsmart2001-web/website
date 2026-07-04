@@ -6200,10 +6200,15 @@ async function renderApplications() {
     const rows = !data?.length
         ? `<tr><td colspan="8"><div class="empty-state">No applications yet. Share the /endurance/apply/ page.</div></td></tr>`
         : data.map(a => {
-            const linkedName = a.type === 'driver' ? a.linked_driver?.display_name : a.linked_team?.name;
+            const linkedName = a.linked_driver?.display_name || a.linked_team?.name;
             const rosterCell = linkedName
                 ? `<span class="badge badge-green">✓ ${esc(linkedName)}</span>`
-                : (a.status === 'accepted' ? `<button class="btn-icon" onclick="createRecordFromApplication('${a.id}')">+ Add to roster</button>` : '<span class="td-muted">—</span>');
+                : (a.status === 'accepted'
+                    ? `<div style="display:flex;gap:0.35rem;flex-wrap:wrap">
+                           <button class="btn-icon" onclick="createRecordFromApplication('${a.id}')">+ Add to roster</button>
+                           <button class="btn-icon" onclick="linkApplicationToExisting('${a.id}')">Link existing</button>
+                       </div>`
+                    : '<span class="td-muted">—</span>');
             return `
             <tr>
                 <td><strong>${esc(a.name)}</strong><br><small class="td-muted">${esc(a.psn_id) || '—'}</small></td>
@@ -6537,6 +6542,36 @@ async function saveTeamFromApplication(appId) {
     }
     closeModal();
     await loadCache();
+    await renderApplications();
+}
+
+async function linkApplicationToExisting(appId) {
+    const driverOptions = (_drivers || []).map(d =>
+        `<option value="${d.id}">${esc(d.display_name)}${d.psn_id ? ' (' + esc(d.psn_id) + ')' : ''}</option>`
+    ).join('');
+    openModal('Link to existing driver', `
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">
+            Select the driver already on the roster that this application belongs to. This marks the application as linked without creating a duplicate record.
+        </p>
+        <div class="form-group">
+            <label>Driver</label>
+            <select id="link-existing-driver-select" style="width:100%">
+                <option value="">— Select driver —</option>
+                ${driverOptions}
+            </select>
+        </div>`, `
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmLinkApplicationToExisting('${appId}')">Link</button>
+    `);
+}
+
+async function confirmLinkApplicationToExisting(appId) {
+    const driverId = document.getElementById('link-existing-driver-select')?.value;
+    if (!driverId) { toast('Please select a driver.', 'error'); return; }
+    const { error } = await sb.from('applications').update({ linked_driver_id: driverId }).eq('id', appId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Application linked to existing driver.', 'success');
+    closeModal();
     await renderApplications();
 }
 
