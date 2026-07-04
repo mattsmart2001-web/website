@@ -148,106 +148,193 @@
         .sort-btn.sort-btn-active { border-color:var(--gold); color:var(--gold); }
 
         /* ===== LISTING ===== */
-        .driver-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-        .driver-card {
-            background: var(--bg-1);
-            border: 1px solid var(--border);
-            border-top: 3px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
-            text-decoration: none;
-            color: var(--text);
-            transition: border-color 0.2s, transform 0.08s, box-shadow 0.2s;
-            cursor: pointer;
-            transform-style: preserve-3d;
-            will-change: transform;
-        }
-        .driver-card:hover { border-color: rgba(255,209,102,0.35); }
-        .driver-card-photo {
-            width: 100%;
-            aspect-ratio: 1;
-            object-fit: cover;
-            background: var(--bg-2);
+
+        /* Stats strip */
+        .driver-stats-strip {
             display: flex;
-            align-items: center;
             justify-content: center;
+            gap: 0;
+            margin: 0 auto 2rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            max-width: 560px;
+        }
+        .dss-item {
+            flex: 1;
+            padding: 0.85rem 0.5rem 0.7rem;
+            text-align: center;
             position: relative;
         }
-        .driver-card-photo img { width: 100%; height: 100%; object-fit: cover; }
-        .driver-card-pts {
+        .dss-item + .dss-item::before {
+            content: '';
             position: absolute;
-            bottom: 0.5rem;
-            right: 0.5rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.05rem;
-            padding: 0.25rem 0.5rem 0.2rem;
-            background: rgba(5,6,8,0.72);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,209,102,0.28);
-            border-radius: 6px;
-            line-height: 1;
+            left: 0; top: 20%; bottom: 20%;
+            width: 1px;
+            background: var(--border);
         }
-        .driver-card-pts-value {
+        .dss-value {
             font-family: 'Anton', sans-serif;
-            font-size: 1.15rem;
+            font-size: 1.75rem;
             letter-spacing: 0.03em;
             color: var(--gold);
             line-height: 1;
+            display: block;
         }
-        .driver-card-pts-label {
+        .dss-label {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.4rem;
+            font-size: 0.47rem;
             font-weight: 700;
             letter-spacing: 0.22em;
             text-transform: uppercase;
             color: var(--muted);
+            display: block;
+            margin-top: 0.25rem;
         }
-        .driver-initials {
-            font-family: 'Anton', sans-serif;
-            font-size: 2.5rem;
-            letter-spacing: 0.05em;
-            color: var(--muted);
-            opacity: 0.4;
+
+        /* Ticker */
+        .driver-ticker-wrap {
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto 2rem;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 0.55rem 0;
         }
-        .driver-card-body { padding: 0.9rem; position: relative; overflow: hidden; display: flex; gap: 0.55rem; align-items: flex-start; }
-        .driver-card-body-main { flex: 1; min-width: 0; }
-        .driver-card-ghost {
-            position: absolute; top: -0.1rem; right: -0.1rem;
-            font-family: 'Orbitron', sans-serif; font-weight: 900;
-            font-size: 4.5rem; line-height: 1; letter-spacing: -0.03em;
-            color: rgba(255,255,255,0.045); pointer-events: none; user-select: none;
+        .driver-ticker-wrap::before,
+        .driver-ticker-wrap::after {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 80px;
+            z-index: 2;
+            pointer-events: none;
         }
-        .driver-card-num {
+        .driver-ticker-wrap::before {
+            left: 0;
+            background: linear-gradient(to right, var(--bg), transparent);
+        }
+        .driver-ticker-wrap::after {
+            right: 0;
+            background: linear-gradient(to left, var(--bg), transparent);
+        }
+        .driver-ticker-track {
+            display: flex;
+            width: max-content;
+            animation: gtec-ticker 80s linear infinite;
+        }
+        .driver-ticker-track:hover { animation-play-state: paused; }
+        @keyframes gtec-ticker {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+        .driver-ticker-item {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.65rem;
+            font-size: 0.62rem;
             font-weight: 700;
-            color: var(--gold);
-            letter-spacing: 0.1em;
-            margin-bottom: 0.2rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            white-space: nowrap;
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        .driver-card-name { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.03em; text-transform: uppercase; line-height: 1.1; margin-bottom: 0.3rem; }
-        .driver-card-meta { font-size: 0.74rem; color: var(--muted); }
+        .driver-ticker-item .tic-num {
+            color: var(--gold);
+            opacity: 0.7;
+        }
+        .driver-ticker-sep {
+            color: var(--gold);
+            opacity: 0.3;
+            font-size: 0.5rem;
+            align-self: center;
+        }
+
+        /* Portrait card grid */
+        .driver-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 0.85rem;
+        }
+        .driver-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            text-decoration: none;
+            color: var(--text);
+            cursor: pointer;
+            position: relative;
+            aspect-ratio: 3 / 4;
+            transform-style: preserve-3d;
+            will-change: transform;
+            transition: border-color 0.2s, transform 0.08s, box-shadow 0.2s;
+        }
+        .driver-card:hover { border-color: rgba(255,209,102,0.45); }
+
+        /* Photo fills the whole card */
+        .driver-card-photo {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-2);
+            overflow: hidden;
+        }
+        .driver-card-photo img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            object-position: top center;
+        }
+
+        /* Gradient overlay — fades photo into dark at bottom */
+        .driver-card-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to top,
+                rgba(5,6,8,0.97) 0%,
+                rgba(5,6,8,0.75) 42%,
+                transparent 75%
+            );
+        }
+
+        /* Ghost number — centred in photo area, very subtle */
+        .driver-card-ghost {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -58%);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 5rem;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            color: rgba(255,255,255,0.06);
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* ELO badge — top-left */
         .driver-card-elo {
-            margin-top: 0.65rem;
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
             display: inline-flex;
             align-items: baseline;
-            gap: 0.35rem;
-            padding: 0.18rem 0.6rem;
-            background: rgba(255,209,102,0.08);
-            border: 1px solid rgba(255,209,102,0.25);
-            border-radius: 4px;
+            gap: 0.3rem;
+            padding: 0.18rem 0.5rem 0.15rem;
+            background: rgba(5,6,8,0.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,209,102,0.28);
+            border-radius: 5px;
+            line-height: 1;
         }
         .driver-card-elo.is-provisional { border-style: dashed; opacity: 0.85; }
         .driver-card-elo-label {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.55rem;
+            font-size: 0.44rem;
             font-weight: 700;
             letter-spacing: 0.18em;
             text-transform: uppercase;
@@ -255,23 +342,88 @@
         }
         .driver-card-elo-value {
             font-family: 'Anton', sans-serif;
-            font-size: 1rem;
+            font-size: 0.9rem;
             letter-spacing: 0.03em;
             color: var(--gold);
             line-height: 1;
         }
-        .driver-card-tier { margin-top: 0.5rem; }
-        .driver-card-tier .elo-tier { margin-left: 0 !important; }
+
+        /* PTS badge — top-right */
+        .driver-card-pts {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.05rem;
+            padding: 0.22rem 0.45rem 0.18rem;
+            background: rgba(5,6,8,0.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,209,102,0.28);
+            border-radius: 5px;
+            line-height: 1;
+        }
+        .driver-card-pts-value {
+            font-family: 'Anton', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.03em;
+            color: var(--gold);
+            line-height: 1;
+        }
+        .driver-card-pts-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.38rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        /* Info block — overlay at bottom of card */
+        .driver-card-info {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 0.6rem 0.7rem 0.65rem;
+            z-index: 2;
+        }
+        .driver-card-num {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.15em;
+            margin-bottom: 0.12rem;
+        }
+        .driver-card-name {
+            font-family: 'Anton', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            line-height: 1.1;
+            margin-bottom: 0.25rem;
+        }
+        .driver-card-meta {
+            font-size: 0.68rem;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+        .driver-card-meta .team-line {
+            color: rgba(241,245,249,0.7);
+            font-size: 0.65rem;
+        }
+
+        /* Badges row inside card info */
         .driver-card-badges {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.28rem;
-            flex-shrink: 0;
-            padding-top: 0.1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.22rem;
+            margin-top: 0.35rem;
         }
         .driver-card-badge {
-            width: 26px; height: 26px;
-            font-size: 0.88rem;
+            width: 22px; height: 22px;
+            font-size: 0.78rem;
             display: flex; align-items: center; justify-content: center;
             background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.12), rgba(0,0,0,0.45) 75%);
             border: 1px solid rgba(255,209,102,0.3);
@@ -279,12 +431,26 @@
             cursor: default;
             transition: transform 0.15s, box-shadow 0.15s;
             font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
-            position: relative; z-index: 1;
         }
         .driver-card-badge:hover {
             transform: scale(1.25);
             box-shadow: 0 0 10px rgba(255,209,102,0.35);
         }
+
+        /* Placeholder initials when no photo */
+        .driver-initials {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Anton', sans-serif;
+            font-size: 3rem;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            opacity: 0.35;
+        }
+
+        /* Elo tier pill inside card — remove margin, shrink */
+        .driver-card-tier { margin-top: 0.3rem; }
+        .driver-card-tier .elo-tier { margin-left: 0 !important; font-size: 0.55rem !important; padding: 0.12rem 0.5rem !important; }
 
         /* ===== PROFILE ===== */
         .profile-header {
@@ -795,7 +961,7 @@ async function showListing() {
         }
         const eloRow = elo != null
             ? `<div class="driver-card-elo${provisional ? ' is-provisional' : ''}">
-                   <span class="driver-card-elo-label">Elo</span>
+                   <span class="driver-card-elo-label">ELO</span>
                    <span class="driver-card-elo-value">${elo}</span>
                </div>`
             : '';
@@ -814,30 +980,49 @@ async function showListing() {
         const mfrColor = d.manufacturers?.brand_color || '';
         const badgeRow = cardBadges(d, winsMap[d.id] || 0, racesMap[d.id] || 0, seasonFinishesMap[d.id]);
         return `
-        <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-top-color:${esc(mfrColor)}` : ''}">
+        <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-left-color:${esc(mfrColor)}` : ''}">
             <div class="driver-card-photo">
                 ${avatarHTML(d.photo_url, d.display_name, 'card')}
-                <div class="driver-card-pts">
-                    <span class="driver-card-pts-value">${pts}</span>
-                    <span class="driver-card-pts-label">PTS</span>
-                </div>
             </div>
-            <div class="driver-card-body">
-                ${d.career_number ? `<div class="driver-card-ghost">${d.career_number}</div>` : ''}
-                <div class="driver-card-body-main">
-                    ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
-                    <div class="driver-card-name">${esc(d.display_name)}</div>
-                    <div class="driver-card-meta">
-                        ${d.nationality ? flag(d.nationality) + ' ' + esc(d.nationality) : ''}
-                        ${d.teams?.name ? `<br>${esc(d.teams.name)}` : ''}
-                    </div>
-                    ${eloRow}
-                    ${tier ? `<div class="driver-card-tier">${tier}</div>` : ''}
+            <div class="driver-card-overlay"></div>
+            ${d.career_number ? `<div class="driver-card-ghost">${d.career_number}</div>` : ''}
+            ${eloRow}
+            <div class="driver-card-pts">
+                <span class="driver-card-pts-value">${pts}</span>
+                <span class="driver-card-pts-label">PTS</span>
+            </div>
+            <div class="driver-card-info">
+                ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
+                <div class="driver-card-name">${esc(d.display_name)}</div>
+                <div class="driver-card-meta">
+                    ${d.nationality ? `<span>${flag(d.nationality)} ${esc(d.nationality)}</span>` : ''}
+                    ${d.teams?.name ? `<div class="team-line">${esc(d.teams.name)}</div>` : ''}
                 </div>
+                ${tier ? `<div class="driver-card-tier">${tier}</div>` : ''}
                 ${badgeRow}
             </div>
         </div>`;
     }).join('');
+
+    // Stats strip counts
+    const totalDrivers = (data || []).length;
+    const totalTeams   = new Set((data || []).map(d => d.teams?.name).filter(Boolean)).size;
+    const totalNations = new Set((data || []).map(d => d.nationality).filter(Boolean)).size;
+    const totalMfrs    = new Set((data || []).map(d => d.manufacturers?.name).filter(Boolean)).size;
+
+    // Ticker — build a list of all driver names (sorted A-Z) then duplicate for seamless loop
+    const tickerNames = (data || [])
+        .slice()
+        .sort((a, b) => (a.display_name || '').localeCompare(b.display_name || ''))
+        .map(d => {
+            const num = d.career_number ? `<span class="tic-num">#${d.career_number}</span>` : '';
+            return `<span class="driver-ticker-item">${num}${esc(d.display_name)}</span><span class="driver-ticker-sep">◆</span>`;
+        }).join('');
+    const tickerHTML = tickerNames
+        ? `<div class="driver-ticker-wrap">
+               <div class="driver-ticker-track">${tickerNames}${tickerNames}</div>
+           </div>`
+        : '';
 
     app.innerHTML = `
         <div class="hero">
@@ -847,6 +1032,25 @@ async function showListing() {
         </div>
         <div class="content">
             ${data.length ? `
+                <div class="driver-stats-strip">
+                    <div class="dss-item">
+                        <span class="dss-value">${totalDrivers}</span>
+                        <span class="dss-label">Drivers</span>
+                    </div>
+                    <div class="dss-item">
+                        <span class="dss-value">${totalTeams}</span>
+                        <span class="dss-label">Teams</span>
+                    </div>
+                    <div class="dss-item">
+                        <span class="dss-value">${totalNations}</span>
+                        <span class="dss-label">Nations</span>
+                    </div>
+                    <div class="dss-item">
+                        <span class="dss-value">${totalMfrs}</span>
+                        <span class="dss-label">Manufacturers</span>
+                    </div>
+                </div>
+                ${tickerHTML}
                 <div class="gtec-search-wrap" style="margin-bottom:0.65rem">
                     <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
