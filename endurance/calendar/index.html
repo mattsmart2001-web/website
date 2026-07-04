@@ -567,7 +567,7 @@ async function openGrid(eventId, eventName) {
     });
 
     document.getElementById('grid-body').innerHTML = keys.map(n => {
-        const title = n === 0 ? 'Unassigned' : `Split ${n}`;
+        const title = n === 0 ? 'Race 1 Roster — No Splits Assigned Yet' : `Split ${n}`;
         const sorted = groups[n].slice().sort((a, b) => {
             const aCar = a.driver?.career_number ?? a.entry.car_number ?? 999;
             const bCar = b.driver?.career_number ?? b.entry.car_number ?? 999;
