@@ -154,10 +154,22 @@
         .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0; }
         .team-card-name { font-family: 'Anton', sans-serif; font-size: 1.35rem; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; }
         .team-card-meta { font-size: 0.76rem; color: var(--muted); }
-        .team-card-drivers { display: flex; flex-direction: column; gap: 0.28rem; margin-top: 0.1rem; }
-        .team-card-driver { display: flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; color: var(--text); text-decoration: none; }
-        .team-card-driver:hover { color: var(--gold); }
-        .tcd-num { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; color: var(--gold); width: 2.2rem; flex-shrink: 0; }
+        .team-card-drivers { display: flex; flex-wrap: wrap; gap: 0.4rem; padding-top: 0.65rem; margin-top: 0.35rem; border-top: 1px solid rgba(255,255,255,0.07); }
+        .team-card-driver {
+            display: flex; align-items: center; gap: 0.45rem;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px;
+            padding: 0.28rem 0.7rem 0.28rem 0.28rem;
+            text-decoration: none; color: var(--text);
+            transition: border-color 0.2s;
+            flex: 1; min-width: 0;
+        }
+        .team-card-driver:hover { border-color: rgba(255,209,102,0.4); }
+        .tcd-avatar { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .tcd-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .tcd-avatar-init { font-family: 'Anton', sans-serif; font-size: 0.7rem; color: var(--muted); }
+        .tcd-info { min-width: 0; overflow: hidden; }
+        .tcd-num { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; color: var(--gold); line-height: 1.2; }
+        .tcd-name { font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
 
         /* ===== PROFILE ===== */
         .profile-header { margin-bottom: 1.75rem; }
@@ -290,7 +302,7 @@ async function showListing() {
         sb.from('teams').select('id, name, slug, home_country, bio, manufacturers(name,brand_color,logo_url,car_name)').order('name'),
         sb.from('seasons').select('id').eq('is_active', true).limit(1),
         sb.from('team_standings').select('team_id, season_id, points'),
-        sb.from('drivers').select('id, display_name, slug, career_number, current_team_id').not('current_team_id', 'is', null).order('display_name'),
+        sb.from('drivers').select('id, display_name, slug, career_number, photo_url, current_team_id').not('current_team_id', 'is', null).order('display_name'),
     ]);
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
@@ -320,9 +332,18 @@ async function showListing() {
         ].filter(Boolean).join(' ').toLowerCase();
         const pts = pointsMap[t.id] || 0;
         const driversHtml = teamDrivers.length
-            ? `<div class="team-card-drivers">${teamDrivers.map(d =>
-                `<a class="team-card-driver" href="/endurance/drivers/?slug=${esc(d.slug)}" onclick="event.stopPropagation()">${d.career_number ? `<span class="tcd-num">#${d.career_number}</span>` : '<span class="tcd-num"></span>'}<span>${esc(d.display_name)}</span></a>`
-              ).join('')}</div>`
+            ? `<div class="team-card-drivers">${teamDrivers.map(d => {
+                const avatarInner = d.photo_url
+                    ? `<img src="${esc(d.photo_url)}" alt="${esc(d.display_name)}" loading="lazy">`
+                    : `<span class="tcd-avatar-init">${initials(d.display_name)}</span>`;
+                return `<a class="team-card-driver" href="/endurance/drivers/?slug=${esc(d.slug)}" onclick="event.stopPropagation()">
+                    <div class="tcd-avatar">${avatarInner}</div>
+                    <div class="tcd-info">
+                        ${d.career_number ? `<div class="tcd-num">#${d.career_number}</div>` : ''}
+                        <div class="tcd-name">${esc(d.display_name)}</div>
+                    </div>
+                </a>`;
+              }).join('')}</div>`
             : '';
         return `
         <div class="team-card" data-search="${esc(search)}" data-name="${esc(t.name)}" data-points="${pts}" data-mfr="${esc(mfr?.name || '')}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'" style="${mfr?.brand_color ? `border-top-color:${esc(mfr.brand_color)}` : ''}">
