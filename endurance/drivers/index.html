@@ -980,7 +980,7 @@ async function showListing() {
         const mfrColor = d.manufacturers?.brand_color || '';
         const badgeRow = cardBadges(d, winsMap[d.id] || 0, racesMap[d.id] || 0, seasonFinishesMap[d.id]);
         return `
-        <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-left-color:${esc(mfrColor)}` : ''}">
+        <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" data-mfr="${esc(d.manufacturers?.name || '')}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-left-color:${esc(mfrColor)}` : ''}">
             <div class="driver-card-photo">
                 ${avatarHTML(d.photo_url, d.display_name, 'card')}
             </div>
@@ -1003,6 +1003,15 @@ async function showListing() {
             </div>
         </div>`;
     }).join('');
+
+    // Manufacturer filter buttons
+    const mfrs = [...new Set((data || []).map(d => d.manufacturers?.name).filter(Boolean))].sort();
+    const mfrFilterHtml = mfrs.length ? `
+        <div class="sort-pills" style="justify-content:center;margin-bottom:1.25rem">
+            <span class="sort-label">Manufacturer:</span>
+            <button class="sort-btn mfr-filter-btn sort-btn-active" data-mfr="" onclick="setDriverMfr('',this)">All</button>
+            ${mfrs.map(m => `<button class="sort-btn mfr-filter-btn" data-mfr="${esc(m)}" onclick="setDriverMfr(this.dataset.mfr,this)">${esc(m)}</button>`).join('')}
+        </div>` : '';
 
     // Stats strip counts
     const totalDrivers = (data || []).length;
@@ -1056,7 +1065,7 @@ async function showListing() {
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
                     <input class="gtec-search-input" id="drivers-search" type="search" autocomplete="off"
-                           placeholder="Search driver, team, nationality or #number" oninput="filterCards(this,'driver-card','drivers-count-sub','driver','drivers')">
+                           placeholder="Search driver, team, nationality or #number" oninput="applyDriverFilters()">
                 </div>
                 <div class="sort-pills">
                     <span class="sort-label">Sort:</span>
@@ -1064,6 +1073,7 @@ async function showListing() {
                     <button class="sort-btn" data-sort="elo" onclick="sortCards('.driver-grid','.driver-card','elo')">ELO</button>
                     <button class="sort-btn" data-sort="points" onclick="sortCards('.driver-grid','.driver-card','points')">Points</button>
                 </div>
+                ${mfrFilterHtml}
                 <div class="driver-grid">${cards}</div>
                 <div class="empty-msg" id="drivers-empty" style="display:none">No drivers match your search.</div>
             ` : `<div class="empty-msg">No drivers registered yet.</div>`}
@@ -1098,6 +1108,35 @@ async function showListing() {
     }
 })();
 
+let _driverMfrFilter = '';
+
+function setDriverMfr(mfr, btn) {
+    _driverMfrFilter = mfr;
+    document.querySelectorAll('.mfr-filter-btn').forEach(b => b.classList.remove('sort-btn-active'));
+    if (btn) btn.classList.add('sort-btn-active');
+    applyDriverFilters();
+}
+
+function applyDriverFilters() {
+    const q = (document.getElementById('drivers-search')?.value || '').toLowerCase().trim();
+    const mfr = _driverMfrFilter.toLowerCase();
+    const cards = document.querySelectorAll('.driver-card');
+    let shown = 0;
+    cards.forEach(card => {
+        const matchQ = !q || (card.getAttribute('data-search') || '').includes(q);
+        const matchMfr = !mfr || (card.getAttribute('data-mfr') || '').toLowerCase() === mfr;
+        const match = matchQ && matchMfr;
+        card.style.display = match ? '' : 'none';
+        if (match) shown++;
+    });
+    const countEl = document.getElementById('drivers-count-sub');
+    if (countEl) countEl.textContent = (q || mfr)
+        ? `${shown} match${shown === 1 ? '' : 'es'} of ${cards.length}`
+        : `${cards.length} registered driver${cards.length !== 1 ? 's' : ''}`;
+    const emptyEl = document.getElementById('drivers-empty');
+    if (emptyEl) emptyEl.style.display = ((q || mfr) && shown === 0) ? '' : 'none';
+}
+
 // Generic card filter — reads data-search attributes and toggles
 // display:none on non-matching cards. Updates the count line + empty
 // state so it doesn't look broken when nothing matches.
@@ -1123,7 +1162,7 @@ function filterCards(input, cardClass, countId, singular, plural) {
 }
 
 function sortCards(gridSel, cardSel, sortKey) {
-    document.querySelectorAll('.sort-btn').forEach(b => {
+    document.querySelectorAll('.sort-btn:not(.mfr-filter-btn)').forEach(b => {
         b.classList.toggle('sort-btn-active', b.dataset.sort === sortKey);
     });
     const grid = document.querySelector(gridSel);
