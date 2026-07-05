@@ -148,8 +148,19 @@
             padding: 1.5rem; cursor: pointer; text-decoration: none; color: var(--text);
             transition: border-color 0.2s, transform 0.15s;
             display: flex; flex-direction: column; gap: 0.75rem;
+            position: relative; overflow: hidden;
         }
         .team-card:hover { border-color: rgba(255,209,102,0.35); transform: translateY(-2px); }
+        .team-card-logo-bg {
+            position: absolute; bottom: -18px; right: -18px;
+            width: 150px; height: 150px;
+            object-fit: contain;
+            opacity: 0.07;
+            filter: grayscale(1) brightness(4);
+            pointer-events: none; user-select: none;
+            transition: opacity 0.2s;
+        }
+        .team-card:hover .team-card-logo-bg { opacity: 0.13; }
         .team-card-mfr { display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: var(--muted); }
         .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0; }
         .team-card-name { font-family: 'Anton', sans-serif; font-size: 1.35rem; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; }
@@ -347,6 +358,7 @@ async function showListing() {
             : '';
         return `
         <div class="team-card" data-search="${esc(search)}" data-name="${esc(t.name)}" data-points="${pts}" data-mfr="${esc(mfr?.name || '')}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'" style="${mfr?.brand_color ? `border-top-color:${esc(mfr.brand_color)}` : ''}">
+            ${mfr?.logo_url ? `<img class="team-card-logo-bg" src="${esc(mfr.logo_url)}" alt="" aria-hidden="true">` : ''}
             ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}</div>` : ''}
             <div class="team-card-name">${esc(t.name)}</div>
             <div class="team-card-meta">
