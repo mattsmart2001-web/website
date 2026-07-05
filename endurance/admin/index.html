@@ -4497,7 +4497,7 @@ async function _fetchPreSeasonData(seasonId, seasonName) {
     const eventIds = events.map(e => e.id);
     if (eventIds.length) {
         const { data: entries } = await sb.from('entries')
-            .select('id,teams(id,name,manufacturers(name,brand_color)),entry_drivers(drivers(id,display_name,career_number,gt7_dr_rating,gt7_sr_rating))')
+            .select('id,teams(id,name,manufacturers(name,brand_color)),entry_drivers(drivers(id,display_name,career_number,gt7_dr_rating,gt7_sr_rating,bio))')
             .in('event_id', eventIds);
         (entries || []).forEach(en => {
             if (en.teams?.id) tMap.set(en.teams.id, en.teams);
@@ -4510,7 +4510,7 @@ async function _fetchPreSeasonData(seasonId, seasonName) {
         // Seed tMap from team_seasons so registered teams always appear
         teamSeasonRows.forEach(ts => { if (ts.teams?.id) tMap.set(ts.teams.id, ts.teams); });
         const { data: allDrivers } = await sb.from('drivers')
-            .select('id,display_name,career_number,gt7_dr_rating,gt7_sr_rating,current_team_id,teams!current_team_id(id,name,manufacturers(name,brand_color))')
+            .select('id,display_name,career_number,gt7_dr_rating,gt7_sr_rating,bio,current_team_id,teams!current_team_id(id,name,manufacturers(name,brand_color))')
             .order('display_name');
         (allDrivers || []).forEach(d => {
             if (!d.display_name) return; // skip unclaimed slots
@@ -4833,6 +4833,18 @@ function _buildCircuitConditionsSection(ev, c) {
     </div>`;
 }
 
+function _bioSnippet(bio) {
+    if (!bio) return null;
+    const clean = bio.replace(/\s+/g, ' ').trim();
+    if (clean.length < 20) return null;
+    const sentences = clean.match(/[^.!?]+[.!?]+/g) || [];
+    if (sentences.length) {
+        const s = sentences.slice(0, 2).join(' ').trim();
+        return s.length > 220 ? s.slice(0, 220).trimEnd() + '…' : s;
+    }
+    return clean.length > 220 ? clean.slice(0, 220).trimEnd() + '…' : clean;
+}
+
 function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
     if (!drivers.length) throw new Error('No drivers confirmed yet. Add entries to this season\'s events first.');
     const ranked = drivers.map(d => {
@@ -5146,6 +5158,7 @@ function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
             ? `<span style="font-size:0.78rem;color:var(--muted)">Race Elo: <strong style="color:var(--text)">${Math.round(d.skill)}</strong></span>`
             : `<span style="font-size:0.78rem;color:var(--muted)">GT7: <strong style="color:var(--text)">DR-${d.gt7_dr_rating||'?'} / SR-${d.gt7_sr_rating||'?'}</strong></span>`;
 
+        const bioSnip = _bioSnippet(d.bio);
         return `<div class="stat-card" style="margin:1.25rem 0">
             <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem;flex-wrap:wrap">
                 ${d.career_number ? `<span style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.78rem;font-weight:700">#${d.career_number}</span>` : ''}
@@ -5156,6 +5169,7 @@ function _buildTitleContenders({ seasonName, drivers, driverRatings }) {
             ${teamBlock}
             <p style="margin:0.85rem 0 0;font-size:0.88rem;line-height:1.7">${opener}</p>
             <p style="margin:0.55rem 0 0;font-size:0.88rem;line-height:1.7;color:rgba(255,255,255,0.75)">${body}</p>
+            ${bioSnip ? `<p style="margin:0.6rem 0 0;font-size:0.84rem;line-height:1.65;color:rgba(255,255,255,0.5);font-style:italic;padding-left:0.85rem;border-left:2px solid rgba(255,209,102,0.25)">${esc(bioSnip)}</p>` : ''}
             <p style="margin:0.55rem 0 0;font-size:0.84rem;font-style:italic;color:var(--muted)">${closer}</p>
         </div>`;
     }).join('');
