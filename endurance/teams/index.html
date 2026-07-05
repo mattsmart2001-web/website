@@ -154,6 +154,10 @@
         .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0; }
         .team-card-name { font-family: 'Anton', sans-serif; font-size: 1.35rem; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; }
         .team-card-meta { font-size: 0.76rem; color: var(--muted); }
+        .team-card-drivers { display: flex; flex-direction: column; gap: 0.28rem; margin-top: 0.1rem; }
+        .team-card-driver { display: flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; color: var(--text); text-decoration: none; }
+        .team-card-driver:hover { color: var(--gold); }
+        .tcd-num { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; color: var(--gold); width: 2.2rem; flex-shrink: 0; }
 
         /* ===== PROFILE ===== */
         .profile-header { margin-bottom: 1.75rem; }
@@ -286,7 +290,7 @@ async function showListing() {
         sb.from('teams').select('id, name, slug, home_country, bio, manufacturers(name,brand_color,logo_url,car_name)').order('name'),
         sb.from('seasons').select('id').eq('is_active', true).limit(1),
         sb.from('team_standings').select('team_id, season_id, points'),
-        sb.from('drivers').select('current_team_id'),
+        sb.from('drivers').select('id, display_name, slug, career_number, current_team_id').not('current_team_id', 'is', null).order('display_name'),
     ]);
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
@@ -296,20 +300,30 @@ async function showListing() {
     (standings || []).forEach(s => {
         if (!activeSznId || s.season_id === activeSznId) pointsMap[s.team_id] = Number(s.points || 0);
     });
-    const countMap = {};
+    const driversByTeam = {};
     (dCounts || []).forEach(r => {
-        if (r.current_team_id) countMap[r.current_team_id] = (countMap[r.current_team_id] || 0) + 1;
+        if (r.current_team_id) {
+            if (!driversByTeam[r.current_team_id]) driversByTeam[r.current_team_id] = [];
+            driversByTeam[r.current_team_id].push(r);
+        }
     });
 
     const cards = (data || []).map(t => {
         const mfr = t.manufacturers;
-        const dCount = countMap[t.id] || 0;
+        const teamDrivers = driversByTeam[t.id] || [];
+        const dCount = teamDrivers.length;
         const search = [
             t.name,
             t.home_country,
             mfr?.name,
+            ...teamDrivers.map(d => d.display_name),
         ].filter(Boolean).join(' ').toLowerCase();
         const pts = pointsMap[t.id] || 0;
+        const driversHtml = teamDrivers.length
+            ? `<div class="team-card-drivers">${teamDrivers.map(d =>
+                `<a class="team-card-driver" href="/endurance/drivers/?slug=${esc(d.slug)}" onclick="event.stopPropagation()">${d.career_number ? `<span class="tcd-num">#${d.career_number}</span>` : '<span class="tcd-num"></span>'}<span>${esc(d.display_name)}</span></a>`
+              ).join('')}</div>`
+            : '';
         return `
         <div class="team-card" data-search="${esc(search)}" data-name="${esc(t.name)}" data-points="${pts}" data-mfr="${esc(mfr?.name || '')}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'" style="${mfr?.brand_color ? `border-top-color:${esc(mfr.brand_color)}` : ''}">
             ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}</div>` : ''}
@@ -318,6 +332,7 @@ async function showListing() {
                 ${t.home_country ? flag(t.home_country) + ' ' + esc(t.home_country) + ' &nbsp;·&nbsp; ' : ''}
                 ${dCount} driver${dCount !== 1 ? 's' : ''}
             </div>
+            ${driversHtml}
         </div>`;
     }).join('');
 
