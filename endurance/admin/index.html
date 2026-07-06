@@ -3373,11 +3373,12 @@ async function clearAllLobbies(eventId, eventName, seasonId) {
 }
 
 async function notifyLobbies(eventId, eventName, seasonId) {
-    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox, lobby hosts will receive an email, and a summary will post to Discord #split-announcements.`)) return;
+    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox, lobby hosts will additionally get hosting instructions in their inbox and by email, and a summary will post to Discord #split-announcements.`)) return;
     const { data, error } = await sb.rpc('notify_lobby_assignments', { p_event_id: eventId });
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
-    toast(`Sent ${data.count} notification${data.count === 1 ? '' : 's'}.`, 'success');
+    const hostNote = data.host_count ? ` (${data.host_count} host${data.host_count === 1 ? '' : 's'} also got hosting instructions in their inbox)` : '';
+    toast(`Sent ${data.count} notification${data.count === 1 ? '' : 's'}${hostNote}.`, 'success');
     await refreshMsgsBadge();
 
     // Email lobby hosts — fetch entries that have a host assigned for this event
