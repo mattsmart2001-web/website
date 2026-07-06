@@ -7206,6 +7206,7 @@ async function renderMessages() {
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
                 <button class="btn btn-ghost" onclick="openDirectMessageModal()">Message Driver</button>
                 <button class="btn btn-ghost" onclick="openLobbyHostsModal()">Message Lobby Hosts</button>
+                <button class="btn btn-ghost" onclick="openSoloDriversModal()">Message Solo Drivers</button>
                 <button class="btn btn-primary" onclick="openBroadcastModal()">Message All Drivers</button>
             </div>
         </div>
@@ -7285,6 +7286,39 @@ async function sendLobbyHostsMessage() {
     if (error) { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
     toast(`Sent to ${data.count} lobby host${data.count === 1 ? '' : 's'}.`, 'success');
+    closeModal();
+    if (currentSection === 'messages') await renderMessages();
+    await refreshMsgsBadge();
+}
+
+function openSoloDriversModal() {
+    openModal('Message Solo Drivers', `
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">Sends to every driver with no current team — a good way to chase solo drivers about joining one. There's no undo.</p>
+        <form id="entity-form">
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" placeholder="e.g. Looking for a team?">
+            </div>
+            <div class="form-group">
+                <label>Message <span class="required">*</span></label>
+                <textarea name="message" rows="8" required placeholder="Type your message…"></textarea>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="sendSoloDriversMessage()">Send to Solo Drivers</button>`
+    );
+}
+
+async function sendSoloDriversMessage() {
+    const d = getFormData('entity-form');
+    if (!d.message) { toast('Message body is required.', 'error'); return; }
+    const { data, error } = await sb.rpc('message_solo_drivers', {
+        p_subject: d.subject || null,
+        p_message: d.message,
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
+    toast(`Sent to ${data.count} solo driver${data.count === 1 ? '' : 's'}.`, 'success');
     closeModal();
     if (currentSection === 'messages') await renderMessages();
     await refreshMsgsBadge();
