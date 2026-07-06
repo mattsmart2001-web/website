@@ -7203,6 +7203,7 @@ async function renderMessages() {
             <div style="font-size:0.85rem;color:var(--muted)">Drivers can write to admins from their portal; replies show in their inbox. Message one driver or broadcast to all.</div>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
                 <button class="btn btn-ghost" onclick="openDirectMessageModal()">Message Driver</button>
+                <button class="btn btn-ghost" onclick="openLobbyHostBroadcastModal()">Message Lobby Hosts</button>
                 <button class="btn btn-primary" onclick="openBroadcastModal()">Message All Drivers</button>
             </div>
         </div>
@@ -7249,6 +7250,42 @@ async function sendBroadcast() {
     if (error) { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
     toast(`Broadcast sent to ${data.count} driver${data.count === 1 ? '' : 's'}.`, 'success');
+    closeModal();
+    await renderMessages();
+    await refreshMsgsBadge();
+}
+
+async function openLobbyHostBroadcastModal() {
+    const { count } = await sb.from('drivers').select('id', { count: 'exact', head: true }).eq('willing_host', true);
+    openModal('Message Lobby Hosts', `
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">This sends the same message to every driver who ticked "willing to host" (${count ?? 0} driver${count === 1 ? '' : 's'}). There's no undo — write it once, send it once.</p>
+        <form id="entity-form">
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" placeholder="e.g. Hosting reminder for Round 2">
+            </div>
+            <div class="form-group">
+                <label>Message <span class="required">*</span></label>
+                <textarea name="message" rows="8" required placeholder="Type your announcement…"></textarea>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="sendLobbyHostBroadcast()">Send to Lobby Hosts</button>`
+    );
+}
+
+async function sendLobbyHostBroadcast() {
+    const d = getFormData('entity-form');
+    if (!d.message) { toast('Message body is required.', 'error'); return; }
+    const phrase = prompt('Type SEND to confirm broadcasting this message to every willing lobby host:');
+    if (phrase !== 'SEND') { toast('Cancelled — phrase did not match.', 'error'); return; }
+    const { data, error } = await sb.rpc('broadcast_message_to_lobby_hosts', {
+        p_subject: d.subject || null,
+        p_message: d.message,
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
+    toast(`Broadcast sent to ${data.count} lobby host${data.count === 1 ? '' : 's'}.`, 'success');
     closeModal();
     await renderMessages();
     await refreshMsgsBadge();
