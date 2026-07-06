@@ -1199,9 +1199,10 @@ async function showProfile() {
     document.title = `${driver.display_name} — GTEC`;
 
     // Season career stats + rating history in parallel with race history
-    const [seasonsRes, ratingRes, historyRes, penaltiesRes, stewardRes] = await Promise.all([
+    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes] = await Promise.all([
         sb.from('driver_standings').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
         sb.from('driver_ratings').select('rating_before, rating_after, delta, event_id, events(round, name)').eq('driver_id', driver.id).order('created_at'),
+        sb.from('driver_current_ratings').select('rating, peak_rating').eq('driver_id', driver.id).maybeSingle(),
         sb.from('result_drivers')
         .select(`
             finish_position, status, points_awarded, pole_point, fastest_lap_point, laps_driven,
@@ -1221,6 +1222,7 @@ async function showProfile() {
 
     const seasons    = seasonsRes.data  || [];
     const ratingHist = ratingRes.data   || [];
+    const currentRatingRow = currentRatingRes.data;
     const rawHistory = historyRes.data  || [];
     const penalties  = penaltiesRes.data || [];
     const stewards   = stewardRes.data   || [];
@@ -1256,9 +1258,11 @@ async function showProfile() {
     });
     const secretBadges = _secretBadges || {};
 
-    // Current rating
-    const currentRating = ratingHist.length ? ratingHist[ratingHist.length - 1].rating_after : 1500;
-    const peakRating    = ratingHist.length ? Math.max(...ratingHist.map(r => r.rating_after)) : 1500;
+    // Current rating — driver_current_ratings.rating/peak_rating already
+    // fall back to the DR/SR seed for drivers with no race history, so use
+    // it rather than hardcoding 1500 here.
+    const currentRating = ratingHist.length ? ratingHist[ratingHist.length - 1].rating_after : (currentRatingRow?.rating ?? 1500);
+    const peakRating    = ratingHist.length ? Math.max(...ratingHist.map(r => r.rating_after)) : (currentRatingRow?.peak_rating ?? 1500);
     const lastDelta     = ratingHist.length ? ratingHist[ratingHist.length - 1].delta : null;
     const isProvisional = ratingHist.length === 0;
 
