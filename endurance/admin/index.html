@@ -3341,15 +3341,16 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const totalLobbiesUsed = currentLobby;
 
     // Host selection — pick the highest-rated willing driver per lobby.
-    // SparksTheory is always host if present in the lobby, regardless of willing_host flag.
+    // These drivers are always host if present in their lobby, regardless of willing_host flag.
+    const DEFAULT_HOSTS = ['SparksTheory', 'l888-1'];
     const lobbyMap = new Map();
     entries.forEach(en => {
         const ln = en._lobby;
         if (!ln) return;
         (en.entry_drivers || []).forEach(ed => {
-            const isSparks = ed.drivers?.display_name === 'SparksTheory';
-            if (!ed.drivers?.willing_host && !isSparks) return;
-            const skill = isSparks ? Infinity : skillFor(ed);
+            const isDefaultHost = DEFAULT_HOSTS.includes(ed.drivers?.display_name);
+            if (!ed.drivers?.willing_host && !isDefaultHost) return;
+            const skill = isDefaultHost ? Infinity : skillFor(ed);
             const cur = lobbyMap.get(ln);
             if (!cur || skill > cur.skill) lobbyMap.set(ln, { entryId: en.id, driverId: ed.driver_id, skill });
         });
