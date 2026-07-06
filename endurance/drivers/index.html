@@ -142,6 +142,11 @@
             box-shadow: 0 0 0 3px rgba(255,209,102,0.12);
         }
         .sort-pills { display:flex; align-items:center; gap:0.4rem; max-width:480px; margin:0 auto 1.5rem; flex-wrap:wrap; }
+        .sort-pills.mfr-pills { max-width:100%; flex-wrap:nowrap; overflow-x:auto; justify-content:flex-start; padding-bottom:0.35rem; scrollbar-width:thin; }
+        .sort-pills.mfr-pills .sort-btn,
+        .sort-pills.mfr-pills .sort-label { flex-shrink:0; }
+        .sort-pills.mfr-pills::-webkit-scrollbar { height:4px; }
+        .sort-pills.mfr-pills::-webkit-scrollbar-thumb { background:var(--border); border-radius:999px; }
         .sort-label { font-size:0.72rem; color:var(--muted); margin-right:0.15rem; }
         .sort-btn { background:transparent; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:0.72rem; font-weight:600; letter-spacing:0.08em; padding:0.28rem 0.85rem; cursor:pointer; transition:border-color 0.15s,color 0.15s; font-family:inherit; }
         .sort-btn:hover { border-color:rgba(255,255,255,0.25); color:var(--text); }
@@ -1007,7 +1012,7 @@ async function showListing() {
     // Manufacturer filter buttons
     const mfrs = [...new Set((data || []).map(d => d.manufacturers?.name).filter(Boolean))].sort();
     const mfrFilterHtml = mfrs.length ? `
-        <div class="sort-pills" style="justify-content:center;margin-bottom:1.25rem">
+        <div class="sort-pills mfr-pills" style="margin-bottom:1.25rem">
             <span class="sort-label">Manufacturer:</span>
             <button class="sort-btn mfr-filter-btn sort-btn-active" data-mfr="" onclick="setDriverMfr('',this)">All</button>
             ${mfrs.map(m => `<button class="sort-btn mfr-filter-btn" data-mfr="${esc(m)}" onclick="setDriverMfr(this.dataset.mfr,this)">${esc(m)}</button>`).join('')}
