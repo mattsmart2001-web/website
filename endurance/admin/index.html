@@ -7203,6 +7203,7 @@ async function renderMessages() {
             <div style="font-size:0.85rem;color:var(--muted)">Drivers can write to admins from their portal; replies show in their inbox. Message one driver or broadcast to all.</div>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
                 <button class="btn btn-ghost" onclick="openDirectMessageModal()">Message Driver</button>
+                <button class="btn btn-ghost" onclick="openLobbyHostsModal()">Message Lobby Hosts</button>
                 <button class="btn btn-primary" onclick="openBroadcastModal()">Message All Drivers</button>
             </div>
         </div>
@@ -7251,6 +7252,39 @@ async function sendBroadcast() {
     toast(`Broadcast sent to ${data.count} driver${data.count === 1 ? '' : 's'}.`, 'success');
     closeModal();
     await renderMessages();
+    await refreshMsgsBadge();
+}
+
+function openLobbyHostsModal() {
+    openModal('Message Lobby Hosts', `
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">Sends to every driver who ticked "willing to host" on their application — not just those assigned a split this round. There's no undo.</p>
+        <form id="entity-form">
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" placeholder="e.g. Lobby hosting reminder">
+            </div>
+            <div class="form-group">
+                <label>Message <span class="required">*</span></label>
+                <textarea name="message" rows="8" required placeholder="Type your message…"></textarea>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="sendLobbyHostsMessage()">Send to Lobby Hosts</button>`
+    );
+}
+
+async function sendLobbyHostsMessage() {
+    const d = getFormData('entity-form');
+    if (!d.message) { toast('Message body is required.', 'error'); return; }
+    const { data, error } = await sb.rpc('message_lobby_hosts', {
+        p_subject: d.subject || null,
+        p_message: d.message,
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
+    toast(`Sent to ${data.count} lobby host${data.count === 1 ? '' : 's'}.`, 'success');
+    closeModal();
+    if (currentSection === 'messages') await renderMessages();
     await refreshMsgsBadge();
 }
 
