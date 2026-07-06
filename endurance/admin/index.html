@@ -7291,9 +7291,11 @@ async function sendLobbyHostsMessage() {
     await refreshMsgsBadge();
 }
 
-function openSoloDriversModal() {
+async function openSoloDriversModal() {
+    const { count } = await sb.from('drivers').select('id', { count: 'exact', head: true }).is('current_team_id', null);
     openModal('Message Solo Drivers', `
         <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">Sends to every driver with no current team — a good way to chase solo drivers about joining one. There's no undo.</p>
+        <div class="badge badge-gold" style="margin-bottom:1rem">${count ?? 0} solo driver${count === 1 ? '' : 's'} will receive this</div>
         <form id="entity-form">
             <div class="form-group">
                 <label>Subject</label>
