@@ -3437,7 +3437,7 @@ async function notifyLobbies(eventId, eventName, seasonId) {
         const { data: { session: hostSession } } = await sb.auth.getSession();
         if (hostSession?.access_token) {
             const { data: ev } = await sb.from('events')
-                .select('round, starts_at, tyre_wear, fuel_consumption, time_multiplier, weather, time_of_day, damage_level, slipstream, bop_enabled, quali_same_as_race, quali_notes')
+                .select('round, starts_at, tyre_wear, fuel_consumption, time_multiplier, weather, time_of_day, damage_level, slipstream, bop_enabled, quali_same_as_race, quali_notes, equal_conditions_mode, shortcut_penalty, wall_collision_penalty, car_collision_penalty, ghosting, pit_lane_cutting_penalty')
                 .eq('id', eventId).maybeSingle();
             const { data: hostEntries } = await sb.from('entries')
                 .select('lobby_number, host_driver_id')
@@ -3465,6 +3465,12 @@ async function notifyLobbies(eventId, eventName, seasonId) {
                                     damage_level:    ev?.damage_level     ?? null,
                                     slipstream:      ev?.slipstream       ?? null,
                                     bop_enabled:     ev?.bop_enabled      ?? false,
+                                    equal_conditions_mode:    ev?.equal_conditions_mode    ?? false,
+                                    shortcut_penalty:         ev?.shortcut_penalty         ?? false,
+                                    wall_collision_penalty:   ev?.wall_collision_penalty   ?? false,
+                                    car_collision_penalty:    ev?.car_collision_penalty    ?? false,
+                                    ghosting:                 ev?.ghosting                 ?? false,
+                                    pit_lane_cutting_penalty: ev?.pit_lane_cutting_penalty ?? false,
                                 },
                                 quali_same_as_race: ev?.quali_same_as_race !== false,
                                 quali_notes:        ev?.quali_notes        ?? null,

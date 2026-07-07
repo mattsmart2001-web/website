@@ -66,6 +66,12 @@ function buildRaceSettingsTable(rs) {
         rs.damage_level    && ['Damage',           rs.damage_level.charAt(0).toUpperCase() + rs.damage_level.slice(1)],
         rs.slipstream      && ['Slipstream',       rs.slipstream.charAt(0).toUpperCase() + rs.slipstream.slice(1)],
         rs.bop_enabled     && ['Balance of Performance', 'Enabled'],
+        rs.equal_conditions_mode   && ['Equal Conditions Mode', 'On'],
+        rs.shortcut_penalty        && ['Shortcut Penalty', 'On - Weak'],
+        rs.wall_collision_penalty  && ['Wall Collision Penalty', 'On - Weak'],
+        rs.car_collision_penalty   && ['Car Collision Penalty', 'On - Weak'],
+        rs.ghosting                && ['Ghosting', 'On'],
+        rs.pit_lane_cutting_penalty&& ['Pit Lane Cutting Penalty', 'On'],
     ].filter(Boolean);
     if (!rows.length) return '';
     return `<table style="width:100%;border-collapse:collapse;margin:10px 0 0">
