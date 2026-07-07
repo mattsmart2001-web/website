@@ -10,11 +10,14 @@
 -- for this (split-scoped pairwise comparison); points didn't.
 --
 -- split_points_multiplier(lobby_number): Split 1 = 100%, then -10%
--- per split down to a 50% floor from Split 6 on. Applied to the whole
--- per-race total (position points + pole + fastest lap) and rounded
--- to the nearest whole point, so points_awarded stays a plain int and
--- no schema change is needed. NULL lobby_number (events with no split
--- concept) defaults to full value.
+-- per split down to a 50% floor from Split 6 on. Position points,
+-- pole bonus and fastest-lap bonus are each scaled and rounded
+-- independently (not summed then rounded once), so a 1-point bonus
+-- is guaranteed to round to exactly 1 point at every split regardless
+-- of what the position points do — no rounding interaction between
+-- them. points_awarded stays a plain int, no schema change needed.
+-- NULL lobby_number (events with no split concept) defaults to full
+-- value.
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION split_points_multiplier(p_lobby_number int)
@@ -119,7 +122,9 @@ BEGIN
         END IF;
 
         UPDATE result_drivers
-           SET points_awarded = ROUND((pts + fl_bonus + pole_bonus) * split_points_multiplier(r.lobby_number))::int
+           SET points_awarded = ROUND(pts * split_points_multiplier(r.lobby_number))::int
+                               + ROUND(fl_bonus * split_points_multiplier(r.lobby_number))::int
+                               + ROUND(pole_bonus * split_points_multiplier(r.lobby_number))::int
          WHERE id = r.id;
     END LOOP;
 
@@ -158,7 +163,9 @@ BEGIN
         END IF;
 
         UPDATE results
-           SET points_awarded = ROUND((pts + fl_bonus + pole_bonus) * split_points_multiplier(r.lobby_number))::int
+           SET points_awarded = ROUND(pts * split_points_multiplier(r.lobby_number))::int
+                               + ROUND(fl_bonus * split_points_multiplier(r.lobby_number))::int
+                               + ROUND(pole_bonus * split_points_multiplier(r.lobby_number))::int
          WHERE id = r.id;
     END LOOP;
 
