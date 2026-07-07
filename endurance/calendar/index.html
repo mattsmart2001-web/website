@@ -631,9 +631,9 @@ function openRaceDetails(eventId, eventName) {
         ['Slipstream',         e.slipstream ? e.slipstream.charAt(0).toUpperCase() + e.slipstream.slice(1) : null],
         ['Required Tyres',     tyrePills],
         ['Equal Conditions Mode',    e.equal_conditions_mode == null ? null : (e.equal_conditions_mode ? 'On' : 'Off')],
-        ['Shortcut Penalty',         e.shortcut_penalty == null ? null : (e.shortcut_penalty ? 'On' : 'Off')],
-        ['Wall Collision Penalty',   e.wall_collision_penalty == null ? null : (e.wall_collision_penalty ? 'On' : 'Off')],
-        ['Car Collision Penalty',    e.car_collision_penalty == null ? null : (e.car_collision_penalty ? 'On' : 'Off')],
+        ['Shortcut Penalty',         e.shortcut_penalty == null ? null : (e.shortcut_penalty ? 'On - Weak' : 'Off')],
+        ['Wall Collision Penalty',   e.wall_collision_penalty == null ? null : (e.wall_collision_penalty ? 'On - Weak' : 'Off')],
+        ['Car Collision Penalty',    e.car_collision_penalty == null ? null : (e.car_collision_penalty ? 'On - Weak' : 'Off')],
         ['Ghosting',                 e.ghosting == null ? null : (e.ghosting ? 'On' : 'Off')],
         ['Pit Lane Cutting Penalty', e.pit_lane_cutting_penalty == null ? null : (e.pit_lane_cutting_penalty ? 'On' : 'Off')],
     ].filter(([, v]) => v && String(v).trim());

@@ -4733,9 +4733,9 @@ function _buildCircuitGuide(ev, seasonName) {
     if (ev.refuel_rate_lps)    fmtItems.push(`<strong>Refuel rate:</strong> ${ev.refuel_rate_lps} L/s`);
     if (ev.required_tyres?.length) fmtItems.push(`<strong>Required tyres:</strong> ${ev.required_tyres.map(esc).join(', ')}`);
     if (ev.equal_conditions_mode != null)   fmtItems.push(`<strong>Equal Conditions Mode:</strong> ${ev.equal_conditions_mode ? 'On' : 'Off'}`);
-    if (ev.shortcut_penalty != null)        fmtItems.push(`<strong>Shortcut Penalty:</strong> ${ev.shortcut_penalty ? 'On' : 'Off'}`);
-    if (ev.wall_collision_penalty != null)  fmtItems.push(`<strong>Wall Collision Penalty:</strong> ${ev.wall_collision_penalty ? 'On' : 'Off'}`);
-    if (ev.car_collision_penalty != null)   fmtItems.push(`<strong>Car Collision Penalty:</strong> ${ev.car_collision_penalty ? 'On' : 'Off'}`);
+    if (ev.shortcut_penalty != null)        fmtItems.push(`<strong>Shortcut Penalty:</strong> ${ev.shortcut_penalty ? 'On - Weak' : 'Off'}`);
+    if (ev.wall_collision_penalty != null)  fmtItems.push(`<strong>Wall Collision Penalty:</strong> ${ev.wall_collision_penalty ? 'On - Weak' : 'Off'}`);
+    if (ev.car_collision_penalty != null)   fmtItems.push(`<strong>Car Collision Penalty:</strong> ${ev.car_collision_penalty ? 'On - Weak' : 'Off'}`);
     if (ev.ghosting != null)                fmtItems.push(`<strong>Ghosting:</strong> ${ev.ghosting ? 'On' : 'Off'}`);
     if (ev.pit_lane_cutting_penalty != null) fmtItems.push(`<strong>Pit Lane Cutting Penalty:</strong> ${ev.pit_lane_cutting_penalty ? 'On' : 'Off'}`);
 
