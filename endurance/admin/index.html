@@ -2437,6 +2437,22 @@ function eventForm(e = {}) {
                 </div>
             </div>
             <div class="form-group">
+                <label>Race Rule Toggles</label>
+                <div style="display:flex;flex-wrap:wrap;gap:0.5rem 1.25rem;padding:0.55rem 0.65rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px">
+                    ${[
+                        ['equal_conditions_mode',   'Equal Conditions Mode'],
+                        ['shortcut_penalty',        'Shortcut Penalty'],
+                        ['wall_collision_penalty',  'Wall Collision Penalty'],
+                        ['ghosting',                'Ghosting'],
+                        ['pit_lane_cutting_penalty','Pit Lane Cutting Penalty'],
+                    ].map(([name, label]) => `
+                        <label style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.84rem;cursor:pointer">
+                            <input type="checkbox" name="${name}" ${e[name] ? 'checked' : ''} style="accent-color:var(--gold);width:15px;height:15px">
+                            <span>${label}</span>
+                        </label>`).join('')}
+                </div>
+            </div>
+            <div class="form-group">
                 <label>Additional Briefing</label>
                 <textarea name="race_details" rows="4" placeholder="Anything else drivers need to know — track limits, BoP, formation lap, etc.">${esc(e.race_details)}</textarea>
             </div>
@@ -2507,6 +2523,11 @@ async function saveEvent(id) {
         refuel_rate_lps:    d.refuel_rate_lps ? parseInt(d.refuel_rate_lps, 10) : null,
         slipstream:         d.slipstream || null,
         required_tyres:     requiredTyres.length ? requiredTyres : null,
+        equal_conditions_mode:   !!d.equal_conditions_mode,
+        shortcut_penalty:        !!d.shortcut_penalty,
+        wall_collision_penalty:  !!d.wall_collision_penalty,
+        ghosting:                !!d.ghosting,
+        pit_lane_cutting_penalty: !!d.pit_lane_cutting_penalty,
         race_details:       d.race_details || null,
         quali_same_as_race: !!document.getElementById('ev-quali-same')?.checked,
         quali_notes:        d.quali_notes || null,
@@ -4611,7 +4632,7 @@ async function generateCircuitGuide(eventId, circuitName, seasonId, seasonName, 
     document.querySelector('.modal-body').innerHTML = '<div class="loading-state">Building circuit guide…</div>';
     try {
         const { data: ev } = await sb.from('events')
-            .select('id,name,circuit_name,round,starts_at,duration_hours,weather,time_of_day,time_multiplier,tyre_wear,fuel_consumption,mandatory_pit_stops,required_tyres,bop_enabled,damage_level,slipstream,starting_procedure,refuel_rate_lps,notes')
+            .select('id,name,circuit_name,round,starts_at,duration_hours,weather,time_of_day,time_multiplier,tyre_wear,fuel_consumption,mandatory_pit_stops,required_tyres,bop_enabled,damage_level,slipstream,starting_procedure,refuel_rate_lps,notes,equal_conditions_mode,shortcut_penalty,wall_collision_penalty,ghosting,pit_lane_cutting_penalty')
             .eq('id', eventId).maybeSingle();
         const draft = _buildCircuitGuide(ev || { id:eventId, circuit_name:circuitName, round, starts_at:null, duration_hours:null }, seasonName);
         _openArticleEditor(`Circuit Guide: ${esc(circuitName)}`, draft);
@@ -4709,6 +4730,11 @@ function _buildCircuitGuide(ev, seasonName) {
     if (ev.bop_enabled != null) fmtItems.push(`<strong>BoP:</strong> ${ev.bop_enabled ? 'On' : 'Off'}`);
     if (ev.refuel_rate_lps)    fmtItems.push(`<strong>Refuel rate:</strong> ${ev.refuel_rate_lps} L/s`);
     if (ev.required_tyres?.length) fmtItems.push(`<strong>Required tyres:</strong> ${ev.required_tyres.map(esc).join(', ')}`);
+    if (ev.equal_conditions_mode != null)   fmtItems.push(`<strong>Equal Conditions Mode:</strong> ${ev.equal_conditions_mode ? 'On' : 'Off'}`);
+    if (ev.shortcut_penalty != null)        fmtItems.push(`<strong>Shortcut Penalty:</strong> ${ev.shortcut_penalty ? 'On' : 'Off'}`);
+    if (ev.wall_collision_penalty != null)  fmtItems.push(`<strong>Wall Collision Penalty:</strong> ${ev.wall_collision_penalty ? 'On' : 'Off'}`);
+    if (ev.ghosting != null)                fmtItems.push(`<strong>Ghosting:</strong> ${ev.ghosting ? 'On' : 'Off'}`);
+    if (ev.pit_lane_cutting_penalty != null) fmtItems.push(`<strong>Pit Lane Cutting Penalty:</strong> ${ev.pit_lane_cutting_penalty ? 'On' : 'Off'}`);
 
     const raceFormatHtml = fmtItems.length ? `
         <div style="margin:1.4rem 0">
