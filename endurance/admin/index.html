@@ -7234,6 +7234,7 @@ async function renderMessages() {
                 <button class="btn btn-ghost" onclick="openDirectMessageModal()">Message Driver</button>
                 <button class="btn btn-ghost" onclick="openLobbyHostsModal()">Message Lobby Hosts</button>
                 <button class="btn btn-ghost" onclick="openSoloDriversModal()">Message Solo Drivers</button>
+                <button class="btn btn-ghost" onclick="openNoManufacturerModal()">Message No Manufacturer</button>
                 <button class="btn btn-primary" onclick="openBroadcastModal()">Message All Drivers</button>
             </div>
         </div>
@@ -7348,6 +7349,41 @@ async function sendSoloDriversMessage() {
     if (error) { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
     toast(`Sent to ${data.count} solo driver${data.count === 1 ? '' : 's'}.`, 'success');
+    closeModal();
+    if (currentSection === 'messages') await renderMessages();
+    await refreshMsgsBadge();
+}
+
+async function openNoManufacturerModal() {
+    const { count } = await sb.from('drivers').select('id', { count: 'exact', head: true }).is('current_manufacturer_id', null).not('user_id', 'is', null);
+    openModal('Message No Manufacturer', `
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">Sends to every claimed driver with no manufacturer set — a good way to chase them about picking one. Drivers who haven't claimed their profile yet are excluded since they can't read their inbox. There's no undo.</p>
+        <div class="badge badge-gold" style="margin-bottom:1rem">${count ?? 0} driver${count === 1 ? '' : 's'} will receive this</div>
+        <form id="entity-form">
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" placeholder="e.g. Pick your manufacturer">
+            </div>
+            <div class="form-group">
+                <label>Message <span class="required">*</span></label>
+                <textarea name="message" rows="8" required placeholder="Type your message…"></textarea>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="sendNoManufacturerMessage()">Send</button>`
+    );
+}
+
+async function sendNoManufacturerMessage() {
+    const d = getFormData('entity-form');
+    if (!d.message) { toast('Message body is required.', 'error'); return; }
+    const { data, error } = await sb.rpc('message_no_manufacturer_drivers', {
+        p_subject: d.subject || null,
+        p_message: d.message,
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
+    toast(`Sent to ${data.count} driver${data.count === 1 ? '' : 's'}.`, 'success');
     closeModal();
     if (currentSection === 'messages') await renderMessages();
     await refreshMsgsBadge();
