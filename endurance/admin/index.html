@@ -2650,11 +2650,18 @@ async function viewEventEntries(eventId, eventName, seasonId) {
             ? `<button class="btn-icon" onclick="navigate('seasons')">No season teams · Open Seasons</button>`
             : `<span style="font-size:0.78rem;color:var(--muted)">All teams and free-agent drivers registered.</span>`;
 
+    const removeAllBtn = data.length > 0
+        ? `<button class="btn-icon danger" onclick="removeAllEntries('${eventId}','${esc(eventName)}','${seasonId}',${data.length})">Remove All (${data.length})</button>`
+        : '';
+
     panel.innerHTML = `
         <div class="section-card">
             <div class="section-card-header">
                 <span class="section-card-title">Entries — ${esc(eventName)}</span>
-                ${headerBtn}
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+                    ${removeAllBtn}
+                    ${headerBtn}
+                </div>
             </div>
             <table><thead><tr>
                 <th>#</th><th>Team</th><th>Manufacturer</th><th>Car Model</th><th>Drivers</th><th>Status</th><th></th>
@@ -2966,6 +2973,14 @@ async function removeEntry(entryId, eventId, eventName, seasonId) {
     const { error } = await sb.from('entries').delete().eq('id', entryId);
     if (error) { toast(error.message, 'error'); return; }
     toast('Entry removed.', 'success');
+    await viewEventEntries(eventId, eventName, seasonId);
+}
+
+async function removeAllEntries(eventId, eventName, seasonId, count) {
+    if (!confirm(`Remove all ${count} entr${count === 1 ? 'y' : 'ies'} for "${eventName}"?\n\nThis also removes every driver assignment and any results already recorded against these entries. This cannot be undone.`)) return;
+    const { error } = await sb.from('entries').delete().eq('event_id', eventId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('All entries removed.', 'success');
     await viewEventEntries(eventId, eventName, seasonId);
 }
 
