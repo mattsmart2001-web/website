@@ -4082,8 +4082,11 @@ async function openAddPenaltyModal(eventId, eventName) {
         .eq('event_id', eventId)
         .order('car_number');
 
-    const entryOpts = (entries || []).map(en =>
-        `<option value="${esc(en.id)}">${en.car_number != null ? '#' + en.car_number + ' — ' : ''}${esc(en.teams?.name)}</option>`).join('');
+    const entryOpts = (entries || []).map(en => {
+        const driverNames = (en.entry_drivers || []).map(ed => ed.drivers?.display_name).filter(Boolean).join(' / ');
+        const label = en.teams?.name || driverNames || 'Unnamed entry';
+        return `<option value="${esc(en.id)}">${en.car_number != null ? '#' + en.car_number + ' — ' : ''}${esc(label)}</option>`;
+    }).join('');
 
     const penaltyTypes = [
         { value: 'time_add',         label: 'Time Added' },
