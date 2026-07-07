@@ -3259,7 +3259,7 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const lobbySize = Math.max(2, Math.min(32, parseInt(sizeInput?.value, 10) || 16));
 
     const { data: entries } = await sb.from('entries')
-        .select(`id, car_number, entry_drivers(driver_id, drivers(id, career_number, gt7_dr_rating, gt7_sr_rating, willing_host, display_name))`)
+        .select(`id, car_number, entry_drivers(driver_id, drivers(id, career_number, gt7_dr_rating, gt7_sr_rating, willing_host, display_name, nationality))`)
         .eq('event_id', eventId)
         .neq('status', 'withdrawn');
     if (!entries?.length) { toast('No entries to allocate.', 'error'); return; }
@@ -3358,11 +3358,15 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     // Host selection — pick the highest-rated willing driver per lobby.
     // These drivers are always host if present in their lobby, regardless of willing_host flag.
     const DEFAULT_HOSTS = ['SparksTheory', 'l888-1'];
+    // Excluded from hosting entirely (connection quality) regardless of
+    // willing_host or DEFAULT_HOSTS status.
+    const HOST_EXCLUDED_NATIONALITIES = ['ZA'];
     const lobbyMap = new Map();
     entries.forEach(en => {
         const ln = en._lobby;
         if (!ln) return;
         (en.entry_drivers || []).forEach(ed => {
+            if (HOST_EXCLUDED_NATIONALITIES.includes(ed.drivers?.nationality)) return;
             const isDefaultHost = DEFAULT_HOSTS.includes(ed.drivers?.display_name);
             if (!ed.drivers?.willing_host && !isDefaultHost) return;
             const skill = isDefaultHost ? Infinity : skillFor(ed);
