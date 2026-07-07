@@ -3358,15 +3358,23 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     // Host selection — pick the highest-rated willing driver per lobby.
     // These drivers are always host if present in their lobby, regardless of willing_host flag.
     const DEFAULT_HOSTS = ['SparksTheory', 'l888-1'];
-    // Excluded from hosting entirely (connection quality) regardless of
-    // willing_host or DEFAULT_HOSTS status.
-    const HOST_EXCLUDED_NATIONALITIES = ['ZA'];
+    // Only drivers from these nationalities are eligible to host (connection
+    // quality to the lobby region), regardless of willing_host or
+    // DEFAULT_HOSTS status. Geographic Europe, including UK/Norway/
+    // Switzerland/Iceland. Russia and Türkiye deliberately left out —
+    // transcontinental, latency to either can vary a lot; add them here if
+    // that turns out fine in practice.
+    const HOST_ELIGIBLE_NATIONALITIES = [
+        'AD','AT','BE','BG','BY','CH','CY','CZ','DE','DK','EE','ES','FI','FR',
+        'GB','GR','HR','HU','IE','IS','IT','LT','LU','LV','MC','MT','NL','NO',
+        'PL','PT','RO','RS','SE','SI','SK','SM','UA',
+    ];
     const lobbyMap = new Map();
     entries.forEach(en => {
         const ln = en._lobby;
         if (!ln) return;
         (en.entry_drivers || []).forEach(ed => {
-            if (HOST_EXCLUDED_NATIONALITIES.includes(ed.drivers?.nationality)) return;
+            if (!HOST_ELIGIBLE_NATIONALITIES.includes(ed.drivers?.nationality)) return;
             const isDefaultHost = DEFAULT_HOSTS.includes(ed.drivers?.display_name);
             if (!ed.drivers?.willing_host && !isDefaultHost) return;
             const skill = isDefaultHost ? Infinity : skillFor(ed);
