@@ -7235,6 +7235,7 @@ async function renderMessages() {
                 <button class="btn btn-ghost" onclick="openLobbyHostsModal()">Message Lobby Hosts</button>
                 <button class="btn btn-ghost" onclick="openSoloDriversModal()">Message Solo Drivers</button>
                 <button class="btn btn-ghost" onclick="openNoManufacturerModal()">Message No Manufacturer</button>
+                <button class="btn btn-ghost" onclick="openTeamLeadersModal()">Message Team Leaders</button>
                 <button class="btn btn-primary" onclick="openBroadcastModal()">Message All Drivers</button>
             </div>
         </div>
@@ -7384,6 +7385,44 @@ async function sendNoManufacturerMessage() {
     if (error) { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
     toast(`Sent to ${data.count} driver${data.count === 1 ? '' : 's'}.`, 'success');
+    closeModal();
+    if (currentSection === 'messages') await renderMessages();
+    await refreshMsgsBadge();
+}
+
+async function openTeamLeadersModal() {
+    const { data: rows } = await sb.from('teams')
+        .select('leader_driver_id, leader:drivers!leader_driver_id(user_id)')
+        .not('leader_driver_id', 'is', null);
+    const count = new Set((rows || []).filter(r => r.leader?.user_id).map(r => r.leader_driver_id)).size;
+    openModal('Message Team Leaders', `
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">Sends to every claimed driver who leads a team — use this for team-admin announcements (roster changes, entry deadlines) without messaging every driver. There's no undo.</p>
+        <div class="badge badge-gold" style="margin-bottom:1rem">${count} team leader${count === 1 ? '' : 's'} will receive this</div>
+        <form id="entity-form">
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" name="subject" placeholder="e.g. Roster deadline reminder">
+            </div>
+            <div class="form-group">
+                <label>Message <span class="required">*</span></label>
+                <textarea name="message" rows="8" required placeholder="Type your message…"></textarea>
+            </div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="sendTeamLeadersMessage()">Send</button>`
+    );
+}
+
+async function sendTeamLeadersMessage() {
+    const d = getFormData('entity-form');
+    if (!d.message) { toast('Message body is required.', 'error'); return; }
+    const { data, error } = await sb.rpc('message_team_leaders', {
+        p_subject: d.subject || null,
+        p_message: d.message,
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
+    toast(`Sent to ${data.count} team leader${data.count === 1 ? '' : 's'}.`, 'success');
     closeModal();
     if (currentSection === 'messages') await renderMessages();
     await refreshMsgsBadge();
