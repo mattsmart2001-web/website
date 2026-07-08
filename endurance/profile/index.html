@@ -382,10 +382,24 @@
         <div class="upcoming-list" id="upcoming-list"></div>
     </div>
 
-    <!-- Lobby room code — appears once split notifications have gone out -->
+    <!-- Race lobby — current event, split, and lobby ID -->
     <div class="card" id="card-lobby-room" style="display:none">
-        <div class="card-title" id="lobby-room-title">Split Lobby</div>
-        <div id="lobby-room-body"></div>
+        <div class="card-title">Race Lobby</div>
+        <div class="standing-grid">
+            <div class="standing-item">
+                <div class="si-label">Current Event</div>
+                <div class="si-value" id="lobby-room-event" style="font-size:1rem">—</div>
+            </div>
+            <div class="standing-item">
+                <div class="si-label">Split</div>
+                <div class="si-value" id="lobby-room-split">—</div>
+            </div>
+            <div class="standing-item">
+                <div class="si-label">Lobby ID</div>
+                <div class="si-value" id="lobby-room-id" style="font-size:1.3rem">—</div>
+            </div>
+        </div>
+        <div id="lobby-room-extra"></div>
     </div>
 
     <!-- Recent results -->
@@ -924,8 +938,10 @@ async function toggleAbsence(eventId, driverId, checkbox) {
     if (row) row.classList.toggle('absent', checkbox.checked);
 }
 
-// Split lobby room code — only appears once splits are notified (final)
-// for whichever of the driver's upcoming events is soonest.
+// Race Lobby card — Current Event / Split / Lobby ID. Shows as soon as the
+// driver has an entry in the next scheduled event, even before splits
+// exist. Split fills in once allocated (immediately for the host, once
+// notified for everyone else). Lobby ID fills in once the host posts it.
 let _lobbyRoomCtx = null; // { eventId, lobbyNumber, isHost }
 
 async function loadLobbyRoomCode(driverId) {
@@ -936,21 +952,33 @@ async function loadLobbyRoomCode(driverId) {
         .select('entries!inner(id, event_id, lobby_number, host_driver_id, events!inner(id, name, round, starts_at, status, splits_notified_at, season_id))')
         .eq('driver_id', driverId)
         .eq('entries.events.season_id', season.id)
-        .eq('entries.events.status', 'scheduled')
-        .not('entries.lobby_number', 'is', null);
+        .eq('entries.events.status', 'scheduled');
 
-    // Hosts see this as soon as their split exists, so they can prep ahead
-    // of time. Everyone else only once split notifications have gone out —
-    // before that they don't officially know their own split assignment.
-    const candidates = (rows || []).map(r => r.entries).filter(en =>
-        en && (en.host_driver_id === driverId || en.events.splits_notified_at != null)
-    );
+    const candidates = (rows || []).map(r => r.entries).filter(Boolean);
     if (!candidates.length) { document.getElementById('card-lobby-room').style.display = 'none'; return; }
 
     candidates.sort((a, b) => new Date(a.events.starts_at) - new Date(b.events.starts_at));
     const en = candidates[0];
     const ev = en.events;
-    const isHost = en.host_driver_id === driverId;
+    const isHost = en.lobby_number != null && en.host_driver_id === driverId;
+    // Hosts know their split as soon as it's allocated, so they can prep
+    // ahead of time. Everyone else only once split notifications have gone
+    // out — before that they don't officially know their own assignment.
+    const splitKnown = en.lobby_number != null && (isHost || ev.splits_notified_at != null);
+
+    document.getElementById('lobby-room-event').textContent = `R${ev.round} — ${ev.name}`;
+    document.getElementById('lobby-room-split').textContent = splitKnown ? en.lobby_number : 'TBC';
+
+    const idEl = document.getElementById('lobby-room-id');
+    const extra = document.getElementById('lobby-room-extra');
+
+    if (!splitKnown) {
+        idEl.textContent = '—';
+        extra.innerHTML = '';
+        _lobbyRoomCtx = null;
+        document.getElementById('card-lobby-room').style.display = '';
+        return;
+    }
 
     _lobbyRoomCtx = { eventId: ev.id, lobbyNumber: en.lobby_number, isHost };
 
@@ -960,22 +988,20 @@ async function loadLobbyRoomCode(driverId) {
         .eq('lobby_number', en.lobby_number)
         .maybeSingle();
 
-    document.getElementById('lobby-room-title').textContent = `Split ${en.lobby_number} Lobby — Round ${ev.round}`;
-    const body = document.getElementById('lobby-room-body');
+    idEl.textContent = rc?.room_code || (isHost ? '—' : 'Pending');
 
     if (isHost) {
-        body.innerHTML = `
-            <p style="color:var(--muted);font-size:0.85rem;margin:0 0 0.75rem">You're hosting this split. Post the Lobby ID here once you've created the Custom Race in GT7 — everyone in your split can see it, even if they're not on Discord.</p>
+        extra.innerHTML = `
+            <p style="color:var(--muted);font-size:0.85rem;margin:0.75rem 0">You're hosting this split. Post the Lobby ID here once you've created the Custom Race in GT7 — everyone in your split can see it, even if they're not on Discord.</p>
             <div class="form-group">
                 <label class="field-label">Lobby ID</label>
                 <input type="text" id="lobby-room-input" placeholder="e.g. 123-456-789" value="${esc(rc?.room_code || '')}">
             </div>
             <button class="btn-save" id="lobby-room-save" onclick="saveLobbyRoomCode()">Post Lobby ID</button>`;
     } else {
-        body.innerHTML = rc?.room_code
-            ? `<p style="color:var(--muted);font-size:0.85rem;margin:0 0 0.5rem">Lobby ID for your split:</p>
-               <div class="elo-value" style="font-size:1.4rem">${esc(rc.room_code)}</div>`
-            : `<p style="color:var(--muted);font-size:0.85rem;margin:0">Your host hasn't posted the Lobby ID yet — check back closer to race time, or watch your split's Discord channel.</p>`;
+        extra.innerHTML = rc?.room_code
+            ? ''
+            : `<p style="color:var(--muted);font-size:0.85rem;margin:0.75rem 0 0">Your host hasn't posted the Lobby ID yet — check back closer to race time, or watch your split's Discord channel.</p>`;
     }
 
     document.getElementById('card-lobby-room').style.display = '';
