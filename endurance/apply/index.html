@@ -313,7 +313,7 @@
                 <div class="form-section-title">Championship Preferences</div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="field-mfr">Preferred Manufacturer</label>
+                        <label for="field-mfr">Preferred Manufacturer <span class="req" id="mfr-req" style="display:none">*</span></label>
                         <select id="field-mfr" name="preferred_manufacturer_id">
                             <option value="">— No preference —</option>
                         </select>
@@ -489,6 +489,10 @@ function setType(type) {
     document.getElementById('btn-team').classList.toggle('active', type === 'team');
     const tn = document.getElementById('field-team-name');
     if (tn) tn.required = type === 'team';
+    const mfr = document.getElementById('field-mfr');
+    const mfrReq = document.getElementById('mfr-req');
+    if (mfr) mfr.required = type === 'team';
+    if (mfrReq) mfrReq.style.display = type === 'team' ? '' : 'none';
 }
 
 async function submitForm(e) {
