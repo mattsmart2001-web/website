@@ -3238,6 +3238,13 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                         onclick="moveEntryLobby('${en.id}',-1,'${eventId}','${esc(eventName)}','${seasonId}')">↑</button>
                     <button class="btn-icon" title="Move entry to a slower split"
                         onclick="moveEntryLobby('${en.id}',1,'${eventId}','${esc(eventName)}','${seasonId}')">↓</button>
+                    ${lobbyNum !== 0 && d ? (
+                        en.host_driver_id === d.id
+                            ? `<button class="btn-icon" title="Remove as host"
+                                onclick="removeEntryHost('${en.id}','${esc(d.display_name)}','${eventId}','${esc(eventName)}','${seasonId}')">Unhost</button>`
+                            : `<button class="btn-icon" title="Set as host for this split"
+                                onclick="setEntryHost('${en.id}','${d.id}','${esc(d.display_name)}','${eventId}','${esc(eventName)}','${seasonId}',${lobbyNum})">Host</button>`
+                    ) : ''}
                     ${lobbyNum !== 0 ? `<button class="btn-icon" title="Unassign entry"
                         onclick="setEntryLobby('${en.id}',null,'${eventId}','${esc(eventName)}','${seasonId}')">×</button>` : ''}
                 </div></td>
@@ -3425,6 +3432,80 @@ async function clearAllLobbies(eventId, eventName, seasonId) {
     await viewEventLobbies(eventId, eventName, seasonId);
 }
 
+// Fetches the event's race-settings columns and POSTs a single lobby-host
+// email. Returns true/false; shared by the bulk Notify Drivers flow and
+// the manual Set Host action.
+async function sendLobbyHostEmail(accessToken, driverId, eventId, eventName, lobbyNumber, ev) {
+    try {
+        const res = await fetch('/.netlify/functions/send-lobby-host-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({
+                driver_id:    driverId,
+                event_name:   eventName,
+                round:        ev?.round ?? null,
+                lobby_number: lobbyNumber,
+                starts_at:    ev?.starts_at ?? null,
+                race_settings: {
+                    tyre_wear:       ev?.tyre_wear       ?? null,
+                    fuel_consumption:ev?.fuel_consumption ?? null,
+                    time_multiplier: ev?.time_multiplier  ?? null,
+                    weather:         ev?.weather          ?? null,
+                    time_of_day:     ev?.time_of_day      ?? null,
+                    damage_level:    ev?.damage_level     ?? null,
+                    slipstream:      ev?.slipstream       ?? null,
+                    bop_enabled:     ev?.bop_enabled      ?? false,
+                    equal_conditions_mode:    ev?.equal_conditions_mode    ?? false,
+                    shortcut_penalty:         ev?.shortcut_penalty         ?? false,
+                    wall_collision_penalty:   ev?.wall_collision_penalty   ?? false,
+                    car_collision_penalty:    ev?.car_collision_penalty    ?? false,
+                    ghosting:                 ev?.ghosting                 ?? false,
+                    pit_lane_cutting_penalty: ev?.pit_lane_cutting_penalty ?? false,
+                },
+                quali_same_as_race: ev?.quali_same_as_race !== false,
+                quali_notes:        ev?.quali_notes        ?? null,
+            }),
+        });
+        if (!res.ok) console.warn('Host email failed for', driverId, res.status, await res.text());
+        return res.ok;
+    } catch (e) { console.warn('Host email error:', e); return false; }
+}
+
+const EVENT_RACE_SETTINGS_COLUMNS = 'round, starts_at, tyre_wear, fuel_consumption, time_multiplier, weather, time_of_day, damage_level, slipstream, bop_enabled, quali_same_as_race, quali_notes, equal_conditions_mode, shortcut_penalty, wall_collision_penalty, car_collision_penalty, ghosting, pit_lane_cutting_penalty';
+
+async function setEntryHost(entryId, driverId, driverName, eventId, eventName, seasonId, lobbyNum) {
+    if (!confirm(`Set ${driverName} as host for Split ${lobbyNum}?\n\nThey'll immediately get hosting instructions by email and in their portal inbox. Any existing host for this split will be replaced.`)) return;
+
+    // Only one host per lobby — clear any existing host in this split first.
+    await sb.from('entries').update({ host_driver_id: null }).eq('event_id', eventId).eq('lobby_number', lobbyNum);
+    const { error } = await sb.from('entries').update({ host_driver_id: driverId }).eq('id', entryId);
+    if (error) { toast(error.message, 'error'); return; }
+
+    const { data: pmData, error: pmErr } = await sb.rpc('notify_single_lobby_host', { p_entry_id: entryId });
+    if (pmErr || !pmData?.ok) console.warn('Host portal message failed:', pmErr?.message || pmData?.error);
+
+    let emailed = false;
+    try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session?.access_token) {
+            const { data: ev } = await sb.from('events').select(EVENT_RACE_SETTINGS_COLUMNS).eq('id', eventId).maybeSingle();
+            emailed = await sendLobbyHostEmail(session.access_token, driverId, eventId, eventName, lobbyNum, ev);
+        }
+    } catch (e) { console.warn('Host email dispatch error:', e); }
+
+    toast(`${driverName} set as host for Split ${lobbyNum}.${emailed ? ' Email sent.' : ' Portal message sent, but the email may have failed — check console.'}`, 'success');
+    await refreshMsgsBadge();
+    await viewEventLobbies(eventId, eventName, seasonId);
+}
+
+async function removeEntryHost(entryId, driverName, eventId, eventName, seasonId) {
+    if (!confirm(`Remove ${driverName} as host? They won't be notified of this — message them separately if needed.`)) return;
+    const { error } = await sb.from('entries').update({ host_driver_id: null }).eq('id', entryId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Host removed.', 'success');
+    await viewEventLobbies(eventId, eventName, seasonId);
+}
+
 async function notifyLobbies(eventId, eventName, seasonId) {
     if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox, lobby hosts will additionally get hosting instructions in their inbox and by email, and a summary will post to Discord #split-announcements.`)) return;
     const { data, error } = await sb.rpc('notify_lobby_assignments', { p_event_id: eventId });
@@ -3438,50 +3519,16 @@ async function notifyLobbies(eventId, eventName, seasonId) {
     try {
         const { data: { session: hostSession } } = await sb.auth.getSession();
         if (hostSession?.access_token) {
-            const { data: ev } = await sb.from('events')
-                .select('round, starts_at, tyre_wear, fuel_consumption, time_multiplier, weather, time_of_day, damage_level, slipstream, bop_enabled, quali_same_as_race, quali_notes, equal_conditions_mode, shortcut_penalty, wall_collision_penalty, car_collision_penalty, ghosting, pit_lane_cutting_penalty')
-                .eq('id', eventId).maybeSingle();
+            const { data: ev } = await sb.from('events').select(EVENT_RACE_SETTINGS_COLUMNS).eq('id', eventId).maybeSingle();
             const { data: hostEntries } = await sb.from('entries')
                 .select('lobby_number, host_driver_id')
                 .eq('event_id', eventId)
                 .not('host_driver_id', 'is', null);
             if (hostEntries?.length) {
-                let hostEmailsSent = 0;
-                await Promise.all(hostEntries.map(async en => {
-                    try {
-                        const res = await fetch('/.netlify/functions/send-lobby-host-email', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${hostSession.access_token}` },
-                            body: JSON.stringify({
-                                driver_id:    en.host_driver_id,
-                                event_name:   eventName,
-                                round:        ev?.round ?? null,
-                                lobby_number: en.lobby_number,
-                                starts_at:    ev?.starts_at ?? null,
-                                race_settings: {
-                                    tyre_wear:       ev?.tyre_wear       ?? null,
-                                    fuel_consumption:ev?.fuel_consumption ?? null,
-                                    time_multiplier: ev?.time_multiplier  ?? null,
-                                    weather:         ev?.weather          ?? null,
-                                    time_of_day:     ev?.time_of_day      ?? null,
-                                    damage_level:    ev?.damage_level     ?? null,
-                                    slipstream:      ev?.slipstream       ?? null,
-                                    bop_enabled:     ev?.bop_enabled      ?? false,
-                                    equal_conditions_mode:    ev?.equal_conditions_mode    ?? false,
-                                    shortcut_penalty:         ev?.shortcut_penalty         ?? false,
-                                    wall_collision_penalty:   ev?.wall_collision_penalty   ?? false,
-                                    car_collision_penalty:    ev?.car_collision_penalty    ?? false,
-                                    ghosting:                 ev?.ghosting                 ?? false,
-                                    pit_lane_cutting_penalty: ev?.pit_lane_cutting_penalty ?? false,
-                                },
-                                quali_same_as_race: ev?.quali_same_as_race !== false,
-                                quali_notes:        ev?.quali_notes        ?? null,
-                            }),
-                        });
-                        if (res.ok) hostEmailsSent++;
-                        else console.warn('Host email failed for', en.host_driver_id, res.status, await res.text());
-                    } catch (e) { console.warn('Host email error:', e); }
-                }));
+                const results = await Promise.all(hostEntries.map(en =>
+                    sendLobbyHostEmail(hostSession.access_token, en.host_driver_id, eventId, eventName, en.lobby_number, ev)
+                ));
+                const hostEmailsSent = results.filter(Boolean).length;
                 if (hostEmailsSent > 0) toast(`Host email${hostEmailsSent === 1 ? '' : 's'} sent to ${hostEmailsSent} driver${hostEmailsSent === 1 ? '' : 's'}.`, 'success');
             }
         }
