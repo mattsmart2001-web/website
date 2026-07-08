@@ -3355,14 +3355,18 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
         const en = entries[i];
         const driversInEntry = Math.max(1, (en.entry_drivers || []).length);
         const wouldExceedTarget = currentCount > 0 && currentCount + driversInEntry > currentTarget;
-        const wouldExceedCap    = currentCount + driversInEntry > lobbySize;
-        const canBump = currentLobby < targetLobbies;
-        if ((wouldExceedTarget || wouldExceedCap) && canBump) {
+        const wouldExceedCap    = currentCount > 0 && currentCount + driversInEntry > lobbySize;
+        // The cap is a hard limit and must be enforced even on what was
+        // estimated to be the last lobby — open an extra lobby beyond
+        // targetLobbies rather than silently blowing past lobbySize.
+        // The softer "even distribution" target only bumps while there's
+        // still a planned lobby left to bump into.
+        if (wouldExceedCap || (wouldExceedTarget && currentLobby < targetLobbies)) {
             remainingDrivers -= currentCount;
-            remainingLobbies--;
+            remainingLobbies = Math.max(1, remainingLobbies - 1);
             currentLobby++;
             currentCount = 0;
-            currentTarget = Math.ceil(remainingDrivers / Math.max(1, remainingLobbies));
+            currentTarget = Math.ceil(remainingDrivers / remainingLobbies);
         }
         currentCount += driversInEntry;
         totalDrivers += driversInEntry;
