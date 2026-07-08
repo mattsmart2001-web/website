@@ -6,10 +6,12 @@
 -- channel. This adds an in-portal place for the host to post it,
 -- readable by everyone in that split, live via Realtime.
 --
--- Only appears/writable once split notifications have gone out
--- (events.splits_notified_at is set) — splits are considered final at
--- that point, so posting a room code before then would risk it going
--- stale if the split changes.
+-- The assigned host can post/update it as soon as splits exist (no need
+-- to wait for Notify Drivers) — they may want to prep ahead of time.
+-- Regular (non-host) drivers only see the card once split notifications
+-- have gone out (events.splits_notified_at is set), since before that
+-- they don't officially know their own split assignment yet; that part
+-- is enforced in the portal query rather than RLS.
 -- ============================================================
 
 ALTER TABLE events
@@ -44,23 +46,17 @@ CREATE POLICY "drivers in the lobby can read the room code" ON lobby_room_codes
     );
 
 -- Only that split's assigned host (or an admin) can post/update the room
--- code, and only once split notifications have actually gone out.
+-- code — as soon as they're assigned, no need to wait for notifications.
 CREATE POLICY "the lobby host can set the room code" ON lobby_room_codes
     FOR INSERT TO authenticated
     WITH CHECK (
-        (
-            EXISTS (
-                SELECT 1
-                FROM   entries en
-                JOIN   drivers d ON d.id = en.host_driver_id
-                WHERE  en.event_id     = lobby_room_codes.event_id
-                  AND  en.lobby_number = lobby_room_codes.lobby_number
-                  AND  d.user_id       = auth.uid()
-            )
-            AND EXISTS (
-                SELECT 1 FROM events ev
-                WHERE ev.id = lobby_room_codes.event_id AND ev.splits_notified_at IS NOT NULL
-            )
+        EXISTS (
+            SELECT 1
+            FROM   entries en
+            JOIN   drivers d ON d.id = en.host_driver_id
+            WHERE  en.event_id     = lobby_room_codes.event_id
+              AND  en.lobby_number = lobby_room_codes.lobby_number
+              AND  d.user_id       = auth.uid()
         )
         OR EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = auth.uid() AND ur.role = 'admin')
     );
@@ -79,19 +75,13 @@ CREATE POLICY "the lobby host can update the room code" ON lobby_room_codes
         OR EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = auth.uid() AND ur.role = 'admin')
     )
     WITH CHECK (
-        (
-            EXISTS (
-                SELECT 1
-                FROM   entries en
-                JOIN   drivers d ON d.id = en.host_driver_id
-                WHERE  en.event_id     = lobby_room_codes.event_id
-                  AND  en.lobby_number = lobby_room_codes.lobby_number
-                  AND  d.user_id       = auth.uid()
-            )
-            AND EXISTS (
-                SELECT 1 FROM events ev
-                WHERE ev.id = lobby_room_codes.event_id AND ev.splits_notified_at IS NOT NULL
-            )
+        EXISTS (
+            SELECT 1
+            FROM   entries en
+            JOIN   drivers d ON d.id = en.host_driver_id
+            WHERE  en.event_id     = lobby_room_codes.event_id
+              AND  en.lobby_number = lobby_room_codes.lobby_number
+              AND  d.user_id       = auth.uid()
         )
         OR EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = auth.uid() AND ur.role = 'admin')
     );

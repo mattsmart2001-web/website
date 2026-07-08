@@ -937,10 +937,14 @@ async function loadLobbyRoomCode(driverId) {
         .eq('driver_id', driverId)
         .eq('entries.events.season_id', season.id)
         .eq('entries.events.status', 'scheduled')
-        .not('entries.events.splits_notified_at', 'is', null)
         .not('entries.lobby_number', 'is', null);
 
-    const candidates = (rows || []).map(r => r.entries).filter(Boolean);
+    // Hosts see this as soon as their split exists, so they can prep ahead
+    // of time. Everyone else only once split notifications have gone out —
+    // before that they don't officially know their own split assignment.
+    const candidates = (rows || []).map(r => r.entries).filter(en =>
+        en && (en.host_driver_id === driverId || en.events.splits_notified_at != null)
+    );
     if (!candidates.length) { document.getElementById('card-lobby-room').style.display = 'none'; return; }
 
     candidates.sort((a, b) => new Date(a.events.starts_at) - new Date(b.events.starts_at));

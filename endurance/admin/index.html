@@ -3278,6 +3278,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn btn-ghost" onclick="clearAllLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Clear All</button>
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
                 <button class="btn-icon danger" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
+                <button class="btn-icon danger" onclick="deleteLobbyRoomCodes('${eventId}','${esc(eventName)}')">Delete Room Codes</button>
                 <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Split size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
             </div>
         </div>
@@ -3555,6 +3556,13 @@ async function deleteLobbyNotifications(eventId, eventName, seasonId) {
     if (!data?.ok) { toast(data?.error || 'Could not delete.', 'error'); return; }
     toast(`Deleted ${data.count} notification${data.count === 1 ? '' : 's'}.`, 'success');
     await refreshMsgsBadge();
+}
+
+async function deleteLobbyRoomCodes(eventId, eventName) {
+    if (!confirm(`Delete all posted Lobby IDs for "${eventName}"?\n\nUse this once the event is over, before allocating splits for the next one.`)) return;
+    const { error, count } = await sb.from('lobby_room_codes').delete({ count: 'exact' }).eq('event_id', eventId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(`Deleted ${count ?? 0} lobby room code${count === 1 ? '' : 's'}.`, 'success');
 }
 
 async function moveEntryLobby(entryId, delta, eventId, eventName, seasonId) {
