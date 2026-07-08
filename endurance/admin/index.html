@@ -3160,6 +3160,10 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
         (rated   || []).forEach(r => ratedSet.add(r.driver_id));
     }
 
+    // Lobby ID posted by each split's host, if any.
+    const { data: roomCodes } = await sb.from('lobby_room_codes').select('lobby_number, room_code').eq('event_id', eventId);
+    const roomCodeByLobby = new Map((roomCodes || []).map(r => [r.lobby_number, r.room_code]));
+
     // Each driver's "skill" = real Elo if they've been rated, else DR+SR seed.
     const driverSkill = ed => {
         if (ratedSet.has(ed.driver_id)) return ratingMap.get(ed.driver_id) ?? 1500;
@@ -3250,9 +3254,15 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 </div></td>
             </tr>`;
         }).join('');
+        const roomCode = roomCodeByLobby.get(lobbyNum);
+        const roomCodeHTML = lobbyNum !== 0
+            ? (roomCode
+                ? `<span class="badge badge-gold" style="margin-left:0.6rem">Lobby ID: ${esc(roomCode)}</span>`
+                : `<span class="badge badge-muted" style="margin-left:0.6rem">No Lobby ID yet</span>`)
+            : '';
         return `<div class="section-card" style="margin-bottom:1rem">
             <div class="section-card-header">
-                <span class="section-card-title">${title} <span class="td-muted" style="font-weight:normal;font-size:0.78rem">· ${list.length} driver${list.length === 1 ? '' : 's'}</span></span>
+                <span class="section-card-title">${title} <span class="td-muted" style="font-weight:normal;font-size:0.78rem">· ${list.length} driver${list.length === 1 ? '' : 's'}</span>${roomCodeHTML}</span>
             </div>
             <table><thead><tr>
                 <th>Car</th><th>Driver</th><th>Team</th><th>Skill</th><th>Move</th><th></th>
