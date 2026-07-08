@@ -382,6 +382,12 @@
         <div class="upcoming-list" id="upcoming-list"></div>
     </div>
 
+    <!-- Lobby room code — appears once split notifications have gone out -->
+    <div class="card" id="card-lobby-room" style="display:none">
+        <div class="card-title" id="lobby-room-title">Split Lobby</div>
+        <div id="lobby-room-body"></div>
+    </div>
+
     <!-- Recent results -->
     <div class="card" id="card-results" style="display:none">
         <div class="card-title">Recent Results</div>
@@ -918,6 +924,79 @@ async function toggleAbsence(eventId, driverId, checkbox) {
     if (row) row.classList.toggle('absent', checkbox.checked);
 }
 
+// Split lobby room code — only appears once splits are notified (final)
+// for whichever of the driver's upcoming events is soonest.
+let _lobbyRoomCtx = null; // { eventId, lobbyNumber, isHost }
+
+async function loadLobbyRoomCode(driverId) {
+    const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+    if (!season) { document.getElementById('card-lobby-room').style.display = 'none'; return; }
+
+    const { data: rows } = await sb.from('entry_drivers')
+        .select('entries!inner(id, event_id, lobby_number, host_driver_id, events!inner(id, name, round, starts_at, status, splits_notified_at, season_id))')
+        .eq('driver_id', driverId)
+        .eq('entries.events.season_id', season.id)
+        .eq('entries.events.status', 'scheduled')
+        .not('entries.events.splits_notified_at', 'is', null)
+        .not('entries.lobby_number', 'is', null);
+
+    const candidates = (rows || []).map(r => r.entries).filter(Boolean);
+    if (!candidates.length) { document.getElementById('card-lobby-room').style.display = 'none'; return; }
+
+    candidates.sort((a, b) => new Date(a.events.starts_at) - new Date(b.events.starts_at));
+    const en = candidates[0];
+    const ev = en.events;
+    const isHost = en.host_driver_id === driverId;
+
+    _lobbyRoomCtx = { eventId: ev.id, lobbyNumber: en.lobby_number, isHost };
+
+    const { data: rc } = await sb.from('lobby_room_codes')
+        .select('room_code, updated_at')
+        .eq('event_id', ev.id)
+        .eq('lobby_number', en.lobby_number)
+        .maybeSingle();
+
+    document.getElementById('lobby-room-title').textContent = `Split ${en.lobby_number} Lobby — Round ${ev.round}`;
+    const body = document.getElementById('lobby-room-body');
+
+    if (isHost) {
+        body.innerHTML = `
+            <p style="color:var(--muted);font-size:0.85rem;margin:0 0 0.75rem">You're hosting this split. Post the Lobby ID here once you've created the Custom Race in GT7 — everyone in your split can see it, even if they're not on Discord.</p>
+            <div class="form-group">
+                <label class="field-label">Lobby ID</label>
+                <input type="text" id="lobby-room-input" placeholder="e.g. 123-456-789" value="${esc(rc?.room_code || '')}">
+            </div>
+            <button class="btn-save" id="lobby-room-save" onclick="saveLobbyRoomCode()">Post Lobby ID</button>`;
+    } else {
+        body.innerHTML = rc?.room_code
+            ? `<p style="color:var(--muted);font-size:0.85rem;margin:0 0 0.5rem">Lobby ID for your split:</p>
+               <div class="elo-value" style="font-size:1.4rem">${esc(rc.room_code)}</div>`
+            : `<p style="color:var(--muted);font-size:0.85rem;margin:0">Your host hasn't posted the Lobby ID yet — check back closer to race time, or watch your split's Discord channel.</p>`;
+    }
+
+    document.getElementById('card-lobby-room').style.display = '';
+}
+
+async function saveLobbyRoomCode() {
+    if (!_lobbyRoomCtx) return;
+    const input = document.getElementById('lobby-room-input');
+    const btn = document.getElementById('lobby-room-save');
+    const code = input.value.trim();
+    if (!code) { toast('Enter the Lobby ID first.', 'error'); return; }
+    btn.disabled = true;
+    const { data: { user } } = await sb.auth.getUser();
+    const { error } = await sb.from('lobby_room_codes').upsert({
+        event_id:     _lobbyRoomCtx.eventId,
+        lobby_number: _lobbyRoomCtx.lobbyNumber,
+        room_code:    code,
+        updated_by:   user?.id || null,
+        updated_at:   new Date().toISOString(),
+    }, { onConflict: 'event_id,lobby_number' });
+    btn.disabled = false;
+    if (error) { toast('Could not save — please try again.', 'error'); return; }
+    toast('Lobby ID posted.', 'success');
+}
+
 async function loadBadges(driverId) {
     // Career counts + per-circuit completions in parallel. Circuit list
     // is the distinct lower-cased events.circuit_name for any classified
@@ -1086,6 +1165,7 @@ async function init() {
     // Load async sections (don't block page display)
     loadStanding(driver.id);
     loadUpcoming(driver.id);
+    loadLobbyRoomCode(driver.id);
     loadRecentResults(driver.id);
     loadInbox(driver.id);
     loadBadges(driver.id);
@@ -1617,6 +1697,16 @@ function setupRealtimeSubscriptions(driver) {
     _realtimeChannels.push(
         sb.channel('driver:' + driver.id)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'drivers', filter: `id=eq.${driver.id}` }, debounced(() => loadTeamCard(driver)))
+            .subscribe()
+    );
+
+    // Lobby room code — table is tiny (one row per split per event), so a
+    // single unfiltered subscription and a debounced re-fetch of this
+    // driver's own room code is simplest; no need to filter by event/split.
+    const reloadLobbyRoom = debounced(() => loadLobbyRoomCode(driver.id));
+    _realtimeChannels.push(
+        sb.channel('lobby-room:' + driver.id)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'lobby_room_codes' }, reloadLobbyRoom)
             .subscribe()
     );
 
