@@ -3257,7 +3257,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
         const roomCode = roomCodeByLobby.get(lobbyNum);
         const roomCodeHTML = lobbyNum !== 0
             ? (roomCode
-                ? `<span class="badge badge-gold" style="margin-left:0.6rem">Lobby ID: ${esc(roomCode)}</span>`
+                ? `<span class="badge badge-gold" style="margin-left:0.6rem">Lobby ID: <span style="text-transform:none">${esc(roomCode)}</span></span>`
                 : `<span class="badge badge-muted" style="margin-left:0.6rem">No Lobby ID yet</span>`)
             : '';
         return `<div class="section-card" style="margin-bottom:1rem">
