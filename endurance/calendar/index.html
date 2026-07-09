@@ -281,6 +281,31 @@
         .grid-driver-meta a { color: inherit; text-decoration: none; }
         .grid-driver-meta a:hover { color: var(--gold); }
         .grid-mfr-name { font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.1em; color: var(--muted); }
+        .grid-row.is-host {
+            background: linear-gradient(90deg, rgba(255,209,102,0.12), rgba(255,209,102,0.02) 75%);
+            border-radius: 8px;
+            margin: 0 -0.6rem;
+            padding-left: 0.6rem;
+            padding-right: 0.6rem;
+        }
+        .grid-host-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.22rem;
+            margin-left: 0.5rem;
+            padding: 0.08rem 0.5rem;
+            background: linear-gradient(135deg, rgba(255,209,102,0.3), rgba(255,209,102,0.1));
+            border: 1px solid rgba(255,209,102,0.55);
+            border-radius: 999px;
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
 
         /* Race Details modal */
         .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; }
@@ -535,7 +560,7 @@ async function openGrid(eventId, eventName) {
     overlay.classList.add('open');
 
     const { data: entries, error } = await sb.from('entries')
-        .select('id, car_number, car_model, lobby_number, status, teams(name, slug), manufacturers(name, brand_color, car_name, logo_url), entry_drivers(stint_role, drivers(display_name, slug, career_number))')
+        .select('id, car_number, car_model, lobby_number, status, host_driver_id, teams(name, slug), manufacturers(name, brand_color, car_name, logo_url), entry_drivers(stint_role, drivers(id, display_name, slug, career_number))')
         .eq('event_id', eventId)
         .in('status', ['confirmed']);
 
@@ -582,17 +607,21 @@ async function openGrid(eventId, eventName) {
                 : (en.teams?.name ? esc(en.teams.name) : '<em>Solo</em>');
             const mfrName = en.manufacturers?.name || '';
             const number  = d?.career_number ?? en.car_number;
+            const isHost = d?.id && en.host_driver_id === d.id;
             const driverName = d?.display_name
                 ? (d.slug ? `<a href="/endurance/drivers/?slug=${esc(d.slug)}" style="color:inherit;text-decoration:none">${esc(d.display_name)}</a>` : esc(d.display_name))
                 : '<em>No driver</em>';
+            const hostBadge = isHost
+                ? `<span class="grid-host-badge" title="Lobby host for this split">🎛️ Host</span>`
+                : '';
             const logoUrl = en.manufacturers?.logo_url;
             const logoHtml = logoUrl
                 ? `<img class="grid-mfr-logo" src="${esc(logoUrl)}" alt="${esc(mfrName)}" loading="lazy">`
                 : `<span style="width:28px;display:inline-block"></span>`;
-            return `<div class="grid-row">
+            return `<div class="grid-row${isHost ? ' is-host' : ''}">
                 <span class="grid-car">${number != null ? '#' + number : '—'}</span>
                 <div class="grid-info">
-                    <div class="grid-driver-name">${driverName}</div>
+                    <div class="grid-driver-name">${driverName}${hostBadge}</div>
                     <div class="grid-driver-meta">${teamCell}${mfrName ? ' · <span class="grid-mfr-name">' + esc(mfrName) + (en.manufacturers?.car_name ? ' — ' + esc(en.manufacturers.car_name) : '') + '</span>' : ''}</div>
                 </div>
                 ${logoHtml}
