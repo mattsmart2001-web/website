@@ -1300,6 +1300,7 @@ async function loadTeamCard(driver) {
         </div>`).join('');
 
     document.getElementById('team-summary').innerHTML = `
+        ${team.banner_url ? `<img src="${esc(team.banner_url)}" alt="${esc(team.name)} banner" style="width:100%;aspect-ratio:3/1;object-fit:cover;border-radius:8px;border:1px solid var(--border);margin-bottom:1rem;display:block">` : ''}
         <div class="team-summary-grid" style="margin-bottom:0.85rem">
             <div class="team-info-item">
                 <div class="ti-label">Team</div>
