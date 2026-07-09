@@ -633,7 +633,7 @@ async function openGrid(eventId, eventName) {
                 <span class="grid-car">${number != null ? '#' + number : '—'}</span>
                 <div class="grid-info">
                     <div class="grid-driver-name">${driverName}${hostBadge}</div>
-                    <div class="grid-driver-meta">${teamCell}${mfrName ? ' · <span class="grid-mfr-name">' + esc(mfrName) + (en.manufacturers?.car_name ? ' — ' + esc(en.manufacturers.car_name) : '') + '</span>' : ''}</div>
+                    <div class="grid-driver-meta">${teamCell}</div>
                 </div>
                 ${logoHtml}
             </div>`;
