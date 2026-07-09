@@ -98,6 +98,7 @@
         /* Hero */
         .hero { padding: 3rem 2rem 1.5rem; max-width: 1100px; margin: 0 auto; }
         .hero-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; }
+        .team-profile-banner { width: 100%; aspect-ratio: 3 / 1; max-height: 280px; object-fit: cover; border-radius: 14px; margin-bottom: 1.75rem; display: block; border: 1px solid var(--border); }
         .hero-title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.4rem; }
         .hero-sub { color: var(--muted); font-size: 0.88rem; }
 
@@ -151,6 +152,10 @@
             position: relative; overflow: hidden;
         }
         .team-card:hover { border-color: rgba(255,209,102,0.35); transform: translateY(-2px); }
+        .team-card-banner {
+            display: block; width: calc(100% + 3rem); height: 110px; object-fit: cover;
+            margin: -1.5rem -1.5rem 0.25rem; border-radius: 12px 12px 0 0;
+        }
         .team-card-logo-bg {
             position: absolute; bottom: -18px; right: -18px;
             width: 150px; height: 150px;
@@ -310,7 +315,7 @@ function mfrBadge(logoUrl, brandColor, name) {
 async function showListing() {
     document.title = 'Teams — GTEC';
     const [{ data, error }, { data: activeSeasons }, { data: standings }, { data: dCounts }] = await Promise.all([
-        sb.from('teams').select('id, name, slug, home_country, bio, manufacturers(name,brand_color,logo_url,car_name)').order('name'),
+        sb.from('teams').select('id, name, slug, home_country, bio, banner_url, manufacturers(name,brand_color,logo_url,car_name)').order('name'),
         sb.from('seasons').select('id').eq('is_active', true).limit(1),
         sb.from('team_standings').select('team_id, season_id, points'),
         sb.from('drivers').select('id, display_name, slug, career_number, photo_url, current_team_id').not('current_team_id', 'is', null).order('display_name'),
@@ -358,6 +363,7 @@ async function showListing() {
             : '';
         return `
         <div class="team-card" data-search="${esc(search)}" data-name="${esc(t.name)}" data-points="${pts}" data-mfr="${esc(mfr?.name || '')}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'" style="${mfr?.brand_color ? `border-top-color:${esc(mfr.brand_color)}` : ''}">
+            ${t.banner_url ? `<img class="team-card-banner" src="${esc(t.banner_url)}" alt="">` : ''}
             ${mfr?.logo_url ? `<img class="team-card-logo-bg" src="${esc(mfr.logo_url)}" alt="" aria-hidden="true">` : ''}
             ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}</div>` : ''}
             <div class="team-card-name">${esc(t.name)}</div>
@@ -542,6 +548,8 @@ async function showProfile() {
         </div>
         <div class="content">
             <a class="back-link" href="/endurance/teams/">← All Teams</a>
+
+            ${team.banner_url ? `<img class="team-profile-banner" src="${esc(team.banner_url)}" alt="${esc(team.name)} banner">` : ''}
 
             <div class="profile-header">
                 <div class="profile-name">${esc(team.name)}</div>

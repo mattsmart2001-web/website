@@ -235,6 +235,13 @@
         .upload-progress { height: 3px; background: var(--border); border-radius: 2px; margin-top: 0.5rem; overflow: hidden; display: none; }
         .upload-progress-bar { height: 100%; background: linear-gradient(90deg, var(--gold-deep), var(--gold)); border-radius: 2px; width: 0; transition: width 0.3s; }
 
+        /* Team banner upload */
+        .banner-upload { position: relative; width: 100%; aspect-ratio: 3 / 1; border-radius: 8px; cursor: pointer; overflow: hidden; background: var(--bg-2); margin-bottom: 0.75rem; }
+        .banner-upload img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .banner-upload .placeholder { width: 100%; height: 100%; border: 2px dashed rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.8rem; text-align: center; padding: 0.5rem; }
+        .banner-upload .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; color: #fff; font-size: 0.8rem; font-weight: 600; }
+        .banner-upload:hover .overlay { opacity: 1; }
+
         /* Save */
         .btn-save { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.75rem; background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: #1a1300; border: none; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: filter 0.2s; }
         .btn-save:hover { filter: brightness(1.08); }
@@ -420,6 +427,21 @@
         </div>
         <div id="team-edit" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)">
             <div style="font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.85rem">Team Settings</div>
+            <div class="form-group full" style="margin-bottom:1.25rem">
+                <label class="field-label">Team Banner</label>
+                <div class="banner-upload" id="banner-upload" onclick="document.getElementById('banner-file').click()">
+                    <div class="placeholder" id="banner-placeholder">Click to upload a banner</div>
+                    <div class="overlay">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="margin-right:0.4rem"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        Change Banner
+                    </div>
+                </div>
+                <input type="file" id="banner-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadTeamBanner(this)">
+                <div class="upload-progress" id="banner-upload-progress">
+                    <div class="upload-progress-bar" id="banner-upload-bar"></div>
+                </div>
+                <div class="form-hint">Recommended 1200×400px (3:1), JPG/PNG/WebP, under 5MB. Shows on the teams grid and your team page.</div>
+            </div>
             <div class="form-grid">
                 <div class="form-group full">
                     <label class="field-label">Team Bio</label>
@@ -627,6 +649,45 @@ async function uploadPhoto(input) {
     if (upd) { toast(upd.message, 'error'); return; }
     setPhotoUI(publicUrl);
     toast('Photo updated!', 'success');
+}
+
+function setBannerUI(url) {
+    const wrap = document.getElementById('banner-upload');
+    const placeholder = document.getElementById('banner-placeholder');
+    if (!wrap) return;
+    if (url) {
+        let img = wrap.querySelector('img');
+        if (!img) {
+            img = document.createElement('img'); img.alt = '';
+            wrap.insertBefore(img, wrap.firstChild);
+        }
+        img.src = url;
+        placeholder.style.display = 'none';
+    } else {
+        placeholder.style.display = '';
+    }
+}
+
+async function uploadTeamBanner(input) {
+    const file = input.files[0]; input.value = '';
+    if (!file) return;
+    if (!_editableTeam) { toast('Only the team leader can upload a banner.', 'error'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5 MB.', 'error'); return; }
+    const prog = document.getElementById('banner-upload-progress');
+    const bar  = document.getElementById('banner-upload-bar');
+    prog.style.display = 'block'; bar.style.width = '30%';
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+    const { error: upErr } = await sb.storage.from('gtec-team-banners').upload(`${_editableTeam.id}.${ext}`, file, { upsert: true, contentType: file.type });
+    if (upErr) { toast(upErr.message, 'error'); prog.style.display = 'none'; return; }
+    bar.style.width = '75%';
+    const { data: { publicUrl } } = sb.storage.from('gtec-team-banners').getPublicUrl(`${_editableTeam.id}.${ext}`);
+    const { error: upd } = await sb.from('teams').update({ banner_url: publicUrl }).eq('id', _editableTeam.id);
+    bar.style.width = '100%';
+    setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0'; }, 600);
+    if (upd) { toast(upd.message, 'error'); return; }
+    _editableTeam.banner_url = publicUrl;
+    setBannerUI(publicUrl);
+    toast('Banner updated!', 'success');
 }
 
 function openContactModal() {
@@ -1211,7 +1272,7 @@ let _shareStats   = { elo: null, tier: null, points: 0, wins: 0, podiums: 0, rac
 async function loadTeamCard(driver) {
     if (!driver.current_team_id) return;
     const { data: team } = await sb.from('teams')
-        .select('id, name, slug, bio, home_country, founded_on, leader_driver_id, manufacturers(name, brand_color, logo_url, car_name)')
+        .select('id, name, slug, bio, home_country, founded_on, leader_driver_id, banner_url, manufacturers(name, brand_color, logo_url, car_name)')
         .eq('id', driver.current_team_id)
         .maybeSingle();
     if (!team) return;
@@ -1266,6 +1327,7 @@ async function loadTeamCard(driver) {
         document.getElementById('team-bio').value = team.bio || '';
         document.getElementById('team-home-country').innerHTML = window.gtecCountryOptions(team.home_country);
         document.getElementById('team-founded-on').value = team.founded_on ? team.founded_on.slice(0, 10) : '';
+        setBannerUI(team.banner_url);
     }
 
     const { data: windowOpen } = await sb.rpc('is_team_window_open');
