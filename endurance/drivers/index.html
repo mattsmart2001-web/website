@@ -463,7 +463,8 @@
             opacity: 0.35;
         }
 
-        /* Elo tier pill inside card — shrink to fit the side-badges column */
+        /* Elo tier pill inside card — remove margin, shrink */
+        .driver-card-tier { margin-top: 0.3rem; }
         .driver-card-tier .elo-tier { margin-left: 0 !important; font-size: 0.55rem !important; padding: 0.12rem 0.5rem !important; }
 
         /* ===== PROFILE ===== */
@@ -1005,10 +1006,7 @@ async function showListing() {
                 <span class="driver-card-pts-value">${pts}</span>
                 <span class="driver-card-pts-label">PTS</span>
             </div>
-            ${(tier || badgeRow) ? `<div class="driver-card-side-badges">
-                ${tier ? `<div class="driver-card-tier">${tier}</div>` : ''}
-                ${badgeRow}
-            </div>` : ''}
+            ${badgeRow ? `<div class="driver-card-side-badges">${badgeRow}</div>` : ''}
             <div class="driver-card-info">
                 ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
                 <div class="driver-card-name">${esc(d.display_name)}</div>
@@ -1016,6 +1014,7 @@ async function showListing() {
                     ${d.nationality ? `<span>${flag(d.nationality)} ${esc(d.nationality)}</span>` : ''}
                     ${d.teams?.name ? `<div class="team-line">${esc(d.teams.name)}</div>` : ''}
                 </div>
+                ${tier ? `<div class="driver-card-tier">${tier}</div>` : ''}
             </div>
         </div>`;
     }).join('');
