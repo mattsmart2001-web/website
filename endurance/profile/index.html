@@ -681,12 +681,13 @@ async function uploadTeamBanner(input) {
     if (upErr) { toast(upErr.message, 'error'); prog.style.display = 'none'; return; }
     bar.style.width = '75%';
     const { data: { publicUrl } } = sb.storage.from('gtec-team-banners').getPublicUrl(`${_editableTeam.id}.${ext}`);
-    const { error: upd } = await sb.from('teams').update({ banner_url: publicUrl }).eq('id', _editableTeam.id);
+    const bustedUrl = `${publicUrl}?v=${Date.now()}`;
+    const { error: upd } = await sb.from('teams').update({ banner_url: bustedUrl }).eq('id', _editableTeam.id);
     bar.style.width = '100%';
     setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0'; }, 600);
     if (upd) { toast(upd.message, 'error'); return; }
-    _editableTeam.banner_url = publicUrl;
-    setBannerUI(publicUrl);
+    _editableTeam.banner_url = bustedUrl;
+    setBannerUI(bustedUrl);
     toast('Banner updated!', 'success');
 }
 
