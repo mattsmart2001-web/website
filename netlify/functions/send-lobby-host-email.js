@@ -70,6 +70,8 @@ function buildRaceSettingsTable(rs) {
         rs.engine_swap     && ['Engine Swap',      rs.engine_swap === 'allowed' ? 'Allowed' : 'Prohibited'],
         rs.race_start      && ['Race Start',       { grid_start_fsc: 'Grid Start with False Start Check', grid_start: 'Grid Start', rolling_start: 'Rolling Start' }[rs.race_start] || rs.race_start],
         rs.autodrive       && ['AutoDrive',        rs.autodrive === 'allowed' ? 'Allowed' : 'Prohibited'],
+        rs.settings_allowed&& ['Settings Allowed', rs.settings_allowed === 'brake_balance_only' ? 'Brake Balance Only' : 'None'],
+        rs.initial_fuel    && ['Initial Fuel',     rs.initial_fuel === '50l' ? '50L' : 'Default'],
         rs.bop_enabled     && ['Balance of Performance', 'Enabled'],
         rs.equal_conditions_mode   && ['Equal Conditions Mode', 'On'],
         rs.shortcut_penalty        && ['Shortcut Penalty', 'On - Weak'],

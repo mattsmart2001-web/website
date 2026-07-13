@@ -517,7 +517,7 @@ async function load() {
                            e.bop_enabled != null || e.damage_level ||
                            e.refuel_rate_lps != null || e.slipstream ||
                            e.grip_reduction_off_track || e.nitrous || e.engine_swap ||
-                           e.race_start || e.autodrive ||
+                           e.race_start || e.autodrive || e.settings_allowed || e.initial_fuel ||
                            (Array.isArray(e.required_tyres) && e.required_tyres.length) ||
                            e.quali_same_as_race != null || e.quali_notes ||
                            e.equal_conditions_mode != null || e.shortcut_penalty != null ||
@@ -677,6 +677,8 @@ function openRaceDetails(eventId, eventName) {
         ['Engine Swap',        e.engine_swap ? (e.engine_swap === 'allowed' ? 'Allowed' : 'Prohibited') : null],
         ['Race Start',         e.race_start ? { grid_start_fsc: 'Grid Start with False Start Check', grid_start: 'Grid Start', rolling_start: 'Rolling Start' }[e.race_start] || e.race_start : null],
         ['AutoDrive',          e.autodrive ? (e.autodrive === 'allowed' ? 'Allowed' : 'Prohibited') : null],
+        ['Settings Allowed',   e.settings_allowed ? (e.settings_allowed === 'brake_balance_only' ? 'Brake Balance Only' : 'None') : null],
+        ['Initial Fuel',       e.initial_fuel ? (e.initial_fuel === '50l' ? '50L' : 'Default') : null],
         ['Required Tyres',     tyrePills],
         ['Equal Conditions Mode',    e.equal_conditions_mode == null ? null : (e.equal_conditions_mode ? 'On' : 'Off')],
         ['Shortcut Penalty',         e.shortcut_penalty == null ? null : (e.shortcut_penalty ? 'On - Weak' : 'Off')],

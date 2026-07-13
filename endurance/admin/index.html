@@ -2464,6 +2464,24 @@ function eventForm(e = {}) {
                 </div>
                 <div class="form-group"><!-- spacer --></div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Settings Allowed</label>
+                    <select name="settings_allowed">
+                        <option value="">—</option>
+                        <option value="brake_balance_only" ${e.settings_allowed === 'brake_balance_only' ? 'selected' : ''}>Brake Balance Only</option>
+                        <option value="none"               ${e.settings_allowed === 'none'               ? 'selected' : ''}>None</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Initial Fuel</label>
+                    <select name="initial_fuel">
+                        <option value="">—</option>
+                        <option value="default" ${e.initial_fuel === 'default' ? 'selected' : ''}>Default</option>
+                        <option value="50l"     ${e.initial_fuel === '50l'     ? 'selected' : ''}>50L</option>
+                    </select>
+                </div>
+            </div>
             <div class="form-group">
                 <label>Required Tyres <span style="color:var(--muted);font-weight:normal;font-size:0.72rem">(tick every compound drivers must use)</span></label>
                 <div style="display:flex;flex-wrap:wrap;gap:0.5rem 1rem;padding:0.55rem 0.65rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px">
@@ -2578,6 +2596,8 @@ async function saveEvent(id) {
         engine_swap:        d.engine_swap || null,
         race_start:         d.race_start || null,
         autodrive:          d.autodrive || null,
+        settings_allowed:   d.settings_allowed || null,
+        initial_fuel:       d.initial_fuel || null,
         required_tyres:     requiredTyres.length ? requiredTyres : null,
         equal_conditions_mode:   !!d.equal_conditions_mode,
         shortcut_penalty:        !!d.shortcut_penalty,
@@ -3522,6 +3542,8 @@ async function sendLobbyHostEmail(accessToken, driverId, eventId, eventName, lob
                     engine_swap:     ev?.engine_swap       ?? null,
                     race_start:      ev?.race_start        ?? null,
                     autodrive:       ev?.autodrive         ?? null,
+                    settings_allowed: ev?.settings_allowed ?? null,
+                    initial_fuel:    ev?.initial_fuel       ?? null,
                     bop_enabled:     ev?.bop_enabled      ?? false,
                     equal_conditions_mode:    ev?.equal_conditions_mode    ?? false,
                     shortcut_penalty:         ev?.shortcut_penalty         ?? false,
@@ -3541,7 +3563,7 @@ async function sendLobbyHostEmail(accessToken, driverId, eventId, eventName, lob
     } catch (e) { console.warn('Host email error:', e); return false; }
 }
 
-const EVENT_RACE_SETTINGS_COLUMNS = 'round, starts_at, tyre_wear, fuel_consumption, time_multiplier, weather, time_of_day, damage_level, slipstream, grip_reduction_off_track, nitrous, engine_swap, race_start, autodrive, bop_enabled, quali_same_as_race, quali_notes, equal_conditions_mode, shortcut_penalty, wall_collision_penalty, car_collision_penalty, correct_vehicle_course, flag_rules, ghosting, pit_lane_cutting_penalty';
+const EVENT_RACE_SETTINGS_COLUMNS = 'round, starts_at, tyre_wear, fuel_consumption, time_multiplier, weather, time_of_day, damage_level, slipstream, grip_reduction_off_track, nitrous, engine_swap, race_start, autodrive, settings_allowed, initial_fuel, bop_enabled, quali_same_as_race, quali_notes, equal_conditions_mode, shortcut_penalty, wall_collision_penalty, car_collision_penalty, correct_vehicle_course, flag_rules, ghosting, pit_lane_cutting_penalty';
 
 async function setEntryHost(entryId, driverId, driverName, eventId, eventName, seasonId, lobbyNum) {
     if (!confirm(`Set ${driverName} as host for Split ${lobbyNum}?\n\nThey'll immediately get hosting instructions by email and in their portal inbox. Any existing host for this split will be replaced.`)) return;
@@ -4766,7 +4788,7 @@ async function generateCircuitGuide(eventId, circuitName, seasonId, seasonName, 
     document.querySelector('.modal-body').innerHTML = '<div class="loading-state">Building circuit guide…</div>';
     try {
         const { data: ev } = await sb.from('events')
-            .select('id,name,circuit_name,round,starts_at,duration_hours,weather,time_of_day,time_multiplier,tyre_wear,fuel_consumption,mandatory_pit_stops,required_tyres,bop_enabled,damage_level,slipstream,grip_reduction_off_track,nitrous,engine_swap,race_start,autodrive,starting_procedure,refuel_rate_lps,notes,equal_conditions_mode,shortcut_penalty,wall_collision_penalty,car_collision_penalty,correct_vehicle_course,flag_rules,ghosting,pit_lane_cutting_penalty')
+            .select('id,name,circuit_name,round,starts_at,duration_hours,weather,time_of_day,time_multiplier,tyre_wear,fuel_consumption,mandatory_pit_stops,required_tyres,bop_enabled,damage_level,slipstream,grip_reduction_off_track,nitrous,engine_swap,race_start,autodrive,settings_allowed,initial_fuel,starting_procedure,refuel_rate_lps,notes,equal_conditions_mode,shortcut_penalty,wall_collision_penalty,car_collision_penalty,correct_vehicle_course,flag_rules,ghosting,pit_lane_cutting_penalty')
             .eq('id', eventId).maybeSingle();
         const draft = _buildCircuitGuide(ev || { id:eventId, circuit_name:circuitName, round, starts_at:null, duration_hours:null }, seasonName);
         _openArticleEditor(`Circuit Guide: ${esc(circuitName)}`, draft);
@@ -4868,6 +4890,8 @@ function _buildCircuitGuide(ev, seasonName) {
     if (ev.engine_swap)        fmtItems.push(`<strong>Engine Swap:</strong> ${ev.engine_swap === 'allowed' ? 'Allowed' : 'Prohibited'}`);
     if (ev.race_start)         fmtItems.push(`<strong>Race Start:</strong> ${esc(_hcRaceStart(ev.race_start))}`);
     if (ev.autodrive)          fmtItems.push(`<strong>AutoDrive:</strong> ${ev.autodrive === 'allowed' ? 'Allowed' : 'Prohibited'}`);
+    if (ev.settings_allowed)   fmtItems.push(`<strong>Settings Allowed:</strong> ${ev.settings_allowed === 'brake_balance_only' ? 'Brake Balance Only' : 'None'}`);
+    if (ev.initial_fuel)       fmtItems.push(`<strong>Initial Fuel:</strong> ${ev.initial_fuel === '50l' ? '50L' : 'Default'}`);
     if (ev.required_tyres?.length) fmtItems.push(`<strong>Required tyres:</strong> ${ev.required_tyres.map(esc).join(', ')}`);
     if (ev.equal_conditions_mode != null)   fmtItems.push(`<strong>Equal Conditions Mode:</strong> ${ev.equal_conditions_mode ? 'On' : 'Off'}`);
     if (ev.shortcut_penalty != null)        fmtItems.push(`<strong>Shortcut Penalty:</strong> ${ev.shortcut_penalty ? 'On - Weak' : 'Off'}`);
