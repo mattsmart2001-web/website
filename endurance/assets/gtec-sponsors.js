@@ -30,6 +30,12 @@
             img:  '/yfood_logo_black-960x264.png',
             className: 'gtec-sponsor-yfood',
         },
+        {
+            name: 'All Mapped Out',
+            href: 'https://allmappedout.com/',
+            img:  '/all-mapped-out-logo.png',
+            className: '',
+        },
     ];
 
     // Inject CSS once.
