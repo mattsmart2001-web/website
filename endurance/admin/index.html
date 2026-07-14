@@ -3182,6 +3182,36 @@ function drSrSeed(drLetter, srLetter) {
     return (DR_TO_ELO[drLetter] ?? 1500) + (SR_TO_BONUS[srLetter] ?? 0);
 }
 
+const HOST_SS_SLOTS = [
+    { column: 'quali_screenshot_1_url', label: 'Qualifying 1' },
+    { column: 'quali_screenshot_2_url', label: 'Qualifying 2' },
+    { column: 'race_screenshot_1_url',  label: 'Race Results 1' },
+    { column: 'race_screenshot_2_url',  label: 'Race Results 2' },
+];
+const HOST_SS_COLUMNS = HOST_SS_SLOTS.map(s => s.column);
+
+async function viewSplitScreenshots(eventId, lobbyNum, eventName) {
+    openModal(`Split ${lobbyNum} Screenshots · ${eventName}`, '<div class="loading-state">Loading screenshots…</div>', `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`);
+    const { data: shot } = await sb.from('lobby_result_screenshots')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('lobby_number', lobbyNum)
+        .maybeSingle();
+    const body = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem">
+        ${HOST_SS_SLOTS.map(s => {
+            const url = shot?.[s.column];
+            return `<div>
+                <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.1em;color:var(--muted);text-transform:uppercase;margin-bottom:0.4rem">${s.label}</div>
+                ${url
+                    ? `<a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" alt="${s.label}" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px;border:1px solid var(--border);display:block"></a>`
+                    : `<div style="width:100%;aspect-ratio:16/9;border:2px dashed var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.8rem">Not uploaded</div>`}
+            </div>`;
+        }).join('')}
+    </div>
+    ${shot?.updated_at ? `<div style="margin-top:1rem;font-size:0.75rem;color:var(--muted)">Last updated ${new Date(shot.updated_at).toLocaleString()}</div>` : ''}`;
+    document.querySelector('.modal-body').innerHTML = body;
+}
+
 async function viewEventLobbies(eventId, eventName, seasonId) {
     const panel = document.getElementById('event-entries-panel');
     panel.innerHTML = '<div class="loading-state">Loading splits…</div>';
@@ -3240,6 +3270,10 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
     // Lobby ID posted by each split's host, if any.
     const { data: roomCodes } = await sb.from('lobby_room_codes').select('lobby_number, room_code').eq('event_id', eventId);
     const roomCodeByLobby = new Map((roomCodes || []).map(r => [r.lobby_number, r.room_code]));
+
+    // Result screenshots posted by each split's host, if any.
+    const { data: screenshotRows } = await sb.from('lobby_result_screenshots').select('*').eq('event_id', eventId);
+    const screenshotsByLobby = new Map((screenshotRows || []).map(r => [r.lobby_number, r]));
 
     // Each driver's "skill" = real Elo if they've been rated, else DR+SR seed.
     const driverSkill = ed => {
@@ -3337,9 +3371,14 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 ? `<span class="badge badge-gold" style="margin-left:0.6rem">Lobby ID: <span style="text-transform:none">${esc(roomCode)}</span></span>`
                 : `<span class="badge badge-muted" style="margin-left:0.6rem">No Lobby ID yet</span>`)
             : '';
+        const shots = screenshotsByLobby.get(lobbyNum);
+        const shotCount = shots ? HOST_SS_COLUMNS.filter(c => shots[c]).length : 0;
+        const screenshotsHTML = lobbyNum !== 0
+            ? `<button class="btn-icon" style="margin-left:0.6rem" onclick="viewSplitScreenshots('${eventId}',${lobbyNum},'${esc(eventName)}')">Screenshots (${shotCount}/4)</button>`
+            : '';
         return `<div class="section-card" style="margin-bottom:1rem">
             <div class="section-card-header">
-                <span class="section-card-title">${title} <span class="td-muted" style="font-weight:normal;font-size:0.78rem">· ${list.length} driver${list.length === 1 ? '' : 's'}</span>${roomCodeHTML}</span>
+                <span class="section-card-title">${title} <span class="td-muted" style="font-weight:normal;font-size:0.78rem">· ${list.length} driver${list.length === 1 ? '' : 's'}</span>${roomCodeHTML}${screenshotsHTML}</span>
             </div>
             <table><thead><tr>
                 <th>Car</th><th>Driver</th><th>Team</th><th>Skill</th><th>Move</th><th></th>

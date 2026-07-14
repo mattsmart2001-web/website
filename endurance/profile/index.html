@@ -242,6 +242,22 @@
         .banner-upload .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; color: #fff; font-size: 0.8rem; font-weight: 600; }
         .banner-upload:hover .overlay { opacity: 1; }
 
+        /* Split result screenshot uploads */
+        .host-ss-event { border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem; margin-bottom: 0.75rem; }
+        .host-ss-event:last-child { margin-bottom: 0; }
+        .host-ss-event-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.15rem; }
+        .host-ss-event-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.65rem; }
+        .host-ss-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+        .host-ss-slot { position: relative; aspect-ratio: 16 / 9; border-radius: 6px; cursor: pointer; overflow: hidden; background: var(--bg-2); display: block; }
+        .host-ss-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .host-ss-slot .placeholder { width: 100%; height: 100%; border: 2px dashed rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.68rem; text-align: center; padding: 0.3rem; }
+        .host-ss-slot .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; color: #fff; font-size: 0.68rem; font-weight: 600; text-align: center; }
+        .host-ss-slot:hover .overlay { opacity: 1; }
+        .host-ss-slot-label { font-size: 0.65rem; color: var(--muted); text-align: center; margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        @media (max-width: 480px) {
+            .host-ss-slots { grid-template-columns: repeat(2, 1fr); }
+        }
+
         /* Save */
         .btn-save { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.75rem; background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: #1a1300; border: none; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: filter 0.2s; }
         .btn-save:hover { filter: brightness(1.08); }
@@ -407,6 +423,14 @@
             </div>
         </div>
         <div id="lobby-room-extra"></div>
+    </div>
+
+    <!-- Split result screenshots — hosts of recently-run splits upload
+         their 2 qualifying + 2 race results screenshots here for admin. -->
+    <div class="card" id="card-host-screenshots" style="display:none">
+        <div class="card-title">Race Result Screenshots</div>
+        <p style="color:var(--muted);font-size:0.85rem;margin:0 0 0.85rem">Splits you've hosted recently. Upload the qualifying and race results screens so admin can enter results.</p>
+        <div id="host-screenshots-list"></div>
     </div>
 
     <!-- Recent results -->
@@ -1089,6 +1113,101 @@ async function saveLobbyRoomCode() {
     toast('Lobby ID posted.', 'success');
 }
 
+// Split result screenshots — lists every split the driver has hosted in
+// the active season whose event has already started, each with 4 upload
+// slots (2 qualifying, 2 race results) for admin to use when entering
+// results.
+const HOST_SS_SLOTS = [
+    { column: 'quali_screenshot_1_url', slug: 'quali1', label: 'Quali 1' },
+    { column: 'quali_screenshot_2_url', slug: 'quali2', label: 'Quali 2' },
+    { column: 'race_screenshot_1_url',  slug: 'race1',  label: 'Race 1' },
+    { column: 'race_screenshot_2_url',  slug: 'race2',  label: 'Race 2' },
+];
+
+async function loadHostScreenshots(driverId) {
+    const card = document.getElementById('card-host-screenshots');
+    const list = document.getElementById('host-screenshots-list');
+
+    const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+    if (!season) { card.style.display = 'none'; return; }
+
+    const { data: rows } = await sb.from('entries')
+        .select('event_id, lobby_number, events!inner(id, name, round, starts_at, season_id)')
+        .eq('host_driver_id', driverId)
+        .eq('events.season_id', season.id)
+        .not('lobby_number', 'is', null)
+        .lte('events.starts_at', new Date().toISOString());
+
+    if (!rows?.length) { card.style.display = 'none'; return; }
+
+    // De-dupe (a driver should only ever host one entry per split, but
+    // don't assume it) and cap to the 5 most recent hosted splits.
+    const seen = new Set();
+    const hosted = [];
+    rows.forEach(r => {
+        const key = `${r.event_id}:${r.lobby_number}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        hosted.push(r);
+    });
+    hosted.sort((a, b) => new Date(b.events.starts_at) - new Date(a.events.starts_at));
+    hosted.length = Math.min(hosted.length, 5);
+
+    const eventIds = hosted.map(r => r.event_id);
+    const { data: shots } = await sb.from('lobby_result_screenshots')
+        .select('*')
+        .in('event_id', eventIds);
+    const shotMap = new Map((shots || []).map(s => [`${s.event_id}:${s.lobby_number}`, s]));
+
+    list.innerHTML = hosted.map(r => {
+        const ev = r.events;
+        const shot = shotMap.get(`${r.event_id}:${r.lobby_number}`) || {};
+        const slotsHTML = HOST_SS_SLOTS.map(s => {
+            const url = shot[s.column];
+            return `
+                <div>
+                    <label class="host-ss-slot">
+                        <input type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSplitScreenshot(this,'${r.event_id}',${r.lobby_number},'${s.column}','${driverId}')">
+                        ${url ? `<img src="${esc(url)}" alt="${s.label}"><div class="overlay">Replace</div>` : `<div class="placeholder">+ ${s.label}</div>`}
+                    </label>
+                    <div class="host-ss-slot-label">${s.label}</div>
+                </div>`;
+        }).join('');
+        return `
+            <div class="host-ss-event">
+                <div class="host-ss-event-title">R${ev.round} — ${esc(ev.name)} · Split ${r.lobby_number}</div>
+                <div class="host-ss-event-meta">${fmtDate(ev.starts_at)}</div>
+                <div class="host-ss-slots">${slotsHTML}</div>
+            </div>`;
+    }).join('');
+
+    card.style.display = '';
+}
+
+async function uploadSplitScreenshot(input, eventId, lobbyNumber, column, driverId) {
+    const file = input.files[0]; input.value = '';
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toast('Image must be under 8 MB.', 'error'); return; }
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+    const slot = HOST_SS_SLOTS.find(s => s.column === column).slug;
+    const path = `${eventId}-${lobbyNumber}-${slot}.${ext}`;
+    const { error: upErr } = await sb.storage.from('gtec-split-screenshots').upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) { toast(upErr.message, 'error'); return; }
+    const { data: { publicUrl } } = sb.storage.from('gtec-split-screenshots').getPublicUrl(path);
+    const bustedUrl = `${publicUrl}?v=${Date.now()}`;
+    const { data: { user } } = await sb.auth.getUser();
+    const { error: upd } = await sb.from('lobby_result_screenshots').upsert({
+        event_id:     eventId,
+        lobby_number: lobbyNumber,
+        [column]:     bustedUrl,
+        updated_by:   user?.id || null,
+        updated_at:   new Date().toISOString(),
+    }, { onConflict: 'event_id,lobby_number' });
+    if (upd) { toast(upd.message, 'error'); return; }
+    toast('Screenshot uploaded.', 'success');
+    await loadHostScreenshots(driverId);
+}
+
 async function loadBadges(driverId) {
     // Career counts + per-circuit completions in parallel. Circuit list
     // is the distinct lower-cased events.circuit_name for any classified
@@ -1258,6 +1377,7 @@ async function init() {
     loadStanding(driver.id);
     loadUpcoming(driver.id);
     loadLobbyRoomCode(driver.id);
+    loadHostScreenshots(driver.id);
     loadRecentResults(driver.id);
     loadInbox(driver.id);
     loadBadges(driver.id);
