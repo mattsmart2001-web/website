@@ -1135,13 +1135,14 @@ async function loadHostScreenshots(driverId) {
         .select('event_id, lobby_number, events!inner(id, name, round, starts_at, season_id)')
         .eq('host_driver_id', driverId)
         .eq('events.season_id', season.id)
-        .not('lobby_number', 'is', null)
-        .lte('events.starts_at', new Date().toISOString());
+        .not('lobby_number', 'is', null);
 
     if (!rows?.length) { card.style.display = 'none'; return; }
 
     // De-dupe (a driver should only ever host one entry per split, but
-    // don't assume it) and cap to the 5 most recent hosted splits.
+    // don't assume it) and cap to the 5 most recent hosted splits. Shows
+    // as soon as they're assigned as host — even before the race — and
+    // naturally disappears again if admin clears the split assignment.
     const seen = new Set();
     const hosted = [];
     rows.forEach(r => {
