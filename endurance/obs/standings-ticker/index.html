@@ -121,7 +121,6 @@ async function render() {
 
     const { data: standings } = await sb.from('driver_standings').select('*').eq('season_id', season.id);
     const rows = (standings || [])
-        .filter(r => Number(r.points) > 0)
         .sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
 
     if (!rows.length) { document.getElementById('err').style.display = 'block'; return; }
