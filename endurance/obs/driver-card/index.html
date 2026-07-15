@@ -113,12 +113,16 @@ async function render() {
     if (!slug) { document.getElementById('err').style.display = 'block'; return; }
 
     const { data: driver } = await sb.from('drivers')
-        .select('id, display_name, slug, nationality, career_number, photo_url, gt7_dr_rating, gt7_sr_rating, teams!current_team_id(name), manufacturers(name, brand_color, logo_url)')
+        .select('id, display_name, slug, nationality, career_number, photo_url, teams!current_team_id(name), manufacturers(name, brand_color, logo_url)')
         .eq('slug', slug).maybeSingle();
 
     if (!driver) { document.getElementById('err').textContent = 'Driver not found.'; document.getElementById('err').style.display = 'block'; return; }
 
-    const { data: rating } = await sb.from('driver_current_ratings').select('rating').eq('driver_id', driver.id).maybeSingle();
+    const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+    const [{ data: rating }, { data: standing }] = await Promise.all([
+        sb.from('driver_current_ratings').select('rating').eq('driver_id', driver.id).maybeSingle(),
+        season ? sb.from('driver_standings').select('points').eq('driver_id', driver.id).eq('season_id', season.id).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
 
     const card = document.getElementById('card');
     if (driver.manufacturers?.brand_color) card.style.setProperty('--mfr-color', driver.manufacturers.brand_color);
@@ -143,11 +147,12 @@ async function render() {
     document.getElementById('d-sub').innerHTML = subParts.join(' <span style="opacity:0.4">·</span> ');
 
     const chips = [];
+    if (standing?.points != null) {
+        chips.push(`<span class="chip"><span class="chip-label">PTS</span>${Number(standing.points)}</span>`);
+    }
     if (rating?.rating) {
         chips.push(`<span class="chip"><span class="chip-label">ELO</span>${Math.round(rating.rating)}</span>`);
     }
-    if (driver.gt7_dr_rating) chips.push(`<span class="chip"><span class="chip-label">DR</span>${esc(driver.gt7_dr_rating)}</span>`);
-    if (driver.gt7_sr_rating) chips.push(`<span class="chip"><span class="chip-label">SR</span>${esc(driver.gt7_sr_rating)}</span>`);
     document.getElementById('d-chips').innerHTML = chips.join('');
 
     card.classList.add('ready');
