@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GTEC — OBS Driver Card</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700;900&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-2: #11161f;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --gold: #ffd166;
+        --gold-deep: #c79a3a;
+        --border: rgba(255, 255, 255, 0.1);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        font-family: 'Inter', sans-serif;
+        overflow: hidden;
+    }
+    /* Widget hugs its own content — size the OBS Browser Source a bit
+       larger than needed (e.g. 620x180) and position/crop in OBS. */
+    body { display: flex; align-items: flex-end; height: 100vh; padding: 12px; }
+
+    #card {
+        display: none;
+        align-items: stretch;
+        gap: 0;
+        background: rgba(8, 11, 16, 0.88);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,209,102,0.06);
+        overflow: hidden;
+        opacity: 0;
+        transform: translateX(-30px);
+        animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    #card.ready { display: flex; }
+    @keyframes cardIn {
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    .mfr-accent { width: 6px; flex-shrink: 0; background: var(--mfr-color, var(--gold)); }
+
+    .avatar-wrap {
+        width: 76px; height: 76px; flex-shrink: 0; margin: 10px 0 10px 12px;
+        border-radius: 50%;
+        border: 2px solid var(--gold);
+        overflow: hidden;
+        background: var(--bg-2);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .avatar-init { font-family: 'Orbitron', sans-serif; font-size: 1.4rem; font-weight: 800; color: var(--gold); }
+
+    .info { padding: 10px 18px 10px 14px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 260px; }
+
+    .name-row { display: flex; align-items: baseline; gap: 0.5rem; }
+    .name { font-family: 'Anton', sans-serif; font-size: 1.35rem; letter-spacing: 0.02em; color: var(--text); text-transform: uppercase; line-height: 1.05; }
+    .car-num { font-family: 'Orbitron', sans-serif; font-size: 0.95rem; font-weight: 800; color: var(--gold); }
+
+    .sub-row { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+    .sub-row .team-name { color: var(--text); font-weight: 600; }
+    .mfr-logo { width: 15px; height: 15px; object-fit: contain; vertical-align: middle; }
+
+    .chips { display: flex; gap: 0.4rem; margin-top: 2px; }
+    .chip {
+        font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700;
+        letter-spacing: 0.04em; padding: 0.18em 0.55em; border-radius: 4px;
+        background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text);
+    }
+    .chip .chip-label { color: var(--muted); margin-right: 0.3em; }
+
+    .gtec-mark {
+        position: absolute; bottom: 4px; right: 8px;
+        font-family: 'Orbitron', sans-serif; font-size: 0.5rem; font-weight: 700;
+        letter-spacing: 0.25em; color: rgba(255,209,102,0.4); text-transform: uppercase;
+    }
+
+    #err { display: none; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 1rem; }
+</style>
+</head>
+<body>
+
+<div id="card"><div class="mfr-accent"></div><div class="avatar-wrap" id="avatar"></div><div class="info">
+    <div class="name-row"><span class="name" id="d-name"></span><span class="car-num" id="d-num"></span></div>
+    <div class="sub-row" id="d-sub"></div>
+    <div class="chips" id="d-chips"></div>
+</div></div>
+<div id="err">Add <code>?slug=driver-slug</code> to the URL to pick a driver.</div>
+
+<script src="/endurance/assets/countries.js"></script>
+<script src="/endurance/assets/gtec-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+
+const flagFor = code => (window.GTEC_COUNTRIES || []).find(c => c.code === (code || '').toUpperCase())?.flag || '';
+const esc = s => { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+const initials = name => (name || '??').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+async function render() {
+    const params = new URLSearchParams(location.search);
+    const slug = params.get('slug');
+    if (!slug) { document.getElementById('err').style.display = 'block'; return; }
+
+    const { data: driver } = await sb.from('drivers')
+        .select('id, display_name, slug, nationality, career_number, photo_url, gt7_dr_rating, gt7_sr_rating, teams!current_team_id(name), manufacturers(name, brand_color, logo_url)')
+        .eq('slug', slug).maybeSingle();
+
+    if (!driver) { document.getElementById('err').textContent = 'Driver not found.'; document.getElementById('err').style.display = 'block'; return; }
+
+    const { data: rating } = await sb.from('driver_current_ratings').select('rating').eq('driver_id', driver.id).maybeSingle();
+
+    const card = document.getElementById('card');
+    if (driver.manufacturers?.brand_color) card.style.setProperty('--mfr-color', driver.manufacturers.brand_color);
+
+    const avatar = document.getElementById('avatar');
+    avatar.innerHTML = driver.photo_url
+        ? `<img src="${esc(driver.photo_url)}" alt="">`
+        : `<span class="avatar-init">${initials(driver.display_name)}</span>`;
+
+    document.getElementById('d-name').textContent = driver.display_name || '';
+    document.getElementById('d-num').textContent = driver.career_number != null ? `#${driver.career_number}` : '';
+    document.title = `${driver.display_name} — GTEC OBS Card`;
+
+    const subParts = [];
+    if (driver.teams?.name) {
+        const mfrLogo = driver.manufacturers?.logo_url ? `<img class="mfr-logo" src="${esc(driver.manufacturers.logo_url)}" alt="">` : '';
+        subParts.push(`${mfrLogo}<span class="team-name">${esc(driver.teams.name)}</span>`);
+    } else if (driver.manufacturers?.name) {
+        subParts.push(esc(driver.manufacturers.name));
+    }
+    if (driver.nationality) subParts.push(`${flagFor(driver.nationality)} ${esc(driver.nationality)}`);
+    document.getElementById('d-sub').innerHTML = subParts.join(' <span style="opacity:0.4">·</span> ');
+
+    const chips = [];
+    if (rating?.rating) {
+        chips.push(`<span class="chip"><span class="chip-label">ELO</span>${Math.round(rating.rating)}</span>`);
+    }
+    if (driver.gt7_dr_rating) chips.push(`<span class="chip"><span class="chip-label">DR</span>${esc(driver.gt7_dr_rating)}</span>`);
+    if (driver.gt7_sr_rating) chips.push(`<span class="chip"><span class="chip-label">SR</span>${esc(driver.gt7_sr_rating)}</span>`);
+    document.getElementById('d-chips').innerHTML = chips.join('');
+
+    card.classList.add('ready');
+}
+
+render();
+</script>
+</body>
+</html>
