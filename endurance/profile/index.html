@@ -345,6 +345,14 @@
                     </svg>
                     <span>Share Driver Card</span>
                 </button>
+                <button class="profile-share-btn" id="obs-widget-btn" type="button" style="display:none" title="Copy a link to your OBS streaming overlay">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
+                        <rect x="3" y="4" width="18" height="14" rx="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="18" x2="12" y2="21"/>
+                    </svg>
+                    <span>Copy OBS Widget Link</span>
+                </button>
             </div>
             <div class="profile-tags" id="profile-tags"></div>
         </div>
@@ -951,8 +959,20 @@ async function loadStanding(driverId) {
     // Now that we have driver + stats wired, reveal the Share Card button
     // (was hidden in markup until the data was loaded).
     armShareButton();
+    armObsWidgetButton();
 
     card.style.display = '';
+}
+
+function armObsWidgetButton() {
+    const btn = document.getElementById('obs-widget-btn');
+    if (!btn || btn.dataset.armed === '1' || !_shareDriver) return;
+    btn.dataset.armed = '1';
+    btn.style.display = '';
+    btn.addEventListener('click', () => {
+        const url = `${location.origin}/endurance/obs/driver-card/?slug=${_shareDriver.slug}`;
+        navigator.clipboard.writeText(url).then(() => toast('OBS widget link copied!', 'success'));
+    });
 }
 
 function armShareButton() {
