@@ -7778,6 +7778,7 @@ async function sendDirectMessage() {
     if (error) { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
     toast('Message sent.', 'success');
+    notifyDriverOfReply(d.driver_id, d.message, d.subject || 'New message from GTEC Admin');
     closeModal();
     // Refresh the messages table if it's the current view.
     if (currentSection === 'messages') await renderMessages();
@@ -7931,15 +7932,15 @@ async function saveMessageStatus(id, isDirect = false, driverId = null) {
     await refreshMsgsBadge();
 }
 
-// Best-effort push for an admin reply — fire-and-forget, doesn't block the
-// save/close flow above.
-async function notifyDriverOfReply(driverId, reply) {
+// Best-effort push for an admin reply or direct message — fire-and-forget,
+// doesn't block the save/close flow above.
+async function notifyDriverOfReply(driverId, message, title = 'New reply from GTEC Admin') {
     try {
         const { data: { session } } = await sb.auth.getSession();
         if (!session?.access_token) return;
-        const preview = reply.length > 120 ? reply.slice(0, 117) + '…' : reply;
-        sendPushToDriver(session.access_token, driverId, 'New reply from GTEC Admin', preview, '/endurance/profile/');
-    } catch (e) { console.warn('Reply push notification error:', e); }
+        const preview = message.length > 120 ? message.slice(0, 117) + '…' : message;
+        sendPushToDriver(session.access_token, driverId, title, preview, '/endurance/profile/');
+    } catch (e) { console.warn('Message push notification error:', e); }
 }
 
 async function deleteMessage(id) {
