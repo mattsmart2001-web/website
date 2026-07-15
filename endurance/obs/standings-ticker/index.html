@@ -114,7 +114,7 @@ const esc = s => { if (s == null) return ''; return String(s).replace(/&/g,'&amp
 // long interval — this isn't meant to be live-live, just not stale.
 const REFRESH_MS = 90000;
 // Seconds of scroll per entry — tune the overall speed here.
-const SECONDS_PER_ENTRY = 0.45;
+const SECONDS_PER_ENTRY = 1.8;
 
 async function render() {
     const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
