@@ -271,6 +271,7 @@
         .header-icon-btn { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: background 0.2s, border-color 0.2s, color 0.2s; }
         .header-icon-btn:hover { border-color: rgba(255,209,102,0.4); color: var(--text); }
         .header-icon-btn.active { background: rgba(255,209,102,0.12); border-color: rgba(255,209,102,0.45); color: var(--gold); }
+        .header-icon-btn.unsupported { opacity: 0.35; border-style: dashed; }
         .contact-overlay { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 1.5rem; }
         .contact-overlay.open { display: flex; }
         .contact-modal { width: 100%; max-width: 540px; background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem 1.6rem 1.6rem; max-height: 92vh; overflow-y: auto; }
@@ -1434,12 +1435,28 @@ async function init() {
 }
 
 // Push notification opt-in — small bell icon next to Contact Admin.
-// Hidden entirely on browsers that don't support the Push API (e.g. iOS
-// Safari unless installed to home screen).
+// Browsers without Push API support (most commonly iOS Safari unless the
+// site's been added to the Home Screen) get a muted, explained version
+// instead of the icon just vanishing — a silently-missing icon reads as
+// broken rather than unsupported.
 async function initPushUI(driverId) {
     const btn = document.getElementById('push-toggle-btn');
-    if (!window.gtecPush || !window.gtecPush.isSupported()) { btn.style.display = 'none'; return; }
     btn.style.display = '';
+
+    if (!window.gtecPush || !window.gtecPush.isSupported()) {
+        btn.classList.add('unsupported');
+        btn.title = 'Push notifications aren\'t available here';
+        if (btn.dataset.armed !== '1') {
+            btn.dataset.armed = '1';
+            btn.addEventListener('click', () => {
+                const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+                toast(isIOS
+                    ? 'On iPhone: tap Share, then "Add to Home Screen" — then open GTEC from your home screen to turn on push notifications.'
+                    : 'Push notifications aren\'t supported in this browser.', 'error');
+            });
+        }
+        return;
+    }
 
     async function refresh() {
         const sub = await window.gtecPush.getSubscription();
