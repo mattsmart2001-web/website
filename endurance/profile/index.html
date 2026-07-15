@@ -268,9 +268,9 @@
         /* Contact Admin button + modal */
         .btn-contact { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.1rem; background: rgba(255,209,102,0.08); border: 1px solid rgba(255,209,102,0.3); border-radius: 999px; color: var(--gold); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
         .btn-contact:hover { background: rgba(255,209,102,0.15); border-color: rgba(255,209,102,0.55); }
-        .push-toggle-icon { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: background 0.2s, border-color 0.2s, color 0.2s; }
-        .push-toggle-icon:hover { border-color: rgba(255,209,102,0.4); color: var(--text); }
-        .push-toggle-icon.active { background: rgba(255,209,102,0.12); border-color: rgba(255,209,102,0.45); color: var(--gold); }
+        .header-icon-btn { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+        .header-icon-btn:hover { border-color: rgba(255,209,102,0.4); color: var(--text); }
+        .header-icon-btn.active { background: rgba(255,209,102,0.12); border-color: rgba(255,209,102,0.45); color: var(--gold); }
         .contact-overlay { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 1.5rem; }
         .contact-overlay.open { display: flex; }
         .contact-modal { width: 100%; max-width: 540px; background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem 1.6rem 1.6rem; max-height: 92vh; overflow-y: auto; }
@@ -362,7 +362,10 @@
             <div class="profile-tags" id="profile-tags"></div>
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem">
-            <button class="push-toggle-icon" id="push-toggle-btn" type="button" style="display:none" title="Enable push notifications">
+            <button class="header-icon-btn" id="ticker-link-btn" type="button" title="Copy the OBS standings ticker link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+            </button>
+            <button class="header-icon-btn" id="push-toggle-btn" type="button" style="display:none" title="Enable push notifications">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             </button>
             <button class="btn-contact" onclick="openContactModal()">
@@ -985,6 +988,17 @@ function armObsWidgetButton() {
         navigator.clipboard.writeText(url).then(() => toast('OBS widget link copied!', 'success'));
     });
 }
+
+// Standings ticker link needs no driver-specific data, so it's armed
+// once at load rather than waiting on the async profile load.
+(function armTickerLinkButton() {
+    const btn = document.getElementById('ticker-link-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+        const url = `${location.origin}/endurance/obs/standings-ticker/`;
+        navigator.clipboard.writeText(url).then(() => toast('Standings ticker link copied!', 'success'));
+    });
+})();
 
 function armShareButton() {
     const btn = document.getElementById('share-profile-btn');

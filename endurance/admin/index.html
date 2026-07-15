@@ -1149,6 +1149,18 @@ function getFormData(formId) {
 // ============================================================
 // 6. Dashboard
 // ============================================================
+function copyObsLink(path) {
+    const url = `${location.origin}/endurance/obs/${path}/`;
+    navigator.clipboard.writeText(url).then(() => toast('Link copied to clipboard.', 'success'));
+}
+
+function copyObsDriverLink() {
+    const slug = document.getElementById('obs-driver-slug').value.trim();
+    if (!slug) { toast('Enter a driver slug first.', 'error'); return; }
+    const url = `${location.origin}/endurance/obs/driver-card/?slug=${encodeURIComponent(slug)}`;
+    navigator.clipboard.writeText(url).then(() => toast('Link copied to clipboard.', 'success'));
+}
+
 async function renderDashboard() {
     const [mfr, seasons, teams, drivers, evts] = await Promise.all([
         sb.from('manufacturers').select('id', { count: 'exact', head: true }),
@@ -1171,6 +1183,20 @@ async function renderDashboard() {
         <div class="table-wrap" style="padding:1.5rem">
             <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem;font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase">Active Season</div>
             <div style="font-family:'Anton',sans-serif;font-size:1.6rem;letter-spacing:0.04em">${activeSeason ? esc(activeSeason.name) : '<span style="color:var(--muted);font-size:1rem;font-family:Inter,sans-serif">None — create a season and mark it active</span>'}</div>
+        </div>
+        <div class="table-wrap" style="padding:1.5rem;margin-top:1rem">
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">OBS Widgets</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding-bottom:0.85rem;border-bottom:1px solid var(--border)">
+                <div style="font-size:0.85rem;color:var(--muted)">Standings ticker — scrolling championship standings, same link for everyone.</div>
+                <button class="btn-icon" onclick="copyObsLink('standings-ticker')">Copy Link</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding-top:0.85rem">
+                <div style="font-size:0.85rem;color:var(--muted)">Driver card — lower-third for one driver. They can copy their own from their portal, or grab one here by slug.</div>
+                <div style="display:flex;gap:0.5rem;align-items:center">
+                    <input type="text" id="obs-driver-slug" placeholder="driver-slug" style="width:140px;padding:0.45rem 0.65rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.82rem">
+                    <button class="btn-icon" onclick="copyObsDriverLink()">Copy Link</button>
+                </div>
+            </div>
         </div>
         <div class="table-wrap" style="padding:1.5rem;margin-top:1rem">
             <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Maintenance</div>
