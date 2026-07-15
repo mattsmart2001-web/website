@@ -3638,7 +3638,7 @@ async function removeEntryHost(entryId, driverName, eventId, eventName, seasonId
 }
 
 async function notifyLobbies(eventId, eventName, seasonId) {
-    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox, lobby hosts will additionally get hosting instructions in their inbox and by email, and a summary will post to Discord #split-announcements.`)) return;
+    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox and a push notification if they've enabled one, lobby hosts will additionally get hosting instructions in their inbox and by email, and a summary will post to Discord #split-announcements.`)) return;
     const { data, error } = await sb.rpc('notify_lobby_assignments', { p_event_id: eventId });
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
@@ -3682,6 +3682,26 @@ async function notifyLobbies(eventId, eventName, seasonId) {
             console.warn('Discord splits skipped: no active session');
         }
     } catch (e) { console.warn('Discord splits notification error:', e); }
+
+    // Also push-notify any driver who's opted into web push (best effort — non-blocking)
+    try {
+        const { data: { session: pushSession } } = await sb.auth.getSession();
+        if (pushSession?.access_token) {
+            fetch('/.netlify/functions/send-push-notifications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pushSession.access_token}` },
+                body: JSON.stringify({
+                    event_id: eventId,
+                    title: `Split Assignment · ${eventName}`,
+                    body: 'Your split for this round is up — check your portal for details.',
+                    url: '/endurance/profile/',
+                }),
+            }).then(async r => {
+                if (!r.ok) console.warn('Push notify failed:', r.status, await r.text());
+                else console.log('Push notify sent OK');
+            }).catch(e => console.warn('Push notify error:', e));
+        }
+    } catch (e) { console.warn('Push notification error:', e); }
 }
 
 async function deleteLobbyNotifications(eventId, eventName, seasonId) {

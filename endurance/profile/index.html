@@ -391,6 +391,14 @@
         </div>
     </div>
 
+    <!-- Push notification opt-in -->
+    <div class="card" id="card-push" style="display:none">
+        <div class="card-title">Notifications</div>
+        <p style="color:var(--muted);font-size:0.85rem;margin:0 0 0.85rem">Get a push notification on this device the moment your split is assigned — no need to check Discord or the portal.</p>
+        <button class="btn-save" id="push-toggle-btn" type="button">Enable Push Notifications</button>
+        <div id="push-status" style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem"></div>
+    </div>
+
     <!-- Season standing + Elo -->
     <div class="card" id="card-standing" style="display:none">
         <div class="card-title" id="standing-season-label">Current Season</div>
@@ -614,6 +622,7 @@
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
 <script src="/endurance/assets/gtec-badges.js?v=13"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
+<script src="/endurance/assets/gtec-push.js"></script>
 <script src="../assets/countries.js"></script>
 <script>
 'use strict';
@@ -1401,12 +1410,50 @@ async function init() {
     loadUpcoming(driver.id);
     loadLobbyRoomCode(driver.id);
     loadHostScreenshots(driver.id);
+    initPushUI(driver.id);
     loadRecentResults(driver.id);
     loadInbox(driver.id);
     loadBadges(driver.id);
     loadTeamingSections(driver);
     loadTeamCard(driver);
     setupRealtimeSubscriptions(driver);
+}
+
+// Push notification opt-in card. Hidden entirely on browsers that don't
+// support the Push API (e.g. iOS Safari unless installed to home screen).
+async function initPushUI(driverId) {
+    const card = document.getElementById('card-push');
+    const btn = document.getElementById('push-toggle-btn');
+    const status = document.getElementById('push-status');
+    if (!window.gtecPush || !window.gtecPush.isSupported()) { card.style.display = 'none'; return; }
+    card.style.display = '';
+
+    async function refresh() {
+        const sub = await window.gtecPush.getSubscription();
+        btn.textContent = sub ? 'Disable Push Notifications' : 'Enable Push Notifications';
+        status.textContent = sub ? 'Enabled on this device.' : '';
+    }
+    await refresh();
+
+    if (btn.dataset.armed === '1') return;
+    btn.dataset.armed = '1';
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+            const sub = await window.gtecPush.getSubscription();
+            if (sub) {
+                await window.gtecPush.unsubscribe(sb);
+                toast('Push notifications disabled.', 'success');
+            } else {
+                await window.gtecPush.subscribe(sb, driverId);
+                toast('Push notifications enabled!', 'success');
+            }
+        } catch (err) {
+            toast(err.message || 'Could not update push notifications.', 'error');
+        }
+        btn.disabled = false;
+        await refresh();
+    });
 }
 
 let _editableTeam = null;

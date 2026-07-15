@@ -3,7 +3,7 @@
 'use strict';
 
 // Bump this string to force every client to refetch their shell.
-const CACHE_NAME = 'gtec-shell-v26';
+const CACHE_NAME = 'gtec-shell-v27';
 
 // Assets to pre-cache on install. Keep this short — fonts and Supabase
 // data are intentionally omitted so they always come fresh. The list is
@@ -127,4 +127,36 @@ self.addEventListener('fetch', (event) => {
             }
         })());
     }
+});
+
+/* ---------------------------------------------------------------
+   Web push — split assignments, etc. Payload is JSON:
+   { title, body, url }. Falls back gracefully if a push ever
+   arrives without a JSON body.
+------------------------------------------------------------------ */
+self.addEventListener('push', (event) => {
+    let data = {};
+    try { data = event.data ? event.data.json() : {}; }
+    catch { data = { title: 'GTEC', body: event.data ? event.data.text() : '' }; }
+
+    const title = data.title || 'GTEC';
+    const options = {
+        body: data.body || '',
+        icon: '/endurance/assets/icon-192.png',
+        badge: '/endurance/assets/icon-192.png',
+        data: { url: data.url || '/endurance/profile/' },
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const url = event.notification.data && event.notification.data.url || '/endurance/profile/';
+    event.waitUntil((async () => {
+        const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+        for (const client of allClients) {
+            if (client.url.includes(url) && 'focus' in client) return client.focus();
+        }
+        if (clients.openWindow) return clients.openWindow(url);
+    })());
 });
