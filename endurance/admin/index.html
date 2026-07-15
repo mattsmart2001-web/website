@@ -3628,6 +3628,21 @@ async function sendLobbyHostEmail(accessToken, driverId, eventId, eventName, lob
     } catch (e) { console.warn('Host email error:', e); return false; }
 }
 
+// Best-effort single-driver push notification. Silently does nothing if
+// there's no active session or the driver has no push subscription — the
+// portal message / email is always the source of truth, this is a bonus.
+async function sendPushToDriver(accessToken, driverId, title, body, url) {
+    try {
+        const res = await fetch('/.netlify/functions/send-push-notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({ driver_id: driverId, title, body, url: url || '/endurance/profile/' }),
+        });
+        if (!res.ok) console.warn('Push notify failed for', driverId, res.status, await res.text());
+        return res.ok;
+    } catch (e) { console.warn('Push notify error:', e); return false; }
+}
+
 const EVENT_RACE_SETTINGS_COLUMNS = 'round, starts_at, tyre_wear, fuel_consumption, time_multiplier, weather, time_of_day, damage_level, slipstream, grip_reduction_off_track, nitrous, engine_swap, race_start, autodrive, settings_allowed, initial_fuel, bop_enabled, quali_same_as_race, quali_notes, equal_conditions_mode, shortcut_penalty, wall_collision_penalty, car_collision_penalty, correct_vehicle_course, flag_rules, ghosting, pit_lane_cutting_penalty';
 
 async function setEntryHost(entryId, driverId, driverName, eventId, eventName, seasonId, lobbyNum) {
@@ -3647,6 +3662,10 @@ async function setEntryHost(entryId, driverId, driverName, eventId, eventName, s
         if (session?.access_token) {
             const { data: ev } = await sb.from('events').select(EVENT_RACE_SETTINGS_COLUMNS).eq('id', eventId).maybeSingle();
             emailed = await sendLobbyHostEmail(session.access_token, driverId, eventId, eventName, lobbyNum, ev);
+            sendPushToDriver(session.access_token, driverId,
+                `Hosting Duty · Split ${lobbyNum} · ${eventName}`,
+                'You\'ve been set as host for this split — check your portal for lobby settings.',
+                '/endurance/profile/');
         }
     } catch (e) { console.warn('Host email dispatch error:', e); }
 
@@ -7863,11 +7882,11 @@ async function viewMessage(id) {
             </div>
         </form>`,
         `<button class="btn btn-ghost" onclick="closeModal()">Close</button>
-         <button class="btn btn-primary" onclick="saveMessageStatus('${m.id}', ${!m.is_broadcast})">Save</button>`
+         <button class="btn btn-primary" onclick="saveMessageStatus('${m.id}', ${!m.is_broadcast}, '${m.driver_id}')">Save</button>`
     );
 }
 
-async function saveMessageStatus(id, isDirect = false) {
+async function saveMessageStatus(id, isDirect = false, driverId = null) {
     const d = getFormData('entity-form');
 
     if (isDirect) {
@@ -7885,6 +7904,7 @@ async function saveMessageStatus(id, isDirect = false) {
             .eq('id', id);
         if (error) { toast(error.message, 'error'); return; }
         toast(reply ? 'Reply sent.' : 'Updated.', 'success');
+        if (reply && driverId) notifyDriverOfReply(driverId, reply);
     } else {
         const reply = (d.admin_reply || '').trim();
         const { data: existing } = await sb.from('driver_contact_messages')
@@ -7903,11 +7923,23 @@ async function saveMessageStatus(id, isDirect = false) {
         const { error } = await sb.from('driver_contact_messages').update(payload).eq('id', id);
         if (error) { toast(error.message, 'error'); return; }
         toast(reply ? 'Reply sent to driver.' : 'Message updated.', 'success');
+        if (reply && driverId) notifyDriverOfReply(driverId, reply);
     }
 
     closeModal();
     await renderMessages();
     await refreshMsgsBadge();
+}
+
+// Best-effort push for an admin reply — fire-and-forget, doesn't block the
+// save/close flow above.
+async function notifyDriverOfReply(driverId, reply) {
+    try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session?.access_token) return;
+        const preview = reply.length > 120 ? reply.slice(0, 117) + '…' : reply;
+        sendPushToDriver(session.access_token, driverId, 'New reply from GTEC Admin', preview, '/endurance/profile/');
+    } catch (e) { console.warn('Reply push notification error:', e); }
 }
 
 async function deleteMessage(id) {

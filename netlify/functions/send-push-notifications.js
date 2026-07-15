@@ -1,12 +1,14 @@
 // ============================================================
 // send-push-notifications
-// POST { event_id, title, body, url }
+// POST { event_id, title, body, url }               — every driver with
+//                                                       a split assigned
+//                                                       for that event
+// POST { driver_id, title, body, url }               — one specific driver
 // Auth: Bearer <supabase admin token>
 //
-// Sends a web push notification to every driver with a lobby_number
-// assigned for the given event — same audience as the split-assignment
-// portal message. Best-effort per subscription; stale endpoints (404/410
-// from the push service) are deleted as they're found.
+// Exactly one of event_id / driver_id is required. Best-effort per
+// subscription; stale endpoints (404/410 from the push service) are
+// deleted as they're found.
 //
 // Env vars required:
 //   GTEC_SUPABASE_URL       (falls back to SUPABASE_URL if unset)
@@ -59,23 +61,28 @@ exports.handler = async (event) => {
     try { body = JSON.parse(event.body || '{}'); }
     catch { return { statusCode: 400, body: 'Invalid JSON' }; }
 
-    const { event_id, title, body: msgBody, url } = body;
-    if (!event_id) return { statusCode: 400, body: 'event_id required' };
+    const { event_id, driver_id, title, body: msgBody, url } = body;
+    if (!event_id && !driver_id) return { statusCode: 400, body: 'event_id or driver_id required' };
     if (!title || !msgBody) return { statusCode: 400, body: 'title and body required' };
 
     const authHeaders = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${userToken}` };
 
-    // Every driver with a split assigned for this event.
-    const entriesRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/entries?select=entry_drivers(driver_id)&event_id=eq.${event_id}&lobby_number=not.is.null`,
-        { headers: authHeaders }
-    );
-    const entries = await entriesRes.json();
-    if (!Array.isArray(entries)) return { statusCode: 502, body: 'Could not load entries' };
+    let driverIds;
+    if (driver_id) {
+        driverIds = [driver_id];
+    } else {
+        // Every driver with a split assigned for this event.
+        const entriesRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/entries?select=entry_drivers(driver_id)&event_id=eq.${event_id}&lobby_number=not.is.null`,
+            { headers: authHeaders }
+        );
+        const entries = await entriesRes.json();
+        if (!Array.isArray(entries)) return { statusCode: 502, body: 'Could not load entries' };
 
-    const driverIds = Array.from(new Set(
-        entries.flatMap(en => (en.entry_drivers || []).map(ed => ed.driver_id)).filter(Boolean)
-    ));
+        driverIds = Array.from(new Set(
+            entries.flatMap(en => (en.entry_drivers || []).map(ed => ed.driver_id)).filter(Boolean)
+        ));
+    }
     if (driverIds.length === 0) return { statusCode: 200, body: JSON.stringify({ ok: true, sent: 0 }) };
 
     const subsRes = await fetch(
