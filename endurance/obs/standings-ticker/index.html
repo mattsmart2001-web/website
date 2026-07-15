@@ -119,8 +119,26 @@ async function render() {
     const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
     if (!season) { document.getElementById('err').style.display = 'block'; return; }
 
-    const { data: standings } = await sb.from('driver_standings').select('*').eq('season_id', season.id);
-    const rows = (standings || [])
+    // Full roster from `drivers` (same source the public Drivers page uses —
+    // every registered driver, season-agnostic) merged with this season's
+    // standings. Anyone with no standings row yet (no races scored) shows
+    // at 0 PTS instead of being missing entirely.
+    const [{ data: drivers }, { data: standings }] = await Promise.all([
+        sb.from('drivers').select('id, display_name, manufacturers(brand_color)'),
+        sb.from('driver_standings').select('driver_id, points, wins, podiums').eq('season_id', season.id),
+    ]);
+    const standingByDriver = new Map((standings || []).map(s => [s.driver_id, s]));
+    const rows = (drivers || [])
+        .map(d => {
+            const st = standingByDriver.get(d.id);
+            return {
+                driver_name: d.display_name,
+                brand_color: d.manufacturers?.brand_color || null,
+                points:  st ? Number(st.points)  : 0,
+                wins:    st ? Number(st.wins)    : 0,
+                podiums: st ? Number(st.podiums) : 0,
+            };
+        })
         .sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
 
     if (!rows.length) { document.getElementById('err').style.display = 'block'; return; }
