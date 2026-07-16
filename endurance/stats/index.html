@@ -255,9 +255,25 @@
         .compare-picker select { flex: 1; min-width: 180px; padding: 0.6rem 0.8rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.9rem; }
         .compare-vs { font-family: 'Anton', sans-serif; color: var(--gold); font-size: 1.1rem; }
         .compare-table { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-        .compare-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
-        .compare-driver-name { font-weight: 700; text-align: center; }
-        .compare-driver-name a { color: var(--text); text-decoration: none; }
+        .compare-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 1.5rem 1.25rem; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+        .compare-driver-name { text-align: center; }
+        .compare-driver-name a {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(1.4rem, 3.2vw, 2.1rem);
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            line-height: 1.05;
+            background: linear-gradient(180deg, #fff, var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            text-decoration: none;
+            text-shadow: 0 0 24px rgba(255,209,102,0.25);
+            transition: filter 0.2s;
+            display: inline-block;
+        }
+        .compare-driver-name a:hover { filter: brightness(1.2); }
         .compare-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 0.65rem 1.25rem; align-items: center; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
         .compare-row:last-child { border-bottom: none; }
         .compare-val { text-align: center; font-family: 'Orbitron', sans-serif; }
@@ -269,6 +285,7 @@
             .hero, .content { padding: 1.5rem 1rem; }
             .hide-mob { display: none; }
             .compare-label { min-width: 72px; font-size: 0.58rem; }
+            .compare-driver-name a { font-size: clamp(1rem, 5vw, 1.5rem); }
         }
     </style>
     <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
