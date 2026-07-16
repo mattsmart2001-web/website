@@ -429,7 +429,13 @@
 
     <!-- Upcoming events -->
     <div class="card" id="card-upcoming" style="display:none">
-        <div class="card-title">Upcoming Events</div>
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap">
+            Upcoming Events
+            <a href="webcal://sparkstheory.co.uk/endurance/calendar.ics" style="font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;text-transform:none;letter-spacing:normal;color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem" title="Subscribe in your phone or desktop calendar app">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Subscribe to Calendar
+            </a>
+        </div>
         <div class="upcoming-list" id="upcoming-list"></div>
     </div>
 

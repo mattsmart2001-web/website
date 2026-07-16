@@ -53,6 +53,14 @@
   status = 410
   force = true
 
+# Clean URL for the season calendar ICS feed — calendar apps subscribe to
+# this directly, so it needs a stable path rather than the raw function URL.
+[[redirects]]
+  from = "/endurance/calendar.ics"
+  to = "/.netlify/functions/calendar-feed"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
