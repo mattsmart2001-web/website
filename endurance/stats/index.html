@@ -516,8 +516,15 @@ function setupCompare(career, ratings) {
             ['Fastest Laps',  da.fastest_laps || 0,  db.fastest_laps || 0],
             ['Starts',        da.starts || 0,        db.starts || 0],
             ['Current Rating', ra?.rating ?? 0,      rb?.rating ?? 0,      tierFmt],
-            ['Peak Rating',    ra?.peak_rating ?? 0, rb?.peak_rating ?? 0, tierFmt],
         ];
+
+        // Peak Rating repeats Current Rating whenever a driver hasn't dropped
+        // from their high point — the common case — so it reads as a
+        // duplicate stat. Only worth a row when it actually differs.
+        const peakA = ra?.peak_rating ?? 0, peakB = rb?.peak_rating ?? 0;
+        if (peakA !== (ra?.rating ?? 0) || peakB !== (rb?.rating ?? 0)) {
+            rows.push(['Peak Rating', peakA, peakB, tierFmt]);
+        }
 
         result.innerHTML = `
             <div class="compare-table">
