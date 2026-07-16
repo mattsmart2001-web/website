@@ -416,6 +416,17 @@
             color: var(--muted);
             text-indent: 0.3em;
         }
+        .cd-caption {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--gold);
+            text-align: center;
+            margin-bottom: 0.75rem;
+            text-indent: 0.25em;
+        }
         .cd-launched {
             font-family: 'Orbitron', sans-serif;
             font-size: 0.85rem;
@@ -833,28 +844,31 @@
         <p class="gtec-runby">Run by <a href="/">SparksTheory</a></p>
     </div>
 
-    <div class="gtec-countdown" id="countdown">
-        <div class="cd-unit">
-            <span class="cd-value" id="cd-days">--</span>
-            <span class="cd-label">Days</span>
-        </div>
-        <span class="cd-sep">:</span>
-        <div class="cd-unit">
-            <span class="cd-value" id="cd-hours">--</span>
-            <span class="cd-label">Hours</span>
-        </div>
-        <span class="cd-sep">:</span>
-        <div class="cd-unit">
-            <span class="cd-value" id="cd-mins">--</span>
-            <span class="cd-label">Mins</span>
-        </div>
-        <span class="cd-sep">:</span>
-        <div class="cd-unit">
-            <span class="cd-value" id="cd-secs">--</span>
-            <span class="cd-label">Secs</span>
+    <div id="countdown-block">
+        <div class="cd-caption" id="cd-caption"></div>
+        <div class="gtec-countdown" id="countdown">
+            <div class="cd-unit">
+                <span class="cd-value" id="cd-days">--</span>
+                <span class="cd-label">Days</span>
+            </div>
+            <span class="cd-sep">:</span>
+            <div class="cd-unit">
+                <span class="cd-value" id="cd-hours">--</span>
+                <span class="cd-label">Hours</span>
+            </div>
+            <span class="cd-sep">:</span>
+            <div class="cd-unit">
+                <span class="cd-value" id="cd-mins">--</span>
+                <span class="cd-label">Mins</span>
+            </div>
+            <span class="cd-sep">:</span>
+            <div class="cd-unit">
+                <span class="cd-value" id="cd-secs">--</span>
+                <span class="cd-label">Secs</span>
+            </div>
         </div>
     </div>
-    <div class="cd-launched" id="cd-launched" style="display:none">Season 1 is here.</div>
+    <div class="cd-launched" id="cd-launched" style="display:none">Season complete. See you next year.</div>
 </header>
 
 <section class="gtec-section">
@@ -1143,9 +1157,13 @@
             else              { if (signin) signin.style.display = ''; }
         });
 
-        // Dynamic countdown — targets the starts_at of Round 1 of the active season
+        // Dynamic countdown — targets whichever event in the active season
+        // hasn't started yet, so it keeps counting down round to round all
+        // season long instead of going dark after Round 1.
         (async function () {
+            const cdBlock    = document.getElementById('countdown-block');
             const cdWrap     = document.getElementById('countdown');
+            const cdCaption  = document.getElementById('cd-caption');
             const cdLaunched = document.getElementById('cd-launched');
             if (!cdWrap) return;
 
@@ -1154,18 +1172,26 @@
                 .eq('is_active', true)
                 .maybeSingle();
 
-            if (!season) { cdWrap.style.display = 'none'; return; }
+            if (!season) { cdBlock.style.display = 'none'; return; }
 
-            const { data: event } = await sb.from('events')
-                .select('starts_at')
+            const { data: events } = await sb.from('events')
+                .select('round, name, circuit_name, starts_at, status')
                 .eq('season_id', season.id)
-                .order('round')
-                .limit(1)
-                .maybeSingle();
+                .order('round');
 
-            if (!event?.starts_at) { cdWrap.style.display = 'none'; return; }
+            const next = (events || [])
+                .filter(e => e.starts_at && e.status !== 'cancelled' && new Date(e.starts_at).getTime() > Date.now())
+                .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))[0];
 
-            const TARGET = new Date(event.starts_at).getTime();
+            if (!next) {
+                cdBlock.style.display = 'none';
+                if (cdLaunched && events?.length) cdLaunched.style.display = 'block';
+                return;
+            }
+
+            if (cdCaption) cdCaption.textContent = `Round ${next.round} — ${next.circuit_name || next.name} in`;
+
+            const TARGET = new Date(next.starts_at).getTime();
 
             const els = {
                 days:  document.getElementById('cd-days'),
@@ -1179,8 +1205,7 @@
             function tick() {
                 const diff = TARGET - Date.now();
                 if (diff <= 0) {
-                    cdWrap.style.display = 'none';
-                    if (cdLaunched) cdLaunched.style.display = 'block';
+                    cdBlock.style.display = 'none';
                     return;
                 }
                 const d = Math.floor(diff / 86400000);
