@@ -3431,6 +3431,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
                 <button class="btn-icon danger" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
                 <button class="btn-icon danger" onclick="deleteLobbyRoomCodes('${eventId}','${esc(eventName)}')">Delete Room Codes</button>
+                <button class="btn-icon danger" onclick="deleteEventScreenshots('${eventId}','${esc(eventName)}','${seasonId}')">Delete Screenshots</button>
                 <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Split size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
             </div>
         </div>
@@ -3763,6 +3764,40 @@ async function deleteLobbyRoomCodes(eventId, eventName) {
     const { error, count } = await sb.from('lobby_room_codes').delete({ count: 'exact' }).eq('event_id', eventId);
     if (error) { toast(error.message, 'error'); return; }
     toast(`Deleted ${count ?? 0} lobby room code${count === 1 ? '' : 's'}.`, 'success');
+}
+
+const SPLIT_SCREENSHOT_COLUMNS = ['quali_screenshot_1_url', 'quali_screenshot_2_url', 'race_screenshot_1_url', 'race_screenshot_2_url'];
+
+async function deleteEventScreenshots(eventId, eventName, seasonId) {
+    if (!confirm(`Delete all uploaded result screenshots for "${eventName}"?\n\nThis removes the actual image files from storage, not just the portal entries — use this once results have been entered and you no longer need them. Cannot be undone.`)) return;
+
+    const { data: rows, error: fetchErr } = await sb.from('lobby_result_screenshots').select('*').eq('event_id', eventId);
+    if (fetchErr) { toast(fetchErr.message, 'error'); return; }
+    if (!rows?.length) { toast('No screenshots to delete for this event.', 'success'); return; }
+
+    // Storage object paths live inside the stored public URLs (plus a
+    // cache-busting query string) rather than as their own column, so
+    // recover them from whichever URL each split actually has.
+    const marker = '/gtec-split-screenshots/';
+    const paths = [];
+    rows.forEach(r => SPLIT_SCREENSHOT_COLUMNS.forEach(col => {
+        const url = r[col];
+        if (!url) return;
+        const idx = url.indexOf(marker);
+        if (idx === -1) return;
+        paths.push(decodeURIComponent(url.slice(idx + marker.length).split('?')[0]));
+    }));
+
+    if (paths.length) {
+        const { error: rmErr } = await sb.storage.from('gtec-split-screenshots').remove(paths);
+        if (rmErr) console.warn('Some screenshot files failed to delete:', rmErr.message);
+    }
+
+    const { error: delErr, count } = await sb.from('lobby_result_screenshots').delete({ count: 'exact' }).eq('event_id', eventId);
+    if (delErr) { toast(delErr.message, 'error'); return; }
+
+    toast(`Deleted ${paths.length} screenshot file${paths.length === 1 ? '' : 's'} across ${count ?? 0} split${count === 1 ? '' : 's'}.`, 'success');
+    await viewEventLobbies(eventId, eventName, seasonId);
 }
 
 async function moveEntryLobby(entryId, delta, eventId, eventName, seasonId) {
