@@ -1168,9 +1168,10 @@ function formatBytes(bytes) {
     return `${(mb / 1024).toFixed(2)} GB`;
 }
 
-// Supabase's free tier storage cap. Bump this to 100 * 1024**3 (100GB) if
-// this project's on Pro — nothing here can detect the plan automatically.
-const STORAGE_LIMIT_BYTES = 1024 * 1024 * 1024;
+// Supabase's included storage quota for this project's plan. Nothing here
+// can detect the plan automatically — update this if the plan changes.
+// Free: 1 * 1024**3 (1GB). Pro (current): 100 * 1024**3 (100GB).
+const STORAGE_LIMIT_BYTES = 100 * 1024 * 1024 * 1024;
 
 async function renderDashboard() {
     const [mfr, seasons, teams, drivers, evts, storageRes] = await Promise.all([
