@@ -548,10 +548,23 @@ function setupCompare(career, ratings) {
                 .in('id', [da.driver_id, db.driver_id]);
             const colorFor = (id) => (mfrRows || []).find(r => r.id === id)?.manufacturers?.brand_color || null;
 
+            // The on-page fmt functions (tierFmt in particular) return HTML
+            // for innerHTML display — Canvas can only draw plain text, so
+            // the card needs its own plain-text formatting, not a reuse of
+            // whatever fmt each row uses on the page.
+            const cardFmt = (label, v) => {
+                if (label === 'Current Rating' || label === 'Peak Rating') {
+                    const tier = window.eloTier ? window.eloTier(v).name : '';
+                    return tier ? `${v} ${tier.toUpperCase()}` : String(v);
+                }
+                if (label === 'Career Points') return Number(v).toFixed(v % 1 === 0 ? 0 : 1);
+                return String(v);
+            };
+
             window.gtecCompareCard({
                 a: { display_name: da.driver_name, slug: da.driver_slug, photo_url: da.photo_url, manufacturer_color: colorFor(da.driver_id) },
                 b: { display_name: db.driver_name, slug: db.driver_slug, photo_url: db.photo_url, manufacturer_color: colorFor(db.driver_id) },
-                rows: rows.map(([label, va, vb, fmt]) => ({ label, va, vb, fmt })),
+                rows: rows.map(([label, va, vb]) => ({ label, va, vb, fmt: v => cardFmt(label, v) })),
                 buttonEl: btn,
             });
         });

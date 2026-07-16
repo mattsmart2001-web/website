@@ -14,7 +14,12 @@
     'use strict';
 
     const W = 1080;
-    const H = 1400;
+    // Photo band + name plates are a fixed height; the stats table height
+    // (and therefore the overall card height) depends on how many rows are
+    // passed in, so it's computed per-card in drawCard() rather than fixed
+    // here — a fixed H overflowed and collided with the footer once real
+    // pages started sending 8 comparison rows instead of the ~6 tested with.
+    const BAND_Y = 96, BAND_H = 620, PLATE_GAP = 68, ROW_GAP = 76, ROW_H = 74, FOOTER_SPACE = 70;
     const SITE_URL = 'https://sparkstheory.co.uk/endurance/';
     const GOLD = '#ffd166';
 
@@ -114,6 +119,11 @@
     }
 
     async function drawCard(a, b, rows) {
+        const bandY = BAND_Y, bandH = BAND_H;
+        const plateY = bandY + bandH + PLATE_GAP;
+        const rowY = plateY + ROW_GAP;
+        const H = rowY + rows.length * ROW_H + FOOTER_SPACE;
+
         const canvas = document.createElement('canvas');
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
@@ -125,7 +135,6 @@
 
         const [photoA, photoB] = await Promise.all([loadImage(a.photo_url), loadImage(b.photo_url)]);
 
-        const bandY = 96, bandH = 620;
         drawHalf(ctx, a, photoA, 0, bandY, W / 2, bandH);
         drawHalf(ctx, b, photoB, W / 2, bandY, W / 2, bandH);
 
@@ -159,7 +168,6 @@
         ctx.restore();
 
         /* ---------- name plates ---------- */
-        const plateY = bandY + bandH + 68;
         [{ d: a, cx: W / 4 }, { d: b, cx: (W / 4) * 3 }].forEach(({ d, cx }) => {
             const name = (d.display_name || '').toUpperCase();
             const fs = fitText(ctx, name, W / 2 - 48, 68, 34, 900, 'Anton');
@@ -175,8 +183,7 @@
         });
 
         /* ---------- stats rows ---------- */
-        let rowY = plateY + 76;
-        const rowH = 74;
+        const rowH = ROW_H;
         const tableX = 48, tableW = W - 96;
         ctx.strokeStyle = 'rgba(255,209,102,0.22)'; ctx.lineWidth = 1;
         roundRect(ctx, tableX, rowY, tableW, rowH * rows.length, 14); ctx.stroke();
@@ -265,7 +272,7 @@
             .gtec-cc-title { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold, #ffd166); }
             .gtec-cc-close { background: transparent; border: none; color: var(--muted, #94a3b8); font-size: 1.4rem; line-height: 1; cursor: pointer; padding: 0.1rem 0.45rem; transition: color 0.15s ease; }
             .gtec-cc-close:hover { color: var(--text, #f1f5f9); }
-            .gtec-cc-preview { width: 100%; aspect-ratio: ${W} / ${H}; border-radius: 10px; overflow: hidden; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.08); }
+            .gtec-cc-preview { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.08); }
             .gtec-cc-preview img { width: 100%; height: 100%; display: block; }
             .gtec-cc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
             .gtec-cc-action { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.7rem 0.85rem; background: var(--bg-2, #11161f); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: var(--text, #f1f5f9); font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease; }
@@ -280,7 +287,7 @@
         document.head.appendChild(style);
     }
 
-    function openModal({ blob, fname, url, a, b }) {
+    function openModal({ blob, fname, url, a, b, cardW, cardH }) {
         injectModalStyles();
         const previewUrl = URL.createObjectURL(blob);
         const overlay = document.createElement('div');
@@ -297,7 +304,7 @@
                     <div class="gtec-cc-title">Share Comparison</div>
                     <button class="gtec-cc-close" data-act="close" aria-label="Close">✕</button>
                 </div>
-                <div class="gtec-cc-preview"><img src="${previewUrl}" alt="${escAttr(a.display_name)} vs ${escAttr(b.display_name)} — GTEC"></div>
+                <div class="gtec-cc-preview" style="aspect-ratio:${cardW} / ${cardH}"><img src="${previewUrl}" alt="${escAttr(a.display_name)} vs ${escAttr(b.display_name)} — GTEC"></div>
                 <div class="gtec-cc-actions">
                     ${supportsShare ? `<button class="gtec-cc-action primary" data-act="share">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
@@ -413,7 +420,7 @@
             const fname = `${(a.slug || 'a')}-vs-${(b.slug || 'b')}-gtec.png`;
 
             resetBtn();
-            openModal({ blob, fname, url, a, b });
+            openModal({ blob, fname, url, a, b, cardW: canvas.width, cardH: canvas.height });
         } catch (err) {
             console.error(err);
             setBtn('Share failed');
