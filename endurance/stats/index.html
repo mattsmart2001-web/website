@@ -250,10 +250,25 @@
         .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
         .empty-msg { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
 
+        /* Compare Drivers */
+        .compare-picker { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .compare-picker select { flex: 1; min-width: 180px; padding: 0.6rem 0.8rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.9rem; }
+        .compare-vs { font-family: 'Anton', sans-serif; color: var(--gold); font-size: 1.1rem; }
+        .compare-table { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+        .compare-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+        .compare-driver-name { font-weight: 700; text-align: center; }
+        .compare-driver-name a { color: var(--text); text-decoration: none; }
+        .compare-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 0.65rem 1.25rem; align-items: center; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+        .compare-row:last-child { border-bottom: none; }
+        .compare-val { text-align: center; font-family: 'Orbitron', sans-serif; }
+        .compare-label { text-align: center; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; min-width: 110px; }
+        .compare-win { color: var(--gold); font-weight: 800; }
+
         @media (max-width: 600px) {
             .nav { padding: 1rem; }
             .hero, .content { padding: 1.5rem 1rem; }
             .hide-mob { display: none; }
+            .compare-label { min-width: 72px; font-size: 0.58rem; }
         }
     </style>
     <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
@@ -427,7 +442,75 @@ async function load() {
             </div>
         </div>` : '';
 
-    content.innerHTML = hofHTML + leaderboardsHTML + recordsHTML;
+    // Compare Drivers — reuses the career + ratings data already fetched
+    // above, so picking two drivers is instant, no extra queries.
+    const driverOptions = career.slice()
+        .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
+        .map(d => `<option value="${esc(d.driver_id)}">${esc(d.driver_name)}</option>`).join('');
+    const compareHTML = career.length ? `
+        <div class="section">
+            <div class="section-title">Compare Drivers</div>
+            <div class="compare-picker">
+                <select id="compare-a"><option value="">— Select driver —</option>${driverOptions}</select>
+                <span class="compare-vs">VS</span>
+                <select id="compare-b"><option value="">— Select driver —</option>${driverOptions}</select>
+            </div>
+            <div id="compare-result"></div>
+        </div>` : '';
+
+    content.innerHTML = hofHTML + leaderboardsHTML + compareHTML + recordsHTML;
+
+    // Unfiltered ratings (not just last_rated_at like the leaderboards use)
+    // so an unraced driver still shows their real provisional DR/SR-seeded
+    // rating instead of a misleading 0.
+    if (career.length) setupCompare(career, ratingsRes.data || []);
+}
+
+function setupCompare(career, ratings) {
+    const selA = document.getElementById('compare-a');
+    const selB = document.getElementById('compare-b');
+    const result = document.getElementById('compare-result');
+    const ratingByDriver = new Map(ratings.map(r => [r.driver_id, r]));
+
+    function update() {
+        const da = career.find(d => d.driver_id === selA.value);
+        const db = career.find(d => d.driver_id === selB.value);
+        if (!da || !db) { result.innerHTML = ''; return; }
+        const ra = ratingByDriver.get(da.driver_id);
+        const rb = ratingByDriver.get(db.driver_id);
+        const tierFmt = v => v == null ? '—' : `${v}${window.eloTierBadge ? window.eloTierBadge(v) : ''}`;
+
+        const rows = [
+            ['Career Points', Number(da.career_points) || 0, Number(db.career_points) || 0, v => v.toFixed(v % 1 === 0 ? 0 : 1)],
+            ['Wins',          da.wins || 0,          db.wins || 0],
+            ['Podiums',       da.podiums || 0,       db.podiums || 0],
+            ['Poles',         da.poles || 0,         db.poles || 0],
+            ['Fastest Laps',  da.fastest_laps || 0,  db.fastest_laps || 0],
+            ['Starts',        da.starts || 0,        db.starts || 0],
+            ['Current Rating', ra?.rating ?? 0,      rb?.rating ?? 0,      tierFmt],
+            ['Peak Rating',    ra?.peak_rating ?? 0, rb?.peak_rating ?? 0, tierFmt],
+        ];
+
+        result.innerHTML = `
+            <div class="compare-table">
+                <div class="compare-head">
+                    <div class="compare-driver-name"><a href="/endurance/drivers/?slug=${esc(da.driver_slug)}">${esc(da.driver_name)}</a></div>
+                    <div></div>
+                    <div class="compare-driver-name"><a href="/endurance/drivers/?slug=${esc(db.driver_slug)}">${esc(db.driver_name)}</a></div>
+                </div>
+                ${rows.map(([label, va, vb, fmt = v => v]) => {
+                    const aWin = va > vb, bWin = vb > va;
+                    return `<div class="compare-row">
+                        <div class="compare-val ${aWin ? 'compare-win' : ''}">${fmt(va)}</div>
+                        <div class="compare-label">${label}</div>
+                        <div class="compare-val ${bWin ? 'compare-win' : ''}">${fmt(vb)}</div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+    }
+
+    selA.addEventListener('change', update);
+    selB.addEventListener('change', update);
 }
 
 load();
