@@ -274,11 +274,22 @@
             display: inline-block;
         }
         .compare-driver-name a:hover { filter: brightness(1.2); }
-        .compare-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 0.65rem 1.25rem; align-items: center; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+        .compare-row { position: relative; display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 0.65rem 1.25rem 1.05rem; align-items: center; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
         .compare-row:last-child { border-bottom: none; }
         .compare-val { text-align: center; font-family: 'Orbitron', sans-serif; }
         .compare-label { text-align: center; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; min-width: 110px; }
         .compare-win { color: var(--gold); font-weight: 800; }
+
+        /* Tug-of-war bar: each stat row grows a fill from the centre toward
+           whichever side is ahead, proportional to their share of the total —
+           a quick visual read on "how much" a driver is winning by. */
+        .compare-bar { position: absolute; left: 1.25rem; right: 1.25rem; bottom: 0.4rem; height: 4px; display: flex; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+        .compare-bar-half { flex: 1; display: flex; }
+        .compare-bar-half.left { justify-content: flex-end; }
+        .compare-bar-half.right { justify-content: flex-start; }
+        .compare-bar-center { flex: none; width: 2px; background: rgba(255,255,255,0.18); }
+        .compare-bar-fill { width: 0%; height: 100%; background: rgba(148,163,184,0.5); transition: width 0.9s cubic-bezier(0.22,1,0.36,1); }
+        .compare-bar-fill.win { background: linear-gradient(90deg, rgba(255,209,102,0.45), var(--gold)); box-shadow: 0 0 8px rgba(255,209,102,0.55); }
         .compare-share-btn {
             display: flex; align-items: center; justify-content: center; gap: 0.5rem;
             width: 100%; margin-top: 1rem; padding: 0.85rem 1rem;
@@ -494,6 +505,46 @@ async function load() {
     if (career.length) setupCompare(career, ratingsRes.data || []);
 }
 
+// Splits a formatted value like "1799<span class=...>Platinum</span>" into
+// its leading number (which gets counted up) and trailing suffix (badge HTML,
+// left static — only the number itself needs to animate).
+function renderCompareVal(v, fmt) {
+    if (v == null) return '<span class="cv-num">—</span>';
+    const full = String(fmt(v));
+    const m = full.match(/^(-?[\d,]*\.?\d+)/);
+    if (!m) return full;
+    const numStr = m[1];
+    const suffix = full.slice(numStr.length);
+    const target = parseFloat(numStr.replace(/,/g, ''));
+    const decimals = numStr.includes('.') ? numStr.split('.')[1].length : 0;
+    return `<span class="cv-num" data-target="${target}" data-decimals="${decimals}">0</span>${suffix}`;
+}
+
+// Counts each stat up from 0 to its real value and grows the tug-of-war
+// bars from the centre, so picking two drivers feels like a live readout
+// rather than a static table dump.
+function animateCompareEntrance(container) {
+    const duration = 750;
+    container.querySelectorAll('.cv-num[data-target]').forEach((el) => {
+        const target = parseFloat(el.dataset.target);
+        const decimals = parseInt(el.dataset.decimals, 10) || 0;
+        if (!Number.isFinite(target)) return;
+        const start = performance.now();
+        const tick = (now) => {
+            const t = Math.min(1, (now - start) / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            el.textContent = (target * eased).toFixed(decimals);
+            if (t < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    });
+    requestAnimationFrame(() => {
+        container.querySelectorAll('.compare-bar-fill[data-pct]').forEach((el) => {
+            el.style.width = `${el.dataset.pct}%`;
+        });
+    });
+}
+
 function setupCompare(career, ratings) {
     const selA = document.getElementById('compare-a');
     const selB = document.getElementById('compare-b');
@@ -535,10 +586,18 @@ function setupCompare(career, ratings) {
                 </div>
                 ${rows.map(([label, va, vb, fmt = v => v]) => {
                     const aWin = va > vb, bWin = vb > va;
+                    const total = Math.abs(va) + Math.abs(vb);
+                    const shareA = total === 0 ? 50 : (Math.abs(va) / total) * 100;
+                    const shareB = total === 0 ? 50 : (Math.abs(vb) / total) * 100;
                     return `<div class="compare-row">
-                        <div class="compare-val ${aWin ? 'compare-win' : ''}">${fmt(va)}</div>
+                        <div class="compare-val ${aWin ? 'compare-win' : ''}">${renderCompareVal(va, fmt)}</div>
                         <div class="compare-label">${label}</div>
-                        <div class="compare-val ${bWin ? 'compare-win' : ''}">${fmt(vb)}</div>
+                        <div class="compare-val ${bWin ? 'compare-win' : ''}">${renderCompareVal(vb, fmt)}</div>
+                        <div class="compare-bar">
+                            <div class="compare-bar-half left"><div class="compare-bar-fill ${aWin ? 'win' : ''}" data-pct="${shareA.toFixed(1)}"></div></div>
+                            <div class="compare-bar-center"></div>
+                            <div class="compare-bar-half right"><div class="compare-bar-fill ${bWin ? 'win' : ''}" data-pct="${shareB.toFixed(1)}"></div></div>
+                        </div>
                     </div>`;
                 }).join('')}
             </div>
@@ -575,6 +634,8 @@ function setupCompare(career, ratings) {
                 buttonEl: btn,
             });
         });
+
+        animateCompareEntrance(result);
     }
 
     selA.addEventListener('change', update);
