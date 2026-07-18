@@ -578,7 +578,7 @@ function animateCompareEntrance(container) {
     });
 }
 
-// Championship Fight — can driver A still finish ahead of driver B in the
+// Championship Fight: can driver A still finish ahead of driver B in the
 // active season's points table (or vice versa)? Uses the extreme joint
 // case: whoever's behind scores the shared remaining-rounds ceiling every
 // round, whoever's ahead scores nothing more. Same Split-1-forever
@@ -632,7 +632,7 @@ function setupCompare(career, ratings, seasonFight) {
         if (fight?.tied) {
             fightHTML = `<div class="compare-fight">
                 <span class="cf-icon">🔥</span>
-                <span>Tied on points right now — ${fight.remaining} round${fight.remaining === 1 ? '' : 's'} left, this one's still wide open.</span>
+                <span>Tied on points right now: ${fight.remaining} round${fight.remaining === 1 ? '' : 's'} left, this one's still wide open.</span>
             </div>`;
         } else if (fight) {
             const leaderName  = fight.leaderIsA ? da.driver_name : db.driver_name;
@@ -640,11 +640,11 @@ function setupCompare(career, ratings, seasonFight) {
             fightHTML = fight.stillAlive
                 ? `<div class="compare-fight">
                     <span class="cf-icon">🔥</span>
-                    <span>Still alive — <b>${esc(chaserName)}</b> needs at least a ${fight.gap.toFixed(fight.gap % 1 === 0 ? 0 : 1)}pt swing over ${fight.remaining} round${fight.remaining === 1 ? '' : 's'} to catch <b>${esc(leaderName)}</b> this season.</span>
+                    <span>Still alive: <b>${esc(chaserName)}</b> needs at least a ${fight.gap.toFixed(fight.gap % 1 === 0 ? 0 : 1)}pt swing over ${fight.remaining} round${fight.remaining === 1 ? '' : 's'} to catch <b>${esc(leaderName)}</b> this season.</span>
                 </div>`
                 : `<div class="compare-fight settled">
                     <span class="cf-icon">🏁</span>
-                    <span>Settled — <b>${esc(leaderName)}</b> can no longer be caught by ${esc(chaserName)} this season.</span>
+                    <span>Settled: <b>${esc(leaderName)}</b> can no longer be caught by ${esc(chaserName)} this season.</span>
                 </div>`;
         }
 
