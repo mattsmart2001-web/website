@@ -173,6 +173,49 @@
         .standings a:active { color: inherit; text-decoration: none; }
         .standings a:hover { text-decoration: underline; }
 
+        /* Live Battles — every adjacent-position pair still mathematically
+           swappable, not just the title fight at the top. */
+        .battles-section { margin-top: 1.5rem; }
+        .battles-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 0.85rem;
+            text-indent: 0.35em;
+        }
+        .battles-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .battle-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.85rem;
+        }
+        .battle-name { font-weight: 600; color: var(--text); text-decoration: none; }
+        .battle-name:hover { text-decoration: underline; }
+        .battle-vs { color: var(--muted); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+        .battle-gap {
+            margin-left: auto;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: var(--gold);
+            white-space: nowrap;
+        }
+        .battles-note { font-size: 0.72rem; color: var(--muted); margin-top: 0.7rem; }
+
         /* Standings table */
         .standings {
             background: var(--bg-1);
@@ -460,6 +503,8 @@ let _teams   = [];
 let _ratings = null; // loaded lazily
 let _season  = null;
 let _tab     = 'drivers';
+let _ceiling  = null; // max points still available across all remaining rounds (Split-1 ceiling), for Live Battles
+let _remaining = 0;
 
 function esc(s) {
     if (s == null) return '';
@@ -524,6 +569,46 @@ async function loadRatings() {
     if (error) { panel.innerHTML = `<div class="state-msg"><p>${esc(error.message)}</p></div>`; return; }
     _ratings = data || [];
     renderRatings(panel);
+}
+
+// Live Battles — every adjacent-position pair still mathematically
+// swappable, not just the title fight. A pair is "live" if the chaser's
+// ceiling (their points + everyone's shared remaining-rounds ceiling)
+// could still reach or pass the leader's current points. Settled pairs
+// (chaser can never catch up) are simply omitted — this is a list of
+// what's still actually contestable, not the full grid.
+function buildBattlesHTML(sortedList, { nameKey, slugKey, urlBase }) {
+    if (_ceiling == null || sortedList.length < 2) return '';
+    const battles = [];
+    for (let i = 0; i < sortedList.length - 1; i++) {
+        const leader = sortedList[i], chaser = sortedList[i + 1];
+        const leaderPoints = Number(leader.points) || 0;
+        const chaserPoints = Number(chaser.points) || 0;
+        if (chaserPoints + _ceiling >= leaderPoints) {
+            const gap = leaderPoints - chaserPoints;
+            battles.push({
+                posA: i + 1, posB: i + 2,
+                nameA: leader[nameKey], slugA: leader[slugKey],
+                nameB: chaser[nameKey], slugB: chaser[slugKey],
+                gap,
+            });
+        }
+    }
+    if (!battles.length) return '';
+    return `
+        <div class="battles-section">
+            <div class="battles-title">Live Battles</div>
+            <div class="battles-list">
+                ${battles.map(b => `
+                    <div class="battle-row">
+                        <a class="battle-name" href="${urlBase}?slug=${esc(b.slugA)}">P${b.posA} ${esc(b.nameA)}</a>
+                        <span class="battle-vs">vs</span>
+                        <a class="battle-name" href="${urlBase}?slug=${esc(b.slugB)}">P${b.posB} ${esc(b.nameB)}</a>
+                        <span class="battle-gap">${b.gap.toFixed(b.gap % 1 === 0 ? 0 : 1)} pt${b.gap === 1 ? '' : 's'} apart</span>
+                    </div>`).join('')}
+            </div>
+            <div class="battles-note">${_remaining} round${_remaining === 1 ? '' : 's'} left · positions not shown here are already mathematically settled</div>
+        </div>`;
 }
 
 function renderDrivers(panel) {
@@ -593,7 +678,8 @@ function renderDrivers(panel) {
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
-        </div>`;
+        </div>
+        ${buildBattlesHTML(_drivers, { nameKey: 'driver_name', slugKey: 'driver_slug', urlBase: '/endurance/drivers/' })}`;
 }
 
 function renderTeams(panel) {
@@ -647,7 +733,8 @@ function renderTeams(panel) {
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
-        </div>`;
+        </div>
+        ${buildBattlesHTML(_teams, { nameKey: 'team_name', slugKey: 'team_slug', urlBase: '/endurance/teams/' })}`;
 }
 
 function renderRatings(panel) {
@@ -694,7 +781,7 @@ function renderRatings(panel) {
 
 async function load() {
     const { data: season } = await sb.from('seasons')
-        .select('id, name, year')
+        .select('id, name, year, points_systems(points, pole_points, fastest_lap_points)')
         .eq('is_active', true)
         .maybeSingle();
 
@@ -708,7 +795,7 @@ async function load() {
     document.getElementById('season-title').textContent = season.name;
     document.getElementById('season-sub').textContent = `${season.year} Championship · Live standings`;
 
-    const [d, t, ratings, perEvent] = await Promise.all([
+    const [d, t, ratings, perEvent, remainingRes] = await Promise.all([
         sb.from('driver_standings').select('*').eq('season_id', season.id),
         sb.from('team_standings').select('*').eq('season_id', season.id),
         sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
@@ -716,7 +803,20 @@ async function load() {
         // event" and show championship movement arrows.
         sb.from('result_drivers')
             .select('driver_id, points_awarded, results!inner(event_id, events!inner(season_id, starts_at))'),
+        // Remaining rounds — feeds Live Battles' "still catchable" ceiling,
+        // same Split-1-forever assumption as Season Stakes on the profile pages.
+        sb.from('events').select('id', { count: 'exact', head: true })
+            .eq('season_id', season.id).in('status', ['scheduled', 'in_progress']),
     ]);
+
+    _remaining = remainingRes.count || 0;
+    const ps = season.points_systems;
+    if (ps && _remaining) {
+        const maxPos = Math.max(0, ...(ps.points || []).map(p => Number(p.points) || 0));
+        _ceiling = _remaining * (maxPos + Number(ps.pole_points || 0) + Number(ps.fastest_lap_points || 0));
+    } else {
+        _ceiling = null;
+    }
 
     // Index ratings by driver for quick lookup during render.
     _ratingByDriver = {};
