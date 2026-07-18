@@ -73,17 +73,17 @@
             // category-type. stats.seasonFinishes is an array of finish
             // positions (1..N) across *completed* seasons only.
             badges: [
-                { key: 'dynasty',          name: 'Dynasty',                 icon: '🏛️', blurb: 'Win 3 championships',
+                { key: 'dynasty',          name: 'Dynasty',                 icon: '/endurance/assets/badges/dynasty.png',         blurb: 'Win 3 championships',
                   evalFn: s => (s.seasonFinishes || []).filter(p => p === 1).length >= 3 },
-                { key: 'double_champion',  name: 'Double Champion',         icon: '🏆', blurb: 'Win 2 championships',
+                { key: 'double_champion',  name: 'Double Champion',         icon: '/endurance/assets/badges/double_champion.png', blurb: 'Win 2 championships',
                   evalFn: s => (s.seasonFinishes || []).filter(p => p === 1).length >= 2 },
-                { key: 'season_champion',  name: 'Season Champion',         icon: '👑', blurb: 'Win a championship',
+                { key: 'season_champion',  name: 'Season Champion',         icon: '/endurance/assets/badges/season_champion.png', blurb: 'Win a championship',
                   evalFn: s => (s.seasonFinishes || []).some(p => p === 1) },
-                { key: 'vice_champion',    name: 'Vice Champion',           icon: '🥈', blurb: 'Finish P2 in a season',
+                { key: 'vice_champion',    name: 'Vice Champion',           icon: '/endurance/assets/badges/vice_champion.png',   blurb: 'Finish P2 in a season',
                   evalFn: s => (s.seasonFinishes || []).some(p => p === 2) },
-                { key: 'challenger',       name: 'Championship Challenger', icon: '🎯', blurb: 'Finish top 5 in a season',
+                { key: 'challenger',       name: 'Championship Challenger', icon: '/endurance/assets/badges/challenger.png',      blurb: 'Finish top 5 in a season',
                   evalFn: s => (s.seasonFinishes || []).some(p => p >= 1 && p <= 5) },
-                { key: 'contender',        name: 'Championship Contender',  icon: '🚩', blurb: 'Finish top 10 in a season',
+                { key: 'contender',        name: 'Championship Contender',  icon: '/endurance/assets/badges/contender.png',       blurb: 'Finish top 10 in a season',
                   evalFn: s => (s.seasonFinishes || []).some(p => p >= 1 && p <= 10) },
             ],
         },
