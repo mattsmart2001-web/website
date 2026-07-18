@@ -32,12 +32,12 @@
             stat: 'wins',
             statLabel: 'wins',
             badges: [
-                { key: 'legend_of_gtec', name: 'Legend of GTEC', icon: '🌟', threshold: 50, blurb: 'Win 50 races' },
-                { key: 'dominator',      name: 'Dominator',      icon: '🔥', threshold: 25, blurb: 'Win 25 races' },
-                { key: 'elite_winner',   name: 'Elite Winner',   icon: '💎', threshold: 10, blurb: 'Win 10 races' },
-                { key: 'proven_winner',  name: 'Proven Winner',  icon: '🏆', threshold:  5, blurb: 'Win 5 races'  },
-                { key: 'race_winner',    name: 'Race Winner',    icon: '🥇', threshold:  3, blurb: 'Win 3 races'  },
-                { key: 'first_victory',  name: 'First Victory',  icon: '🎉', threshold:  1, blurb: 'Win your first race' },
+                { key: 'legend_of_gtec', name: 'Legend of GTEC', icon: '/endurance/assets/badges/legend_of_gtec.png', threshold: 50, blurb: 'Win 50 races' },
+                { key: 'dominator',      name: 'Dominator',      icon: '/endurance/assets/badges/dominator.png',     threshold: 25, blurb: 'Win 25 races' },
+                { key: 'elite_winner',   name: 'Elite Winner',   icon: '/endurance/assets/badges/elite_winner.png',  threshold: 10, blurb: 'Win 10 races' },
+                { key: 'proven_winner',  name: 'Proven Winner',  icon: '/endurance/assets/badges/proven_winner.png', threshold:  5, blurb: 'Win 5 races'  },
+                { key: 'race_winner',    name: 'Race Winner',    icon: '/endurance/assets/badges/race_winner.png',   threshold:  3, blurb: 'Win 3 races'  },
+                { key: 'first_victory',  name: 'First Victory',  icon: '/endurance/assets/badges/first_victory.png', threshold:  1, blurb: 'Win your first race' },
             ],
         },
         {
