@@ -50,18 +50,18 @@
             // unlocks the badge. Easy to extend — add a row, the public
             // strip + portal grid both pick it up automatically.
             badges: [
-                { key: 'spa',          name: 'Spa Survivor',         icon: '🇧🇪', blurb: 'Complete a race at Spa-Francorchamps',         matchers: ['spa', 'francorchamp'] },
-                { key: 'monza',        name: 'Temple Visitor',       icon: '🇮🇹', blurb: 'Complete a race at Monza',                       matchers: ['monza'] },
-                { key: 'suzuka',       name: 'Suzuka Graduate',      icon: '🇯🇵', blurb: 'Complete a race at Suzuka',                      matchers: ['suzuka'] },
-                { key: 'bathurst',     name: 'Mountain Survivor',    icon: '🇦🇺', blurb: 'Complete a race at Mount Panorama / Bathurst',   matchers: ['bathurst', 'mount panorama', 'panorama'] },
-                { key: 'daytona',      name: 'Daytona Survivor',     icon: '🇺🇸', blurb: 'Complete a race at Daytona',                     matchers: ['daytona'] },
-                { key: 'interlagos',   name: 'Interlagos Survivor',  icon: '🇧🇷', blurb: 'Complete a race at Interlagos',                  matchers: ['interlagos'] },
-                { key: 'nurburgring',  name: 'Green Hell Survivor',  icon: '🇩🇪', blurb: 'Complete a race at the Nürburgring Nordschleife', matchers: ['nürburgring', 'nurburgring', 'nordschleife', 'nords'] },
-                { key: 'le_mans',      name: 'Le Mans Finisher',     icon: '🇫🇷', blurb: 'Complete a race at Circuit de la Sarthe / Le Mans', matchers: ['le mans', 'sarthe'] },
+                { key: 'spa',          name: 'Spa Survivor',         icon: '/endurance/assets/badges/spa.png',         blurb: 'Complete a race at Spa-Francorchamps',         matchers: ['spa', 'francorchamp'] },
+                { key: 'monza',        name: 'Temple Visitor',       icon: '/endurance/assets/badges/monza.png',       blurb: 'Complete a race at Monza',                       matchers: ['monza'] },
+                { key: 'suzuka',       name: 'Suzuka Graduate',      icon: '/endurance/assets/badges/suzuka.png',      blurb: 'Complete a race at Suzuka',                      matchers: ['suzuka'] },
+                { key: 'bathurst',     name: 'Mountain Survivor',    icon: '/endurance/assets/badges/bathurst.png',    blurb: 'Complete a race at Mount Panorama / Bathurst',   matchers: ['bathurst', 'mount panorama', 'panorama'] },
+                { key: 'daytona',      name: 'Daytona Survivor',     icon: '/endurance/assets/badges/daytona.png',     blurb: 'Complete a race at Daytona',                     matchers: ['daytona'] },
+                { key: 'interlagos',   name: 'Interlagos Survivor',  icon: '/endurance/assets/badges/interlagos.png',  blurb: 'Complete a race at Interlagos',                  matchers: ['interlagos'] },
+                { key: 'nurburgring',  name: 'Green Hell Survivor',  icon: '/endurance/assets/badges/nurburgring.png', blurb: 'Complete a race at the Nürburgring Nordschleife', matchers: ['nürburgring', 'nurburgring', 'nordschleife', 'nords'] },
+                { key: 'le_mans',      name: 'Le Mans Finisher',     icon: '/endurance/assets/badges/le_mans.png',     blurb: 'Complete a race at Circuit de la Sarthe / Le Mans', matchers: ['le mans', 'sarthe'] },
                 // Capstone. Auto-unlocks the moment every other badge in
                 // this category is earned, so it doesn't need its own
                 // matchers — badgeIsEarned() resolves it dynamically.
-                { key: 'grand_tour',   name: 'Grand Tour',           icon: '🏁', blurb: 'Complete every event on the calendar',           requiresAll: true },
+                { key: 'grand_tour',   name: 'Grand Tour',           icon: '/endurance/assets/badges/grand_tour.png',  blurb: 'Complete every event on the calendar',           requiresAll: true },
             ],
         },
         {
