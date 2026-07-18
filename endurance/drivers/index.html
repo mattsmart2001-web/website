@@ -602,6 +602,23 @@
         }
         .bio-text { color: var(--muted); line-height: 1.7; font-size: 0.9rem; }
 
+        /* Season Stakes — best/worst possible finish still open, shown
+           for every driver, not just the title fight. */
+        .stakes-bar {
+            display: flex; gap: 0;
+            background: var(--bg-1);
+            border: 1px solid rgba(255,209,102,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .stakes-item { flex: 1; padding: 0.85rem 0.75rem; text-align: center; border-right: 1px solid var(--border); }
+        .stakes-item:last-child { border-right: none; }
+        .stakes-label { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+        .stakes-value { font-family: 'Anton', sans-serif; font-size: 1.35rem; line-height: 1; color: var(--text); }
+        .stakes-item.stakes-best .stakes-value { color: #4ade80; }
+        .stakes-item.stakes-worst .stakes-value { color: #f87171; }
+        .stakes-note { font-size: 0.72rem; color: var(--muted); text-align: center; margin-top: 0.6rem; }
+
         /* Split journey — a horizontal scroll of stops showing which split
            the driver raced in each round, with promotion / relegation
            indicators between them. */
@@ -1211,6 +1228,64 @@ function sortCards(gridSel, cardSel, sortKey) {
 }
 
 // ============================================================
+// SEASON STAKES — best/worst possible finish still mathematically
+// open for a driver in the active season. Ceiling per remaining round
+// assumes the most generous case (Split 1 / 100% multiplier, pole +
+// fastest lap + the win) rather than trying to predict actual future
+// splits — splits are Elo-sorted each round, so a driver who really
+// did win everything from here would be climbing toward Split 1
+// anyway. Every driver gets a number, not just the title fight:
+//   best  = 1 + rivals whose CURRENT points already beat this
+//           driver's ceiling (uncatchable even in the fantasy case)
+//   worst = 1 + rivals whose CEILING could still reach or pass this
+//           driver's floor (their current points, scoring nothing
+//           more) — ties assumed to go against this driver here,
+//           since remaining-round tie-breaks can't be known in advance
+// ============================================================
+async function fetchSeasonStakes(driverId) {
+    const { data: season } = await sb.from('seasons')
+        .select('id, year, points_systems(points, pole_points, fastest_lap_points)')
+        .eq('is_active', true)
+        .maybeSingle();
+    if (!season) return null;
+
+    const [{ count: remaining }, { data: allDrivers }, { data: standings }] = await Promise.all([
+        sb.from('events').select('id', { count: 'exact', head: true })
+            .eq('season_id', season.id).in('status', ['scheduled', 'in_progress']),
+        sb.from('drivers').select('id'),
+        sb.from('driver_standings').select('driver_id, points, wins, podiums').eq('season_id', season.id),
+    ]);
+    if (!remaining) return null; // season over, or nothing scheduled yet to project against
+
+    const ps = season.points_systems;
+    if (!ps) return null;
+    const maxPos = Math.max(0, ...(ps.points || []).map(p => Number(p.points) || 0));
+    const ceiling = remaining * (maxPos + Number(ps.pole_points || 0) + Number(ps.fastest_lap_points || 0));
+
+    const standingsMap = new Map((standings || []).map(s => [s.driver_id, s]));
+    const field = (allDrivers || []).map(d => {
+        const s = standingsMap.get(d.id);
+        return { driver_id: d.id, points: Number(s?.points || 0), wins: Number(s?.wins || 0), podiums: Number(s?.podiums || 0) };
+    });
+
+    const me = field.find(f => f.driver_id === driverId);
+    if (!me) return null;
+
+    const sorted = [...field].sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
+    const currentPosition = sorted.findIndex(f => f.driver_id === driverId) + 1;
+    const myCeiling = me.points + ceiling;
+
+    let best = 1, worst = 1;
+    field.forEach(f => {
+        if (f.driver_id === driverId) return;
+        if (f.points > myCeiling) best++;                  // still ahead even in my fantasy best
+        if (f.points + ceiling >= me.points) worst++;       // could reach or pass my floor
+    });
+
+    return { seasonYear: season.year, remaining, currentPoints: me.points, currentPosition, totalDrivers: field.length, best, worst };
+}
+
+// ============================================================
 // PROFILE
 // ============================================================
 async function showProfile() {
@@ -1227,7 +1302,7 @@ async function showProfile() {
     document.title = `${driver.display_name} — GTEC`;
 
     // Season career stats + rating history in parallel with race history
-    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes] = await Promise.all([
+    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes] = await Promise.all([
         sb.from('driver_standings').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
         sb.from('driver_ratings').select('rating_before, rating_after, delta, event_id, events(round, name)').eq('driver_id', driver.id).order('created_at'),
         sb.from('driver_current_ratings').select('rating, peak_rating').eq('driver_id', driver.id).maybeSingle(),
@@ -1246,6 +1321,7 @@ async function showProfile() {
         sb.from('steward_decisions')
             .select('decision_no, title, content, ruling, issued_at, events(name, slug, starts_at)')
             .eq('driver_id', driver.id),
+        fetchSeasonStakes(driver.id),
     ]);
 
     const seasons    = seasonsRes.data  || [];
@@ -1333,6 +1409,30 @@ async function showProfile() {
     }
 
     const tagsHTML = tags.map(t => `<span class="profile-tag">${t}</span>`).join('') + ratingChips.join('');
+
+    // Season Stakes — best/worst possible finish still mathematically
+    // open in the active season, for every driver, not just the
+    // handful fighting for P1. Hidden if the season's over or hasn't
+    // started, or this driver isn't in the current roster.
+    const seasonStakesHTML = seasonStakes ? `
+        <div class="section">
+            <div class="section-title">${seasonStakes.seasonYear} Championship Picture</div>
+            <div class="stakes-bar">
+                <div class="stakes-item">
+                    <div class="stakes-label">Currently</div>
+                    <div class="stakes-value">P${seasonStakes.currentPosition}</div>
+                </div>
+                <div class="stakes-item stakes-best">
+                    <div class="stakes-label">Best Possible</div>
+                    <div class="stakes-value">P${seasonStakes.best}</div>
+                </div>
+                <div class="stakes-item stakes-worst">
+                    <div class="stakes-label">Worst Possible</div>
+                    <div class="stakes-value">P${seasonStakes.worst}</div>
+                </div>
+            </div>
+            <div class="stakes-note">${seasonStakes.currentPoints.toFixed(seasonStakes.currentPoints % 1 === 0 ? 0 : 1)} pts · ${seasonStakes.remaining} round${seasonStakes.remaining === 1 ? '' : 's'} left · P${seasonStakes.best}${seasonStakes.best === seasonStakes.worst ? '' : `–P${seasonStakes.worst}`} still mathematically possible</div>
+        </div>` : '';
 
     // Career stats table
     const seasonsHTML = (seasons || []).length ? `
@@ -1506,6 +1606,8 @@ async function showProfile() {
                 <div class="stat-item hide-mob"><div class="stat-label">Podiums</div><div class="stat-value">${totals.podiums}</div></div>
                 <div class="stat-item hide-mob"><div class="stat-label">Poles</div><div class="stat-value">${totals.poles}</div></div>
             </div>
+
+            ${seasonStakesHTML}
 
             ${driver.bio ? `<div class="section"><div class="section-title">Bio</div><div class="bio-text">${esc(driver.bio)}</div></div>` : ''}
 
