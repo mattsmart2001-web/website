@@ -175,7 +175,7 @@
 
         /* Live Battles — every adjacent-position pair still mathematically
            swappable, not just the title fight at the top. */
-        .battles-section { margin-top: 1.5rem; }
+        .battles-section { margin-bottom: 1.5rem; }
         .battles-title {
             font-family: 'Orbitron', sans-serif;
             font-size: 0.65rem;
@@ -663,6 +663,7 @@ function renderDrivers(panel) {
     }).join('');
 
     panel.innerHTML = `
+        ${buildBattlesHTML(_drivers, { nameKey: 'driver_name', slugKey: 'driver_slug', urlBase: '/endurance/drivers/' })}
         <div class="standings">
             <table>
                 <thead><tr>
@@ -678,8 +679,7 @@ function renderDrivers(panel) {
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
-        </div>
-        ${buildBattlesHTML(_drivers, { nameKey: 'driver_name', slugKey: 'driver_slug', urlBase: '/endurance/drivers/' })}`;
+        </div>`;
 }
 
 function renderTeams(panel) {
@@ -719,6 +719,7 @@ function renderTeams(panel) {
     }).join('');
 
     panel.innerHTML = `
+        ${buildBattlesHTML(_teams, { nameKey: 'team_name', slugKey: 'team_slug', urlBase: '/endurance/teams/' })}
         <div class="standings">
             <table>
                 <thead><tr>
@@ -733,8 +734,7 @@ function renderTeams(panel) {
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
-        </div>
-        ${buildBattlesHTML(_teams, { nameKey: 'team_name', slugKey: 'team_slug', urlBase: '/endurance/teams/' })}`;
+        </div>`;
 }
 
 function renderRatings(panel) {
