@@ -121,7 +121,7 @@
             title: 'Community',
             type: 'role',
             badges: [
-                { key: 'lobby_host', name: 'Lobby Host', icon: '🎛️', blurb: 'Registered as a willing lobby host for their split',
+                { key: 'lobby_host', name: 'Lobby Host', icon: '/endurance/assets/badges/lobby_host.png', blurb: 'Registered as a willing lobby host for their split',
                   evalFn: s => !!s.willingHost },
             ],
         },
