@@ -17,12 +17,12 @@
             stat: 'starts',
             statLabel: 'races',
             badges: [
-                { key: 'living_legend',  name: 'Living Legend',         icon: '👑', threshold: 100, blurb: 'Complete 100 races' },
-                { key: 'ironman',        name: 'Ironman',               icon: '🛡️', threshold:  50, blurb: 'Complete 50 races'  },
-                { key: 'endurance_spec', name: 'Endurance Specialist',  icon: '⏱️', threshold:  20, blurb: 'Complete 20 races'  },
-                { key: 'veteran',        name: 'Veteran',               icon: '🪖', threshold:  10, blurb: 'Complete 10 races'  },
-                { key: 'regular',        name: 'Regular',               icon: '🎫', threshold:   5, blurb: 'Complete 5 races'   },
-                { key: 'debut',          name: 'Debut',                 icon: '🏁', threshold:   1, blurb: 'Complete first race'},
+                { key: 'living_legend',  name: 'Living Legend',         icon: '/endurance/assets/badges/living_legend.png',  threshold: 100, blurb: 'Complete 100 races' },
+                { key: 'ironman',        name: 'Ironman',               icon: '/endurance/assets/badges/ironman.png',        threshold:  50, blurb: 'Complete 50 races'  },
+                { key: 'endurance_spec', name: 'Endurance Specialist',  icon: '/endurance/assets/badges/endurance_spec.png', threshold:  20, blurb: 'Complete 20 races'  },
+                { key: 'veteran',        name: 'Veteran',               icon: '/endurance/assets/badges/veteran.png',        threshold:  10, blurb: 'Complete 10 races'  },
+                { key: 'regular',        name: 'Regular',               icon: '/endurance/assets/badges/regular.png',        threshold:   5, blurb: 'Complete 5 races'   },
+                { key: 'debut',          name: 'Debut',                 icon: '/endurance/assets/badges/debut.png',          threshold:   1, blurb: 'Complete first race'},
             ],
         },
         {
