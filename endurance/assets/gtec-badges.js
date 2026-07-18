@@ -182,11 +182,12 @@
     // Badge art can be a plain emoji string ("👑") or a path/URL to a PNG —
     // anything containing a "/" is treated as an image so badges can be
     // swapped from emoji to custom artwork one at a time, no data migration.
+    function isImageIcon(icon) {
+        return !!icon && icon.indexOf('/') !== -1;
+    }
+
     function iconMarkup(icon) {
-        if (icon && icon.indexOf('/') !== -1) {
-            return `<img src="${icon}" alt="" loading="lazy">`;
-        }
-        return icon;
+        return isImageIcon(icon) ? `<img src="${icon}" alt="" loading="lazy">` : icon;
     }
 
     function badgeIcon(b, opts = {}) {
@@ -203,7 +204,12 @@
                     <span class="gtec-badge-label">Hidden</span>
                 </div>`;
         }
-        const cls      = 'gtec-badge' + (locked ? ' gtec-badge-locked' : '');
+        // Custom artwork already comes with its own border/shading baked in,
+        // so the circular ring + card chrome built for bare emoji would just
+        // double up on it — drop both and let the art sit on its own.
+        const artwork  = isImageIcon(b.icon);
+        const cls      = 'gtec-badge' + (locked ? ' gtec-badge-locked' : '') + (artwork ? ' gtec-badge-artwork' : '');
+        const iconCls  = 'gtec-badge-icon' + (artwork ? ' gtec-badge-artwork' : '');
         const title    = locked
             ? `${b.name} — ${b.blurb}${progress != null ? ` · ${Math.round(progress * 100)}%` : ''}`
             : `${b.name} — ${b.blurb}`;
@@ -213,7 +219,7 @@
         return `
             <div class="${cls}" title="${title}">
                 ${ring}
-                <span class="gtec-badge-icon" aria-hidden="true">${iconMarkup(b.icon)}</span>
+                <span class="${iconCls}" aria-hidden="true">${iconMarkup(b.icon)}</span>
                 ${locked ? '<span class="gtec-badge-lock">🔒</span>' : ''}
                 <span class="gtec-badge-label">${b.name}</span>
             </div>`;
@@ -426,6 +432,12 @@
                 transition: transform 0.15s ease, box-shadow 0.15s ease;
             }
             .gtec-badge:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,209,102,0.18); }
+            .gtec-badge.gtec-badge-artwork {
+                background: none;
+                border: none;
+                box-shadow: none;
+            }
+            .gtec-badge.gtec-badge-artwork:hover { box-shadow: none; }
             .gtec-badge-locked {
                 background: linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
                 border-color: rgba(255,255,255,0.1);
@@ -474,6 +486,21 @@
                 border-color: rgba(255,255,255,0.15);
                 box-shadow: none;
                 filter: grayscale(1) brightness(0.65);
+            }
+            .gtec-badge-icon.gtec-badge-artwork {
+                background: none;
+                border: none;
+                box-shadow: none;
+                border-radius: 0;
+            }
+            .gtec-badge-icon.gtec-badge-artwork img {
+                border-radius: 0;
+                object-fit: contain;
+            }
+            .gtec-badge-locked .gtec-badge-icon.gtec-badge-artwork {
+                background: none;
+                border: none;
+                box-shadow: none;
             }
             .gtec-badge-label {
                 font-family: 'Orbitron', sans-serif;
