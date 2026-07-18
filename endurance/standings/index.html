@@ -173,48 +173,15 @@
         .standings a:active { color: inherit; text-decoration: none; }
         .standings a:hover { text-decoration: underline; }
 
-        /* Live Battles — every adjacent-position pair still mathematically
-           swappable, not just the title fight at the top. */
-        .battles-section { margin-bottom: 1.5rem; }
-        .battles-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.65rem;
-            font-weight: 700;
-            letter-spacing: 0.35em;
-            text-transform: uppercase;
-            color: var(--gold);
-            margin-bottom: 0.85rem;
-            text-indent: 0.35em;
+        /* Live-battle flag — a quiet inline cue next to the points-gap
+           number when this row could still catch the row above it,
+           rather than a separate section competing with the table. */
+        .battle-flag {
+            display: inline-block;
+            margin-left: 0.3rem;
+            font-size: 0.72rem;
+            cursor: help;
         }
-        .battles-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        .battle-row {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            flex-wrap: wrap;
-            background: var(--bg-1);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 0.6rem 0.9rem;
-            font-size: 0.85rem;
-        }
-        .battle-name { font-weight: 600; color: var(--text); text-decoration: none; }
-        .battle-name:hover { text-decoration: underline; }
-        .battle-vs { color: var(--muted); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
-        .battle-gap {
-            margin-left: auto;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.68rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            color: var(--gold);
-            white-space: nowrap;
-        }
-        .battles-note { font-size: 0.72rem; color: var(--muted); margin-top: 0.7rem; }
 
         /* Standings table */
         .standings {
@@ -571,44 +538,18 @@ async function loadRatings() {
     renderRatings(panel);
 }
 
-// Live Battles — every adjacent-position pair still mathematically
-// swappable, not just the title fight. A pair is "live" if the chaser's
-// ceiling (their points + everyone's shared remaining-rounds ceiling)
-// could still reach or pass the leader's current points. Settled pairs
-// (chaser can never catch up) are simply omitted — this is a list of
-// what's still actually contestable, not the full grid.
-function buildBattlesHTML(sortedList, { nameKey, slugKey, urlBase }) {
-    if (_ceiling == null || sortedList.length < 2) return '';
-    const battles = [];
-    for (let i = 0; i < sortedList.length - 1; i++) {
-        const leader = sortedList[i], chaser = sortedList[i + 1];
-        const leaderPoints = Number(leader.points) || 0;
-        const chaserPoints = Number(chaser.points) || 0;
-        if (chaserPoints + _ceiling >= leaderPoints) {
-            const gap = leaderPoints - chaserPoints;
-            battles.push({
-                posA: i + 1, posB: i + 2,
-                nameA: leader[nameKey], slugA: leader[slugKey],
-                nameB: chaser[nameKey], slugB: chaser[slugKey],
-                gap,
-            });
-        }
-    }
-    if (!battles.length) return '';
-    return `
-        <div class="battles-section">
-            <div class="battles-title">Live Battles</div>
-            <div class="battles-list">
-                ${battles.map(b => `
-                    <div class="battle-row">
-                        <a class="battle-name" href="${urlBase}?slug=${esc(b.slugA)}">P${b.posA} ${esc(b.nameA)}</a>
-                        <span class="battle-vs">vs</span>
-                        <a class="battle-name" href="${urlBase}?slug=${esc(b.slugB)}">P${b.posB} ${esc(b.nameB)}</a>
-                        <span class="battle-gap">${b.gap.toFixed(b.gap % 1 === 0 ? 0 : 1)} pt${b.gap === 1 ? '' : 's'} apart</span>
-                    </div>`).join('')}
-            </div>
-            <div class="battles-note">${_remaining} round${_remaining === 1 ? '' : 's'} left · positions not shown here are already mathematically settled</div>
-        </div>`;
+// Live-battle flag — a quiet inline cue instead of a separate section.
+// Returns a small icon for the gap cell when THIS row could still catch
+// the row directly above it (their ceiling reaches or passes the row
+// above's current points); empty string when that gap is already
+// mathematically settled, or for the leader row (nothing above to chase).
+function battleFlag(rowPoints, aboveRow) {
+    if (_ceiling == null || !aboveRow) return '';
+    const abovePoints = Number(aboveRow.points) || 0;
+    if (rowPoints + _ceiling < abovePoints) return '';
+    const gap = abovePoints - rowPoints;
+    const title = `Still catchable — ${gap.toFixed(gap % 1 === 0 ? 0 : 1)} pt${gap === 1 ? '' : 's'} back, ${_remaining} round${_remaining === 1 ? '' : 's'} left`;
+    return `<span class="battle-flag" title="${esc(title)}">🔥</span>`;
 }
 
 function renderDrivers(panel) {
@@ -637,7 +578,7 @@ function renderDrivers(panel) {
         const points = Number(d.points) || 0;
         const gap = pos === 1
             ? `<span class="leader-pip">LEADER</span>`
-            : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>`;
+            : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>${battleFlag(points, _drivers[i - 1])}`;
         return `<tr class="driver-row ${rankCls(pos)}">
             <td class="${posCls(pos)}" style="${d.brand_color ? `border-left:3px solid ${esc(d.brand_color)}` : 'border-left:3px solid transparent'}">
                 <div class="pos-stack">
@@ -663,7 +604,6 @@ function renderDrivers(panel) {
     }).join('');
 
     panel.innerHTML = `
-        ${buildBattlesHTML(_drivers, { nameKey: 'driver_name', slugKey: 'driver_slug', urlBase: '/endurance/drivers/' })}
         <div class="standings">
             <table>
                 <thead><tr>
@@ -697,7 +637,7 @@ function renderTeams(panel) {
         const points = Number(t.points) || 0;
         const gap = pos === 1
             ? `<span class="leader-pip">LEADER</span>`
-            : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>`;
+            : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>${battleFlag(points, _teams[i - 1])}`;
         return `<tr class="${rankCls(pos)}">
             <td class="${posCls(pos)}" style="${t.brand_color ? `border-left:3px solid ${esc(t.brand_color)}` : 'border-left:3px solid transparent'}">
                 <div class="pos-stack"><span>${pos}</span></div>
@@ -719,7 +659,6 @@ function renderTeams(panel) {
     }).join('');
 
     panel.innerHTML = `
-        ${buildBattlesHTML(_teams, { nameKey: 'team_name', slugKey: 'team_slug', urlBase: '/endurance/teams/' })}
         <div class="standings">
             <table>
                 <thead><tr>
