@@ -179,6 +179,16 @@
         return remaining[0] || null;
     }
 
+    // Badge art can be a plain emoji string ("👑") or a path/URL to a PNG —
+    // anything containing a "/" is treated as an image so badges can be
+    // swapped from emoji to custom artwork one at a time, no data migration.
+    function iconMarkup(icon) {
+        if (icon && icon.indexOf('/') !== -1) {
+            return `<img src="${icon}" alt="" loading="lazy">`;
+        }
+        return icon;
+    }
+
     function badgeIcon(b, opts = {}) {
         const locked   = !!opts.locked;
         const secret   = !!opts.secret;
@@ -203,7 +213,7 @@
         return `
             <div class="${cls}" title="${title}">
                 ${ring}
-                <span class="gtec-badge-icon" aria-hidden="true">${b.icon}</span>
+                <span class="gtec-badge-icon" aria-hidden="true">${iconMarkup(b.icon)}</span>
                 ${locked ? '<span class="gtec-badge-lock">🔒</span>' : ''}
                 <span class="gtec-badge-label">${b.name}</span>
             </div>`;
@@ -452,6 +462,12 @@
                 border: 2px solid rgba(255,209,102,0.55);
                 box-shadow: inset 0 0 12px rgba(255,209,102,0.18);
                 font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+                overflow: hidden;
+            }
+            .gtec-badge-icon img {
+                width: 100%; height: 100%;
+                object-fit: cover;
+                border-radius: 50%;
             }
             .gtec-badge-locked .gtec-badge-icon {
                 background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.05), rgba(0,0,0,0.4) 75%);
