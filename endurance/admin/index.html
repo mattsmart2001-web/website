@@ -863,7 +863,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/countries.js"></script>
 <script src="../assets/gtec-config.js"></script>
-<script src="../assets/gtec-badges.js?v=13"></script>
+<script src="../assets/gtec-badges.js?v=14"></script>
 <script>
 'use strict';
 
@@ -1978,7 +1978,7 @@ function manualBadgePicker(granted) {
                 ${cat.badges.map(b => `
                     <label style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.82rem;cursor:pointer;user-select:none">
                         <input type="checkbox" name="manual_badges" value="${esc(b.key)}" ${set.has(b.key) ? 'checked' : ''} style="accent-color:var(--gold);width:14px;height:14px">
-                        <span>${b.icon || ''} ${esc(b.name)}</span>
+                        <span style="display:inline-flex;align-items:center;gap:0.3rem">${window.gtecBadgeIsImage && window.gtecBadgeIsImage(b.icon) ? `<img src="${b.icon}" alt="" style="width:16px;height:16px;object-fit:contain">` : (b.icon || '')} ${esc(b.name)}</span>
                     </label>`).join('')}
             </div>
         </div>`).join('');

@@ -543,7 +543,12 @@
         document.head.appendChild(style);
     }
 
-    window.BADGE_CATEGORIES = CATEGORIES;
-    window.renderBadgeStrip = renderBadgeStrip;
-    window.renderBadgeGrid  = renderBadgeGrid;
+    window.BADGE_CATEGORIES  = CATEGORIES;
+    window.renderBadgeStrip  = renderBadgeStrip;
+    window.renderBadgeGrid   = renderBadgeGrid;
+    // Shared with other pages that render their own compact badge chips
+    // (driver cards, admin's manual-badge picker) so a badge's icon — emoji
+    // or custom PNG — never has to be interpreted more than once.
+    window.gtecBadgeIsImage     = isImageIcon;
+    window.gtecBadgeIconMarkup  = iconMarkup;
 })();

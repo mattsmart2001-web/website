@@ -451,6 +451,21 @@
             transform: scale(1.25);
             box-shadow: 0 0 10px rgba(255,209,102,0.35);
         }
+        .driver-card-badge img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        /* Custom artwork already has its own border baked in — drop the
+           circular ring built for bare emoji so it sits on its own. */
+        .driver-card-badge.driver-card-badge-artwork {
+            background: none;
+            border: none;
+        }
+        .driver-card-badge.driver-card-badge-artwork img {
+            border-radius: 0;
+            object-fit: contain;
+        }
 
         /* Placeholder initials when no photo */
         .driver-initials {
@@ -791,7 +806,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=13"></script>
+<script src="/endurance/assets/gtec-badges.js?v=14"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script>
 'use strict';
@@ -956,9 +971,12 @@ async function showListing() {
         }
 
         if (!earned.length) return '';
-        const chips = earned.map(b =>
-            `<span class="driver-card-badge" title="${b.name} — ${b.blurb}">${b.icon}</span>`
-        ).join('');
+        const chips = earned.map(b => {
+            const artwork = window.gtecBadgeIsImage && window.gtecBadgeIsImage(b.icon);
+            const icon    = window.gtecBadgeIconMarkup ? window.gtecBadgeIconMarkup(b.icon) : b.icon;
+            const cls     = 'driver-card-badge' + (artwork ? ' driver-card-badge-artwork' : '');
+            return `<span class="${cls}" title="${b.name} — ${b.blurb}">${icon}</span>`;
+        }).join('');
         return `<div class="driver-card-badges">${chips}</div>`;
     }
 
