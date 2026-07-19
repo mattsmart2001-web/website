@@ -123,8 +123,8 @@
             stat: 'hostCount',
             statLabel: 'splits hosted',
             badges: [
-                { key: 'host_legend',  name: 'Host Legend',  icon: '🏅', threshold: 15, blurb: 'Hosted 15 splits' },
-                { key: 'trusted_host', name: 'Trusted Host', icon: '🎖️', threshold:  5, blurb: 'Hosted 5 splits'  },
+                { key: 'host_legend',  name: 'Host Legend',  icon: '/endurance/assets/badges/host_legend.png',  threshold: 15, blurb: 'Hosted 15 splits' },
+                { key: 'trusted_host', name: 'Trusted Host', icon: '/endurance/assets/badges/trusted_host.png', threshold:  5, blurb: 'Hosted 5 splits'  },
                 { key: 'lobby_host',   name: 'Lobby Host',   icon: '/endurance/assets/badges/lobby_host.png', threshold: 1, blurb: 'Hosted your first split' },
             ],
         },
