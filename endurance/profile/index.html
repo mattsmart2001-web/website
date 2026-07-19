@@ -1076,7 +1076,7 @@ async function toggleAbsence(eventId, driverId, checkbox) {
     if (row) row.classList.toggle('absent', checkbox.checked);
 }
 
-// Race Lobby card — Current Event / Split / Lobby ID. Shows as soon as the
+// Race Lobby card: Current Event / Split / Lobby ID. Shows as soon as the
 // driver has an entry in the next scheduled event, even before splits
 // exist. Split fills in once allocated (immediately for the host, once
 // notified for everyone else). Lobby ID fills in once the host posts it.
@@ -1104,7 +1104,7 @@ async function loadLobbyRoomCode(driverId) {
     // out — before that they don't officially know their own assignment.
     const splitKnown = en.lobby_number != null && (isHost || ev.splits_notified_at != null);
 
-    document.getElementById('lobby-room-event').textContent = `R${ev.round} — ${ev.name}`;
+    document.getElementById('lobby-room-event').textContent = `R${ev.round} · ${ev.name}`;
     document.getElementById('lobby-room-split').textContent = splitKnown ? en.lobby_number : 'TBC';
 
     const idEl = document.getElementById('lobby-room-id');
@@ -1130,7 +1130,7 @@ async function loadLobbyRoomCode(driverId) {
 
     if (isHost) {
         extra.innerHTML = `
-            <p style="color:var(--muted);font-size:0.85rem;margin:0.75rem 0">You're hosting this split. Post the Lobby ID here once you've created the Custom Race in GT7 — everyone in your split can see it, even if they're not on Discord.</p>
+            <p style="color:var(--muted);font-size:0.85rem;margin:0.75rem 0">You're hosting this split. Post the Lobby ID here once you've created the Custom Race in GT7. Everyone in your split can see it, even if they're not on Discord.</p>
             <div class="form-group">
                 <label class="field-label">Lobby ID</label>
                 <input type="text" id="lobby-room-input" placeholder="e.g. 123-456-789" value="${esc(rc?.room_code || '')}">
@@ -1139,7 +1139,7 @@ async function loadLobbyRoomCode(driverId) {
     } else {
         extra.innerHTML = rc?.room_code
             ? ''
-            : `<p style="color:var(--muted);font-size:0.85rem;margin:0.75rem 0 0">Your host hasn't posted the Lobby ID yet — check back closer to race time, or watch your split's Discord channel.</p>`;
+            : `<p style="color:var(--muted);font-size:0.85rem;margin:0.75rem 0 0">Your host hasn't posted the Lobby ID yet. Check back closer to race time, or watch your split's Discord channel.</p>`;
     }
 
     document.getElementById('card-lobby-room').style.display = '';
@@ -1161,7 +1161,7 @@ async function saveLobbyRoomCode() {
         updated_at:   new Date().toISOString(),
     }, { onConflict: 'event_id,lobby_number' });
     btn.disabled = false;
-    if (error) { toast('Could not save — please try again.', 'error'); return; }
+    if (error) { toast('Could not save. Please try again.', 'error'); return; }
     toast('Lobby ID posted.', 'success');
 }
 
