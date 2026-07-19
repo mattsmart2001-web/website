@@ -119,10 +119,13 @@
         {
             key: 'community',
             title: 'Community',
-            type: 'role',
+            type: 'threshold',
+            stat: 'hostCount',
+            statLabel: 'splits hosted',
             badges: [
-                { key: 'lobby_host', name: 'Lobby Host', icon: '/endurance/assets/badges/lobby_host.png', blurb: 'Registered as a willing lobby host for their split',
-                  evalFn: s => !!s.willingHost },
+                { key: 'host_legend',  name: 'Host Legend',  icon: '🏅', threshold: 15, blurb: 'Hosted 15 splits' },
+                { key: 'trusted_host', name: 'Trusted Host', icon: '🎖️', threshold:  5, blurb: 'Hosted 5 splits'  },
+                { key: 'lobby_host',   name: 'Lobby Host',   icon: '/endurance/assets/badges/lobby_host.png', threshold: 1, blurb: 'Hosted your first split' },
             ],
         },
     ];

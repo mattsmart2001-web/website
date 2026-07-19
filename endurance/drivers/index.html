@@ -823,7 +823,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=17"></script>
+<script src="/endurance/assets/gtec-badges.js?v=18"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script>
 'use strict';
@@ -898,13 +898,16 @@ function mfrBadge(logoUrl, brandColor, name, opts = {}) {
 // ============================================================
 async function showListing() {
     document.title = 'Drivers — GTEC';
-    const [{ data, error }, { data: ratings }, { data: activeSeasons }, { data: standings }] = await Promise.all([
+    const [{ data, error }, { data: ratings }, { data: activeSeasons }, { data: standings }, { data: hostEntries }] = await Promise.all([
         sb.from('drivers')
             .select('id, display_name, slug, nationality, career_number, photo_url, manual_badges, willing_host, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url,car_name)')
             .order('display_name'),
         sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
         sb.from('seasons').select('id').eq('is_active', true).limit(1),
         sb.from('driver_standings').select('driver_id, season_id, points, wins, races'),
+        // Career-wide count of splits actually hosted (not just "willing to
+        // host") feeds the Community badge ladder.
+        sb.from('entries').select('host_driver_id').not('host_driver_id', 'is', null),
     ]);
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
@@ -945,11 +948,16 @@ async function showListing() {
         });
     });
 
+    const hostCountMap = {};
+    (hostEntries || []).forEach(e => {
+        hostCountMap[e.host_driver_id] = (hostCountMap[e.host_driver_id] || 0) + 1;
+    });
+
     function cardBadges(d, totalWins, totalRaces, seasonFinishes) {
         const cats = window.BADGE_CATEGORIES;
         if (!cats) return '';
         const manualBadges = Array.isArray(d.manual_badges) ? d.manual_badges : [];
-        const stats = { wins: totalWins, starts: totalRaces, willingHost: !!d.willing_host, manualBadges, seasonFinishes: seasonFinishes || [] };
+        const stats = { wins: totalWins, starts: totalRaces, hostCount: hostCountMap[d.id] || 0, manualBadges, seasonFinishes: seasonFinishes || [] };
 
         const seen = new Set();
         const earned = [];
@@ -970,10 +978,7 @@ async function showListing() {
         add(topEarned('victories'));
         add(topEarned('titles'));
         add(topEarned('career'));
-        if (d.willing_host) {
-            const comCat = cats.find(c => c.key === 'community');
-            if (comCat) add(comCat.badges[0]);
-        }
+        add(topEarned('community'));
 
         // Fill remaining slots from manually-granted badges across all categories
         const fillOrder = ['victories', 'titles', 'career', 'secrets', 'circuits', 'community'];
@@ -1302,7 +1307,7 @@ async function showProfile() {
     document.title = `${driver.display_name} — GTEC`;
 
     // Season career stats + rating history in parallel with race history
-    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes] = await Promise.all([
+    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes, hostCountRes] = await Promise.all([
         sb.from('driver_standings').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
         sb.from('driver_ratings').select('rating_before, rating_after, delta, event_id, events(round, name)').eq('driver_id', driver.id).order('created_at'),
         sb.from('driver_current_ratings').select('rating, peak_rating').eq('driver_id', driver.id).maybeSingle(),
@@ -1322,8 +1327,12 @@ async function showProfile() {
             .select('decision_no, title, content, ruling, issued_at, events(name, slug, starts_at)')
             .eq('driver_id', driver.id),
         fetchSeasonStakes(driver.id),
+        // Career-wide count of splits actually hosted, feeds the Community
+        // badge ladder (replaces the old "willing to host" flag check).
+        sb.from('entries').select('id', { count: 'exact', head: true }).eq('host_driver_id', driver.id),
     ]);
 
+    const hostCount  = hostCountRes.count || 0;
     const seasons    = seasonsRes.data  || [];
     const ratingHist = ratingRes.data   || [];
     const currentRatingRow = currentRatingRes.data;
@@ -1586,7 +1595,7 @@ async function showProfile() {
                     ${driver.career_number ? `<div class="profile-number">#${driver.career_number}</div>` : ''}
                     <div class="profile-name">${esc(driver.display_name)}</div>
                     <div class="profile-tags">${tagsHTML}</div>
-                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [], willingHost: !!driver.willing_host }) : ''}
+                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [], hostCount }) : ''}
                     <button class="share-btn" id="share-profile-btn" type="button">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>

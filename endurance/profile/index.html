@@ -630,7 +630,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=17"></script>
+<script src="/endurance/assets/gtec-badges.js?v=18"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script src="/endurance/assets/gtec-push.js"></script>
 <script src="../assets/countries.js"></script>
@@ -1266,7 +1266,7 @@ async function loadBadges(driverId) {
     // is the distinct lower-cased events.circuit_name for any classified
     // result_drivers row owned by this driver — the same source the
     // public profile uses for the strip.
-    const [{ data: stats }, { data: circuitRows }, { data: seasons }, { data: allStandings }, { data: secretBadges }, { data: driverRow }] = await Promise.all([
+    const [{ data: stats }, { data: circuitRows }, { data: seasons }, { data: allStandings }, { data: secretBadges }, { data: driverRow }, { count: hostCount }] = await Promise.all([
         sb.from('driver_career_stats').select('starts, wins').eq('driver_id', driverId).maybeSingle(),
         sb.from('result_drivers')
             .select('status, results(events(circuit_name))')
@@ -1275,6 +1275,9 @@ async function loadBadges(driverId) {
         sb.from('driver_standings').select('driver_id, season_id, points'),
         sb.rpc('driver_secret_badges', { p_driver_id: driverId }),
         sb.from('drivers').select('manual_badges, willing_host').eq('id', driverId).maybeSingle(),
+        // Career-wide count of splits actually hosted, feeds the Community
+        // badge ladder (replaces the old "willing to host" flag check).
+        sb.from('entries').select('id', { count: 'exact', head: true }).eq('host_driver_id', driverId),
     ]);
 
     const completedCircuits = Array.from(new Set(
@@ -1303,7 +1306,7 @@ async function loadBadges(driverId) {
         seasonFinishes,
         secretBadges: secretBadges || {},
         manualBadges: Array.isArray(driverRow?.manual_badges) ? driverRow.manual_badges : [],
-        willingHost: !!driverRow?.willing_host,
+        hostCount: hostCount || 0,
     });
     document.getElementById('card-badges').style.display = '';
 }
