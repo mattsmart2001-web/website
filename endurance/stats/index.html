@@ -408,13 +408,37 @@ function leaderboardHTML(title, rows, valueFmt = v => v) {
     </div>`;
 }
 
+// Same shape as leaderboardHTML but for teams — separate function rather
+// than parameterizing driver vs team in one, since the row shape (slug/name
+// field names, link target) differs and this stays simpler to read.
+function teamLeaderboardHTML(title, rows, valueFmt = v => v) {
+    const ranked = rows.filter(r => Number(r.__value) > 0).slice(0, 5);
+    const inner = ranked.length === 0
+        ? `<div class="empty-lb">No data yet.</div>`
+        : `<table class="lb-table"><tbody>
+            ${ranked.map((r, i) => `<tr>
+                <td class="${posCls(i + 1)}">${i + 1}</td>
+                <td class="lb-name"><a href="/endurance/teams/?slug=${esc(r.team_slug)}">${esc(r.team_name)}</a></td>
+                <td class="lb-value">${valueFmt(r.__value)}</td>
+            </tr>`).join('')}
+          </tbody></table>`;
+    return `<div class="lb-card">
+        <div class="lb-header">${title}</div>
+        ${inner}
+    </div>`;
+}
+
 async function load() {
-    const [hofRes, careerRes, ratingsRes, circuitsRes, seasonRes] = await Promise.all([
+    const [hofRes, careerRes, ratingsRes, circuitsRes, seasonRes, teamStandingsRes] = await Promise.all([
         sb.from('hall_of_fame_records').select('*, drivers(display_name,slug)').order('sort_order'),
         sb.from('driver_career_stats').select('*'),
         sb.from('driver_current_ratings').select('driver_id, driver_name, driver_slug, rating, peak_rating, last_rated_at'),
         sb.from('circuit_records').select('*').order('best_lap_ms'),
         sb.from('seasons').select('id, year, points_systems(points, pole_points, fastest_lap_points)').eq('is_active', true).maybeSingle(),
+        // team_standings is per-team-per-season, same shape driver_career_stats
+        // is derived from — aggregated client-side into career totals below,
+        // same reduce() pattern teams/index.html's own profile page already uses.
+        sb.from('team_standings').select('*'),
     ]);
 
     const content = document.getElementById('content');
@@ -422,6 +446,25 @@ async function load() {
     const career   = careerRes.data   || [];
     const ratings  = (ratingsRes.data || []).filter(r => r.last_rated_at);
     const circuits = circuitsRes.data || [];
+
+    // Team career totals — team_standings has one row per team per season,
+    // sum them into one row per team the same way a team's own profile
+    // page rolls up its "Season History" table into a career line.
+    const teamCareerMap = new Map();
+    (teamStandingsRes.data || []).forEach(s => {
+        const t = teamCareerMap.get(s.team_id) || {
+            team_id: s.team_id, team_name: s.team_name, team_slug: s.team_slug,
+            wins: 0, podiums: 0, poles: 0, fastest_laps: 0, races: 0, points: 0,
+        };
+        t.wins         += Number(s.wins) || 0;
+        t.podiums      += Number(s.podiums) || 0;
+        t.poles        += Number(s.poles) || 0;
+        t.fastest_laps += Number(s.fastest_laps) || 0;
+        t.races        += Number(s.races) || 0;
+        t.points       += Number(s.points) || 0;
+        teamCareerMap.set(s.team_id, t);
+    });
+    const teamCareer = Array.from(teamCareerMap.values());
 
     // Season Stakes ceiling for the compare tool's "Championship Fight"
     // row — same engine as the driver/team profile pages and Standings.
@@ -474,6 +517,7 @@ async function load() {
     // Career leaderboards — annotate each with __value for the metric
     const lb = (key, transform = v => v) => career.map(d => ({ ...d, __value: transform(d[key]) || 0 })).sort((a, b) => b.__value - a.__value);
     const lbRatings = (key) => ratings.map(d => ({ ...d, __value: Number(d[key]) || 0 })).sort((a, b) => b.__value - a.__value);
+    const teamLb = (key, transform = v => v) => teamCareer.map(t => ({ ...t, __value: transform(t[key]) || 0 })).sort((a, b) => b.__value - a.__value);
 
     const leaderboardsHTML = `
         <div class="section">
@@ -487,6 +531,17 @@ async function load() {
                 ${leaderboardHTML('Career Points',     lb('career_points', v => Number(v)), v => Number(v).toFixed(v % 1 === 0 ? 0 : 1))}
                 ${leaderboardHTML('Highest Rating',    lbRatings('rating'),      v => `${v}${window.eloTierBadge ? window.eloTierBadge(v) : ''}`)}
                 ${leaderboardHTML('Peak Rating',       lbRatings('peak_rating'), v => `${v}${window.eloTierBadge ? window.eloTierBadge(v) : ''}`)}
+            </div>
+        </div>
+        <div class="section">
+            <div class="section-title">Team Career Leaderboards</div>
+            <div class="lb-grid">
+                ${teamLeaderboardHTML('Most Team Wins',         teamLb('wins'))}
+                ${teamLeaderboardHTML('Most Team Podiums',      teamLb('podiums'))}
+                ${teamLeaderboardHTML('Most Team Poles',        teamLb('poles'))}
+                ${teamLeaderboardHTML('Most Team Fastest Laps', teamLb('fastest_laps'))}
+                ${teamLeaderboardHTML('Most Team Races',        teamLb('races'))}
+                ${teamLeaderboardHTML('Team Career Points',     teamLb('points', v => Number(v)), v => Number(v).toFixed(v % 1 === 0 ? 0 : 1))}
             </div>
         </div>`;
 
