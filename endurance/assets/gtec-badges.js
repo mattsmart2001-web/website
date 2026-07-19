@@ -131,10 +131,10 @@
             // before the real tiers so the "hardest first" ordering the
             // ladder renderer assumes still holds.
             badges: [
-                { key: 'founding_member', name: 'Founding Member',  icon: '🌱', threshold: Infinity, blurb: 'Part of the GTEC Season 1 grid' },
-                { key: 'ambassador',      name: 'Ambassador',       icon: '🤝', threshold: Infinity, blurb: 'Brought a new driver into GTEC' },
-                { key: 'content_creator', name: 'Content Creator',  icon: '🎥', threshold: Infinity, blurb: 'Streams, records, or shares GTEC content' },
-                { key: 'community_voice', name: 'Community Voice', icon: '💬', threshold: Infinity, blurb: 'A consistently helpful, active presence in the community' },
+                { key: 'founding_member', name: 'Founding Member',  icon: '/endurance/assets/badges/founding_member.png', threshold: Infinity, blurb: 'Part of the GTEC Season 1 grid' },
+                { key: 'ambassador',      name: 'Ambassador',       icon: '/endurance/assets/badges/ambassador.png',      threshold: Infinity, blurb: 'Brought a new driver into GTEC' },
+                { key: 'content_creator', name: 'Content Creator',  icon: '/endurance/assets/badges/content_creator.png', threshold: Infinity, blurb: 'Streams, records, or shares GTEC content' },
+                { key: 'community_voice', name: 'Community Voice', icon: '/endurance/assets/badges/community_voice.png', threshold: Infinity, blurb: 'A consistently helpful, active presence in the community' },
                 { key: 'host_legend',  name: 'Host Legend',  icon: '/endurance/assets/badges/host_legend.png',  threshold: 15, blurb: 'Hosted 15 splits' },
                 { key: 'trusted_host', name: 'Trusted Host', icon: '/endurance/assets/badges/trusted_host.png', threshold:  5, blurb: 'Hosted 5 splits'  },
                 { key: 'lobby_host',   name: 'Lobby Host',   icon: '/endurance/assets/badges/lobby_host.png', threshold: 1, blurb: 'Hosted your first split' },
