@@ -485,7 +485,11 @@ async function load() {
 
     const subEl = document.getElementById('season-sub');
     if (upcoming) {
-        const days = Math.ceil((startDt - today) / 86400000);
+        // Count calendar days, not exact hours — startDt carries the race's
+        // actual kickoff time (e.g. 13:00 BST), which skewed Math.ceil into
+        // rounding up an extra day versus the real date-to-date difference.
+        const startDay = new Date(startDt.getFullYear(), startDt.getMonth(), startDt.getDate());
+        const days = Math.round((startDay - today) / 86400000);
         subEl.innerHTML = `<span style="color:var(--gold);font-weight:600">Starts ${startDt.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</span> · ${range} · ${days} day${days===1?'':'s'} to go`;
     } else {
         subEl.textContent = `${range} · Race Calendar`;
