@@ -2805,14 +2805,21 @@ async function viewEventEntries(eventId, eventName, seasonId) {
         });
     });
 
-    // Drivers without a team who aren't already in any entry for this event
+    // Drivers without a team who aren't already in any entry for this event.
+    // Also excludes anyone marked absent for this event — registerAllSeasonTeams
+    // excludes them from what it actually inserts, so the button's count has
+    // to exclude them too or it promises a number clicking won't deliver.
     const enteredDriverIds = new Set();
     (data || []).forEach(en => (en.entry_drivers || []).forEach(ed => enteredDriverIds.add(ed.driver_id ?? ed.drivers?.id)));
-    const { data: freeAgents } = await sb.from('drivers')
-        .select('id, display_name, career_number')
-        .is('current_team_id', null)
-        .not('user_id', 'is', null);
-    const unregisteredFreeAgents = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id));
+    const [{ data: freeAgents }, { data: absenceRows }] = await Promise.all([
+        sb.from('drivers')
+            .select('id, display_name, career_number')
+            .is('current_team_id', null)
+            .not('user_id', 'is', null),
+        sb.from('driver_event_absences').select('driver_id').eq('event_id', eventId),
+    ]);
+    const absentDriverIds = new Set((absenceRows || []).map(r => r.driver_id));
+    const unregisteredFreeAgents = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id) && !absentDriverIds.has(d.id));
 
     // Existing team entries with zero drivers — left from earlier bulk
     // registers when auto-link didn't run yet.
