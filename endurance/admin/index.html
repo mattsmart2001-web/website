@@ -3751,7 +3751,7 @@ async function removeEntryHost(entryId, driverName, eventId, eventName, seasonId
 }
 
 async function notifyLobbies(eventId, eventName, seasonId) {
-    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox and a push notification if they've enabled one, lobby hosts will additionally get hosting instructions in their inbox and by email, and a summary will post to Discord #split-announcements.`)) return;
+    if (!confirm(`Send a split-assignment notification to every driver in "${eventName}"?\n\nEach driver will get a message in their portal inbox, an email, and a push notification if they've enabled one. Lobby hosts will additionally get hosting instructions in their inbox and by a separate email, and a summary will post to Discord #split-announcements.`)) return;
     const { data, error } = await sb.rpc('notify_lobby_assignments', { p_event_id: eventId });
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
@@ -3777,6 +3777,33 @@ async function notifyLobbies(eventId, eventName, seasonId) {
             }
         }
     } catch (e) { console.warn('Host email dispatch error:', e); }
+
+    // Email every driver in the split (not just hosts) — the main nudge for
+    // anyone who isn't on Discord or hasn't opted into push.
+    try {
+        const { data: { session: bulkSession } } = await sb.auth.getSession();
+        if (bulkSession?.access_token) {
+            const { data: ev } = await sb.from('events').select('round, starts_at, circuit_name').eq('id', eventId).maybeSingle();
+            const res = await fetch('/.netlify/functions/send-split-announcement-emails', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bulkSession.access_token}` },
+                body: JSON.stringify({
+                    event_id:     eventId,
+                    event_name:   eventName,
+                    round:        ev?.round ?? null,
+                    starts_at:    ev?.starts_at ?? null,
+                    circuit_name: ev?.circuit_name ?? null,
+                }),
+            });
+            const result = await res.json().catch(() => null);
+            if (res.ok && result?.ok) {
+                toast(`Split-announcement email${result.count === 1 ? '' : 's'} sent to ${result.count} driver${result.count === 1 ? '' : 's'}${result.skipped ? ` (${result.skipped} skipped — no email on file)` : ''}.`, 'success');
+            } else {
+                console.warn('Bulk split email failed:', result);
+                toast('Split-announcement emails failed to send — check console.', 'error');
+            }
+        }
+    } catch (e) { console.warn('Bulk split email dispatch error:', e); }
 
     // Also post split assignments to Discord #split-announcements (best effort — non-blocking)
     try {
