@@ -113,7 +113,7 @@ function buildEmail(driverName, eventName, round, lobbyNumber, startsAt, raceSet
             <ol style="padding-left:1.25rem;color:#cbd5e1;line-height:1.9">
                 <li>Create a <strong>Custom Race</strong> lobby in Gran Turismo 7 before the race start time.</li>
                 <li>Set the lobby settings as below for qualifying, then update for the race once qualifying is complete.</li>
-                <li>Share the lobby password with your split's drivers via the Discord <strong style="color:#f1f5f9">${lobbyNumber ? `#split-${lobbyNumber}` : 'split'}</strong> channel.</li>
+                <li>Enter the lobby ID in your <strong style="color:#f1f5f9">driver portal</strong> — the drivers in your split can see it there.</li>
                 <li>Start the lobby on time — aim to have everyone in the room <strong>15 minutes</strong> before the scheduled start.</li>
                 <li>If any driver disconnects within the <strong>first lap</strong>, a restart is allowed. Call it in the Discord channel and requeue everyone.</li>
             </ol>
