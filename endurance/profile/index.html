@@ -120,6 +120,19 @@
         .result-row { display: flex; align-items: center; gap: 0.85rem; padding: 0.65rem 0.85rem; background: var(--bg-2); border-radius: 8px; text-decoration: none; color: var(--text); transition: background 0.15s; }
         .result-row:hover { background: rgba(255,255,255,0.04); }
 
+        /* Split journey — same component as the public driver profile:
+           a horizontal scroll of stops showing which split the driver
+           raced in each round, with promotion / relegation indicators. */
+        .split-timeline { display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 0.5rem; }
+        .split-stop { min-width: 96px; flex: 0 0 auto; background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.75rem; text-align: center; }
+        .split-stop-circuit { font-size: 0.65rem; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.35rem; }
+        .split-stop-split { font-family: 'Anton', sans-serif; font-size: 1.5rem; line-height: 1; letter-spacing: 0.04em; color: var(--text); margin-bottom: 0.35rem; }
+        .split-stop-move { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; padding: 0.15rem 0.4rem; border-radius: 999px; display: inline-block; }
+        .split-stop-move.move-up   { color: #4ade80; background: rgba(74,222,128,0.1); }
+        .split-stop-move.move-down { color: #f87171; background: rgba(248,113,113,0.1); }
+        .split-stop-move.move-same { color: var(--muted); background: rgba(255,255,255,0.04); }
+        .split-stop-move.move-new  { color: var(--gold);  background: rgba(255,209,102,0.08); }
+
         /* Inbox */
         .inbox-list {
             display: flex; flex-direction: column; gap: 0.85rem;
@@ -471,6 +484,12 @@
     <div class="card" id="card-results" style="display:none">
         <div class="card-title">Recent Results</div>
         <div class="results-list" id="results-list"></div>
+    </div>
+
+    <!-- Split journey -->
+    <div class="card" id="card-split-journey" style="display:none">
+        <div class="card-title">Split Journey</div>
+        <div class="split-timeline" id="split-journey-list"></div>
     </div>
 
     <!-- Team (shown if driver is on a team) -->
@@ -1349,6 +1368,44 @@ async function loadRecentResults(driverId) {
     }).join('');
 }
 
+// Split Journey — same component and computation as the public driver
+// profile (endurance/drivers/index.html): which split this driver raced
+// in each round, with promotion/relegation indicators between stops.
+// Only shown once they've raced 2+ rounds. Sorted by round number
+// (always present) rather than starts_at (which may not be).
+async function loadSplitJourney(driverId) {
+    const { data: rows } = await sb.from('result_drivers')
+        .select('results(entries(lobby_number), events(round, name, circuit_name))')
+        .eq('driver_id', driverId);
+
+    const splitJourney = (rows || [])
+        .filter(r => r.results?.events?.round != null && r.results?.entries?.lobby_number != null)
+        .sort((a, b) => (a.results.events.round ?? 0) - (b.results.events.round ?? 0))
+        .map(r => ({
+            circuit: r.results.events.circuit_name || r.results.events.name || 'Round',
+            round:   r.results.events.round,
+            split:   r.results.entries.lobby_number,
+        }));
+
+    if (splitJourney.length < 2) return;
+
+    document.getElementById('split-journey-list').innerHTML = splitJourney.map((stop, i) => {
+        const prev = i > 0 ? splitJourney[i - 1].split : null;
+        let moveCls = 'move-new', moveTxt = 'START';
+        if (prev != null) {
+            if (stop.split < prev)      { moveCls = 'move-up';   moveTxt = `↑ ${prev - stop.split}`; }
+            else if (stop.split > prev) { moveCls = 'move-down'; moveTxt = `↓ ${stop.split - prev}`; }
+            else                        { moveCls = 'move-same'; moveTxt = '–'; }
+        }
+        return `<div class="split-stop">
+            <div class="split-stop-circuit">${esc(stop.circuit)}</div>
+            <div class="split-stop-split">S${stop.split}</div>
+            <div class="split-stop-move ${moveCls}">${moveTxt}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('card-split-journey').style.display = '';
+}
+
 // ── Main init ─────────────────────────────────────────────────
 async function init() {
     const { data: { session } } = await sb.auth.getSession();
@@ -1436,6 +1493,7 @@ async function init() {
     loadHostScreenshots(driver.id);
     initPushUI(driver.id);
     loadRecentResults(driver.id);
+    loadSplitJourney(driver.id);
     loadInbox(driver.id);
     loadBadges(driver.id);
     loadTeamingSections(driver);
