@@ -267,9 +267,25 @@
         .grid-lobby { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem 1rem; }
         .grid-lobby-title { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: baseline; }
         .grid-lobby-count { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 0.15em; color: var(--muted); font-weight: 700; }
-        .grid-row { display: grid; grid-template-columns: 42px 1fr auto; column-gap: 0.5rem; padding: 0.4rem 0 0.4rem 0.5rem; margin-left: -0.5rem; border-top: 1px solid var(--border); border-left: 3px solid transparent; align-items: center; }
-        .grid-mfr-logo { width: 28px; height: 28px; object-fit: contain; opacity: 0.7; flex-shrink: 0; }
-        .grid-row:first-of-type { border-top: none; padding-top: 0; }
+        /* Each driver gets its own boxed row — a shade darker than the
+           lobby card it sits in, so it reads as a distinct slot rather
+           than a line in a flat divided list. */
+        .grid-row {
+            display: grid; grid-template-columns: 42px 1fr auto; column-gap: 0.5rem;
+            align-items: center;
+            background: var(--bg-1);
+            border-left: 3px solid transparent;
+            border-radius: 8px;
+            padding: 0.5rem 0.7rem;
+        }
+        .grid-row + .grid-row { margin-top: 0.4rem; }
+        .grid-mfr-chip {
+            width: 30px; height: 30px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.06);
+            border-radius: 50%;
+        }
+        .grid-mfr-logo { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
         .grid-car { font-family: 'Anton', sans-serif; color: var(--gold); font-size: 0.95rem; }
         .grid-team a { color: inherit; text-decoration: none; font-weight: 600; }
         .grid-team a:hover { color: var(--gold); }
@@ -282,10 +298,7 @@
         .grid-driver-meta a:hover { color: var(--gold); }
         .grid-mfr-name { font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.1em; color: var(--muted); }
         .grid-row.is-host {
-            background: linear-gradient(90deg, rgba(255,209,102,0.12), rgba(255,209,102,0.02) 75%);
-            border-radius: 0 8px 8px 0;
-            padding-right: 0.6rem;
-            margin-right: -0.6rem;
+            background: linear-gradient(90deg, rgba(255,209,102,0.16), rgba(255,209,102,0.04));
         }
         .grid-host-badge {
             display: inline-flex;
@@ -559,17 +572,6 @@ async function load() {
 }
 
 // ─── Grid modal ─────────────────────────────────────────────────
-// Deterministic per-team accent color — same team always gets the same
-// subtle hue, no database field or admin setup needed. Solo entries get
-// no accent since there's no team to link them to another row.
-function teamAccentColor(key) {
-    if (!key) return null;
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) { hash = (hash * 31 + key.charCodeAt(i)) | 0; }
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 55%, 58%)`;
-}
-
 async function openGrid(eventId, eventName) {
     const overlay = document.getElementById('grid-overlay');
     document.getElementById('grid-title').textContent = `${eventName} — Grid`;
@@ -625,7 +627,10 @@ async function openGrid(eventId, eventName) {
             const mfrName = en.manufacturers?.name || '';
             const number  = d?.career_number ?? en.car_number;
             const isHost = d?.id && en.host_driver_id === d.id;
-            const teamColor = en.teams?.slug ? teamAccentColor(en.teams.slug) : null;
+            // Manufacturer brand color, not a hash of the team name — so the
+            // accent actually means something (cars group by manufacturer)
+            // instead of an arbitrary rainbow.
+            const mfrColor = en.manufacturers?.brand_color || null;
             const driverName = d?.display_name
                 ? (d.slug ? `<a href="/endurance/drivers/?slug=${esc(d.slug)}" style="color:inherit;text-decoration:none">${esc(d.display_name)}</a>` : esc(d.display_name))
                 : '<em>No driver</em>';
@@ -633,10 +638,8 @@ async function openGrid(eventId, eventName) {
                 ? `<span class="grid-host-badge" title="Lobby host for this split">🎛️ Host</span>`
                 : '';
             const logoUrl = en.manufacturers?.logo_url;
-            const logoHtml = logoUrl
-                ? `<img class="grid-mfr-logo" src="${esc(logoUrl)}" alt="${esc(mfrName)}" loading="lazy">`
-                : `<span style="width:28px;display:inline-block"></span>`;
-            return `<div class="grid-row${isHost ? ' is-host' : ''}"${teamColor ? ` style="border-left-color:${teamColor}"` : ''}>
+            const logoHtml = `<div class="grid-mfr-chip">${logoUrl ? `<img class="grid-mfr-logo" src="${esc(logoUrl)}" alt="${esc(mfrName)}" loading="lazy">` : ''}</div>`;
+            return `<div class="grid-row${isHost ? ' is-host' : ''}"${mfrColor ? ` style="border-left-color:${esc(mfrColor)}"` : ''}>
                 <span class="grid-car">${number != null ? '#' + number : '—'}</span>
                 <div class="grid-info">
                     <div class="grid-driver-name">${driverName}${hostBadge}</div>
