@@ -122,8 +122,8 @@ exports.handler = async (event) => {
     try { body = JSON.parse(event.body || '{}'); }
     catch { return { statusCode: 400, body: 'Invalid JSON body' }; }
 
-    const { event_id, event_name, round, starts_at, circuit_name } = body;
-    if (!event_id) {
+    const { event_id, event_name, round, starts_at, circuit_name, test_email } = body;
+    if (!event_id && !test_email) {
         return { statusCode: 400, body: 'event_id is required' };
     }
 
@@ -141,6 +141,22 @@ exports.handler = async (event) => {
     const roles = await roleRes.json();
     if (!Array.isArray(roles) || roles.length === 0) {
         return { statusCode: 403, body: 'Admin role required' };
+    }
+
+    // Test mode — no driver/entry data is queried at all; sends one sample
+    // email straight to the given address so the admin can preview/verify
+    // delivery without touching any real driver.
+    if (test_email) {
+        const tpl = buildEmail('Test Driver', event_name || 'Test Event', round || 1, 1, starts_at, circuit_name, 'Test Host', false);
+        const result = await sendBatch([{ from: FROM_EMAIL, to: test_email, subject: tpl.subject, html: tpl.html }]);
+        return {
+            statusCode: result.ok ? 200 : 502,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ok: result.ok, count: result.ok ? 1 : 0, test: true,
+                error: result.ok ? undefined : (result.body?.message || `Resend error ${result.status}`),
+            }),
+        };
     }
 
     // Confirmed, split-assigned entries for this event — same scope the

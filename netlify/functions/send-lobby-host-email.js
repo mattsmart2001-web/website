@@ -154,10 +154,10 @@ exports.handler = async (event) => {
     try { body = JSON.parse(event.body || '{}'); }
     catch { return { statusCode: 400, body: 'Invalid JSON body' }; }
 
-    const { driver_id, hosts, event_name, round, starts_at, race_settings, quali_same_as_race, quali_notes } = body;
+    const { driver_id, hosts, event_name, round, starts_at, race_settings, quali_same_as_race, quali_notes, test_email } = body;
     let { lobby_number } = body;
     const bulkMode = Array.isArray(hosts) && hosts.length > 0;
-    if (!driver_id && !bulkMode) {
+    if (!driver_id && !bulkMode && !test_email) {
         return { statusCode: 400, body: 'driver_id (or hosts[]) is required' };
     }
 
@@ -178,6 +178,26 @@ exports.handler = async (event) => {
     }
 
     const sbHeaders = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${userToken}` };
+
+    // Test mode — no driver data is queried; sends one sample hosting-
+    // instructions email straight to the given address.
+    if (test_email) {
+        const tpl = buildEmail('Test Host', event_name || 'Test Event', round || 1, lobby_number || 1, starts_at, race_settings, quali_same_as_race, quali_notes);
+        const resendRes = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from: FROM_EMAIL, to: test_email, subject: tpl.subject, html: tpl.html }),
+        });
+        const resendBody = await resendRes.json().catch(() => null);
+        if (!resendRes.ok) {
+            return { statusCode: 502, body: JSON.stringify({ ok: false, error: resendBody?.message || `Resend error ${resendRes.status}` }) };
+        }
+        return {
+            statusCode: 200,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ok: true, test: true, sent_to: test_email }),
+        };
+    }
 
     // ------------------------------------------------------------------
     // Bulk mode — one Resend batch call for every host in the round,

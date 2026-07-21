@@ -3501,6 +3501,15 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn-icon danger" onclick="deleteEventScreenshots('${eventId}','${esc(eventName)}','${seasonId}')">Delete Screenshots</button>
                 <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Split size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
             </div>
+            <div style="padding:0.85rem 1.25rem;border-top:1px solid var(--border);display:flex;gap:0.85rem;align-items:flex-end;flex-wrap:wrap;background:rgba(255,255,255,0.015)">
+                <div class="form-group" style="margin:0;min-width:220px">
+                    <label style="display:block;font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.35rem">Test email address</label>
+                    <input type="email" id="test-email-input" placeholder="you@example.com" style="width:100%;padding:0.55rem 0.75rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem">
+                </div>
+                <button class="btn btn-ghost" onclick="sendTestSplitEmail('${eventId}','${esc(eventName)}')">Send Test Split Email</button>
+                <button class="btn btn-ghost" onclick="sendTestHostEmail('${eventId}','${esc(eventName)}')">Send Test Host Email</button>
+                <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Uses this event's real settings, but only sends to the address above — no drivers are contacted.</div>
+            </div>
         </div>
         ${lobbyCardsHTML}`;
 }
@@ -3648,6 +3657,37 @@ async function clearAllLobbies(eventId, eventName, seasonId) {
     await viewEventLobbies(eventId, eventName, seasonId);
 }
 
+// Shared race-settings payload shape sent to send-lobby-host-email —
+// used by the single Set Host action, the bulk Notify Drivers host email,
+// and the Test Host Email button.
+function raceSettingsPayload(ev) {
+    return {
+        tyre_wear:       ev?.tyre_wear       ?? null,
+        fuel_consumption:ev?.fuel_consumption ?? null,
+        time_multiplier: ev?.time_multiplier  ?? null,
+        weather:         ev?.weather          ?? null,
+        time_of_day:     ev?.time_of_day      ?? null,
+        damage_level:    ev?.damage_level     ?? null,
+        slipstream:      ev?.slipstream       ?? null,
+        grip_reduction_off_track: ev?.grip_reduction_off_track ?? null,
+        nitrous:         ev?.nitrous           ?? null,
+        engine_swap:     ev?.engine_swap       ?? null,
+        race_start:      ev?.race_start        ?? null,
+        autodrive:       ev?.autodrive         ?? null,
+        settings_allowed: ev?.settings_allowed ?? null,
+        initial_fuel:    ev?.initial_fuel       ?? null,
+        bop_enabled:     ev?.bop_enabled      ?? false,
+        equal_conditions_mode:    ev?.equal_conditions_mode    ?? false,
+        shortcut_penalty:         ev?.shortcut_penalty         ?? false,
+        wall_collision_penalty:   ev?.wall_collision_penalty   ?? false,
+        car_collision_penalty:    ev?.car_collision_penalty    ?? false,
+        correct_vehicle_course:   ev?.correct_vehicle_course   ?? false,
+        flag_rules:               ev?.flag_rules               ?? false,
+        ghosting:                 ev?.ghosting                 ?? false,
+        pit_lane_cutting_penalty: ev?.pit_lane_cutting_penalty ?? false,
+    };
+}
+
 // Fetches the event's race-settings columns and POSTs a single lobby-host
 // email. Returns true/false; shared by the bulk Notify Drivers flow and
 // the manual Set Host action.
@@ -3662,31 +3702,7 @@ async function sendLobbyHostEmail(accessToken, driverId, eventId, eventName, lob
                 round:        ev?.round ?? null,
                 lobby_number: lobbyNumber,
                 starts_at:    ev?.starts_at ?? null,
-                race_settings: {
-                    tyre_wear:       ev?.tyre_wear       ?? null,
-                    fuel_consumption:ev?.fuel_consumption ?? null,
-                    time_multiplier: ev?.time_multiplier  ?? null,
-                    weather:         ev?.weather          ?? null,
-                    time_of_day:     ev?.time_of_day      ?? null,
-                    damage_level:    ev?.damage_level     ?? null,
-                    slipstream:      ev?.slipstream       ?? null,
-                    grip_reduction_off_track: ev?.grip_reduction_off_track ?? null,
-                    nitrous:         ev?.nitrous           ?? null,
-                    engine_swap:     ev?.engine_swap       ?? null,
-                    race_start:      ev?.race_start        ?? null,
-                    autodrive:       ev?.autodrive         ?? null,
-                    settings_allowed: ev?.settings_allowed ?? null,
-                    initial_fuel:    ev?.initial_fuel       ?? null,
-                    bop_enabled:     ev?.bop_enabled      ?? false,
-                    equal_conditions_mode:    ev?.equal_conditions_mode    ?? false,
-                    shortcut_penalty:         ev?.shortcut_penalty         ?? false,
-                    wall_collision_penalty:   ev?.wall_collision_penalty   ?? false,
-                    car_collision_penalty:    ev?.car_collision_penalty    ?? false,
-                    correct_vehicle_course:   ev?.correct_vehicle_course   ?? false,
-                    flag_rules:               ev?.flag_rules               ?? false,
-                    ghosting:                 ev?.ghosting                 ?? false,
-                    pit_lane_cutting_penalty: ev?.pit_lane_cutting_penalty ?? false,
-                },
+                race_settings: raceSettingsPayload(ev),
                 quali_same_as_race: ev?.quali_same_as_race !== false,
                 quali_notes:        ev?.quali_notes        ?? null,
             }),
@@ -3694,6 +3710,61 @@ async function sendLobbyHostEmail(accessToken, driverId, eventId, eventName, lob
         if (!res.ok) console.warn('Host email failed for', driverId, res.status, await res.text());
         return res.ok;
     } catch (e) { console.warn('Host email error:', e); return false; }
+}
+
+// Sends a real email, using this event's real settings, but only to a
+// single test address — no driver rows are queried or touched.
+async function sendTestSplitEmail(eventId, eventName) {
+    const input = document.getElementById('test-email-input');
+    const testEmail = input?.value.trim();
+    if (!testEmail || !testEmail.includes('@')) { toast('Enter a valid test email address.', 'error'); return; }
+    try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session?.access_token) { toast('No active session.', 'error'); return; }
+        const { data: ev } = await sb.from('events').select('round, starts_at, circuit_name').eq('id', eventId).maybeSingle();
+        const res = await fetch('/.netlify/functions/send-split-announcement-emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({
+                test_email:   testEmail,
+                event_name:   eventName,
+                round:        ev?.round ?? null,
+                starts_at:    ev?.starts_at ?? null,
+                circuit_name: ev?.circuit_name ?? null,
+            }),
+        });
+        const result = await res.json().catch(() => null);
+        if (res.ok && result?.ok) toast(`Test split email sent to ${testEmail}.`, 'success');
+        else { console.warn('Test split email failed:', result); toast(result?.error || 'Test split email failed — check console.', 'error'); }
+    } catch (e) { console.warn('Test split email error:', e); toast('Test split email failed — check console.', 'error'); }
+}
+
+async function sendTestHostEmail(eventId, eventName) {
+    const input = document.getElementById('test-email-input');
+    const testEmail = input?.value.trim();
+    if (!testEmail || !testEmail.includes('@')) { toast('Enter a valid test email address.', 'error'); return; }
+    try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session?.access_token) { toast('No active session.', 'error'); return; }
+        const { data: ev } = await sb.from('events').select(EVENT_RACE_SETTINGS_COLUMNS).eq('id', eventId).maybeSingle();
+        const res = await fetch('/.netlify/functions/send-lobby-host-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({
+                test_email:  testEmail,
+                event_name:  eventName,
+                round:       ev?.round ?? null,
+                lobby_number: 1,
+                starts_at:   ev?.starts_at ?? null,
+                race_settings: raceSettingsPayload(ev),
+                quali_same_as_race: ev?.quali_same_as_race !== false,
+                quali_notes:        ev?.quali_notes        ?? null,
+            }),
+        });
+        const result = await res.json().catch(() => null);
+        if (res.ok && result?.ok) toast(`Test host email sent to ${testEmail}.`, 'success');
+        else { console.warn('Test host email failed:', result); toast(result?.error || 'Test host email failed — check console.', 'error'); }
+    } catch (e) { console.warn('Test host email error:', e); toast('Test host email failed — check console.', 'error'); }
 }
 
 // Best-effort single-driver push notification. Silently does nothing if
@@ -3779,31 +3850,7 @@ async function notifyLobbies(eventId, eventName, seasonId) {
                         event_name: eventName,
                         round: ev?.round ?? null,
                         starts_at: ev?.starts_at ?? null,
-                        race_settings: {
-                            tyre_wear:       ev?.tyre_wear       ?? null,
-                            fuel_consumption:ev?.fuel_consumption ?? null,
-                            time_multiplier: ev?.time_multiplier  ?? null,
-                            weather:         ev?.weather          ?? null,
-                            time_of_day:     ev?.time_of_day      ?? null,
-                            damage_level:    ev?.damage_level     ?? null,
-                            slipstream:      ev?.slipstream       ?? null,
-                            grip_reduction_off_track: ev?.grip_reduction_off_track ?? null,
-                            nitrous:         ev?.nitrous           ?? null,
-                            engine_swap:     ev?.engine_swap       ?? null,
-                            race_start:      ev?.race_start        ?? null,
-                            autodrive:       ev?.autodrive         ?? null,
-                            settings_allowed: ev?.settings_allowed ?? null,
-                            initial_fuel:    ev?.initial_fuel       ?? null,
-                            bop_enabled:     ev?.bop_enabled      ?? false,
-                            equal_conditions_mode:    ev?.equal_conditions_mode    ?? false,
-                            shortcut_penalty:         ev?.shortcut_penalty         ?? false,
-                            wall_collision_penalty:   ev?.wall_collision_penalty   ?? false,
-                            car_collision_penalty:    ev?.car_collision_penalty    ?? false,
-                            correct_vehicle_course:   ev?.correct_vehicle_course   ?? false,
-                            flag_rules:               ev?.flag_rules               ?? false,
-                            ghosting:                 ev?.ghosting                 ?? false,
-                            pit_lane_cutting_penalty: ev?.pit_lane_cutting_penalty ?? false,
-                        },
+                        race_settings: raceSettingsPayload(ev),
                         quali_same_as_race: ev?.quali_same_as_race !== false,
                         quali_notes:        ev?.quali_notes        ?? null,
                     }),
