@@ -154,9 +154,11 @@ exports.handler = async (event) => {
     try { body = JSON.parse(event.body || '{}'); }
     catch { return { statusCode: 400, body: 'Invalid JSON body' }; }
 
-    const { driver_id, event_name, round, lobby_number, starts_at, race_settings, quali_same_as_race, quali_notes } = body;
-    if (!driver_id) {
-        return { statusCode: 400, body: 'driver_id is required' };
+    const { driver_id, hosts, event_name, round, starts_at, race_settings, quali_same_as_race, quali_notes } = body;
+    let { lobby_number } = body;
+    const bulkMode = Array.isArray(hosts) && hosts.length > 0;
+    if (!driver_id && !bulkMode) {
+        return { statusCode: 400, body: 'driver_id (or hosts[]) is required' };
     }
 
     // Verify caller is admin
@@ -175,10 +177,69 @@ exports.handler = async (event) => {
         return { statusCode: 403, body: 'Admin role required' };
     }
 
+    const sbHeaders = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${userToken}` };
+
+    // ------------------------------------------------------------------
+    // Bulk mode — one Resend batch call for every host in the round,
+    // instead of one Resend request per host. Keeps a whole round's host
+    // notifications inside Resend's per-second request-rate limit
+    // regardless of how many splits it has.
+    // ------------------------------------------------------------------
+    if (bulkMode) {
+        const driverIds = hosts.map(h => h.driver_id).filter(Boolean);
+        const idList = driverIds.join(',');
+
+        const [drvRes, appRes] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/drivers?select=id,display_name&id=in.(${idList})`, { headers: sbHeaders }),
+            fetch(`${SUPABASE_URL}/rest/v1/applications?select=email,linked_driver_id,created_at&linked_driver_id=in.(${idList})&order=created_at.desc`, { headers: sbHeaders }),
+        ]);
+        const drvRows = await drvRes.json();
+        const appRows = await appRes.json();
+
+        const nameByDriver  = new Map((Array.isArray(drvRows) ? drvRows : []).map(d => [d.id, d.display_name]));
+        const emailByDriver = new Map();
+        (Array.isArray(appRows) ? appRows : []).forEach(a => {
+            if (!emailByDriver.has(a.linked_driver_id) && a.email) emailByDriver.set(a.linked_driver_id, a.email);
+        });
+
+        const messages = [];
+        let skipped = 0;
+        hosts.forEach(h => {
+            const email = emailByDriver.get(h.driver_id);
+            if (!email) { skipped++; return; }
+            const tpl = buildEmail(nameByDriver.get(h.driver_id), event_name, round, h.lobby_number, starts_at, race_settings, quali_same_as_race, quali_notes);
+            messages.push({ from: FROM_EMAIL, to: email, subject: tpl.subject, html: tpl.html });
+        });
+
+        let sent = 0;
+        const errors = [];
+        for (let i = 0; i < messages.length; i += 100) {
+            const chunk = messages.slice(i, i + 100);
+            const res = await fetch('https://api.resend.com/emails/batch', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(chunk),
+            });
+            const resBody = await res.json().catch(() => null);
+            if (res.ok) sent += chunk.length;
+            else errors.push(resBody?.message || `Resend batch error ${res.status}`);
+        }
+
+        return {
+            statusCode: errors.length && sent === 0 ? 502 : 200,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ok: sent > 0 || messages.length === 0, count: sent, skipped, errors: errors.length ? errors : undefined }),
+        };
+    }
+
+    // ------------------------------------------------------------------
+    // Single mode — unchanged, used by the manual "Set Host" action.
+    // ------------------------------------------------------------------
+
     // Look up driver display name
     const drvRes = await fetch(
         `${SUPABASE_URL}/rest/v1/drivers?select=display_name&id=eq.${driver_id}`,
-        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${userToken}` } }
+        { headers: sbHeaders }
     );
     const drvRows = await drvRes.json();
     const driverName = Array.isArray(drvRows) ? drvRows[0]?.display_name : null;
@@ -186,7 +247,7 @@ exports.handler = async (event) => {
     // Look up driver email via their linked application record
     const appRes = await fetch(
         `${SUPABASE_URL}/rest/v1/applications?select=email&linked_driver_id=eq.${driver_id}&order=created_at.desc&limit=1`,
-        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${userToken}` } }
+        { headers: sbHeaders }
     );
     const appRows = await appRes.json();
     const email = Array.isArray(appRows) ? appRows[0]?.email : null;

@@ -3759,7 +3759,9 @@ async function notifyLobbies(eventId, eventName, seasonId) {
     toast(`Sent ${data.count} notification${data.count === 1 ? '' : 's'}${hostNote}.`, 'success');
     await refreshMsgsBadge();
 
-    // Email lobby hosts — fetch entries that have a host assigned for this event
+    // Email lobby hosts — one Resend batch call for every host in the round
+    // (not one request per host), so it stays inside Resend's per-second
+    // request-rate limit regardless of how many splits this round has.
     try {
         const { data: { session: hostSession } } = await sb.auth.getSession();
         if (hostSession?.access_token) {
@@ -3769,11 +3771,49 @@ async function notifyLobbies(eventId, eventName, seasonId) {
                 .eq('event_id', eventId)
                 .not('host_driver_id', 'is', null);
             if (hostEntries?.length) {
-                const results = await Promise.all(hostEntries.map(en =>
-                    sendLobbyHostEmail(hostSession.access_token, en.host_driver_id, eventId, eventName, en.lobby_number, ev)
-                ));
-                const hostEmailsSent = results.filter(Boolean).length;
-                if (hostEmailsSent > 0) toast(`Host email${hostEmailsSent === 1 ? '' : 's'} sent to ${hostEmailsSent} driver${hostEmailsSent === 1 ? '' : 's'}.`, 'success');
+                const res = await fetch('/.netlify/functions/send-lobby-host-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${hostSession.access_token}` },
+                    body: JSON.stringify({
+                        hosts: hostEntries.map(en => ({ driver_id: en.host_driver_id, lobby_number: en.lobby_number })),
+                        event_name: eventName,
+                        round: ev?.round ?? null,
+                        starts_at: ev?.starts_at ?? null,
+                        race_settings: {
+                            tyre_wear:       ev?.tyre_wear       ?? null,
+                            fuel_consumption:ev?.fuel_consumption ?? null,
+                            time_multiplier: ev?.time_multiplier  ?? null,
+                            weather:         ev?.weather          ?? null,
+                            time_of_day:     ev?.time_of_day      ?? null,
+                            damage_level:    ev?.damage_level     ?? null,
+                            slipstream:      ev?.slipstream       ?? null,
+                            grip_reduction_off_track: ev?.grip_reduction_off_track ?? null,
+                            nitrous:         ev?.nitrous           ?? null,
+                            engine_swap:     ev?.engine_swap       ?? null,
+                            race_start:      ev?.race_start        ?? null,
+                            autodrive:       ev?.autodrive         ?? null,
+                            settings_allowed: ev?.settings_allowed ?? null,
+                            initial_fuel:    ev?.initial_fuel       ?? null,
+                            bop_enabled:     ev?.bop_enabled      ?? false,
+                            equal_conditions_mode:    ev?.equal_conditions_mode    ?? false,
+                            shortcut_penalty:         ev?.shortcut_penalty         ?? false,
+                            wall_collision_penalty:   ev?.wall_collision_penalty   ?? false,
+                            car_collision_penalty:    ev?.car_collision_penalty    ?? false,
+                            correct_vehicle_course:   ev?.correct_vehicle_course   ?? false,
+                            flag_rules:               ev?.flag_rules               ?? false,
+                            ghosting:                 ev?.ghosting                 ?? false,
+                            pit_lane_cutting_penalty: ev?.pit_lane_cutting_penalty ?? false,
+                        },
+                        quali_same_as_race: ev?.quali_same_as_race !== false,
+                        quali_notes:        ev?.quali_notes        ?? null,
+                    }),
+                });
+                const result = await res.json().catch(() => null);
+                if (res.ok && result?.ok && result.count > 0) {
+                    toast(`Host email${result.count === 1 ? '' : 's'} sent to ${result.count} driver${result.count === 1 ? '' : 's'}${result.skipped ? ` (${result.skipped} skipped — no email on file)` : ''}.`, 'success');
+                } else if (!res.ok || !result?.ok) {
+                    console.warn('Host email batch failed:', result);
+                }
             }
         }
     } catch (e) { console.warn('Host email dispatch error:', e); }
