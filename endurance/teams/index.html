@@ -261,6 +261,7 @@
         /* Section */
         .section { margin-bottom: 2rem; }
         .section-title { font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.35em; text-transform: uppercase; color: var(--gold); margin-bottom: 1rem; text-indent: 0.35em; }
+        .section-title.centered { text-align: center; }
         .bio-text { color: var(--muted); line-height: 1.7; font-size: 0.9rem; }
 
         /* Table */
@@ -614,7 +615,7 @@ async function showProfile() {
     // Roster HTML
     const rosterHTML = drivers.length ? `
         <div class="section">
-            <div class="section-title">Current Drivers</div>
+            <div class="section-title centered">Current Drivers</div>
             <div class="driver-roster">
                 ${drivers.map(d => `
                     <a class="driver-card" href="/endurance/drivers/?slug=${esc(d.slug)}">
