@@ -220,21 +220,43 @@
         .stakes-item.stakes-worst .stakes-value { color: #f87171; }
         .stakes-note { font-size: 0.72rem; color: var(--muted); text-align: center; margin-top: 0.6rem; }
 
-        /* Driver roster */
-        .driver-roster { display: flex; flex-wrap: wrap; gap: 1rem; }
-        .driver-chip {
-            display: flex; align-items: center; gap: 0.9rem;
-            background: var(--bg-1); border: 1px solid var(--border); border-radius: 999px;
-            padding: 0.55rem 1.5rem 0.55rem 0.55rem;
+        /* Driver roster — centered portrait photo cards (teams hold up to 2 drivers) */
+        .driver-roster { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; }
+        .driver-card {
+            position: relative;
+            width: 240px; max-width: 100%;
+            aspect-ratio: 3 / 4;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
             text-decoration: none; color: var(--text);
             transition: border-color 0.2s, transform 0.2s;
         }
-        .driver-chip:hover { border-color: rgba(255,209,102,0.35); transform: translateY(-2px); }
-        .driver-avatar { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: var(--bg-2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .driver-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .driver-avatar-init { font-family: 'Anton', sans-serif; font-size: 1.2rem; color: var(--muted); opacity: 0.6; }
-        .driver-chip-name { font-family: 'Anton', sans-serif; font-size: 1.35rem; font-weight: 400; letter-spacing: 0.01em; line-height: 1.1; }
-        .driver-chip-num { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; color: var(--gold); letter-spacing: 0.05em; margin-bottom: 0.15rem; }
+        .driver-card:hover { border-color: rgba(255,209,102,0.45); transform: translateY(-3px); }
+        .driver-card-photo { position: absolute; inset: 0; background: var(--bg-2); }
+        .driver-card-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+        .driver-avatar-init {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Anton', sans-serif; font-size: 3.5rem;
+            color: var(--muted); opacity: 0.35;
+        }
+        .driver-card-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(5,6,8,0.97) 0%, rgba(5,6,8,0.7) 42%, transparent 75%);
+        }
+        .driver-card-ghost {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -58%);
+            font-family: 'Orbitron', sans-serif; font-weight: 900;
+            font-size: 5.5rem; line-height: 1; letter-spacing: -0.04em;
+            color: rgba(255,255,255,0.06); pointer-events: none; user-select: none;
+        }
+        .driver-card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 0.85rem 1rem 1rem; z-index: 2; }
+        .driver-card-num { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; color: var(--gold); letter-spacing: 0.15em; margin-bottom: 0.2rem; }
+        .driver-card-name { font-family: 'Anton', sans-serif; font-size: 1.5rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.05; margin-bottom: 0.3rem; }
+        .driver-card-meta { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
 
         /* Section */
         .section { margin-bottom: 2rem; }
@@ -595,11 +617,14 @@ async function showProfile() {
             <div class="section-title">Current Drivers</div>
             <div class="driver-roster">
                 ${drivers.map(d => `
-                    <a class="driver-chip" href="/endurance/drivers/?slug=${esc(d.slug)}">
-                        <div class="driver-avatar">${driverAvatarHTML(d.photo_url, d.display_name)}</div>
-                        <div>
-                            ${d.career_number ? `<div class="driver-chip-num">#${d.career_number}</div>` : ''}
-                            <div class="driver-chip-name">${esc(d.display_name)}</div>
+                    <a class="driver-card" href="/endurance/drivers/?slug=${esc(d.slug)}">
+                        <div class="driver-card-photo">${driverAvatarHTML(d.photo_url, d.display_name)}</div>
+                        <div class="driver-card-overlay"></div>
+                        ${d.career_number ? `<div class="driver-card-ghost">${d.career_number}</div>` : ''}
+                        <div class="driver-card-info">
+                            ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
+                            <div class="driver-card-name">${esc(d.display_name)}</div>
+                            ${d.nationality ? `<div class="driver-card-meta">${flag(d.nationality)} ${esc(d.nationality)}</div>` : ''}
                         </div>
                     </a>`).join('')}
             </div>
