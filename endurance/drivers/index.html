@@ -538,6 +538,8 @@
             font-size: 0.76rem; color: var(--muted);
         }
         .profile-tag .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+        .profile-tag .tag-link { color: inherit; text-decoration: none; transition: color 0.15s; }
+        .profile-tag .tag-link:hover { color: var(--gold); text-decoration: underline; }
         .pill-leader {
             display: inline-block;
             margin-left: 0.3rem;
@@ -1399,7 +1401,10 @@ async function showProfile() {
         const leaderPill = driver.teams.leader_driver_id === driver.id
             ? ' <span class="pill-leader" title="Team Leader">★ Leader</span>'
             : '';
-        tags.push(`${badge}${esc(driver.teams.name)}${leaderPill}`);
+        const teamName = driver.teams.slug
+            ? `<a class="tag-link" href="/endurance/teams/?slug=${esc(driver.teams.slug)}">${esc(driver.teams.name)}</a>`
+            : esc(driver.teams.name);
+        tags.push(`${badge}${teamName}${leaderPill}`);
     }
     if (driver.manufacturers?.name && !driver.teams?.name) {
         const mfr = driver.manufacturers;
