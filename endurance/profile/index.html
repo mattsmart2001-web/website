@@ -1097,8 +1097,9 @@ async function toggleAbsence(eventId, driverId, checkbox) {
 
 // Race Lobby card: Current Event / Split / Lobby ID. Shows as soon as the
 // driver has an entry in the next scheduled event, even before splits
-// exist. Split fills in once allocated (immediately for the host, once
-// notified for everyone else). Lobby ID fills in once the host posts it.
+// exist. Split fills in the moment it's allocated in admin — for every
+// driver, so the portal mirrors the admin splits view directly. Lobby ID
+// fills in once the host posts it.
 let _lobbyRoomCtx = null; // { eventId, lobbyNumber, isHost }
 
 async function loadLobbyRoomCode(driverId) {
@@ -1118,10 +1119,10 @@ async function loadLobbyRoomCode(driverId) {
     const en = candidates[0];
     const ev = en.events;
     const isHost = en.lobby_number != null && en.host_driver_id === driverId;
-    // Hosts know their split as soon as it's allocated, so they can prep
-    // ahead of time. Everyone else only once split notifications have gone
-    // out — before that they don't officially know their own assignment.
-    const splitKnown = en.lobby_number != null && (isHost || ev.splits_notified_at != null);
+    // Every driver sees their split as soon as it's allocated in admin, so
+    // the portal mirrors the admin splits view and hosts can share the
+    // Lobby ID with the right drivers without waiting on a notify step.
+    const splitKnown = en.lobby_number != null;
 
     document.getElementById('lobby-room-event').textContent = `R${ev.round} · ${ev.name}`;
     document.getElementById('lobby-room-split').textContent = splitKnown ? en.lobby_number : 'TBC';
