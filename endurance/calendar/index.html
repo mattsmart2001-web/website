@@ -294,6 +294,8 @@
         .grid-drivers { font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem; }
         .grid-driver-name { font-weight: 600; font-size: 0.9rem; }
         .grid-driver-name a:hover { color: var(--gold); }
+        .grid-driver-psn { font-size: 0.72rem; color: var(--muted); margin-top: 0.12rem; }
+        .grid-driver-psn .grid-psn-label { font-family: 'Orbitron', sans-serif; font-size: 0.56rem; letter-spacing: 0.12em; text-transform: uppercase; margin-right: 0.25rem; opacity: 0.8; }
         .grid-driver-meta { font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem; }
         .grid-driver-meta a { color: inherit; text-decoration: none; }
         .grid-driver-meta a:hover { color: var(--gold); }
@@ -580,7 +582,7 @@ async function openGrid(eventId, eventName) {
     overlay.classList.add('open');
 
     const { data: entries, error } = await sb.from('entries')
-        .select('id, car_number, car_model, lobby_number, status, host_driver_id, teams(name, slug), manufacturers(name, brand_color, car_name, logo_url), entry_drivers(stint_role, drivers(id, display_name, slug, career_number))')
+        .select('id, car_number, car_model, lobby_number, status, host_driver_id, teams(name, slug), manufacturers(name, brand_color, car_name, logo_url), entry_drivers(stint_role, drivers(id, display_name, slug, career_number, psn_id))')
         .eq('event_id', eventId)
         .in('status', ['confirmed']);
 
@@ -644,6 +646,7 @@ async function openGrid(eventId, eventName) {
                 <span class="grid-car">${number != null ? '#' + number : '—'}</span>
                 <div class="grid-info">
                     <div class="grid-driver-name">${driverName}${hostBadge}</div>
+                    ${d?.psn_id ? `<div class="grid-driver-psn"><span class="grid-psn-label">PSN</span>${esc(d.psn_id)}</div>` : ''}
                     <div class="grid-driver-meta">${teamCell}</div>
                 </div>
                 ${logoHtml}
