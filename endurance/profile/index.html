@@ -1186,9 +1186,10 @@ async function saveLobbyRoomCode() {
 }
 
 // Split result screenshots — lists every split the driver has hosted in
-// the active season whose event has already started, each with 4 upload
-// slots (2 qualifying, 2 race results) for admin to use when entering
-// results.
+// the active season for events still 'scheduled' (awaiting results), each
+// with 4 upload slots (2 qualifying, 2 race results) for admin to use when
+// entering results. Once the admin marks the event completed (or it's
+// cancelled), the card drops that split off the host's profile.
 const HOST_SS_SLOTS = [
     { column: 'quali_screenshot_1_url', slug: 'quali1', label: 'Quali 1' },
     { column: 'quali_screenshot_2_url', slug: 'quali2', label: 'Quali 2' },
@@ -1204,9 +1205,10 @@ async function loadHostScreenshots(driverId) {
     if (!season) { card.style.display = 'none'; return; }
 
     const { data: rows } = await sb.from('entries')
-        .select('event_id, lobby_number, events!inner(id, name, round, starts_at, season_id)')
+        .select('event_id, lobby_number, events!inner(id, name, round, starts_at, season_id, status)')
         .eq('host_driver_id', driverId)
         .eq('events.season_id', season.id)
+        .eq('events.status', 'scheduled')
         .not('lobby_number', 'is', null);
 
     if (!rows?.length) { card.style.display = 'none'; return; }
@@ -1214,7 +1216,8 @@ async function loadHostScreenshots(driverId) {
     // De-dupe (a driver should only ever host one entry per split, but
     // don't assume it) and cap to the 5 most recent hosted splits. Shows
     // as soon as they're assigned as host — even before the race — and
-    // naturally disappears again if admin clears the split assignment.
+    // disappears once admin clears the split assignment or marks the event
+    // completed.
     const seen = new Set();
     const hosted = [];
     rows.forEach(r => {
