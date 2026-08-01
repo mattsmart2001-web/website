@@ -4327,6 +4327,9 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
             const dis   = d ? '' : 'disabled';
             const teamCell = en.teams?.name ? esc(en.teams.name) : '<em>Solo</em>';
             const isClassified = status === 'classified';
+            // Fastest lap can be earned by a classified finisher OR a DNF
+            // (raced but retired). DSQ / DNS / withdrawn never can.
+            const flEligible = isClassified || status === 'dnf';
             return `<tr>
                 <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}${en.lobby_number != null ? ` · S${en.lobby_number}` : ''}</span></td>
                 <td><select data-entry="${en.id}" ${dAttr} data-field="finish_position" data-max="${lobbyDriverCount}" onchange="onPositionChange(this,'results-table')" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis || !isClassified ? 'disabled' : ''}>${buildPositionOptions(lobbyDriverCount, isClassified ? pos : '')}</select></td>
@@ -4334,8 +4337,8 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
                 <td><select data-entry="${en.id}" ${dAttr} data-field="status" onchange="onResultStatusChange(this)" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
                 <td style="text-align:center;font-size:0.78rem;${isPole && isClassified ? 'color:var(--gold);font-weight:600' : 'color:var(--muted)'}" title="Auto-set from qualifying P1">${isPole && isClassified ? '★' : '—'}</td>
                 <td style="white-space:nowrap">
-                    <input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${isFL && isClassified ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px;vertical-align:middle" ${dis || !isClassified ? 'disabled' : ''}>
-                    <input type="text" placeholder="1:23.456" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_time" value="${isClassified ? flTime : ''}" style="width:100px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.78rem;margin-left:0.35rem" ${dis || !isClassified ? 'disabled' : ''}>
+                    <input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${isFL && flEligible ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px;vertical-align:middle" ${dis || !flEligible ? 'disabled' : ''}>
+                    <input type="text" placeholder="1:23.456" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_time" value="${flEligible ? flTime : ''}" style="width:100px;padding:0.4rem 0.5rem;font-family:'Orbitron',sans-serif;font-size:0.78rem;margin-left:0.35rem" ${dis || !flEligible ? 'disabled' : ''}>
                 </td>
                 <td style="text-align:right;color:var(--gold);font-weight:600">${points}</td>
             </tr>`;
@@ -4461,16 +4464,18 @@ async function saveResults(eventId, eventName) {
         if (!result_id) return null;
         const status = dr.status || 'classified';
         const isClassified = status === 'classified';
+        // Fastest lap survives a DNF (raced but retired); positions / pole
+        // remain classified-only.
+        const flEligible = isClassified || status === 'dnf';
         return {
             result_id,
             driver_id:        dr.driver_id,
-            // Non-classified rows can't earn positions / pole / FL credit.
             finish_position:  isClassified ? dr.finish_position : null,
             status,
             classified:       isClassified,
             laps_driven:      dr.laps_driven ?? null,
-            fastest_lap_point: isClassified && !!dr.fastest_lap_point,
-            fastest_lap_ms:   isClassified ? (dr.fastest_lap_ms ?? null) : null,
+            fastest_lap_point: flEligible && !!dr.fastest_lap_point,
+            fastest_lap_ms:   flEligible ? (dr.fastest_lap_ms ?? null) : null,
             // points_share defaults to 1.0; per-driver points come from
             // result_drivers.points_awarded which compute_event_points fills.
         };
@@ -4660,9 +4665,17 @@ function loadEntryDriversForPenalty(sel) {
 function onResultStatusChange(sel) {
     const row = sel.closest('tr');
     if (!row) return;
-    const classified = sel.value === 'classified';
-    row.querySelectorAll('[data-field="finish_position"], [data-field="fastest_lap_point"], [data-field="fastest_lap_time"]').forEach(el => {
-        if (classified) {
+    const status = sel.value;
+    const classified = status === 'classified';
+    // Fastest lap is allowed for a classified finisher or a DNF (raced but
+    // retired); finishing position stays classified-only.
+    const flEligible = classified || status === 'dnf';
+    row.querySelectorAll('[data-field="finish_position"]').forEach(el => {
+        if (classified) { el.disabled = false; }
+        else { el.value = ''; el.disabled = true; }
+    });
+    row.querySelectorAll('[data-field="fastest_lap_point"], [data-field="fastest_lap_time"]').forEach(el => {
+        if (flEligible) {
             el.disabled = false;
         } else {
             if (el.type === 'checkbox') el.checked = false;
