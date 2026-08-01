@@ -122,16 +122,17 @@
             type: 'threshold',
             stat: 'hostCount',
             statLabel: 'splits hosted',
-            // The four below are manual-grant only — no evalFn, no real
-            // threshold to hit. threshold: Infinity keeps them safely inside
-            // the threshold-ladder machinery (progress-ring math needs every
-            // badge in a 'threshold' category to have a numeric threshold)
-            // while guaranteeing hostCount can never auto-earn them; the
-            // admin's manual_badges override is the only way in. Declared
+            // These sit above the real host tiers. threshold: Infinity keeps
+            // them inside the threshold-ladder machinery (progress-ring math
+            // needs every badge in a 'threshold' category to have a numeric
+            // threshold) while guaranteeing hostCount can never auto-earn
+            // them. founding_member auto-awards to anyone who raced in
+            // Season 1 (stats.foundingMember, computed by each page); the
+            // other three stay manual-grant only via manual_badges. Declared
             // before the real tiers so the "hardest first" ordering the
             // ladder renderer assumes still holds.
             badges: [
-                { key: 'founding_member', name: 'Founding Member',  icon: '/endurance/assets/badges/founding_member.png', threshold: Infinity, blurb: 'Part of the GTEC Season 1 grid' },
+                { key: 'founding_member', name: 'Founding Member',  icon: '/endurance/assets/badges/founding_member.png', threshold: Infinity, evalFn: s => !!s.foundingMember, blurb: 'Part of the GTEC Season 1 grid' },
                 { key: 'ambassador',      name: 'Ambassador',       icon: '/endurance/assets/badges/ambassador.png',      threshold: Infinity, blurb: 'Brought a new driver into GTEC' },
                 { key: 'content_creator', name: 'Content Creator',  icon: '/endurance/assets/badges/content_creator.png', threshold: Infinity, blurb: 'Streams, records, or shares GTEC content' },
                 { key: 'community_voice', name: 'Community Voice', icon: '/endurance/assets/badges/community_voice.png', threshold: Infinity, blurb: 'A consistently helpful, active presence in the community' },

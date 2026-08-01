@@ -649,7 +649,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=21"></script>
+<script src="/endurance/assets/gtec-badges.js?v=22"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script src="/endurance/assets/gtec-push.js"></script>
 <script src="../assets/countries.js"></script>
@@ -1294,7 +1294,7 @@ async function loadBadges(driverId) {
         sb.from('result_drivers')
             .select('status, results(events(circuit_name))')
             .eq('driver_id', driverId),
-        sb.from('seasons').select('id, is_active'),
+        sb.from('seasons').select('id, year, is_active'),
         sb.from('driver_standings').select('driver_id, season_id, points'),
         sb.rpc('driver_secret_badges', { p_driver_id: driverId }),
         sb.from('drivers').select('manual_badges, willing_host').eq('id', driverId).maybeSingle(),
@@ -1321,6 +1321,10 @@ async function loadBadges(driverId) {
         if (idx >= 0) seasonFinishes.push(idx + 1);
     });
 
+    // Founding Member — raced in Season 1 (earliest season by year).
+    const _firstSeasonId = (seasons || []).slice().sort((a, b) => (a.year || 0) - (b.year || 0))[0]?.id;
+    const foundingMember = !!_firstSeasonId && (allStandings || []).some(r => r.driver_id === driverId && r.season_id === _firstSeasonId);
+
     if (!window.renderBadgeGrid) return;
     document.getElementById('badges-grid').innerHTML = window.renderBadgeGrid({
         starts: Number(stats?.starts) || 0,
@@ -1330,6 +1334,7 @@ async function loadBadges(driverId) {
         secretBadges: secretBadges || {},
         manualBadges: Array.isArray(driverRow?.manual_badges) ? driverRow.manual_badges : [],
         hostCount: hostCount || 0,
+        foundingMember,
     });
     document.getElementById('card-badges').style.display = '';
 }

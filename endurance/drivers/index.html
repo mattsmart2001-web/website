@@ -825,7 +825,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=21"></script>
+<script src="/endurance/assets/gtec-badges.js?v=22"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script>
 'use strict';
@@ -900,12 +900,12 @@ function mfrBadge(logoUrl, brandColor, name, opts = {}) {
 // ============================================================
 async function showListing() {
     document.title = 'Drivers — GTEC';
-    const [{ data, error }, { data: ratings }, { data: activeSeasons }, { data: standings }, { data: hostEntries }] = await Promise.all([
+    const [{ data, error }, { data: ratings }, { data: allSeasons }, { data: standings }, { data: hostEntries }] = await Promise.all([
         sb.from('drivers')
             .select('id, display_name, slug, nationality, career_number, photo_url, manual_badges, willing_host, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url,car_name)')
             .order('display_name'),
         sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
-        sb.from('seasons').select('id').eq('is_active', true).limit(1),
+        sb.from('seasons').select('id, year, is_active'),
         sb.from('driver_standings').select('driver_id, season_id, points, wins, races'),
         // Career-wide count of splits actually hosted (not just "willing to
         // host") feeds the Community badge ladder.
@@ -925,7 +925,11 @@ async function showListing() {
         ratingMap[r.driver_id] = r.rating;
         if (r.last_rated_at) ratedDriver[r.driver_id] = r.rating;
     });
-    const activeSznId = (activeSeasons || [])[0]?.id;
+    const activeSznId = (allSeasons || []).find(s => s.is_active)?.id;
+    // Season 1 = the earliest season by year. Anyone with a standings row
+    // there was on the Season 1 grid and earns the Founding Member badge.
+    const firstSeasonId = (allSeasons || []).slice().sort((a, b) => (a.year || 0) - (b.year || 0))[0]?.id;
+    const foundingSet = new Set();
     const pointsMap = {};
     const winsMap   = {};
     const racesMap  = {};
@@ -935,6 +939,7 @@ async function showListing() {
         if (!activeSznId || s.season_id === activeSznId) pointsMap[s.driver_id] = Number(s.points || 0);
         winsMap[s.driver_id]  = (winsMap[s.driver_id]  || 0) + Number(s.wins  || 0);
         racesMap[s.driver_id] = (racesMap[s.driver_id] || 0) + Number(s.races || 0);
+        if (firstSeasonId && s.season_id === firstSeasonId) foundingSet.add(s.driver_id);
         if (s.season_id !== activeSznId) {
             if (!_sznGroups[s.season_id]) _sznGroups[s.season_id] = [];
             _sznGroups[s.season_id].push({ driver_id: s.driver_id, points: Number(s.points || 0) });
@@ -959,7 +964,7 @@ async function showListing() {
         const cats = window.BADGE_CATEGORIES;
         if (!cats) return '';
         const manualBadges = Array.isArray(d.manual_badges) ? d.manual_badges : [];
-        const stats = { wins: totalWins, starts: totalRaces, hostCount: hostCountMap[d.id] || 0, manualBadges, seasonFinishes: seasonFinishes || [] };
+        const stats = { wins: totalWins, starts: totalRaces, hostCount: hostCountMap[d.id] || 0, manualBadges, seasonFinishes: seasonFinishes || [], foundingMember: foundingSet.has(d.id) };
 
         const seen = new Set();
         const earned = [];
@@ -1359,7 +1364,7 @@ async function showProfile() {
     // Finishing positions across completed seasons + secret-badge
     // detection in parallel.
     const [{ data: _seasonsList }, { data: _allStandings }, { data: _secretBadges }] = await Promise.all([
-        sb.from('seasons').select('id, is_active'),
+        sb.from('seasons').select('id, year, is_active'),
         sb.from('driver_standings').select('driver_id, season_id, points'),
         sb.rpc('driver_secret_badges', { p_driver_id: driver.id }),
     ]);
@@ -1372,6 +1377,9 @@ async function showProfile() {
         if (idx >= 0) seasonFinishes.push(idx + 1);
     });
     const secretBadges = _secretBadges || {};
+    // Founding Member — raced in Season 1 (earliest season by year).
+    const _firstSeasonId = (_seasonsList || []).slice().sort((a, b) => (a.year || 0) - (b.year || 0))[0]?.id;
+    const foundingMember = !!_firstSeasonId && (_allStandings || []).some(r => r.driver_id === driver.id && r.season_id === _firstSeasonId);
 
     // Current rating — driver_current_ratings.rating/peak_rating already
     // fall back to the DR/SR seed for drivers with no race history, so use
@@ -1600,7 +1608,7 @@ async function showProfile() {
                     ${driver.career_number ? `<div class="profile-number">#${driver.career_number}</div>` : ''}
                     <div class="profile-name">${esc(driver.display_name)}</div>
                     <div class="profile-tags">${tagsHTML}</div>
-                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [], hostCount }) : ''}
+                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [], hostCount, foundingMember }) : ''}
                     <button class="share-btn" id="share-profile-btn" type="button">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
