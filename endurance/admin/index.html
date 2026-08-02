@@ -9064,9 +9064,18 @@ async function renderHealthCheck() {
                 <div style="display:flex;flex-direction:column;gap:0.5rem">${neverExcused.map(d => neverCard(d, true)).join('')}</div>
             ` : ''}`;
 
-    const hcSection = (variant, title, desc, count, bodyHtml, extraHeader = '') => `
-        <div class="hc-section hc-section--${variant}">
-            <div class="hc-section-header">
+    // Each section is a collapsible accordion. Default: open when it needs
+    // attention (a warn/critical section with a non-zero count), collapsed
+    // otherwise (nothing to action, or a purely informational section) — so
+    // a healthy page is compact and problems are already expanded.
+    const hcSection = (variant, title, desc, count, bodyHtml, extraHeader = '') => {
+        const collapsed = count === 0 || variant === 'neutral';
+        return `
+        <div class="hc-section hc-section--${variant}${collapsed ? ' collapsed' : ''}">
+            <div class="hc-section-header" role="button" tabindex="0"
+                 onclick="this.closest('.hc-section').classList.toggle('collapsed')"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.closest('.hc-section').classList.toggle('collapsed');}">
+                <span class="hc-chevron" aria-hidden="true">▾</span>
                 <div style="flex:1;min-width:0">
                     <div class="hc-section-title">${title}</div>
                     <div class="hc-section-desc">${desc}</div>
@@ -9076,6 +9085,7 @@ async function renderHealthCheck() {
             </div>
             <div class="hc-section-body">${bodyHtml}</div>
         </div>`;
+    };
 
     const pillsInline = mfrList.length > 1 ? `
         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem">
@@ -9117,6 +9127,11 @@ async function renderHealthCheck() {
                 </div>
             </div>
 
+            <div class="hc-toolbar">
+                <button class="btn btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.72rem" onclick="hcToggleAll(false)">Expand all</button>
+                <button class="btn btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.72rem" onclick="hcToggleAll(true)">Collapse all</button>
+            </div>
+
             <div class="hc-grid-2">
                 ${hcSection('neutral', 'Solo Drivers', 'Registered drivers not currently in a team', soloCount, soloRows)}
                 ${hcSection('neutral', 'Teams with Open Seats', 'Teams with capacity for more drivers', openCount, `${pillsInline}<div id="hc-team-list" style="display:flex;flex-direction:column;gap:0.5rem">${teamRows}</div>`)}
@@ -9152,7 +9167,12 @@ async function renderHealthCheck() {
             .hc-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; align-items: start; }
 
             .hc-section { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-            .hc-section-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); border-left: 3px solid transparent; }
+            .hc-section-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); border-left: 3px solid transparent; cursor: pointer; user-select: none; }
+            .hc-section-header:hover { background: rgba(255,255,255,0.03); }
+            .hc-chevron { flex-shrink: 0; color: var(--muted); font-size: 0.85rem; line-height: 1; transition: transform 0.15s; }
+            .hc-section.collapsed .hc-chevron { transform: rotate(-90deg); }
+            .hc-section.collapsed .hc-section-header { border-bottom-color: transparent; }
+            .hc-section.collapsed .hc-section-body { display: none; }
             .hc-section--neutral .hc-section-header { border-left-color: var(--border); }
             .hc-section--warn .hc-section-header    { border-left-color: #fb923c; }
             .hc-section--critical .hc-section-header { border-left-color: #f87171; }
@@ -9166,6 +9186,7 @@ async function renderHealthCheck() {
             .hc-section-badge--warn     { background: rgba(251,146,60,0.15); color: #fb923c; }
             .hc-section-badge--critical { background: rgba(239,68,68,0.15); color: #f87171; }
             .hc-section-body { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+            .hc-toolbar { display: flex; justify-content: flex-end; gap: 0.5rem; margin-bottom: 0.25rem; }
 
             .hc-driver-card, .hc-team-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 0.9rem; transition: border-color 0.15s; }
             .hc-driver-card:hover { border-color: var(--accent); }
@@ -9182,6 +9203,10 @@ function hcFilter(mfrId) {
     document.querySelectorAll('.hc-driver-card, .hc-team-card').forEach(card => {
         card.classList.toggle('hc-hidden', mfrId !== '' && card.dataset.mfr !== mfrId);
     });
+}
+
+function hcToggleAll(collapsed) {
+    document.querySelectorAll('.hc-section').forEach(s => s.classList.toggle('collapsed', collapsed));
 }
 
 
