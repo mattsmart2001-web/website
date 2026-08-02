@@ -390,6 +390,37 @@
         .form-pill.form-dnf    { background: rgba(248,113,113,0.15); color: #f87171; }
         .form-empty { color: var(--muted); opacity: 0.5; }
 
+        /* Top-3 rostrum */
+        .podium { display: flex; justify-content: center; align-items: flex-end; gap: 0.75rem; margin: 0.25rem 0 1.75rem; }
+        .podium-spot { display: flex; flex-direction: column; align-items: center; width: 32%; max-width: 190px; }
+        .podium-driver { text-decoration: none; color: var(--text); text-align: center; display: block; margin-bottom: 0.55rem; transition: transform 0.15s; }
+        .podium-driver:hover { transform: translateY(-3px); }
+        .pod-av-wrap { display: flex; justify-content: center; margin-bottom: 0.5rem; }
+        .pod-av { border-radius: 50%; object-fit: cover; background: var(--bg-2); display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--border); }
+        .pod-av-init { font-family: 'Anton', sans-serif; color: var(--muted); }
+        .podium-name { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.02em; line-height: 1.1; }
+        .podium-pts { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+        .podium-step { width: 100%; border-radius: 10px 10px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 0.5rem; border: 1px solid var(--border); border-bottom: none; }
+        .podium-rank { font-family: 'Anton', sans-serif; line-height: 1; }
+        .spot-1 .pod-av { width: 88px; height: 88px; border-color: rgba(255,209,102,0.6); }
+        .spot-2 .pod-av, .spot-3 .pod-av { width: 66px; height: 66px; }
+        .spot-1 .pod-av-init { font-size: 2rem; }
+        .spot-2 .pod-av-init, .spot-3 .pod-av-init { font-size: 1.4rem; }
+        .spot-1 .podium-name { font-size: 1.1rem; }
+        .step-1 { height: 120px; background: linear-gradient(180deg, rgba(255,209,102,0.22), rgba(255,209,102,0.05)); }
+        .step-2 { height: 92px;  background: linear-gradient(180deg, rgba(203,213,225,0.20), rgba(203,213,225,0.04)); }
+        .step-3 { height: 72px;  background: linear-gradient(180deg, rgba(209,154,102,0.20), rgba(209,154,102,0.04)); }
+        .step-1 .podium-rank { color: var(--gold); font-size: 2rem; }
+        .step-2 .podium-rank { color: #cbd5e1; font-size: 1.6rem; }
+        .step-3 .podium-rank { color: #d19a66; font-size: 1.6rem; }
+        @media (max-width: 520px) {
+            .podium { gap: 0.4rem; }
+            .podium-name { font-size: 0.78rem; }
+            .spot-1 .podium-name { font-size: 0.9rem; }
+            .spot-1 .pod-av { width: 62px; height: 62px; }
+            .spot-2 .pod-av, .spot-3 .pod-av { width: 48px; height: 48px; }
+        }
+
         /* Points cell */
         .points {
             font-family: 'Anton', sans-serif;
@@ -571,6 +602,31 @@ function formStrip(form) {
     }).join('') + `</span>`;
 }
 
+// Top-3 rostrum above the driver standings — P2 · P1 · P3, tallest in the
+// middle. Only shown once there's a genuine top three.
+function podiumSpot(d, place) {
+    if (!d) return '';
+    const info = _ratingByDriver[d.driver_id] || {};
+    const pts  = Number(d.points) || 0;
+    const av = info.photo
+        ? `<img class="pod-av" src="${esc(info.photo)}" alt="" loading="lazy">`
+        : `<span class="pod-av pod-av-init">${esc((d.driver_name || '?').trim().charAt(0).toUpperCase())}</span>`;
+    const flg = d.nationality ? `<span class="driver-flag">${flag(d.nationality)}</span> ` : '';
+    return `<div class="podium-spot spot-${place}">
+        <a class="podium-driver" href="/endurance/drivers/?slug=${esc(d.driver_slug)}">
+            <div class="pod-av-wrap">${av}</div>
+            <div class="podium-name">${flg}${esc(d.driver_name)}</div>
+            <div class="podium-pts">${pts.toFixed(pts % 1 === 0 ? 0 : 1)} pts</div>
+        </a>
+        <div class="podium-step step-${place}"><span class="podium-rank">${place}</span></div>
+    </div>`;
+}
+function renderPodium(list) {
+    if (!list || list.length < 3) return '';
+    const [p1, p2, p3] = list;
+    return `<div class="podium">${podiumSpot(p2, 2)}${podiumSpot(p1, 1)}${podiumSpot(p3, 3)}</div>`;
+}
+
 async function setTab(t) {
     _tab = t;
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
@@ -681,6 +737,7 @@ function renderDrivers(panel) {
     }).join('');
 
     panel.innerHTML = `
+        ${renderPodium(_drivers)}
         <div class="standings">
             <table>
                 <thead><tr>
