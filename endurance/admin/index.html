@@ -9035,7 +9035,7 @@ async function renderHealthCheck() {
                         ${excused
                             ? `<span class="badge badge-muted" title="Flagged unable to attend">Excused · ${esc((excusedByDriver.get(d.driver_id) || []).join(', '))}</span>`
                             : (d.total_entered > 0
-                                ? `<span class="badge badge-muted" title="Entered but no classified result (DNS / DNF)">Entered · no result</span>`
+                                ? `<span class="badge badge-muted" title="On the grid but did not start (DNS)">On grid · did not start</span>`
                                 : `<span class="badge badge-muted">Never entered</span>`)}
                         ${d.is_claimed ? `<button class="btn-icon" onclick="openDirectMessageModal('${d.driver_id}','${esc(d.display_name)}')">Message</button>` : ''}
                     </div>
