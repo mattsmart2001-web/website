@@ -365,6 +365,31 @@
         }
         .driver-flag { font-size: 1.05em; line-height: 1; vertical-align: baseline; }
 
+        /* Row cell with avatar to the left of name + meta */
+        .driver-cell { display: flex; align-items: center; gap: 0.6rem; }
+        .driver-cell-text { min-width: 0; }
+        .std-avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            object-fit: cover; flex-shrink: 0; background: var(--bg-2);
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .std-avatar-init { font-family: 'Anton', sans-serif; font-size: 0.95rem; color: var(--muted); opacity: 0.7; }
+        .mfr-badge-lg { display: inline-flex; align-items: center; justify-content: center; width: 34px; flex-shrink: 0; }
+        .mfr-badge-lg .mfr-logo { width: 26px; height: 26px; object-fit: contain; }
+
+        /* Recent-form pills */
+        .form-strip { display: inline-flex; gap: 3px; }
+        .form-pill {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 24px; padding: 2px 5px; border-radius: 4px;
+            font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700;
+            background: rgba(255,255,255,0.06); color: var(--muted);
+        }
+        .form-pill.form-win    { background: rgba(255,209,102,0.18); color: var(--gold); }
+        .form-pill.form-podium { background: rgba(148,163,184,0.20); color: #e2e8f0; }
+        .form-pill.form-dnf    { background: rgba(248,113,113,0.15); color: #f87171; }
+        .form-empty { color: var(--muted); opacity: 0.5; }
+
         /* Points cell */
         .points {
             font-family: 'Anton', sans-serif;
@@ -443,6 +468,7 @@
 <div class="tab-bar">
     <button class="tab active" data-tab="drivers" onclick="setTab('drivers')">Drivers</button>
     <button class="tab" data-tab="teams" onclick="setTab('teams')">Teams</button>
+    <button class="tab" data-tab="manufacturers" onclick="setTab('manufacturers')">Manufacturers</button>
     <button class="tab" data-tab="ratings" onclick="setTab('ratings')">Ratings</button>
 </div>
 
@@ -517,6 +543,34 @@ function mfrBadge(logoUrl, brandColor, name) {
     return '';
 }
 
+// Small round driver avatar (photo, else initial).
+function driverAvatar(photo, name) {
+    if (photo) return `<img class="std-avatar" src="${esc(photo)}" alt="" loading="lazy">`;
+    const init = (name || '?').trim().charAt(0).toUpperCase();
+    return `<span class="std-avatar std-avatar-init">${esc(init)}</span>`;
+}
+
+// Recent-form strip: last few rounds as compact, colour-coded pills.
+function formStrip(form) {
+    if (!form || !form.length) return '<span class="form-empty">—</span>';
+    return `<span class="form-strip">` + form.map(f => {
+        const st = f.status || 'classified';
+        let cls = 'form-pill', label, title;
+        if (st !== 'classified') {
+            cls += ' form-dnf';
+            label = st === 'dnf' ? 'DNF' : st === 'dsq' ? 'DSQ' : st === 'dns' ? 'DNS' : st === 'withdrawn' ? 'WD' : '—';
+            title = label;
+        } else if (f.pos === 1) {
+            cls += ' form-win'; label = 'P1'; title = 'Win';
+        } else if (f.pos != null && f.pos <= 3) {
+            cls += ' form-podium'; label = 'P' + f.pos; title = 'Podium';
+        } else {
+            label = f.pos != null ? 'P' + f.pos : '—'; title = label;
+        }
+        return `<span class="${cls}" title="${esc(title)}">${label}</span>`;
+    }).join('') + `</span>`;
+}
+
 async function setTab(t) {
     _tab = t;
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
@@ -531,6 +585,7 @@ function render() {
     const panel = document.getElementById('panel');
     if (_tab === 'drivers')  renderDrivers(panel);
     else if (_tab === 'teams') renderTeams(panel);
+    else if (_tab === 'manufacturers') renderManufacturers(panel);
     else renderRatings(panel);
 }
 
@@ -603,8 +658,13 @@ function renderDrivers(panel) {
                 </div>
             </td>
             <td>
-                <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${leaderTag}</div>
-                ${teamLine}
+                <div class="driver-cell">
+                    ${driverAvatar(_rInfo?.photo, d.driver_name)}
+                    <div class="driver-cell-text">
+                        <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${leaderTag}</div>
+                        ${teamLine}
+                    </div>
+                </div>
             </td>
             <td class="hide-mob center">${eloHTML}</td>
             <td class="lighter center hide-mob">${d.races}</td>
@@ -612,6 +672,7 @@ function renderDrivers(panel) {
             <td class="lighter center hide-mob">${d.podiums}</td>
             <td class="lighter center hide-mob">${d.poles}</td>
             <td class="lighter center hide-mob">${d.fastest_laps}</td>
+            <td class="hide-mob center">${formStrip(_formByDriver[d.driver_id])}</td>
             <td class="right">
                 <div class="points">${points.toFixed(points % 1 === 0 ? 0 : 1)}</div>
                 ${gap}
@@ -631,6 +692,7 @@ function renderDrivers(panel) {
                     <th class="center hide-mob">Pod</th>
                     <th class="center hide-mob">Pole</th>
                     <th class="center hide-mob">FL</th>
+                    <th class="center hide-mob">Form</th>
                     <th class="right">Points</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
@@ -681,6 +743,56 @@ function renderTeams(panel) {
                     <th style="width:50px">#</th>
                     <th>Team</th>
                     <th class="center hide-mob">Races</th>
+                    <th class="center hide-mob">Wins</th>
+                    <th class="center hide-mob">Pod</th>
+                    <th class="center hide-mob">Pole</th>
+                    <th class="center hide-mob">FL</th>
+                    <th class="right">Points</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+}
+
+function renderManufacturers(panel) {
+    if (!_manufacturers.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Results Yet</h3><p>Manufacturer standings appear once race results are recorded.</p></div>`;
+        return;
+    }
+    const leaderPoints = Number(_manufacturers[0].points) || 0;
+    const rows = _manufacturers.map((m, i) => {
+        const pos = i + 1;
+        const points = Number(m.points) || 0;
+        const gap = pos === 1
+            ? `<span class="leader-pip">LEADER</span>`
+            : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>`;
+        return `<tr class="${rankCls(pos)}">
+            <td class="${posCls(pos)}" style="${m.color ? `border-left:3px solid ${esc(m.color)}` : 'border-left:3px solid transparent'}">${pos}</td>
+            <td>
+                <div class="driver-cell">
+                    <span class="mfr-badge-lg">${mfrBadge(m.logo, m.color, m.name)}</span>
+                    <div class="name">${esc(m.name)}</div>
+                </div>
+            </td>
+            <td class="lighter center hide-mob">${m.drivers}</td>
+            <td class="lighter center hide-mob">${m.wins}</td>
+            <td class="lighter center hide-mob">${m.podiums}</td>
+            <td class="lighter center hide-mob">${m.poles}</td>
+            <td class="lighter center hide-mob">${m.fl}</td>
+            <td class="right">
+                <div class="points">${points.toFixed(points % 1 === 0 ? 0 : 1)}</div>
+                ${gap}
+            </td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:64px">#</th>
+                    <th>Manufacturer</th>
+                    <th class="center hide-mob">Drivers</th>
                     <th class="center hide-mob">Wins</th>
                     <th class="center hide-mob">Pod</th>
                     <th class="center hide-mob">Pole</th>
@@ -757,14 +869,14 @@ async function load() {
         // Per-event, per-driver points so we can derive "rank before the last
         // event" and show championship movement arrows.
         sb.from('result_drivers')
-            .select('driver_id, points_awarded, results!inner(event_id, events!inner(season_id, starts_at))'),
+            .select('driver_id, points_awarded, finish_position, status, results!inner(event_id, events!inner(season_id, starts_at))'),
         // Remaining rounds — feeds Live Battles' "still catchable" ceiling,
         // same Split-1-forever assumption as Season Stakes on the profile pages.
         sb.from('events').select('id', { count: 'exact', head: true })
             .eq('season_id', season.id).in('status', ['scheduled', 'in_progress']),
         // Each driver's own manufacturer (their profile lock) — the source
         // for showing a manufacturer on solo drivers, who have no team.
-        sb.from('drivers').select('id, manufacturers(name, brand_color, logo_url)'),
+        sb.from('drivers').select('id, photo_url, manufacturers(id, name, brand_color, logo_url)'),
     ]);
 
     _remaining = remainingRes.count || 0;
@@ -781,15 +893,19 @@ async function load() {
     (ratings.data || []).forEach(r => {
         _ratingByDriver[r.driver_id] = { rating: r.rating, rated: !!r.last_rated_at };
     });
-    // Merge each driver's own manufacturer in, so solo drivers (no team to
-    // source it from) still show one in the standings.
+    // Merge each driver's own photo + manufacturer in. The manufacturer is
+    // the fallback source for solo drivers (no team to source it from) and
+    // for the Manufacturers championship below.
     (driverMfrs.data || []).forEach(r => {
-        const m = r.manufacturers;
-        if (!m) return;
         const e = _ratingByDriver[r.id] || (_ratingByDriver[r.id] = {});
-        e.manufacturerName = m.name;
-        e.brandColor = m.brand_color;
-        e.manufacturerLogoUrl = m.logo_url;
+        e.photo = r.photo_url || null;
+        const m = r.manufacturers;
+        if (m) {
+            e.manufacturerId = m.id;
+            e.manufacturerName = m.name;
+            e.brandColor = m.brand_color;
+            e.manufacturerLogoUrl = m.logo_url;
+        }
     });
 
     // Compute previous-round positions. The "current" league is the view
@@ -799,6 +915,46 @@ async function load() {
 
     _drivers = (d.data || []).sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
     _teams   = (t.data || []).sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
+
+    // Form guide — each driver's last few rounds (chronological), from the
+    // same per-event rows used for movement arrows.
+    _formByDriver = {};
+    const _evByDriver = {};
+    (perEvent.data || []).forEach(r => {
+        if (r.results?.events?.season_id !== season.id) return;
+        (_evByDriver[r.driver_id] = _evByDriver[r.driver_id] || []).push({
+            at: r.results.events.starts_at, pos: r.finish_position, status: r.status,
+        });
+    });
+    Object.keys(_evByDriver).forEach(id => {
+        _formByDriver[id] = _evByDriver[id]
+            .sort((a, b) => new Date(a.at) - new Date(b.at))
+            .slice(-5);
+    });
+
+    // Manufacturer championship — sum each driver's points under their
+    // manufacturer (the team lock, or the driver's own for solo entries).
+    const _mMap = {};
+    _drivers.forEach(dr => {
+        const info = _ratingByDriver[dr.driver_id] || {};
+        const id   = dr.manufacturer_id || info.manufacturerId;
+        if (!id) return;
+        const m = _mMap[id] || (_mMap[id] = {
+            id,
+            name:  dr.manufacturer_name     || info.manufacturerName || 'Unknown',
+            logo:  dr.manufacturer_logo_url || info.manufacturerLogoUrl,
+            color: dr.brand_color           || info.brandColor,
+            points: 0, wins: 0, podiums: 0, poles: 0, fl: 0, drivers: 0,
+        });
+        m.points  += Number(dr.points)       || 0;
+        m.wins    += Number(dr.wins)         || 0;
+        m.podiums += Number(dr.podiums)      || 0;
+        m.poles   += Number(dr.poles)        || 0;
+        m.fl      += Number(dr.fastest_laps) || 0;
+        m.drivers += 1;
+    });
+    _manufacturers = Object.values(_mMap).sort((a, b) => (b.points - a.points) || (b.wins - a.wins));
+
     render();
 }
 
@@ -835,6 +991,8 @@ function computePrevRank(perEvent, seasonId, currentDrivers) {
 
 let _ratingByDriver = {};
 let _prevDriverRank = {};
+let _formByDriver   = {};
+let _manufacturers  = [];
 
 load();
 </script>
