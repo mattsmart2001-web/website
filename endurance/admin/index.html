@@ -9023,10 +9023,11 @@ async function renderHealthCheck() {
         }
     }
 
-    // "Excused" only if they were genuinely NOT entered — a clean opt-out.
-    // Anyone who WAS entered but has no classified result (a DNS/DNF/no-show)
-    // is worth chasing, even if they also flagged an absence.
-    const isExcused = d => d.total_entered === 0 && excusedByDriver.has(d.driver_id);
+    // "Excused" = flagged an absence for a race that has run — whether or
+    // not they ended up on the grid. A driver who told us they couldn't
+    // attend is excused even if they were still entered and then DNS'd.
+    // Only un-flagged no-shows (DNS with no absence) need a chase.
+    const isExcused = d => excusedByDriver.has(d.driver_id);
     const neverExcused = inactiveDrivers.filter(isExcused);
     const neverMissing = inactiveDrivers.filter(d => !isExcused(d));
     const inactiveCount = neverMissing.length;  // headline = genuine no-shows only
