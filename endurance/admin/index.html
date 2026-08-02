@@ -9016,8 +9016,12 @@ async function renderHealthCheck() {
         }
     }
 
-    const neverMissing = inactiveDrivers.filter(d => !excusedByDriver.has(d.driver_id));
-    const neverExcused = inactiveDrivers.filter(d =>  excusedByDriver.has(d.driver_id));
+    // "Excused" only if they were genuinely NOT entered — a clean opt-out.
+    // Anyone who WAS entered but has no classified result (a DNS/DNF/no-show)
+    // is worth chasing, even if they also flagged an absence.
+    const isExcused = d => d.total_entered === 0 && excusedByDriver.has(d.driver_id);
+    const neverExcused = inactiveDrivers.filter(isExcused);
+    const neverMissing = inactiveDrivers.filter(d => !isExcused(d));
     const inactiveCount = neverMissing.length;  // headline = genuine no-shows only
 
     const neverCard = (d, excused) => `
@@ -9030,7 +9034,9 @@ async function renderHealthCheck() {
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
                         ${excused
                             ? `<span class="badge badge-muted" title="Flagged unable to attend">Excused · ${esc((excusedByDriver.get(d.driver_id) || []).join(', '))}</span>`
-                            : `<span class="badge badge-muted">0 races</span>`}
+                            : (d.total_entered > 0
+                                ? `<span class="badge badge-muted" title="Entered but no classified result (DNS / DNF)">Entered · no result</span>`
+                                : `<span class="badge badge-muted">Never entered</span>`)}
                         ${d.is_claimed ? `<button class="btn-icon" onclick="openDirectMessageModal('${d.driver_id}','${esc(d.display_name)}')">Message</button>` : ''}
                     </div>
                 </div>
