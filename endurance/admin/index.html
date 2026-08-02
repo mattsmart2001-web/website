@@ -8986,7 +8986,14 @@ async function renderHealthCheck() {
         .eq('status', 'completed');
     const seasonHasStarted = (completedCount || 0) > 0;
     const { data: activity } = seasonHasStarted ? await sb.rpc('driver_activity_report') : { data: [] };
-    const inactiveDrivers = (activity || []).filter(d => d.is_claimed && (d.total_entered === 0 || !d.last_raced_at));
+    // Surface anyone who was ENTERED but never got a started result (a DNS /
+    // no-show), claimed or not — they were on the grid and are worth chasing.
+    // The "never entered at all" case stays claimed-only so the panel isn't
+    // flooded by unused unclaimed profiles that were never in a race.
+    const inactiveDrivers = (activity || []).filter(d =>
+        (d.total_entered > 0 && !d.last_raced_at) ||
+        (d.is_claimed && d.total_entered === 0)
+    );
 
     // Tell "opted out of a race we've already held" apart from "genuinely
     // never showed up". A driver who flagged an absence for a race that has
