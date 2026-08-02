@@ -970,7 +970,30 @@ async function load() {
     // recent event's points. Then rank both and diff.
     _prevDriverRank = computePrevRank(perEvent.data || [], season.id, d.data || []);
 
-    _drivers = (d.data || []).sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
+    // Per-driver season tiebreak: best classified finishing position (+ a
+    // fallback status rank). Lets 0-point drivers who actually finished
+    // (e.g. P11/P12, just outside the points) sort above DNF/DNS drivers,
+    // instead of everyone on 0 landing in an arbitrary order.
+    const STATUS_RANK = { classified: 0, dnf: 1, dsq: 2, withdrawn: 3, dns: 4 };
+    const _tie = {};
+    (perEvent.data || []).forEach(r => {
+        if (r.results?.events?.season_id !== season.id) return;
+        const st = r.status || 'classified';
+        const t = _tie[r.driver_id] || (_tie[r.driver_id] = { bestFinish: Infinity, bestStatus: 9 });
+        if (st === 'classified' && r.finish_position != null) t.bestFinish = Math.min(t.bestFinish, r.finish_position);
+        t.bestStatus = Math.min(t.bestStatus, STATUS_RANK[st] ?? 9);
+    });
+    const tieCompare = (a, b) => {
+        const ta = _tie[a.driver_id] || { bestFinish: Infinity, bestStatus: 9 };
+        const tb = _tie[b.driver_id] || { bestFinish: Infinity, bestStatus: 9 };
+        const aHas = ta.bestFinish !== Infinity, bHas = tb.bestFinish !== Infinity;
+        if (aHas !== bHas) return aHas ? -1 : 1;                              // any classified finish beats none
+        if (aHas && ta.bestFinish !== tb.bestFinish) return ta.bestFinish - tb.bestFinish; // better finish first
+        return ta.bestStatus - tb.bestStatus;                                // else DNF above DSQ above DNS
+    };
+
+    _drivers = (d.data || []).sort((a, b) =>
+        (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums) || tieCompare(a, b));
     _teams   = (t.data || []).sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
 
     // Form guide — each driver's last few rounds (chronological), from the
