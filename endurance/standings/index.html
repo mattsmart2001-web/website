@@ -363,6 +363,7 @@
             border-radius: 3px;
             margin-right: 0.45rem;
         }
+        .driver-flag { font-size: 1.05em; line-height: 1; vertical-align: baseline; }
 
         /* Points cell */
         .points {
@@ -478,6 +479,13 @@ function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Flag emoji from any 2-letter ISO country code (regional indicators).
+function flag(c) {
+    const cc = (c || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
+
 function posCls(p) {
     if (p === 1) return 'pos p1';
     if (p === 2) return 'pos p2';
@@ -587,7 +595,7 @@ function renderDrivers(panel) {
                 </div>
             </td>
             <td>
-                <div class="name">${num}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${leaderTag}</div>
+                <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${leaderTag}</div>
                 ${teamLine}
             </td>
             <td class="hide-mob center">${eloHTML}</td>
