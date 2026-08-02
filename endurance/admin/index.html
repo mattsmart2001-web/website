@@ -7641,16 +7641,18 @@ function renderGuide() {
             `)}
 
             ${s('16. Driver Team Health Check', `
-                <p>The Health Check page gives you a live overview of roster health. It runs six checks every time you open it.</p>
+                <p>The Health Check page gives you a live overview of roster health. It runs seven checks every time you open it.</p>
                 ${table(['Tile', 'What it flags', 'Action'], [
                     ['Solo Drivers', 'Claimed drivers with no team', 'Message them or monitor their applications'],
                     ['Open Seats', 'Teams with spare capacity', 'Chase solo drivers to apply'],
                     ['Unclaimed', 'Driver profiles with no linked account', 'Go to Drivers and send a fresh claim link'],
                     ['No Team Leader', 'Teams where the leader slot is empty', 'Go to Teams and assign a leader so join requests can be approved'],
                     ['No-Show Watch', 'Drivers who missed 2 or more of the last 5 races', 'Message them. Consider granting the Ghost badge if it becomes a pattern'],
-                    ['Never Raced', 'Drivers on the roster with zero race entries all time', 'Chase up or remove if they are no longer participating'],
+                    ['Unable to Attend', 'Drivers who flagged themselves unavailable for upcoming events', 'Plan around them; no action needed'],
+                    ['Never Raced', 'Drivers with no race entries yet — split into "needs a chase" and "excused"', 'Chase the un-excused; the excused simply flagged an absence for a race already held'],
                 ])}
                 ${tip('The No-Show Watch looks at the last 5 completed events. A driver only appears here if they were actually entered for those events but did not produce a result. Drivers who were never entered will not show up here — they appear under Never Raced instead.')}
+                ${tip('Never Raced separates drivers who genuinely have not shown up ("needs a chase") from those who flagged themselves unable to attend a race that has already run ("excused" — badged with the round). The tile count only counts the un-excused, so it is not inflated by drivers who told you in advance they would sit a round out.')}
                 ${tip('The Ghost badge (Secrets category) can be granted manually from the driver edit form. It appears on their public driver card as a secret badge.')}
             `)}
 
@@ -8985,24 +8987,68 @@ async function renderHealthCheck() {
     const seasonHasStarted = (completedCount || 0) > 0;
     const { data: activity } = seasonHasStarted ? await sb.rpc('driver_activity_report') : { data: [] };
     const inactiveDrivers = (activity || []).filter(d => d.is_claimed && (d.total_entered === 0 || !d.last_raced_at));
-    const inactiveCount = inactiveDrivers.length;
-    const inactiveRows = !seasonHasStarted
-        ? `<div class="empty-state" style="padding:2rem 1rem">No completed races yet — this panel activates after Round 1.</div>`
-        : !inactiveCount
-        ? `<div class="empty-state" style="padding:2rem 1rem">All drivers have at least one race entry.</div>`
-        : inactiveDrivers.map(d => `
-            <div class="hc-driver-card">
+
+    // Tell "opted out of a race we've already held" apart from "genuinely
+    // never showed up". A driver who flagged an absence for a race that has
+    // run has zero entries for a good reason — surface them as Excused
+    // rather than a critical no-show. Look at absences for events that are
+    // completed or whose start time has passed.
+    const excusedByDriver = new Map();
+    if (activeSeason) {
+        const { data: ranEvs } = await sb.from('events')
+            .select('id, round, status, starts_at')
+            .eq('season_id', activeSeason.id);
+        const nowIso = new Date().toISOString();
+        const ranById = new Map((ranEvs || [])
+            .filter(e => e.status === 'completed' || (e.starts_at && e.starts_at < nowIso))
+            .map(e => [e.id, e]));
+        if (ranById.size) {
+            const { data: ranAbs } = await sb.from('driver_event_absences')
+                .select('driver_id, event_id')
+                .in('event_id', Array.from(ranById.keys()));
+            (ranAbs || []).forEach(r => {
+                const ev = ranById.get(r.event_id);
+                if (!ev) return;
+                const list = excusedByDriver.get(r.driver_id) || [];
+                list.push('R' + ev.round);
+                excusedByDriver.set(r.driver_id, list);
+            });
+        }
+    }
+
+    const neverMissing = inactiveDrivers.filter(d => !excusedByDriver.has(d.driver_id));
+    const neverExcused = inactiveDrivers.filter(d =>  excusedByDriver.has(d.driver_id));
+    const inactiveCount = neverMissing.length;  // headline = genuine no-shows only
+
+    const neverCard = (d, excused) => `
+            <div class="hc-driver-card"${excused ? ' style="border-color:rgba(148,163,184,0.25)"' : ''}>
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
                     <div>
                         <div style="font-weight:600">${esc(d.display_name)}</div>
                         <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${d.is_claimed ? 'Claimed' : '<span style="color:#f87171">Unclaimed</span>'}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                        <span class="badge badge-muted">0 races</span>
+                        ${excused
+                            ? `<span class="badge badge-muted" title="Flagged unable to attend">Excused · ${esc((excusedByDriver.get(d.driver_id) || []).join(', '))}</span>`
+                            : `<span class="badge badge-muted">0 races</span>`}
                         ${d.is_claimed ? `<button class="btn-icon" onclick="openDirectMessageModal('${d.driver_id}','${esc(d.display_name)}')">Message</button>` : ''}
                     </div>
                 </div>
-            </div>`).join('');
+            </div>`;
+
+    const inactiveRows = !seasonHasStarted
+        ? `<div class="empty-state" style="padding:2rem 1rem">No completed races yet — this panel activates after Round 1.</div>`
+        : (!neverMissing.length && !neverExcused.length)
+        ? `<div class="empty-state" style="padding:2rem 1rem">All drivers have at least one race entry.</div>`
+        : `
+            ${neverMissing.length ? `
+                <div class="hc-subgroup-label">Needs a chase — no entries, no absence flagged</div>
+                <div style="display:flex;flex-direction:column;gap:0.5rem;${neverExcused.length ? 'margin-bottom:1.1rem' : ''}">${neverMissing.map(d => neverCard(d, false)).join('')}</div>
+            ` : ''}
+            ${neverExcused.length ? `
+                <div class="hc-subgroup-label">Excused — flagged they couldn't attend the race(s) held so far</div>
+                <div style="display:flex;flex-direction:column;gap:0.5rem">${neverExcused.map(d => neverCard(d, true)).join('')}</div>
+            ` : ''}`;
 
     const hcSection = (variant, title, desc, count, bodyHtml, extraHeader = '') => `
         <div class="hc-section hc-section--${variant}">
@@ -9072,7 +9118,7 @@ async function renderHealthCheck() {
                 ${hcSection('warn', 'Unable to Attend', 'Self-declared unavailability for upcoming events', absentTotalCount, absentPanelRows)}
             </div>
 
-            ${hcSection('critical', 'Never Raced', 'On the roster but no race entries yet', inactiveCount, inactiveRows)}
+            ${hcSection('critical', 'Never Raced', `On the roster but no race entries yet${neverExcused.length ? ` · ${neverExcused.length} excused (flagged an absence)` : ''}`, inactiveCount, inactiveRows)}
 
         </div>
         <style>
@@ -9100,6 +9146,7 @@ async function renderHealthCheck() {
             .hc-section--warn .hc-section-title     { color: #fb923c; }
             .hc-section--critical .hc-section-title { color: #f87171; }
             .hc-section-desc { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
+            .hc-subgroup-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0.15rem 0 0.15rem; }
             .hc-section-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; padding: 0 0.4rem; flex-shrink: 0; }
             .hc-section-badge--neutral  { background: rgba(255,255,255,0.06); color: var(--muted); }
             .hc-section-badge--warn     { background: rgba(251,146,60,0.15); color: #fb923c; }
