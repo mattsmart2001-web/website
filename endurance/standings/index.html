@@ -569,9 +569,17 @@ function renderDrivers(panel) {
     const rows = _drivers.map((d, i) => {
         const pos = i + 1;
         const num = d.career_number ? `<span class="career-num">#${d.career_number}</span>` : '';
+        // Solo drivers have no team_name (and the view derives manufacturer
+        // via team_seasons, so it's null for them) — fall back to the
+        // driver's own manufacturer from driver_current_ratings so solo
+        // entries still show a manufacturer, like team drivers do.
+        const _rInfo = _ratingByDriver[d.driver_id];
+        const soloMfrName  = d.manufacturer_name     || _rInfo?.manufacturerName;
+        const soloMfrLogo  = d.manufacturer_logo_url || _rInfo?.manufacturerLogoUrl;
+        const soloMfrColor = d.brand_color           || _rInfo?.brandColor;
         const teamLine = d.team_name
             ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name, { size: 'lg' })}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='inherit'">${esc(d.team_name)}</a>` : esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</div>`
-            : '';
+            : (soloMfrName ? `<div class="meta-line">${mfrBadge(soloMfrLogo, soloMfrColor, soloMfrName)}<em style="opacity:0.75">Solo</em> · ${esc(soloMfrName)}</div>` : '');
         const movement = movementHTML(pos, _prevDriverRank[d.driver_id]);
         const leaderTag = pos === 1
             ? `<span class="leader-tag">★ Leader</span>`
@@ -742,7 +750,7 @@ async function load() {
     document.getElementById('season-title').textContent = season.name;
     document.getElementById('season-sub').textContent = `${season.year} Championship · Live standings`;
 
-    const [d, t, ratings, perEvent, remainingRes] = await Promise.all([
+    const [d, t, ratings, perEvent, remainingRes, driverMfrs] = await Promise.all([
         sb.from('driver_standings').select('*').eq('season_id', season.id),
         sb.from('team_standings').select('*').eq('season_id', season.id),
         sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
@@ -754,6 +762,9 @@ async function load() {
         // same Split-1-forever assumption as Season Stakes on the profile pages.
         sb.from('events').select('id', { count: 'exact', head: true })
             .eq('season_id', season.id).in('status', ['scheduled', 'in_progress']),
+        // Each driver's own manufacturer (their profile lock) — the source
+        // for showing a manufacturer on solo drivers, who have no team.
+        sb.from('drivers').select('id, manufacturers(name, brand_color, logo_url)'),
     ]);
 
     _remaining = remainingRes.count || 0;
@@ -769,6 +780,16 @@ async function load() {
     _ratingByDriver = {};
     (ratings.data || []).forEach(r => {
         _ratingByDriver[r.driver_id] = { rating: r.rating, rated: !!r.last_rated_at };
+    });
+    // Merge each driver's own manufacturer in, so solo drivers (no team to
+    // source it from) still show one in the standings.
+    (driverMfrs.data || []).forEach(r => {
+        const m = r.manufacturers;
+        if (!m) return;
+        const e = _ratingByDriver[r.id] || (_ratingByDriver[r.id] = {});
+        e.manufacturerName = m.name;
+        e.brandColor = m.brand_color;
+        e.manufacturerLogoUrl = m.logo_url;
     });
 
     // Compute previous-round positions. The "current" league is the view
