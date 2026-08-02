@@ -841,7 +841,13 @@ const app = document.getElementById('app');
 const slug = new URLSearchParams(location.search).get('slug');
 
 const FLAGS = { AD:'🇦🇩',AE:'🇦🇪',AT:'🇦🇹',AU:'🇦🇺',BE:'🇧🇪',BH:'🇧🇭',BR:'🇧🇷',CA:'🇨🇦',CN:'🇨🇳',CZ:'🇨🇿',DE:'🇩🇪',ES:'🇪🇸',FR:'🇫🇷',GB:'🇬🇧',HU:'🇭🇺',IT:'🇮🇹',JP:'🇯🇵',MX:'🇲🇽',NL:'🇳🇱',PL:'🇵🇱',PT:'🇵🇹',SA:'🇸🇦',SE:'🇸🇪',SG:'🇸🇬',US:'🇺🇸' };
-function flag(c) { return FLAGS[c?.toUpperCase()] || ''; }
+// Flag emoji from any 2-letter ISO country code (regional indicators), so
+// every nationality renders — not just the hardcoded FLAGS subset above.
+function flag(c) {
+    const cc = (c || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
 function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function initials(name) { return (name || '??').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2); }
 

@@ -334,7 +334,13 @@ function esc(s) {
     if (s == null) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function flag(c) { return FLAGS[c?.toUpperCase()] || ''; }
+// Flag emoji from any 2-letter ISO country code (regional indicators), so
+// every nationality renders — not just the hardcoded FLAGS subset above.
+function flag(c) {
+    const cc = (c || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
 function fmtDate(iso) {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });

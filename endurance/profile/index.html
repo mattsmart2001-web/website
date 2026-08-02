@@ -659,7 +659,13 @@ const { createClient } = window.supabase;
 const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
 
 const FLAGS = { AD:'🇦🇩',AE:'🇦🇪',AT:'🇦🇹',AU:'🇦🇺',BE:'🇧🇪',BR:'🇧🇷',CA:'🇨🇦',CN:'🇨🇳',CZ:'🇨🇿',DE:'🇩🇪',ES:'🇪🇸',FR:'🇫🇷',GB:'🇬🇧',HU:'🇭🇺',IT:'🇮🇹',JP:'🇯🇵',MX:'🇲🇽',NL:'🇳🇱',PL:'🇵🇱',PT:'🇵🇹',SA:'🇸🇦',SE:'🇸🇪',SG:'🇸🇬',US:'🇺🇸' };
-function flag(c) { return FLAGS[c?.toUpperCase()] || ''; }
+// Flag emoji from any 2-letter ISO country code (regional indicators), so
+// every nationality renders — not just the hardcoded FLAGS subset above.
+function flag(c) {
+    const cc = (c || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
 
 let driverId = null;
 

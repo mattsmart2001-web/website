@@ -440,7 +440,13 @@ const FLAGS = {
     SA:'🇸🇦',SE:'🇸🇪',SG:'🇸🇬',US:'🇺🇸',
 };
 
-function flag(code) { return FLAGS[code?.toUpperCase()] || ''; }
+// Flag emoji from any 2-letter ISO country code (regional indicators), so
+// every nationality renders — not just the hardcoded FLAGS subset above.
+function flag(code) {
+    const cc = (code || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
 
 function esc(s) {
     if (s == null) return '';
