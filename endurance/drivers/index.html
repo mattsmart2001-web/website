@@ -1330,7 +1330,7 @@ async function showProfile() {
             finish_position, status, points_awarded, pole_point, fastest_lap_point, laps_driven,
             results(
                 entries(car_number, lobby_number, teams(name)),
-                events(round, name, starts_at, circuit_name, seasons(year, name))
+                events(id, round, name, starts_at, circuit_name, seasons(year, name))
             )
         `)
         .eq('driver_id', driver.id),
@@ -1348,24 +1348,29 @@ async function showProfile() {
         // whole-team penalty on an entry they were part of), with reason and
         // season — to show the dock + reason on the Career Stats points.
         sb.from('penalties')
-            .select('points_amount, reason, driver_id, entry_id, entries(entry_drivers(driver_id)), events(seasons(year))')
+            .select('points_amount, reason, driver_id, entry_id, event_id, entries(entry_drivers(driver_id)), events(seasons(year))')
             .eq('penalty_type', 'points_deduction'),
     ]);
 
-    // Sum this driver's deductions per season year.
+    // Sum this driver's deductions, keyed both by season year (Career Stats)
+    // and by event (Race History).
     const dedBySeasonYear = {};
+    const dedByEvent = {};
     (dedRes.data || []).forEach(p => {
         if (!p.points_amount) return;
         const hits = p.driver_id
             ? p.driver_id === driver.id
             : (p.entries?.entry_drivers || []).some(ed => ed.driver_id === driver.id);
         if (!hits) return;
-        const yr = p.events?.seasons?.year;
-        if (yr == null) return;
-        const e = dedBySeasonYear[yr] || (dedBySeasonYear[yr] = { amount: 0, reasons: [] });
-        e.amount += p.points_amount;
         const r = (p.reason || '').trim();
-        if (r && !e.reasons.includes(r)) e.reasons.push(r);
+        const add = (map, key) => {
+            if (key == null) return;
+            const e = map[key] || (map[key] = { amount: 0, reasons: [] });
+            e.amount += p.points_amount;
+            if (r && !e.reasons.includes(r)) e.reasons.push(r);
+        };
+        add(dedBySeasonYear, p.events?.seasons?.year);
+        add(dedByEvent, p.event_id);
     });
 
     const hostCount  = hostCountRes.count || 0;
@@ -1570,7 +1575,7 @@ async function showProfile() {
                                 <td class="muted">${esc(ev?.seasons?.year)}</td>
                                 <td class="muted hide-mob">${res?.entries?.car_number ? '#' + res.entries.car_number : ''} ${esc(res?.entries?.teams?.name || 'Solo')}</td>
                                 <td class="right">${posBadge(r.finish_position, r.status)}</td>
-                                <td class="right pts">${pts}</td>
+                                <td class="right pts">${pts}${(() => { const dd = dedByEvent[ev?.id]; return dd && dd.amount ? `<div class="pts-deduct" title="${esc(dd.reasons.join(', '))} (−${dd.amount} pts)">−${dd.amount}${dd.reasons.length ? ` · ${esc(dd.reasons.join(', '))}` : ''}</div>` : ''; })()}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
