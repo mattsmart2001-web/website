@@ -1566,6 +1566,8 @@ async function showProfile() {
                             const res = r.results;
                             const ev  = res?.events;
                             const pts = r.points_awarded || 0;
+                            const evDed = dedByEvent[ev?.id];
+                            const netPts = pts - (evDed?.amount || 0);   // net after this round's deduction, matching the season total
                             const bonuses = [r.pole_point ? 'P' : '', r.fastest_lap_point ? 'FL' : ''].filter(Boolean).join('+');
                             return `<tr>
                                 <td>
@@ -1575,7 +1577,7 @@ async function showProfile() {
                                 <td class="muted">${esc(ev?.seasons?.year)}</td>
                                 <td class="muted hide-mob">${res?.entries?.car_number ? '#' + res.entries.car_number : ''} ${esc(res?.entries?.teams?.name || 'Solo')}</td>
                                 <td class="right">${posBadge(r.finish_position, r.status)}</td>
-                                <td class="right pts">${pts}${(() => { const dd = dedByEvent[ev?.id]; return dd && dd.amount ? `<div class="pts-deduct" title="${esc(dd.reasons.join(', '))} (−${dd.amount} pts)">−${dd.amount}${dd.reasons.length ? ` · ${esc(dd.reasons.join(', '))}` : ''}</div>` : ''; })()}</td>
+                                <td class="right pts">${netPts}${evDed && evDed.amount ? `<div class="pts-deduct" title="${pts} earned − ${evDed.amount} (${esc(evDed.reasons.join(', '))})">−${evDed.amount} · ${esc(evDed.reasons.join(', '))}</div>` : ''}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
