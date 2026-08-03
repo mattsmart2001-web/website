@@ -107,6 +107,7 @@
         .standing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; }
         .standing-item .si-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.25rem; }
         .standing-item .si-value { font-family: 'Anton', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; line-height: 1; }
+        .standing-item .si-deduct { margin-top: 0.3rem; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #f87171; }
         .si-pos { color: var(--gold); }
         .elo-bar-wrap { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
         .elo-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
@@ -946,12 +947,32 @@ async function loadStanding(driverId) {
     const { data: season } = await sb.from('seasons').select('id,name,year').eq('is_active', true).maybeSingle();
     if (!season) return;
 
-    const [allStRes, ratingRes] = await Promise.all([
+    const [allStRes, ratingRes, pensRes] = await Promise.all([
         sb.from('driver_standings')
             .select('driver_id, points, races, wins, podiums, fastest_laps')
             .eq('season_id', season.id),
         sb.from('driver_current_ratings').select('*').eq('driver_id', driverId).maybeSingle(),
+        // This driver's points-deduction penalties this season (with reason)
+        // so we can show why points were docked, matching the standings.
+        sb.from('penalties')
+            .select('points_amount, reason, driver_id, entry_id, entries(entry_drivers(driver_id)), events!inner(season_id)')
+            .eq('penalty_type', 'points_deduction')
+            .eq('events.season_id', season.id),
     ]);
+
+    // Sum this driver's deductions: a driver-specific penalty, or a
+    // whole-team penalty on an entry they were part of.
+    let dedAmount = 0; const dedReasons = [];
+    (pensRes.data || []).forEach(p => {
+        if (!p.points_amount) return;
+        const hits = p.driver_id
+            ? p.driver_id === driverId
+            : (p.entries?.entry_drivers || []).some(ed => ed.driver_id === driverId);
+        if (!hits) return;
+        dedAmount += p.points_amount;
+        const r = (p.reason || '').trim();
+        if (r && !dedReasons.includes(r)) dedReasons.push(r);
+    });
 
     const all = (allStRes.data || []).slice().sort((a, b) => Number(b.points) - Number(a.points));
     const rankIdx = all.findIndex(r => r.driver_id === driverId);
@@ -963,16 +984,19 @@ async function loadStanding(driverId) {
     document.getElementById('standing-season-label').textContent = `${season.name} — Season Standing`;
 
     if (st) {
+        const dedNote = dedAmount
+            ? `−${dedAmount}${dedReasons.length ? ` · ${dedReasons.join(', ')}` : ''}`
+            : '';
         const items = [
             { label: 'Position', value: Number(st.points) > 0 && driverRank ? `P${driverRank}` : '—', cls: 'si-pos' },
-            { label: 'Points',   value: Number(st.points ?? 0).toFixed(Number(st.points ?? 0) % 1 === 0 ? 0 : 1) },
+            { label: 'Points',   value: Number(st.points ?? 0).toFixed(Number(st.points ?? 0) % 1 === 0 ? 0 : 1), note: dedNote },
             { label: 'Races',    value: st.races  ?? 0 },
             { label: 'Wins',     value: st.wins   ?? 0 },
             { label: 'Podiums',  value: st.podiums ?? 0 },
             { label: 'Fastest Laps', value: st.fastest_laps ?? 0 },
         ];
         document.getElementById('standing-grid').innerHTML = items.map(i =>
-            `<div class="standing-item"><div class="si-label">${i.label}</div><div class="si-value ${i.cls||''}">${i.value}</div></div>`
+            `<div class="standing-item"><div class="si-label">${i.label}</div><div class="si-value ${i.cls||''}">${i.value}</div>${i.note ? `<div class="si-deduct" title="${esc(i.note)} (points docked)">${esc(i.note)}</div>` : ''}</div>`
         ).join('');
     }
 
