@@ -734,6 +734,7 @@
         .data-table td.right { text-align: right; }
         .data-table td.muted { color: var(--muted); }
         .pts { font-weight: 700; color: var(--gold); }
+        .pts-deduct { margin-top: 0.2rem; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #f87171; }
         .pos-badge {
             display: inline-block;
             min-width: 28px;
@@ -1320,7 +1321,7 @@ async function showProfile() {
     document.title = `${driver.display_name} — GTEC`;
 
     // Season career stats + rating history in parallel with race history
-    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes, hostCountRes] = await Promise.all([
+    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes, hostCountRes, dedRes] = await Promise.all([
         sb.from('driver_standings').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
         sb.from('driver_ratings').select('rating_before, rating_after, delta, event_id, events(round, name)').eq('driver_id', driver.id).order('created_at'),
         sb.from('driver_current_ratings').select('rating, peak_rating').eq('driver_id', driver.id).maybeSingle(),
@@ -1343,7 +1344,29 @@ async function showProfile() {
         // Career-wide count of splits actually hosted, feeds the Community
         // badge ladder (replaces the old "willing to host" flag check).
         sb.from('entries').select('id', { count: 'exact', head: true }).eq('host_driver_id', driver.id),
+        // Points-deduction penalties affecting this driver (their own, or a
+        // whole-team penalty on an entry they were part of), with reason and
+        // season — to show the dock + reason on the Career Stats points.
+        sb.from('penalties')
+            .select('points_amount, reason, driver_id, entry_id, entries(entry_drivers(driver_id)), events(seasons(year))')
+            .eq('penalty_type', 'points_deduction'),
     ]);
+
+    // Sum this driver's deductions per season year.
+    const dedBySeasonYear = {};
+    (dedRes.data || []).forEach(p => {
+        if (!p.points_amount) return;
+        const hits = p.driver_id
+            ? p.driver_id === driver.id
+            : (p.entries?.entry_drivers || []).some(ed => ed.driver_id === driver.id);
+        if (!hits) return;
+        const yr = p.events?.seasons?.year;
+        if (yr == null) return;
+        const e = dedBySeasonYear[yr] || (dedBySeasonYear[yr] = { amount: 0, reasons: [] });
+        e.amount += p.points_amount;
+        const r = (p.reason || '').trim();
+        if (r && !e.reasons.includes(r)) e.reasons.push(r);
+    });
 
     const hostCount  = hostCountRes.count || 0;
     const seasons    = seasonsRes.data  || [];
@@ -1477,7 +1500,7 @@ async function showProfile() {
                         ${seasons.map(s => `<tr>
                             <td>${s.season_year}</td>
                             <td class="muted">${s.team_name ? `${mfrBadge(s.manufacturer_logo_url, s.brand_color, s.manufacturer_name)} ${esc(s.team_name)}` : '—'}</td>
-                            <td class="right pts">${Number(s.points).toFixed(s.points % 1 === 0 ? 0 : 1)}</td>
+                            <td class="right pts">${Number(s.points).toFixed(s.points % 1 === 0 ? 0 : 1)}${(() => { const dd = dedBySeasonYear[s.season_year]; return dd && dd.amount ? `<div class="pts-deduct" title="${esc(dd.reasons.join(', '))} (−${dd.amount} pts)">−${dd.amount}${dd.reasons.length ? ` · ${esc(dd.reasons.join(', '))}` : ''}</div>` : ''; })()}</td>
                             <td class="right muted">${s.races}</td>
                             <td class="right muted">${s.wins}</td>
                             <td class="right muted">${s.podiums}</td>
