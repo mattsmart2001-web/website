@@ -946,7 +946,7 @@ async function showListing() {
         if (!activeSznId || s.season_id === activeSznId) pointsMap[s.driver_id] = Number(s.points || 0);
         winsMap[s.driver_id]  = (winsMap[s.driver_id]  || 0) + Number(s.wins  || 0);
         racesMap[s.driver_id] = (racesMap[s.driver_id] || 0) + Number(s.races || 0);
-        if (firstSeasonId && s.season_id === firstSeasonId) foundingSet.add(s.driver_id);
+        if (firstSeasonId && s.season_id === firstSeasonId && Number(s.races) > 0) foundingSet.add(s.driver_id);
         if (s.season_id !== activeSznId) {
             if (!_sznGroups[s.season_id]) _sznGroups[s.season_id] = [];
             _sznGroups[s.season_id].push({ driver_id: s.driver_id, points: Number(s.points || 0) });
@@ -1399,7 +1399,7 @@ async function showProfile() {
     // detection in parallel.
     const [{ data: _seasonsList }, { data: _allStandings }, { data: _secretBadges }] = await Promise.all([
         sb.from('seasons').select('id, year, is_active'),
-        sb.from('driver_standings').select('driver_id, season_id, points'),
+        sb.from('driver_standings').select('driver_id, season_id, points, races'),
         sb.rpc('driver_secret_badges', { p_driver_id: driver.id }),
     ]);
     const seasonFinishes = [];
@@ -1413,7 +1413,7 @@ async function showProfile() {
     const secretBadges = _secretBadges || {};
     // Founding Member — raced in Season 1 (earliest season by year).
     const _firstSeasonId = (_seasonsList || []).slice().sort((a, b) => (a.year || 0) - (b.year || 0))[0]?.id;
-    const foundingMember = !!_firstSeasonId && (_allStandings || []).some(r => r.driver_id === driver.id && r.season_id === _firstSeasonId);
+    const foundingMember = !!_firstSeasonId && (_allStandings || []).some(r => r.driver_id === driver.id && r.season_id === _firstSeasonId && Number(r.races) > 0);
 
     // Current rating — driver_current_ratings.rating/peak_rating already
     // fall back to the DR/SR seed for drivers with no race history, so use

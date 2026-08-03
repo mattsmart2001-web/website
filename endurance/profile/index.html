@@ -1325,7 +1325,7 @@ async function loadBadges(driverId) {
             .select('status, results(events(circuit_name))')
             .eq('driver_id', driverId),
         sb.from('seasons').select('id, year, is_active'),
-        sb.from('driver_standings').select('driver_id, season_id, points'),
+        sb.from('driver_standings').select('driver_id, season_id, points, races'),
         sb.rpc('driver_secret_badges', { p_driver_id: driverId }),
         sb.from('drivers').select('manual_badges, willing_host').eq('id', driverId).maybeSingle(),
         // Career-wide count of splits actually hosted, feeds the Community
@@ -1353,7 +1353,7 @@ async function loadBadges(driverId) {
 
     // Founding Member — raced in Season 1 (earliest season by year).
     const _firstSeasonId = (seasons || []).slice().sort((a, b) => (a.year || 0) - (b.year || 0))[0]?.id;
-    const foundingMember = !!_firstSeasonId && (allStandings || []).some(r => r.driver_id === driverId && r.season_id === _firstSeasonId);
+    const foundingMember = !!_firstSeasonId && (allStandings || []).some(r => r.driver_id === driverId && r.season_id === _firstSeasonId && Number(r.races) > 0);
 
     if (!window.renderBadgeGrid) return;
     document.getElementById('badges-grid').innerHTML = window.renderBadgeGrid({
