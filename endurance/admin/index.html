@@ -7641,7 +7641,7 @@ function renderGuide() {
             `)}
 
             ${s('16. Driver Team Health Check', `
-                <p>The Health Check page gives you a live overview of roster health. It runs seven checks every time you open it.</p>
+                <p>The Health Check page gives you a live overview of roster health. It runs eight checks every time you open it.</p>
                 ${table(['Tile', 'What it flags', 'Action'], [
                     ['Solo Drivers', 'Claimed drivers with no team', 'Message them or monitor their applications'],
                     ['Open Seats', 'Teams with spare capacity', 'Chase solo drivers to apply'],
@@ -7649,6 +7649,7 @@ function renderGuide() {
                     ['No Team Leader', 'Teams where the leader slot is empty', 'Go to Teams and assign a leader so join requests can be approved'],
                     ['No-Show Watch', 'Drivers who missed 2 or more of the last 5 races', 'Message them. Consider granting the Ghost badge if it becomes a pattern'],
                     ['Unable to Attend', 'Drivers who flagged themselves unavailable for upcoming events', 'Plan around them; no action needed'],
+                    ['No Manufacturer', 'Claimed drivers with no manufacturer assigned', 'Set one on the driver so they can be entered with a car'],
                     ['Never Raced', 'Drivers with no race entries yet — split into "needs a chase" and "excused"', 'Chase the un-excused; the excused simply flagged an absence for a race already held'],
                 ])}
                 ${tip('The No-Show Watch looks at the last 5 completed events. A driver only appears here if they were actually entered for those events but did not produce a result. Drivers who were never entered will not show up here — they appear under Never Raced instead.')}
@@ -8780,10 +8781,18 @@ async function renderHealthCheck() {
         .is('user_id', null)
         .order('display_name');
 
-    if (e1 || e2 || e3 || e4 || e5) {
-        const err = e1 || e2 || e3 || e4 || e5;
+    // Claimed drivers with no manufacturer assigned — they can't be entered
+    // with a car until one is set.
+    const { data: noMfrDrivers, error: e6 } = await sb.from('drivers')
+        .select('id, display_name, psn_id, current_team_id, teams!current_team_id(name)')
+        .is('current_manufacturer_id', null)
+        .not('user_id', 'is', null)
+        .order('display_name');
+
+    if (e1 || e2 || e3 || e4 || e5 || e6) {
+        const err = e1 || e2 || e3 || e4 || e5 || e6;
         content.innerHTML = `<div class="empty-state">Failed to load health check data: ${esc(err.message)}</div>`;
-        console.error('Health check errors:', { e1, e2, e3, e4, e5 });
+        console.error('Health check errors:', { e1, e2, e3, e4, e5, e6 });
         return;
     }
 
@@ -9064,6 +9073,21 @@ async function renderHealthCheck() {
                 <div style="display:flex;flex-direction:column;gap:0.5rem">${neverExcused.map(d => neverCard(d, true)).join('')}</div>
             ` : ''}`;
 
+    // Claimed drivers with no manufacturer assigned.
+    const noMfrCount = (noMfrDrivers || []).length;
+    const noMfrRows = !noMfrCount
+        ? `<div class="empty-state" style="padding:2rem 1rem">Every claimed driver has a manufacturer assigned.</div>`
+        : (noMfrDrivers || []).map(d => `
+            <div class="hc-driver-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+                    <div>
+                        <div style="font-weight:600">${esc(d.display_name)}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${d.teams?.name ? esc(d.teams.name) : 'Solo'} &middot; ${esc(d.psn_id || '—')}</div>
+                    </div>
+                    <button class="btn-icon" onclick="openDirectMessageModal('${d.id}','${esc(d.display_name)}')">Message</button>
+                </div>
+            </div>`).join('');
+
     // Each section is a collapsible accordion. Default: open when it needs
     // attention (a warn/critical section with a non-zero count), collapsed
     // otherwise (nothing to action, or a purely informational section) — so
@@ -9125,6 +9149,10 @@ async function renderHealthCheck() {
                     <span class="hc-stat-num">${absentTotalCount}</span>
                     <span class="hc-stat-label">Unable to Attend</span>
                 </div>
+                <div class="hc-stat ${noMfrCount ? 'hc-stat--warn' : 'hc-stat--ok'}">
+                    <span class="hc-stat-num">${noMfrCount}</span>
+                    <span class="hc-stat-label">No Manufacturer</span>
+                </div>
             </div>
 
             <div class="hc-toolbar">
@@ -9147,7 +9175,10 @@ async function renderHealthCheck() {
                 ${hcSection('warn', 'Unable to Attend', 'Self-declared unavailability for upcoming events', absentTotalCount, absentPanelRows)}
             </div>
 
-            ${hcSection('critical', 'Never Raced', `On the roster but no race entries yet${neverExcused.length ? ` · ${neverExcused.length} excused (flagged an absence)` : ''}`, inactiveCount, inactiveRows)}
+            <div class="hc-grid-2">
+                ${hcSection('warn', 'No Manufacturer', 'Claimed drivers with no manufacturer assigned', noMfrCount, noMfrRows)}
+                ${hcSection('critical', 'Never Raced', `On the roster but no race entries yet${neverExcused.length ? ` · ${neverExcused.length} excused (flagged an absence)` : ''}`, inactiveCount, inactiveRows)}
+            </div>
 
         </div>
         <style>
