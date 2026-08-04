@@ -1726,6 +1726,8 @@ async function init() {
     loadRecentResults(driver.id);
     loadIncidents(driver.id);
     loadSplitJourney(driver.id);
+    // Stamp "last seen" for the admin roster view (fire and forget).
+    sb.rpc('touch_last_seen').then(() => {});
     loadInbox(driver.id);
     loadBadges(driver.id);
     loadTeamingSections(driver);
