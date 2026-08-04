@@ -7704,7 +7704,7 @@ function renderGuide() {
                 ${ol([
                     'Open <strong>Stewards</strong> in the sidebar. The badge counts cases that are Open or Under review.',
                     'Click a case in the Incident Log to open it, and you\'ll see both drivers, the description, and the clip links.',
-                    'Set a <strong>Verdict</strong> status, add <strong>Outcome / notes</strong>, and optionally link a penalty already recorded on that event.',
+                    'Set a <strong>Verdict</strong> status and add <strong>Outcome / notes</strong>.',
                     'Optionally type a <strong>Note to complainant</strong>. Anything there is delivered to the driver\'s portal inbox. Leave it blank to save quietly.',
                     'Click <strong>Save verdict</strong>.',
                 ])}
@@ -7721,7 +7721,7 @@ function renderGuide() {
                     'The <strong>driver</strong> can <strong>Withdraw</strong> their own case, but only while it is still <strong>Open</strong>. Once you move it to Under review it locks to admin-only.',
                 ])}
                 ${warn('Deleting a case removes the record and its clip links. Any inbox note you already sent the complainant stays in their inbox, since those are separate messages.')}
-                ${tip('Linking a penalty is optional and does not create one. Create the penalty in the event\'s Penalties tab first, then pick it from the dropdown to tie the two together for the record.')}
+                ${tip('A verdict does not apply any points penalty on its own. If a case warrants one, add it in the event\'s Penalties tab, where it flows into the standings.')}
             `)}
 
             ${s('18. DR / SR to ELO Seed Reference', `
@@ -7859,16 +7859,6 @@ async function selectDispute(id) {
     document.querySelectorAll('.stw-row').forEach(r => r.classList.toggle('sel',
         r.getAttribute('onclick') === `selectDispute('${id}')`));
 
-    // Existing penalties on this event, so a verdict can be linked to one.
-    const { data: pens } = await sb.from('penalties')
-        .select('id, penalty_type, penalty_value, reason, driver_id, drivers(display_name)')
-        .eq('event_id', d.event_id);
-    const penOpts = (pens || []).map(p => {
-        const who = p.drivers?.display_name || 'team';
-        const val = p.penalty_value ? ` ${p.penalty_value}` : '';
-        return `<option value="${esc(p.id)}" ${p.id === d.penalty_id ? 'selected' : ''}>${esc(who)} · ${esc(p.penalty_type)}${esc(val)}</option>`;
-    }).join('');
-
     const clips = [d.clip_1_url, d.clip_2_url, d.clip_3_url, d.clip_4_url].filter(Boolean);
     const clipHtml = clips.length ? clips.map((u, i) =>
         `<a class="stw-clip" href="${esc(u)}" target="_blank" rel="noopener"><span class="pl">▶</span><span>Clip ${i + 1}</span><span class="u">${esc(u)}</span></a>`).join('')
@@ -7895,8 +7885,6 @@ async function selectDispute(id) {
             <select id="stw-status">${statusOpts}</select>
             <div class="stw-field-label">Outcome / notes</div>
             <textarea id="stw-outcome" placeholder="Stewards' decision — shown to the complainant once resolved/dismissed.">${esc(d.outcome || '')}</textarea>
-            <div class="stw-field-label">Link a penalty <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — from this event)</span></div>
-            <select id="stw-penalty"><option value="">— none —</option>${penOpts}</select>
             <div class="stw-field-label">Note to complainant <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — sends to their portal inbox)</span></div>
             <textarea id="stw-notify" placeholder="Leave blank to save quietly. Anything here is delivered to the complainant's inbox."></textarea>
             <div class="stw-actions">
@@ -7921,14 +7909,13 @@ async function deleteDispute(id) {
 async function saveVerdict(id) {
     const status  = document.getElementById('stw-status').value;
     const outcome = document.getElementById('stw-outcome').value.trim();
-    const penalty = document.getElementById('stw-penalty').value || null;
     const notify  = document.getElementById('stw-notify').value.trim();
 
     const { data, error } = await sb.rpc('update_dispute', {
         p_dispute_id: id,
         p_status: status,
         p_outcome: outcome || null,
-        p_penalty_id: penalty,
+        p_penalty_id: null,
         p_notify: notify || null,
     });
     if (error)     { toast(error.message, 'error'); return; }
