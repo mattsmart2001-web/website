@@ -7749,9 +7749,10 @@ function renderGuide() {
                     ['<strong>Dismissed</strong>', 'No further action. The outcome text is shown to the complainant.'],
                 ])}
                 ${tip('The outcome/notes text is only revealed to the complainant once the case is Resolved or Dismissed. While Open or Under review, they just see the status.')}
-                ${h('Deleting vs. withdrawing')}
+                ${h('Deleting, hiding, and withdrawing')}
                 ${ul([
-                    '<strong>You (admin)</strong> can <strong>Delete</strong> any case at any status from the case-detail pane. It is permanent, with a confirm.',
+                    '<strong>You (admin)</strong> can <strong>Delete</strong> any case at any status from the case-detail pane. It is permanent, with a confirm, and removes it from the driver\'s portal too.',
+                    '<strong>Hide from portal</strong> takes a case off the driver\'s portal while keeping the full record here in the log. Handy for clearing test cases or noise without losing the audit trail. Toggle it back with <strong>Show in portal</strong>.',
                     'The <strong>driver</strong> can <strong>Withdraw</strong> their own case, but only while it is still <strong>Open</strong>. Once you move it to Under review it locks to admin-only.',
                 ])}
                 ${warn('Deleting a case removes the record and its clip links. Any inbox note you already sent the complainant stays in their inbox, since those are separate messages.')}
@@ -7819,7 +7820,7 @@ async function renderStewards() {
         <div class="stw-row${sel}" onclick="selectDispute('${d.id}')">
             <span class="stw-ref">${esc((d.incident_ref || '—').replace(/^INC-\d+-/, 'INC-'))}</span>
             <div class="stw-row-main">
-                <div class="stw-parties">${esc(d.complainant_name || '—')} <span class="vs">vs</span> ${esc(d.accused_name || '—')}</div>
+                <div class="stw-parties">${esc(d.complainant_name || '—')} <span class="vs">vs</span> ${esc(d.accused_name || '—')}${d.hidden_from_portal ? ' <span class="stw-hidden-tag">Hidden</span>' : ''}</div>
                 <div class="stw-row-meta">R${d.event_round ?? '—'} ${esc(d.event_name || '')} · ${stwFmt(d.created_at)}</div>
             </div>
             <span class="stw-pill sp-${d.status}">${esc(_stwStatusLabel[d.status] || d.status)}</span>
@@ -7846,6 +7847,7 @@ async function renderStewards() {
         .sp-under_review { color: var(--cyan); background: rgba(14,165,233,0.13); border: 1px solid rgba(14,165,233,0.3); }
         .sp-resolved { color: var(--green); background: rgba(34,197,94,0.13); border: 1px solid rgba(34,197,94,0.3); }
         .sp-dismissed { color: var(--muted); background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+        .stw-hidden-tag { font-family: 'Orbitron', sans-serif; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.35rem; vertical-align: middle; }
         .stw-parties-box { display: flex; align-items: center; gap: 0.7rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.9rem; margin-bottom: 0.7rem; }
         .stw-who { flex: 1; min-width: 0; }
         .stw-who .rl { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
@@ -7902,7 +7904,7 @@ async function selectDispute(id) {
         `<option value="${s}" ${s === d.status ? 'selected' : ''}>${_stwStatusLabel[s]}</option>`).join('');
 
     document.getElementById('stw-detail').innerHTML = `
-        <div class="stw-detail-title">${esc(d.incident_ref || 'Case')} <span class="stw-pill sp-${d.status}" style="margin-left:0.4rem">${esc(_stwStatusLabel[d.status] || d.status)}</span></div>
+        <div class="stw-detail-title">${esc(d.incident_ref || 'Case')} <span class="stw-pill sp-${d.status}" style="margin-left:0.4rem">${esc(_stwStatusLabel[d.status] || d.status)}</span>${d.hidden_from_portal ? ' <span class="stw-hidden-tag">Hidden from portal</span>' : ''}</div>
         <div class="stw-parties-box">
             <div class="stw-who comp"><div class="rl">Complainant</div><div class="nm">${esc(d.complainant_name || '—')}</div><div class="ps">${d.complainant_psn ? 'PSN: ' + esc(d.complainant_psn) : ''}${d.lobby_number != null ? ' · Split ' + d.lobby_number : ''}</div></div>
             <div class="stw-vs">VS</div>
@@ -7923,9 +7925,18 @@ async function selectDispute(id) {
             <textarea id="stw-notify" placeholder="Leave blank to save quietly. Anything here is delivered to the complainant's inbox."></textarea>
             <div class="stw-actions">
                 <button class="btn-danger" onclick="deleteDispute('${d.id}')">Delete</button>
+                <button class="btn btn-ghost" onclick="toggleHideDispute('${d.id}', ${!d.hidden_from_portal})">${d.hidden_from_portal ? 'Show in portal' : 'Hide from portal'}</button>
                 <button class="btn-primary" onclick="saveVerdict('${d.id}')">Save</button>
             </div>
+            <p style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem">${d.hidden_from_portal ? 'This case is hidden from the driver\'s portal. It stays here in the log.' : 'Hiding removes this case from the driver\'s portal but keeps it here in the log.'}</p>
         </div>`;
+}
+
+async function toggleHideDispute(id, hide) {
+    const { error } = await sb.from('disputes').update({ hidden_from_portal: hide }).eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(hide ? 'Hidden from the driver\'s portal.' : 'Restored to the driver\'s portal.', 'success');
+    await renderStewards();
 }
 
 async function deleteDispute(id) {
