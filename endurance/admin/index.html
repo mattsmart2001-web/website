@@ -7776,6 +7776,9 @@ async function renderStewards() {
     }
     _disputes = data || [];
 
+    const counts = { open: 0, under_review: 0, resolved: 0, dismissed: 0 };
+    _disputes.forEach(d => { if (counts[d.status] != null) counts[d.status]++; });
+
     const listRows = _disputes.length ? _disputes.map(d => {
         const sel = d.id === _selDisputeId ? ' sel' : '';
         return `
@@ -7828,6 +7831,12 @@ async function renderStewards() {
         .stw-detail-empty { color: var(--muted); font-size: 0.85rem; padding: 2rem 1rem; text-align: center; }
         .stw-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1rem; }
     </style>
+    <div class="stat-grid" style="margin-bottom:1.5rem">
+        <div class="stat-card${counts.open > 0 ? ' stat-card-alert' : ''}"><div class="stat-card-label">Open</div><div class="stat-card-value">${counts.open}</div></div>
+        <div class="stat-card"><div class="stat-card-label">Under Review</div><div class="stat-card-value">${counts.under_review}</div></div>
+        <div class="stat-card"><div class="stat-card-label">Resolved</div><div class="stat-card-value">${counts.resolved}</div></div>
+        <div class="stat-card"><div class="stat-card-label">Dismissed</div><div class="stat-card-value">${counts.dismissed}</div></div>
+    </div>
     <div class="stw-wrap">
         <div class="stw-list">
             <div class="stw-list-title">Incident Log</div>
