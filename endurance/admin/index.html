@@ -7697,30 +7697,30 @@ function renderGuide() {
                 ${h('How a driver files one')}
                 ${ol([
                     'From their portal, under <strong>Stewards &amp; Incidents</strong> (just below their season standing), they click <strong>Report an Incident</strong>.',
-                    'They pick the event, the driver involved, describe what happened, and paste up to four clip <strong>links</strong> (YouTube / Streamable / Medal). Only the person filing submits — no video is uploaded, just links.',
+                    'They pick the event, the driver involved, describe what happened, and paste up to four clip <strong>links</strong> (YouTube / Streamable / Medal). Only the person filing submits. No video is uploaded, just links.',
                     'On submit it gets a per-season reference like <strong>INC-2026-014</strong> and lands in your Stewards log as <strong>Open</strong>.',
                 ])}
                 ${h('Reviewing a case')}
                 ${ol([
                     'Open <strong>Stewards</strong> in the sidebar. The badge counts cases that are Open or Under review.',
-                    'Click a case in the Incident Log to open it — you\'ll see both drivers, the description, and the clip links.',
+                    'Click a case in the Incident Log to open it, and you\'ll see both drivers, the description, and the clip links.',
                     'Set a <strong>Verdict</strong> status, add <strong>Outcome / notes</strong>, and optionally link a penalty already recorded on that event.',
-                    'Optionally type a <strong>Note to complainant</strong> — anything there is delivered to the driver\'s portal inbox. Leave it blank to save quietly.',
+                    'Optionally type a <strong>Note to complainant</strong>. Anything there is delivered to the driver\'s portal inbox. Leave it blank to save quietly.',
                     'Click <strong>Save verdict</strong>.',
                 ])}
                 ${table(['Status', 'Meaning'], [
                     ['<strong>Open</strong>', 'Newly filed, not yet looked at. The driver can still withdraw it themselves at this stage.'],
-                    ['<strong>Under review</strong>', 'You\'ve picked it up. It locks — the driver can no longer withdraw it.'],
+                    ['<strong>Under review</strong>', 'You\'ve picked it up. It locks, so the driver can no longer withdraw it.'],
                     ['<strong>Resolved</strong>', 'Decision made. The outcome text becomes visible to the complainant.'],
                     ['<strong>Dismissed</strong>', 'No further action. The outcome text is shown to the complainant.'],
                 ])}
                 ${tip('The outcome/notes text is only revealed to the complainant once the case is Resolved or Dismissed. While Open or Under review, they just see the status.')}
                 ${h('Deleting vs. withdrawing')}
                 ${ul([
-                    '<strong>You (admin)</strong> can <strong>Delete</strong> any case at any status from the case-detail pane — permanent, with a confirm.',
+                    '<strong>You (admin)</strong> can <strong>Delete</strong> any case at any status from the case-detail pane. It is permanent, with a confirm.',
                     'The <strong>driver</strong> can <strong>Withdraw</strong> their own case, but only while it is still <strong>Open</strong>. Once you move it to Under review it locks to admin-only.',
                 ])}
-                ${warn('Deleting a case removes the record and its clip links. Any inbox note you already sent the complainant stays in their inbox — those are separate messages.')}
+                ${warn('Deleting a case removes the record and its clip links. Any inbox note you already sent the complainant stays in their inbox, since those are separate messages.')}
                 ${tip('Linking a penalty is optional and does not create one. Create the penalty in the event\'s Penalties tab first, then pick it from the dropdown to tie the two together for the record.')}
             `)}
 
