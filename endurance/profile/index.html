@@ -1488,7 +1488,10 @@ async function loadIncidents(driverId) {
             .select('entries(event_id, lobby_number, events(name, round, starts_at))')
             .eq('driver_id', driverId),
         sb.from('drivers').select('id, display_name, psn_id').order('display_name'),
-        sb.from('dispute_overview').select('*').eq('complainant_driver_id', driverId).order('created_at', { ascending: false }),
+        // Exclude admin-hidden cases explicitly: RLS already hides them from
+        // regular drivers, but an admin viewing their own portal can still
+        // read every dispute, so filter here so the portal never shows one.
+        sb.from('dispute_overview').select('*').eq('complainant_driver_id', driverId).eq('hidden_from_portal', false).order('created_at', { ascending: false }),
     ]);
 
     // Build a de-duped, most-recent-first event list from the entries.
