@@ -282,6 +282,8 @@
         .inc-parties { font-weight: 600; font-size: 0.86rem; }
         .inc-parties .vs { color: var(--muted); font-weight: 400; margin: 0 0.3rem; }
         .inc-meta { font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem; }
+        .inc-withdraw { margin-left: auto; background: transparent; border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 600; padding: 0.3rem 0.7rem; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+        .inc-withdraw:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.5); }
         .inc-outcome { margin-top: 0.55rem; padding-top: 0.55rem; border-top: 1px solid var(--border); font-size: 0.82rem; color: #d7dde6; }
         .inc-outcome .ol { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem; }
         .status-pill { display: inline-flex; align-items: center; gap: 0.3rem; font-family: 'Orbitron', sans-serif; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 20px; padding: 0.25rem 0.55rem; }
@@ -1528,6 +1530,9 @@ function renderIncidentList(rows) {
         const clipHtml = clips.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:0.76rem;text-decoration:none;margin-right:0.6rem">▶ Clip ${i + 1}</a>`).join('');
         const outcome = (st === 'resolved' || st === 'dismissed') && r.outcome
             ? `<div class="inc-outcome"><div class="ol">Stewards' verdict</div>${esc(r.outcome)}</div>` : '';
+        // Only while untouched by stewards can the driver withdraw it.
+        const withdraw = st === 'open'
+            ? `<button type="button" class="inc-withdraw" onclick="withdrawIncident('${r.id}')">Withdraw</button>` : '';
         return `
         <div class="inc-row">
             <div class="inc-row-top">
@@ -1537,10 +1542,18 @@ function renderIncidentList(rows) {
             </div>
             <div class="inc-meta">Round ${r.event_round ?? '—'} · ${esc(r.event_name || '—')} · filed ${fmtDate(r.created_at)}</div>
             <div class="inc-meta" style="margin-top:0.4rem;color:#d7dde6">${esc(r.description || '')}</div>
-            <div style="margin-top:0.5rem">${clipHtml}</div>
+            <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap">${clipHtml}${withdraw}</div>
             ${outcome}
         </div>`;
     }).join('');
+}
+
+async function withdrawIncident(id) {
+    if (!confirm('Withdraw this incident? It will be removed and the stewards won\'t see it. You can only do this before they\'ve started reviewing it.')) return;
+    const { error } = await sb.from('disputes').delete().eq('id', id);
+    if (error) { toast(error.message || 'Could not withdraw.', 'error'); return; }
+    toast('Incident withdrawn.', 'success');
+    await loadIncidents(_incDriverId);
 }
 
 function toggleIncidentForm(show) {
