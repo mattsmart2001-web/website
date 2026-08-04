@@ -482,49 +482,77 @@ document.addEventListener('mousemove', (event) => {
 
 // Mobile accelerometer support for gyroscope-based interaction
 let isUsingAccelerometer = false;
+const motionPermissionNeeded =
+    window.DeviceOrientationEvent &&
+    typeof DeviceOrientationEvent.requestPermission === 'function';
 
-// Check if device supports orientation
 if (window.DeviceOrientationEvent) {
-    // Request permission for iOS 13+
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        // iOS requires user interaction first - we'll auto-request on first touch
-        document.addEventListener('touchstart', requestOrientationPermission, { once: true });
+    if (motionPermissionNeeded) {
+        // iOS 13+ requires the request to be made inside a user-gesture handler.
+        // Show a button so the user can explicitly grant permission.
+        showMotionPermissionButton();
     } else {
-        // Non-iOS devices
+        // Android / other browsers expose orientation events without a prompt.
         enableAccelerometer();
     }
 }
 
-function requestOrientationPermission() {
-    DeviceOrientationEvent.requestPermission()
-        .then(permissionState => {
-            if (permissionState === 'granted') {
-                enableAccelerometer();
-            }
-        })
-        .catch(console.error);
+function showMotionPermissionButton() {
+    const btn = document.getElementById('enable-motion-btn');
+    if (!btn) return;
+    btn.hidden = false;
+    const handler = () => {
+        DeviceOrientationEvent.requestPermission()
+            .then(permissionState => {
+                if (permissionState === 'granted') {
+                    enableAccelerometer();
+                    btn.hidden = true;
+                } else {
+                    btn.textContent = 'Motion denied';
+                }
+            })
+            .catch(err => {
+                console.error('Motion permission error:', err);
+                btn.textContent = 'Motion unavailable';
+            });
+    };
+    btn.addEventListener('click', handler);
 }
 
 function enableAccelerometer() {
+    if (isUsingAccelerometer) return;
     window.addEventListener('deviceorientation', handleOrientation);
     isUsingAccelerometer = true;
 }
 
 function handleOrientation(event) {
-    // Get device orientation (beta = front-to-back tilt, gamma = left-to-right tilt)
-    const beta = event.beta;   // -180 to 180 degrees (front-back tilt)
-    const gamma = event.gamma;  // -90 to 90 degrees (left-right tilt)
+    const beta = event.beta;   // -180 to 180 (front-back tilt)
+    const gamma = event.gamma; // -90 to 90 (left-right tilt)
 
-    if (beta !== null && gamma !== null) {
-        // Convert to normalized values (-1 to 1) for consistency with mouse movement
-        // Gamma (left-right): -90 to 90 -> map to -1 to 1
-        mouseX = Math.max(-1, Math.min(1, gamma / 45)); // Divide by 45 for sensitivity
+    if (beta === null || gamma === null) return;
 
-        // Beta (front-back): Use range around portrait position (around 90 degrees in portrait)
-        // Adjust for portrait mode: 90 is neutral, tilt forward/back from there
-        const adjustedBeta = beta - 90; // Center around 0
-        mouseY = Math.max(-1, Math.min(1, adjustedBeta / 45)); // Divide by 45 for sensitivity
+    // Account for screen orientation so left/right tilt always maps to mouseX.
+    const screenAngle =
+        (screen.orientation && screen.orientation.angle) ||
+        window.orientation ||
+        0;
+
+    let tiltX = gamma;
+    let tiltY = beta - 90; // center portrait-neutral around 0
+
+    if (screenAngle === 90) {
+        tiltX = beta - 90;
+        tiltY = -gamma;
+    } else if (screenAngle === -90 || screenAngle === 270) {
+        tiltX = -(beta - 90);
+        tiltY = gamma;
+    } else if (screenAngle === 180) {
+        tiltX = -gamma;
+        tiltY = -(beta - 90);
     }
+
+    mouseX = Math.max(-1, Math.min(1, tiltX / 45));
+    mouseY = Math.max(-1, Math.min(1, tiltY / 45));
 }
 
 // Load GLB model
