@@ -1843,13 +1843,42 @@ async function deleteTeam(id, name) {
 // ============================================================
 // 10. Drivers
 // ============================================================
+// Turns a last-sign-in timestamp into a compact relative label. Returns
+// null when there's nothing to show (no timestamp).
+function fmtLastSeen(iso) {
+    if (!iso) return null;
+    const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+    if (days <= 0)  return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 30)  return `${days}d ago`;
+    if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+    return `${Math.floor(days / 365)}y ago`;
+}
+
 async function renderDrivers() {
-    const { data, error } = await sb.from('drivers')
-        .select('*, teams!current_team_id(name), manufacturers(name)')
-        .order('display_name');
+    const [{ data, error }, { data: signIns }] = await Promise.all([
+        sb.from('drivers')
+            .select('*, teams!current_team_id(name), manufacturers(name)')
+            .order('display_name'),
+        sb.rpc('driver_last_sign_in'),
+    ]);
     if (error) { toast(error.message, 'error'); return; }
 
-    const rows = data.length === 0 ? `<tr><td colspan="8"><div class="empty-state">No drivers yet.</div></td></tr>` :
+    // driver_id -> last_sign_in_at (only present for claimed drivers).
+    const lastSeen = {};
+    (signIns || []).forEach(r => { lastSeen[r.driver_id] = r.last_sign_in_at; });
+
+    const lastSeenCell = d => {
+        if (!d.user_id) return '<td class="td-muted" data-sort="">—</td>';       // unclaimed
+        const iso = lastSeen[d.id];
+        const label = fmtLastSeen(iso);
+        if (!label) return '<td class="td-muted" data-sort="0">Never</td>';        // claimed, never signed in
+        const stale = (Date.now() - new Date(iso).getTime()) / 86400000 >= 30;
+        const when = new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return `<td data-sort="${esc(iso)}" title="${esc(when)}" style="${stale ? 'color:#fb923c' : 'color:var(--muted)'}">${label}</td>`;
+    };
+
+    const rows = data.length === 0 ? `<tr><td colspan="9"><div class="empty-state">No drivers yet.</div></td></tr>` :
         data.map(d => `
             <tr>
                 <td><strong>${esc(d.display_name)}</strong>${d.career_number ? ` <span class="badge badge-gold">#${d.career_number}</span>` : ''}</td>
@@ -1859,6 +1888,7 @@ async function renderDrivers() {
                 <td class="td-muted">${esc(d.teams?.name) || '—'}</td>
                 <td class="td-muted">${esc(d.manufacturers?.name) || '—'}</td>
                 <td>${d.user_id ? '<span class="badge badge-green">Claimed</span>' : '<span class="badge badge-muted">Unclaimed</span>'}</td>
+                ${lastSeenCell(d)}
                 <td><div class="row-actions">
                     ${!d.user_id ? `<button class="btn-icon" onclick="generateClaimLink('${d.id}','${esc(d.display_name)}')">Claim Link</button>` : `<button class="btn-icon" onclick="unlinkDriver('${d.id}','${esc(d.display_name)}')">Unlink</button>`}
                     <button class="btn-icon" onclick="openDirectMessageModal('${d.id}','${esc(d.display_name)}')">Message</button>
@@ -1880,6 +1910,7 @@ async function renderDrivers() {
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">Team</th>
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">Manufacturer</th>
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">Portal</th>
+                <th class="th-sort" onclick="thSort(this,'drivers-table')">Last Login</th>
                 <th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
@@ -8926,11 +8957,15 @@ function thSort(th, tableId) {
     const rows = Array.from(tbody.querySelectorAll('tr'));
     const mult = dir === 'asc' ? 1 : -1;
     rows.sort((a, b) => {
-        const at = (a.cells[col]?.textContent || '').trim().replace(/\s+/g, ' ');
-        const bt = (b.cells[col]?.textContent || '').trim().replace(/\s+/g, ' ');
+        // A cell can supply an explicit sort key via data-sort (e.g. an ISO
+        // date behind a relative "3d ago" label); otherwise use its text.
+        const rawA = a.cells[col]?.dataset.sort;
+        const rawB = b.cells[col]?.dataset.sort;
+        const at = ((rawA !== undefined ? rawA : a.cells[col]?.textContent) || '').trim().replace(/\s+/g, ' ');
+        const bt = ((rawB !== undefined ? rawB : b.cells[col]?.textContent) || '').trim().replace(/\s+/g, ' ');
         if (!at || at === '—') return 1;
         if (!bt || bt === '—') return -1;
-        return mult * at.localeCompare(bt, undefined, { sensitivity: 'base' });
+        return mult * at.localeCompare(bt, undefined, { sensitivity: 'base', numeric: true });
     });
     rows.forEach(r => tbody.appendChild(r));
 }
