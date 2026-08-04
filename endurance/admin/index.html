@@ -9094,8 +9094,11 @@ async function renderHealthCheck() {
     // a healthy page is compact and problems are already expanded.
     const hcSection = (variant, title, desc, count, bodyHtml, extraHeader = '') => {
         const collapsed = count === 0 || variant === 'neutral';
+        // A pass/fail check with nothing outstanding is clean — show it green
+        // rather than its severity colour. Neutral (informational) sections stay neutral.
+        const shownVariant = (variant !== 'neutral' && count === 0) ? 'ok' : variant;
         return `
-        <div class="hc-section hc-section--${variant}${collapsed ? ' collapsed' : ''}">
+        <div class="hc-section hc-section--${shownVariant}${collapsed ? ' collapsed' : ''}">
             <div class="hc-section-header" role="button" tabindex="0"
                  onclick="this.closest('.hc-section').classList.toggle('collapsed')"
                  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.closest('.hc-section').classList.toggle('collapsed');}">
@@ -9105,7 +9108,7 @@ async function renderHealthCheck() {
                     <div class="hc-section-desc">${desc}</div>
                 </div>
                 ${extraHeader}
-                <span class="hc-section-badge hc-section-badge--${variant}">${count}</span>
+                <span class="hc-section-badge hc-section-badge--${shownVariant}">${count}</span>
             </div>
             <div class="hc-section-body">${bodyHtml}</div>
         </div>`;
@@ -9205,15 +9208,18 @@ async function renderHealthCheck() {
             .hc-section.collapsed .hc-section-header { border-bottom-color: transparent; }
             .hc-section.collapsed .hc-section-body { display: none; }
             .hc-section--neutral .hc-section-header { border-left-color: var(--border); }
+            .hc-section--ok .hc-section-header      { border-left-color: #4ade80; }
             .hc-section--warn .hc-section-header    { border-left-color: #fb923c; }
             .hc-section--critical .hc-section-header { border-left-color: #f87171; }
             .hc-section-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text); }
+            .hc-section--ok .hc-section-title       { color: #4ade80; }
             .hc-section--warn .hc-section-title     { color: #fb923c; }
             .hc-section--critical .hc-section-title { color: #f87171; }
             .hc-section-desc { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
             .hc-subgroup-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0.15rem 0 0.15rem; }
             .hc-section-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; padding: 0 0.4rem; flex-shrink: 0; }
             .hc-section-badge--neutral  { background: rgba(255,255,255,0.06); color: var(--muted); }
+            .hc-section-badge--ok       { background: rgba(74,222,128,0.15); color: #4ade80; }
             .hc-section-badge--warn     { background: rgba(251,146,60,0.15); color: #fb923c; }
             .hc-section-badge--critical { background: rgba(239,68,68,0.15); color: #f87171; }
             .hc-section-body { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
