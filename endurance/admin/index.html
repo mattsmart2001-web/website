@@ -784,6 +784,11 @@
             Messages
             <span class="nav-badge" id="msgs-badge" style="display:none">0</span>
         </button>
+        <button class="nav-link" data-section="stewards">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4z"/><path d="m9 12 2 2 4-4"/></svg>
+            Stewards
+            <span class="nav-badge" id="stewards-badge" style="display:none">0</span>
+        </button>
 
         <div class="nav-section">Content</div>
         <button class="nav-link" data-section="news">
@@ -924,8 +929,10 @@ async function initAuth() {
     setupNav();
     await refreshAppsBadge();
     await refreshMsgsBadge();
+    await refreshStewardsBadge();
     setInterval(refreshAppsBadge, 60000);
     setInterval(refreshMsgsBadge, 60000);
+    setInterval(refreshStewardsBadge, 60000);
     setupAdminRealtime();
     await navigate('dashboard');
 }
@@ -943,6 +950,32 @@ function setupAdminRealtime() {
         .on('postgres_changes', { event: '*',      schema: 'public', table: 'driver_contact_messages' }, debouncedRefresh)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_thread_posts'    }, debouncedRefresh)
         .subscribe();
+
+    let ts;
+    sb.channel('admin:disputes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'disputes' }, () => {
+            clearTimeout(ts);
+            ts = setTimeout(async () => {
+                await refreshStewardsBadge();
+                if (currentSection === 'stewards') await renderStewards();
+            }, 300);
+        })
+        .subscribe();
+}
+
+// Open + under-review incidents are the ones needing a steward.
+async function refreshStewardsBadge() {
+    const { count } = await sb.from('disputes')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['open', 'under_review']);
+    const el = document.getElementById('stewards-badge');
+    if (!el) return;
+    if (count && count > 0) {
+        el.textContent = count;
+        el.style.display = '';
+    } else {
+        el.style.display = 'none';
+    }
 }
 
 async function refreshMsgsBadge() {
@@ -1024,6 +1057,7 @@ async function navigate(section, pushHash = true) {
         events: 'Events',
         applications: 'Applications',
         messages: 'Driver Messages',
+        stewards: 'Stewards & Incidents',
         healthcheck: 'Driver Team Health Check',
         news: 'News',
         media: 'Media',
@@ -1035,7 +1069,7 @@ async function navigate(section, pushHash = true) {
     document.getElementById('page-title').textContent = titles[section] || section;
 
     const addBtn = document.getElementById('btn-add');
-    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins' || section === 'messages' || section === 'activity' || section === 'guide' || section === 'healthcheck') {
+    if (section === 'dashboard' || section === 'pages' || section === 'applications' || section === 'admins' || section === 'messages' || section === 'stewards' || section === 'activity' || section === 'guide' || section === 'healthcheck') {
         addBtn.style.display = 'none';
     } else {
         addBtn.style.display = '';
@@ -1060,6 +1094,7 @@ async function navigate(section, pushHash = true) {
         case 'pages':        await renderPages(); break;
         case 'admins':       await renderAdmins(); break;
         case 'messages':     await renderMessages(); break;
+        case 'stewards':     await renderStewards(); break;
         case 'healthcheck':  await renderHealthCheck(); break;
         case 'activity':     await renderActivityLog(); break;
         case 'guide':        renderGuide(); break;
@@ -7687,6 +7722,168 @@ function renderGuide() {
 // ============================================================
 // 11c. Driver Messages
 // ============================================================
+// ============================================================
+// Stewards & Incidents — review driver-filed disputes, set a verdict,
+// optionally notify the complainant. Stewards-private: this admin view
+// is the only place cases are seen in full.
+// ============================================================
+let _disputes = [];
+let _selDisputeId = null;
+const _stwStatusLabel = { open: 'Open', under_review: 'Under review', resolved: 'Resolved', dismissed: 'Dismissed' };
+
+function stwFmt(iso) {
+    return iso ? new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+}
+
+async function renderStewards() {
+    const content = document.getElementById('content');
+    const { data, error } = await sb.from('dispute_overview').select('*').order('created_at', { ascending: false });
+    if (error) {
+        content.innerHTML = `<div class="empty-state">Couldn't load incidents.<br><span style="font-size:0.8rem;color:var(--muted)">If this is the first use, make sure migration 120 has been applied.</span></div>`;
+        return;
+    }
+    _disputes = data || [];
+
+    const listRows = _disputes.length ? _disputes.map(d => {
+        const sel = d.id === _selDisputeId ? ' sel' : '';
+        return `
+        <div class="stw-row${sel}" onclick="selectDispute('${d.id}')">
+            <span class="stw-ref">${esc((d.incident_ref || '—').replace(/^INC-\d+-/, 'INC-'))}</span>
+            <div class="stw-row-main">
+                <div class="stw-parties">${esc(d.complainant_name || '—')} <span class="vs">vs</span> ${esc(d.accused_name || '—')}</div>
+                <div class="stw-row-meta">R${d.event_round ?? '—'} ${esc(d.event_name || '')} · ${stwFmt(d.created_at)}</div>
+            </div>
+            <span class="stw-pill sp-${d.status}">${esc(_stwStatusLabel[d.status] || d.status)}</span>
+        </div>`;
+    }).join('') : '<div class="empty-state" style="margin:0">No incidents filed yet.</div>';
+
+    content.innerHTML = `
+    <style>
+        .stw-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 1rem; align-items: start; }
+        @media (max-width: 900px) { .stw-wrap { grid-template-columns: 1fr; } }
+        .stw-list, .stw-detail { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+        .stw-list-title, .stw-detail-title { font-family: 'Orbitron', sans-serif; font-size: 0.66rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.9rem; }
+        .stw-row { display: grid; grid-template-columns: auto 1fr auto; gap: 0.7rem; align-items: center; background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; cursor: pointer; transition: border-color 0.15s; }
+        .stw-row:hover { border-color: rgba(255,209,102,0.3); }
+        .stw-row.sel { border-color: rgba(255,209,102,0.55); background: var(--bg-3); }
+        .stw-ref { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.58rem; letter-spacing: 0.05em; color: var(--cyan); }
+        .stw-row-main { min-width: 0; }
+        .stw-parties { font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stw-parties .vs { color: var(--muted); font-weight: 400; margin: 0 0.25rem; }
+        .stw-row-meta { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stw-pill { display: inline-flex; align-items: center; gap: 0.3rem; font-family: 'Orbitron', sans-serif; font-size: 0.53rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 20px; padding: 0.24rem 0.5rem; white-space: nowrap; }
+        .stw-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+        .sp-open { color: #fb923c; background: rgba(251,146,60,0.13); border: 1px solid rgba(251,146,60,0.3); }
+        .sp-under_review { color: var(--cyan); background: rgba(14,165,233,0.13); border: 1px solid rgba(14,165,233,0.3); }
+        .sp-resolved { color: var(--green); background: rgba(34,197,94,0.13); border: 1px solid rgba(34,197,94,0.3); }
+        .sp-dismissed { color: var(--muted); background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+        .stw-parties-box { display: flex; align-items: center; gap: 0.7rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.9rem; margin-bottom: 0.7rem; }
+        .stw-who { flex: 1; min-width: 0; }
+        .stw-who .rl { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+        .stw-who.comp .rl { color: var(--gold); }
+        .stw-who.acc .rl { color: var(--red); }
+        .stw-who .nm { font-weight: 700; font-size: 0.92rem; }
+        .stw-who .ps { font-size: 0.72rem; color: var(--muted); }
+        .stw-vs { font-family: 'Anton', sans-serif; color: var(--muted); font-size: 0.85rem; }
+        .stw-field-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0.9rem 0 0.35rem; }
+        .stw-desc { background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.7rem 0.85rem; font-size: 0.86rem; color: #d7dde6; }
+        .stw-clip { display: flex; align-items: center; gap: 0.55rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.7rem; font-size: 0.8rem; text-decoration: none; color: var(--text); margin-bottom: 0.4rem; }
+        .stw-clip .pl { width: 24px; height: 24px; flex-shrink: 0; border-radius: 6px; background: rgba(239,68,68,0.15); color: var(--red); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; }
+        .stw-clip .u { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 0.72rem; }
+        .stw-verdict { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
+        .stw-detail select, .stw-detail textarea { width: 100%; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 0.55rem 0.7rem; }
+        .stw-detail textarea { resize: vertical; min-height: 70px; }
+        .stw-detail-empty { color: var(--muted); font-size: 0.85rem; padding: 2rem 1rem; text-align: center; }
+        .stw-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1rem; }
+    </style>
+    <div class="stw-wrap">
+        <div class="stw-list">
+            <div class="stw-list-title">Incident Log</div>
+            ${listRows}
+        </div>
+        <div class="stw-detail" id="stw-detail">
+            <div class="stw-detail-title">Case Detail</div>
+            <div class="stw-detail-empty">Select an incident from the log to review it.</div>
+        </div>
+    </div>`;
+
+    if (!_selDisputeId && _disputes.length) _selDisputeId = _disputes[0].id;
+    if (_selDisputeId && _disputes.some(d => d.id === _selDisputeId)) selectDispute(_selDisputeId);
+}
+
+async function selectDispute(id) {
+    _selDisputeId = id;
+    const d = _disputes.find(x => x.id === id);
+    if (!d) return;
+    document.querySelectorAll('.stw-row').forEach(r => r.classList.toggle('sel',
+        r.getAttribute('onclick') === `selectDispute('${id}')`));
+
+    // Existing penalties on this event, so a verdict can be linked to one.
+    const { data: pens } = await sb.from('penalties')
+        .select('id, penalty_type, penalty_value, reason, driver_id, drivers(display_name)')
+        .eq('event_id', d.event_id);
+    const penOpts = (pens || []).map(p => {
+        const who = p.drivers?.display_name || 'team';
+        const val = p.penalty_value ? ` ${p.penalty_value}` : '';
+        return `<option value="${esc(p.id)}" ${p.id === d.penalty_id ? 'selected' : ''}>${esc(who)} · ${esc(p.penalty_type)}${esc(val)}</option>`;
+    }).join('');
+
+    const clips = [d.clip_1_url, d.clip_2_url, d.clip_3_url, d.clip_4_url].filter(Boolean);
+    const clipHtml = clips.length ? clips.map((u, i) =>
+        `<a class="stw-clip" href="${esc(u)}" target="_blank" rel="noopener"><span class="pl">▶</span><span>Clip ${i + 1}</span><span class="u">${esc(u)}</span></a>`).join('')
+        : '<div class="empty-state" style="margin:0;padding:0.5rem 0">No clips attached.</div>';
+
+    const statusOpts = ['open', 'under_review', 'resolved', 'dismissed'].map(s =>
+        `<option value="${s}" ${s === d.status ? 'selected' : ''}>${_stwStatusLabel[s]}</option>`).join('');
+
+    document.getElementById('stw-detail').innerHTML = `
+        <div class="stw-detail-title">${esc(d.incident_ref || 'Case')} <span class="stw-pill sp-${d.status}" style="margin-left:0.4rem">${esc(_stwStatusLabel[d.status] || d.status)}</span></div>
+        <div class="stw-parties-box">
+            <div class="stw-who comp"><div class="rl">Complainant</div><div class="nm">${esc(d.complainant_name || '—')}</div><div class="ps">${d.complainant_psn ? 'PSN: ' + esc(d.complainant_psn) : ''}${d.lobby_number != null ? ' · Split ' + d.lobby_number : ''}</div></div>
+            <div class="stw-vs">VS</div>
+            <div class="stw-who acc" style="text-align:right"><div class="rl">Driver involved</div><div class="nm">${esc(d.accused_name || '—')}</div><div class="ps">${d.accused_psn ? 'PSN: ' + esc(d.accused_psn) : ''}</div></div>
+        </div>
+        <div class="stw-field-label">Event</div>
+        <div style="font-size:0.85rem">Round ${d.event_round ?? '—'} · ${esc(d.event_name || '—')} · filed ${stwFmt(d.created_at)}</div>
+        <div class="stw-field-label">Description</div>
+        <div class="stw-desc">${esc(d.description || '')}</div>
+        <div class="stw-field-label">Clips submitted</div>
+        ${clipHtml}
+        <div class="stw-verdict">
+            <div class="stw-field-label" style="margin-top:0">Verdict</div>
+            <select id="stw-status">${statusOpts}</select>
+            <div class="stw-field-label">Outcome / notes</div>
+            <textarea id="stw-outcome" placeholder="Stewards' decision — shown to the complainant once resolved/dismissed.">${esc(d.outcome || '')}</textarea>
+            <div class="stw-field-label">Link a penalty <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — from this event)</span></div>
+            <select id="stw-penalty"><option value="">— none —</option>${penOpts}</select>
+            <div class="stw-field-label">Note to complainant <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — sends to their portal inbox)</span></div>
+            <textarea id="stw-notify" placeholder="Leave blank to save quietly. Anything here is delivered to the complainant's inbox."></textarea>
+            <div class="stw-actions">
+                <button class="btn-primary" onclick="saveVerdict('${d.id}')">Save verdict</button>
+            </div>
+        </div>`;
+}
+
+async function saveVerdict(id) {
+    const status  = document.getElementById('stw-status').value;
+    const outcome = document.getElementById('stw-outcome').value.trim();
+    const penalty = document.getElementById('stw-penalty').value || null;
+    const notify  = document.getElementById('stw-notify').value.trim();
+
+    const { data, error } = await sb.rpc('update_dispute', {
+        p_dispute_id: id,
+        p_status: status,
+        p_outcome: outcome || null,
+        p_penalty_id: penalty,
+        p_notify: notify || null,
+    });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not save.', 'error'); return; }
+    toast(notify ? 'Verdict saved and complainant notified.' : 'Verdict saved.', 'success');
+    await refreshStewardsBadge();
+    await renderStewards();
+}
+
 async function renderMessages() {
     const { data, error } = await sb.from('driver_contact_messages')
         .select('*, drivers(id, display_name, slug, psn_id)')

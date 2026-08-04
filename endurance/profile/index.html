@@ -272,6 +272,25 @@
             .host-ss-slots { grid-template-columns: repeat(2, 1fr); }
         }
 
+        /* Incidents / stewards */
+        .inc-clip-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+        .inc-clip-chip { flex-shrink: 0; min-width: 84px; text-align: center; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); background: var(--bg-2); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.5rem; }
+        .inc-row { border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 0.9rem; margin-bottom: 0.6rem; }
+        .inc-row:last-child { margin-bottom: 0; }
+        .inc-row-top { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+        .inc-ref { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.62rem; letter-spacing: 0.06em; color: var(--cyan, #0ea5e9); background: rgba(14,165,233,0.13); border: 1px solid rgba(14,165,233,0.3); border-radius: 5px; padding: 0.2rem 0.45rem; }
+        .inc-parties { font-weight: 600; font-size: 0.86rem; }
+        .inc-parties .vs { color: var(--muted); font-weight: 400; margin: 0 0.3rem; }
+        .inc-meta { font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem; }
+        .inc-outcome { margin-top: 0.55rem; padding-top: 0.55rem; border-top: 1px solid var(--border); font-size: 0.82rem; color: #d7dde6; }
+        .inc-outcome .ol { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem; }
+        .status-pill { display: inline-flex; align-items: center; gap: 0.3rem; font-family: 'Orbitron', sans-serif; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 20px; padding: 0.25rem 0.55rem; }
+        .status-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+        .sp-open { color: #fb923c; background: rgba(251,146,60,0.13); border: 1px solid rgba(251,146,60,0.3); }
+        .sp-under_review { color: #0ea5e9; background: rgba(14,165,233,0.13); border: 1px solid rgba(14,165,233,0.3); }
+        .sp-resolved { color: #22c55e; background: rgba(34,197,94,0.13); border: 1px solid rgba(34,197,94,0.3); }
+        .sp-dismissed { color: var(--muted); background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+
         /* Save */
         .btn-save { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.75rem; background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: #1a1300; border: none; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: filter 0.2s; }
         .btn-save:hover { filter: brightness(1.08); }
@@ -485,6 +504,46 @@
     <div class="card" id="card-results" style="display:none">
         <div class="card-title">Recent Results</div>
         <div class="results-list" id="results-list"></div>
+    </div>
+
+    <!-- Report an incident — file an on-track dispute to the stewards -->
+    <div class="card" id="card-incidents" style="display:none">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap">
+            <span>Stewards &amp; Incidents</span>
+            <button class="btn-contact" id="btn-report-incident" onclick="toggleIncidentForm()">Report an Incident</button>
+        </div>
+
+        <!-- Submission form (hidden until the button is pressed) -->
+        <form id="incident-form" style="display:none;margin-bottom:1.25rem" onsubmit="submitIncident(event)">
+            <p class="form-hint" style="margin-bottom:1rem">Contact under braking, a punt, unsafe rejoin — describe it and link your clips. The stewards review it privately; you'll see the verdict here and in your inbox.</p>
+            <div class="form-group" style="margin-bottom:0.8rem">
+                <label class="field-label">Event <span style="color:#fca5a5">*</span></label>
+                <select id="inc-event" required onchange="onIncidentEventChange()"><option value="">— select an event you raced —</option></select>
+            </div>
+            <div class="form-group" style="margin-bottom:0.8rem">
+                <label class="field-label">Driver involved <span style="color:#fca5a5">*</span></label>
+                <select id="inc-accused" required><option value="">— pick a driver —</option></select>
+            </div>
+            <div class="form-group" style="margin-bottom:0.8rem">
+                <label class="field-label">What happened? <span style="color:#fca5a5">*</span></label>
+                <textarea id="inc-desc" rows="4" required placeholder="Lap, corner, and what you're disputing…"></textarea>
+            </div>
+            <div class="form-group" style="margin-bottom:0.35rem">
+                <label class="field-label">Clip links <span style="color:#fca5a5">*</span> <span class="td-muted" style="font-weight:normal;font-size:0.7rem;text-transform:none;letter-spacing:0">— YouTube / Streamable / Medal, ~30s each</span></label>
+            </div>
+            <div class="inc-clip-row"><span class="inc-clip-chip">Your POV 1 *</span><input type="url" id="inc-clip1" required placeholder="https://youtu.be/…"></div>
+            <div class="inc-clip-row"><span class="inc-clip-chip">Your POV 2</span><input type="url" id="inc-clip2" placeholder="optional"></div>
+            <div class="inc-clip-row"><span class="inc-clip-chip">Other 1</span><input type="url" id="inc-clip3" placeholder="other driver's angle (optional)"></div>
+            <div class="inc-clip-row"><span class="inc-clip-chip">Other 2</span><input type="url" id="inc-clip4" placeholder="optional"></div>
+            <p class="form-hint" style="margin-top:0.5rem">Links only — no video is uploaded. Keep clips unlisted or public so stewards can open them.</p>
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
+                <button type="button" class="btn-ghost" onclick="toggleIncidentForm(false)">Cancel</button>
+                <button type="submit" class="btn-save" id="btn-submit-incident">Submit to Stewards</button>
+            </div>
+        </form>
+
+        <!-- The driver's own filed incidents -->
+        <div id="incident-list"></div>
     </div>
 
     <!-- Split journey -->
@@ -1407,6 +1466,126 @@ async function loadRecentResults(driverId) {
     }).join('');
 }
 
+// ============================================================
+// Stewards & Incidents — file an on-track dispute, see its status.
+// Clips are links only (no upload); visibility is stewards-private, so
+// this only ever shows incidents THIS driver filed.
+// ============================================================
+const _incStatusLabels = { open: 'Open', under_review: 'Under review', resolved: 'Resolved', dismissed: 'Dismissed' };
+let _incEventLobby = {};   // event_id -> the driver's lobby_number that event
+let _incDriverId = null;
+
+async function loadIncidents(driverId) {
+    _incDriverId = driverId;
+    const card = document.getElementById('card-incidents');
+
+    // Events this driver actually entered (for the form dropdown) + their
+    // split each round, and the roster of other drivers to name.
+    const [{ data: eds }, { data: roster }, { data: mine }] = await Promise.all([
+        sb.from('entry_drivers')
+            .select('entries(event_id, lobby_number, events(name, round, starts_at))')
+            .eq('driver_id', driverId),
+        sb.from('drivers').select('id, display_name, psn_id').order('display_name'),
+        sb.from('dispute_overview').select('*').eq('complainant_driver_id', driverId).order('created_at', { ascending: false }),
+    ]);
+
+    // Build a de-duped, most-recent-first event list from the entries.
+    const evMap = new Map();
+    _incEventLobby = {};
+    (eds || []).forEach(ed => {
+        const en = ed.entries; const ev = en?.events;
+        if (!en?.event_id || !ev) return;
+        _incEventLobby[en.event_id] = en.lobby_number ?? null;
+        if (!evMap.has(en.event_id)) evMap.set(en.event_id, { id: en.event_id, name: ev.name, round: ev.round, starts_at: ev.starts_at });
+    });
+    const events = [...evMap.values()].sort((a, b) => new Date(b.starts_at || 0) - new Date(a.starts_at || 0));
+
+    // Only offer the feature to drivers who've actually raced something.
+    if (!events.length) { card.style.display = 'none'; return; }
+    card.style.display = '';
+
+    const evSel = document.getElementById('inc-event');
+    evSel.innerHTML = '<option value="">— select an event you raced —</option>' +
+        events.map(e => `<option value="${esc(e.id)}">Round ${e.round ?? '—'} · ${esc(e.name)}</option>`).join('');
+
+    const accSel = document.getElementById('inc-accused');
+    accSel.innerHTML = '<option value="">— pick a driver —</option>' +
+        (roster || []).filter(d => d.id !== driverId).map(d =>
+            `<option value="${esc(d.id)}">${esc(d.display_name)}${d.psn_id ? ' (' + esc(d.psn_id) + ')' : ''}</option>`).join('');
+
+    renderIncidentList(mine || []);
+}
+
+function renderIncidentList(rows) {
+    const wrap = document.getElementById('incident-list');
+    if (!rows.length) {
+        wrap.innerHTML = '<p class="empty-note">No incidents filed. Use the button above if you need the stewards to review something.</p>';
+        return;
+    }
+    wrap.innerHTML = rows.map(r => {
+        const st = r.status || 'open';
+        const clips = [r.clip_1_url, r.clip_2_url, r.clip_3_url, r.clip_4_url].filter(Boolean);
+        const clipHtml = clips.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:0.76rem;text-decoration:none;margin-right:0.6rem">▶ Clip ${i + 1}</a>`).join('');
+        const outcome = (st === 'resolved' || st === 'dismissed') && r.outcome
+            ? `<div class="inc-outcome"><div class="ol">Stewards' verdict</div>${esc(r.outcome)}</div>` : '';
+        return `
+        <div class="inc-row">
+            <div class="inc-row-top">
+                <span class="inc-ref">${esc(r.incident_ref || '—')}</span>
+                <span class="inc-parties">vs ${esc(r.accused_name || '—')}</span>
+                <span class="status-pill sp-${st}" style="margin-left:auto">${esc(_incStatusLabels[st] || st)}</span>
+            </div>
+            <div class="inc-meta">Round ${r.event_round ?? '—'} · ${esc(r.event_name || '—')} · filed ${fmtDate(r.created_at)}</div>
+            <div class="inc-meta" style="margin-top:0.4rem;color:#d7dde6">${esc(r.description || '')}</div>
+            <div style="margin-top:0.5rem">${clipHtml}</div>
+            ${outcome}
+        </div>`;
+    }).join('');
+}
+
+function toggleIncidentForm(show) {
+    const form = document.getElementById('incident-form');
+    const open = show === undefined ? form.style.display === 'none' : show;
+    form.style.display = open ? '' : 'none';
+    if (!open) form.reset();
+}
+
+function onIncidentEventChange() {
+    // Nothing visible to change — the split is derived server-side from the
+    // driver's entry — but kept as a hook in case we surface it later.
+}
+
+async function submitIncident(e) {
+    e.preventDefault();
+    const eventId = document.getElementById('inc-event').value;
+    const accused = document.getElementById('inc-accused').value;
+    const desc    = document.getElementById('inc-desc').value.trim();
+    const clip1   = document.getElementById('inc-clip1').value.trim();
+    if (!eventId || !accused || !desc || !clip1) { toast('Event, driver, description and at least one clip are required.', 'error'); return; }
+
+    const btn = document.getElementById('btn-submit-incident');
+    const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Submitting…';
+
+    const { error } = await sb.from('disputes').insert({
+        event_id: eventId,
+        lobby_number: _incEventLobby[eventId] ?? null,
+        complainant_driver_id: _incDriverId,
+        accused_driver_id: accused,
+        description: desc,
+        clip_1_url: clip1,
+        clip_2_url: document.getElementById('inc-clip2').value.trim() || null,
+        clip_3_url: document.getElementById('inc-clip3').value.trim() || null,
+        clip_4_url: document.getElementById('inc-clip4').value.trim() || null,
+        status: 'open',
+    });
+
+    btn.disabled = false; btn.textContent = orig;
+    if (error) { toast(error.message || 'Could not submit.', 'error'); return; }
+    toast('Incident submitted to the stewards.', 'success');
+    toggleIncidentForm(false);
+    await loadIncidents(_incDriverId);
+}
+
 // Split Journey — same component and computation as the public driver
 // profile (endurance/drivers/index.html): which split this driver raced
 // in each round, with promotion/relegation indicators between stops.
@@ -1532,6 +1711,7 @@ async function init() {
     loadHostScreenshots(driver.id);
     initPushUI(driver.id);
     loadRecentResults(driver.id);
+    loadIncidents(driver.id);
     loadSplitJourney(driver.id);
     loadInbox(driver.id);
     loadBadges(driver.id);
@@ -2103,6 +2283,14 @@ function setupRealtimeSubscriptions(driver) {
     _realtimeChannels.push(
         sb.channel('inbox:' + driver.id)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_contact_messages', filter: `driver_id=eq.${driver.id}` }, reloadInbox)
+            .subscribe()
+    );
+
+    // Stewards moving one of this driver's incidents along (verdict etc.)
+    const reloadIncidents = debounced(() => loadIncidents(driver.id));
+    _realtimeChannels.push(
+        sb.channel('disputes:' + driver.id)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'disputes', filter: `complainant_driver_id=eq.${driver.id}` }, reloadIncidents)
             .subscribe()
     );
 
