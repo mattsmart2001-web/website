@@ -7859,9 +7859,22 @@ async function selectDispute(id) {
             <div class="stw-field-label">Note to complainant <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — sends to their portal inbox)</span></div>
             <textarea id="stw-notify" placeholder="Leave blank to save quietly. Anything here is delivered to the complainant's inbox."></textarea>
             <div class="stw-actions">
+                <button class="btn-danger" onclick="deleteDispute('${d.id}')">Delete</button>
                 <button class="btn-primary" onclick="saveVerdict('${d.id}')">Save verdict</button>
             </div>
         </div>`;
+}
+
+async function deleteDispute(id) {
+    const d = _disputes.find(x => x.id === id);
+    const ref = d?.incident_ref || 'this incident';
+    if (!confirm(`Delete ${ref}? This permanently removes the case and cannot be undone. The driver keeps any inbox note already sent.`)) return;
+    const { error } = await sb.from('disputes').delete().eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Incident deleted.', 'success');
+    _selDisputeId = null;
+    await refreshStewardsBadge();
+    await renderStewards();
 }
 
 async function saveVerdict(id) {
