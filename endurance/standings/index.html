@@ -468,6 +468,61 @@
             .points { font-size: 1.05rem; }
             .hide-mob { display: none; }
         }
+
+        /* ===== Championship Battle chart ===== */
+        .battle { margin-bottom: 1.25rem; }
+        .bt-acc { background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+        .bt-head { display: flex; align-items: center; gap: 0.85rem; padding: 1rem 1.1rem; cursor: pointer; user-select: none; }
+        .bt-head:hover { background: rgba(255,255,255,0.02); }
+        .bt-ic { width: 30px; height: 30px; border-radius: 8px; background: rgba(255,209,102,0.12); border: 1px solid rgba(255,209,102,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .bt-titles { flex: 1; min-width: 0; }
+        .bt-title { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); }
+        .bt-sub { font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+        .bt-chev { transition: transform 0.2s; color: var(--muted); flex-shrink: 0; width: 16px; height: 16px; }
+        .bt-acc.collapsed .bt-chev { transform: rotate(-90deg); }
+        .bt-acc.collapsed .bt-body { display: none; }
+        .bt-body { padding: 0.9rem 1.2rem 1.3rem; border-top: 1px solid var(--border); }
+        .bt-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+        .bt-search-wrap { position: relative; flex: 1; min-width: 190px; }
+        .bt-search { width: 100%; background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 0.55rem 0.8rem; }
+        .bt-search::placeholder { color: #5b6472; }
+        .bt-results { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; max-height: 230px; overflow-y: auto; z-index: 8; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.55); }
+        .bt-results.open { display: block; }
+        .bt-res { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.7rem; cursor: pointer; font-size: 0.83rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .bt-res:hover { background: rgba(255,255,255,0.05); }
+        .bt-res-pos { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; color: var(--muted); min-width: 36px; }
+        .bt-res-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bt-res-pts { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+        .bt-res.added { color: #5b6472; cursor: default; }
+        .bt-res.added:hover { background: none; }
+        .bt-none { padding: 0.6rem 0.7rem; color: #5b6472; font-size: 0.8rem; }
+        .bt-preset { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-2); color: var(--muted); cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+        .bt-preset:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .bt-preset.gold { color: var(--gold); border-color: rgba(255,209,102,0.35); background: rgba(255,209,102,0.08); }
+        .bt-selected { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.85rem 0 0.2rem; min-height: 1.9rem; }
+        .bt-chip { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.35rem 0.3rem 0.6rem; border-radius: 20px; border: 1px solid var(--border); background: var(--bg-2); color: var(--text); }
+        .bt-chip .cdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .bt-chip .me { font-family: 'Orbitron', sans-serif; font-size: 0.5rem; letter-spacing: 0.06em; background: rgba(255,209,102,0.16); color: var(--gold); border-radius: 4px; padding: 0.05rem 0.3rem; }
+        .bt-x { border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0 0.15rem; }
+        .bt-x:hover { color: #fca5a5; }
+        .bt-hint { font-size: 0.72rem; color: #5b6472; margin-top: 0.15rem; }
+        .bt-chart-shell { position: relative; margin-top: 0.7rem; }
+        #bt-chart { display: block; width: 100%; height: auto; overflow: visible; }
+        .bt-grid { stroke: rgba(255,255,255,0.06); }
+        .bt-axis { fill: var(--muted); font-family: 'Inter', sans-serif; font-size: 11px; }
+        .bt-yax { fill: #5b6472; font-family: 'Orbitron', sans-serif; font-size: 9px; letter-spacing: 0.08em; }
+        .bt-line { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+        .bt-dot { stroke: var(--bg-1); stroke-width: 2; }
+        .bt-end { font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 700; }
+        .bt-endpts { font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700; fill: var(--muted); }
+        .bt-guide { stroke: rgba(255,255,255,0.18); stroke-width: 1; stroke-dasharray: 3 3; }
+        .bt-empty { fill: #5b6472; font-family: 'Inter', sans-serif; font-size: 13px; }
+        .bt-tt { position: absolute; pointer-events: none; background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.7rem; font-size: 0.76rem; min-width: 150px; opacity: 0; transition: opacity 0.12s; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 5; }
+        .bt-tt-round { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.4rem; }
+        .bt-tt-row { display: flex; align-items: center; gap: 0.45rem; margin: 0.16rem 0; }
+        .bt-tt-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .bt-tt-name { flex: 1; white-space: nowrap; color: #d7dde6; }
+        .bt-tt-val { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.72rem; }
     </style>
     <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
 </head>
@@ -510,6 +565,7 @@
 </div>
 
 <div class="content">
+    <div id="battle" class="battle" style="display:none"></div>
     <div id="panel">
         <div class="loading">Loading…</div>
     </div>
@@ -636,6 +692,9 @@ function renderPodium(list) {
 async function setTab(t) {
     _tab = t;
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+    // The Championship Battle chart belongs to the Drivers championship only.
+    const battle = document.getElementById('battle');
+    if (battle) battle.style.display = (t === 'drivers' && _btEvents.length) ? '' : 'none';
     if (t === 'ratings' && _ratings === null) {
         await loadRatings();
     } else {
@@ -927,7 +986,7 @@ async function load() {
     document.getElementById('season-title').textContent = season.name;
     document.getElementById('season-sub').textContent = `${season.year} Championship · Live standings`;
 
-    const [d, t, ratings, perEvent, remainingRes, driverMfrs, deds] = await Promise.all([
+    const [d, t, ratings, perEvent, remainingRes, driverMfrs, deds, seasonEvents, myUser] = await Promise.all([
         sb.from('driver_standings').select('*').eq('season_id', season.id),
         sb.from('team_standings').select('*').eq('season_id', season.id),
         sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
@@ -945,9 +1004,13 @@ async function load() {
         // Points-deduction penalties this season, with reason — so the
         // standings can show why points were docked, and from whom.
         sb.from('penalties')
-            .select('points_amount, reason, driver_id, entry_id, entries(team_id, entry_drivers(driver_id)), events!inner(season_id)')
+            .select('points_amount, reason, driver_id, entry_id, event_id, entries(team_id, entry_drivers(driver_id)), events!inner(season_id)')
             .eq('penalty_type', 'points_deduction')
             .eq('events.season_id', season.id),
+        // Events for this season (for the Championship Battle chart's round axis).
+        sb.from('events').select('id, round, name, starts_at').eq('season_id', season.id).order('round'),
+        // The signed-in user's own driver, if any — powers the "Compare me" preset.
+        sb.auth.getUser(),
     ]);
 
     _remaining = remainingRes.count || 0;
@@ -1072,8 +1135,213 @@ async function load() {
     });
     _manufacturers = Object.values(_mMap).sort((a, b) => (b.points - a.points) || (b.wins - a.wins));
 
+    await buildBattle(perEvent.data || [], deds.data || [], seasonEvents.data || [], myUser);
     render();
 }
+
+// ===== Championship Battle chart =====
+// Built entirely client-side from data already loaded: per-event points
+// (net of that event's deductions, so cumulative ends at the standings
+// total) over the season's completed rounds.
+let _btEvents = [];          // [{id, round, name}] completed rounds, in order
+let _btPts    = {};          // driver_id -> cumulative points array (aligned to _btEvents)
+let _btDrivers = [];         // [{id, name, slug, pos, total}] ranked, for search/presets
+let _btMyId   = null;        // signed-in user's driver_id, if racing this season
+
+async function buildBattle(perEvent, deds, seasonEvents, myUser) {
+    const inSeason = perEvent.filter(r => r.results?.events?.season_id === _season.id);
+
+    // gross points per driver per event
+    const gross = {};
+    const scored = new Set();
+    inSeason.forEach(r => {
+        const ev = r.results?.event_id; if (!ev) return;
+        scored.add(ev);
+        (gross[r.driver_id] = gross[r.driver_id] || {})[ev] =
+            (gross[r.driver_id]?.[ev] || 0) + Number(r.points_awarded || 0);
+    });
+
+    // deductions per driver per event (driver-specific, or spread across an
+    // entry's drivers when the penalty is team-wide) — mirrors the standings.
+    const ded = {};
+    const addDed = (drv, ev, amt) => { if (!drv || !ev) return; (ded[drv] = ded[drv] || {})[ev] = (ded[drv]?.[ev] || 0) + amt; };
+    deds.forEach(p => {
+        if (!p.points_amount || !p.event_id) return;
+        if (p.driver_id) addDed(p.driver_id, p.event_id, Number(p.points_amount));
+        else (p.entries?.entry_drivers || []).forEach(edn => addDed(edn.driver_id, p.event_id, Number(p.points_amount)));
+    });
+
+    _btEvents = (seasonEvents || []).filter(e => scored.has(e.id))
+        .map(e => ({ id: e.id, round: e.round, name: e.name }));
+    if (!_btEvents.length) { document.getElementById('battle').style.display = 'none'; return; }
+
+    _btPts = {};
+    _drivers.forEach(d => {
+        let running = 0;
+        _btPts[d.driver_id] = _btEvents.map(e =>
+            (running += (gross[d.driver_id]?.[e.id] || 0) - (ded[d.driver_id]?.[e.id] || 0)));
+    });
+    _btDrivers = _drivers.map((d, i) => ({ id: d.driver_id, name: d.driver_name, slug: d.driver_slug, pos: i + 1, total: Number(d.points) || 0 }));
+
+    // Signed-in driver → "Compare me"
+    _btMyId = null;
+    const uid = myUser?.data?.user?.id;
+    if (uid) {
+        const { data: mine } = await sb.from('drivers').select('id').eq('user_id', uid).maybeSingle();
+        if (mine && _btPts[mine.id]) _btMyId = mine.id;
+    }
+
+    renderBattle();
+}
+
+const BT_PALETTE = ['#ffd166', '#38bdf8', '#34d399', '#c084fc', '#f87171', '#fb923c', '#818cf8', '#f472b6'];
+let _btSlots = BT_PALETTE.map(c => ({ color: c, id: null }));
+const _btActive = () => _btSlots.filter(s => s.id && _btById(s.id)).map(s => ({ d: _btById(s.id), color: s.color }));
+const _btById = id => _btDrivers.find(x => x.id === id);
+const _btOn = id => _btSlots.some(s => s.id === id);
+function _btAdd(id) { if (_btOn(id)) return true; const slot = _btSlots.find(s => !s.id); if (!slot) return false; slot.id = id; return true; }
+function btRemove(id) { const s = _btSlots.find(x => x.id === id); if (s) s.id = null; btRefresh(); }
+function btTop() { _btSlots.forEach(s => s.id = null); _btDrivers.slice(0, 8).forEach(d => _btAdd(d.id)); btRefresh(); }
+function btMe() { _btSlots.forEach(s => s.id = null); if (_btMyId) _btAdd(_btMyId); _btDrivers.slice(0, 3).forEach(d => _btAdd(d.id)); btRefresh(); }
+function btClear() { _btSlots.forEach(s => s.id = null); btRefresh(); }
+
+function renderBattle() {
+    const host = document.getElementById('battle');
+    const meBtn = _btMyId ? `<button class="bt-preset" onclick="btMe()">Compare me</button>` : '';
+    host.innerHTML = `
+      <div class="bt-acc collapsed" id="bt-acc">
+        <div class="bt-head" onclick="document.getElementById('bt-acc').classList.toggle('collapsed')">
+          <div class="bt-ic">📈</div>
+          <div class="bt-titles">
+            <div class="bt-title">Championship Battle</div>
+            <div class="bt-sub">See how the title fight unfolded — search any driver, or load the top 8.</div>
+          </div>
+          <svg class="bt-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="bt-body">
+          <div class="bt-toolbar">
+            <div class="bt-search-wrap">
+              <input class="bt-search" id="bt-search" placeholder="🔍  Add a driver by name…" autocomplete="off" oninput="btSearch()" onfocus="btSearch()">
+              <div class="bt-results" id="bt-results"></div>
+            </div>
+            <button class="bt-preset gold" onclick="btTop()">Top 8</button>
+            ${meBtn}
+            <button class="bt-preset" onclick="btClear()">Clear</button>
+          </div>
+          <div class="bt-selected" id="bt-selected"></div>
+          <div class="bt-hint" id="bt-hint"></div>
+          <div class="bt-chart-shell">
+            <svg id="bt-chart" viewBox="0 0 760 400" role="img" aria-label="Cumulative championship points by round"></svg>
+            <div class="bt-tt" id="bt-tt"></div>
+          </div>
+        </div>
+      </div>`;
+    btGrid();
+    btTop();
+    if (_tab === 'drivers') host.style.display = '';
+}
+
+function btSearch() {
+    const q = document.getElementById('bt-search').value.trim().toLowerCase();
+    const box = document.getElementById('bt-results');
+    let list = _btDrivers;
+    if (q) list = _btDrivers.filter(d => (d.name || '').toLowerCase().includes(q));
+    list = list.slice(0, 8);
+    if (!list.length) { box.innerHTML = '<div class="bt-none">No driver found.</div>'; box.classList.add('open'); return; }
+    box.innerHTML = list.map(d => {
+        const on = _btOn(d.id);
+        const me = d.id === _btMyId ? ' <span class="me" style="font-size:.6rem">YOU</span>' : '';
+        return `<div class="bt-res ${on ? 'added' : ''}" ${on ? '' : `onclick="btPick('${d.id}')"`}>
+          <span class="bt-res-pos">P${d.pos}</span>
+          <span class="bt-res-name">${esc(d.name)}${me}</span>
+          <span class="bt-res-pts">${on ? '✓ added' : d.total + ' pts'}</span></div>`;
+    }).join('');
+    box.classList.add('open');
+}
+function btPick(id) {
+    if (_btAdd(id) === false) { btFlash('That\'s 8 drivers — remove one to add another.'); return; }
+    document.getElementById('bt-search').value = '';
+    document.getElementById('bt-results').classList.remove('open');
+    btRefresh();
+}
+document.addEventListener('click', e => {
+    if (!e.target.closest('.bt-search-wrap')) { const r = document.getElementById('bt-results'); if (r) r.classList.remove('open'); }
+});
+
+let _btHintTimer;
+function btFlash(msg) { const h = document.getElementById('bt-hint'); if (!h) return; h.textContent = msg; h.style.color = '#fca5a5'; clearTimeout(_btHintTimer); _btHintTimer = setTimeout(btHint, 1800); }
+function btHint() { const h = document.getElementById('bt-hint'); if (!h) return; const n = _btActive().length; h.style.color = '#5b6472';
+    h.textContent = n ? `${n} of 8 lines · search ${_btDrivers.length} drivers or use a preset` : 'Nobody selected — search a driver or hit a preset.'; }
+function btSelected() {
+    const wrap = document.getElementById('bt-selected'); if (!wrap) return;
+    wrap.innerHTML = _btActive().map(a => {
+        const me = a.d.id === _btMyId ? '<span class="me">YOU</span>' : '';
+        return `<span class="bt-chip"><span class="cdot" style="background:${a.color}"></span>${esc(a.d.name)}${me}<button class="bt-x" onclick="btRemove('${a.d.id}')">✕</button></span>`;
+    }).join('');
+}
+
+// chart geometry
+const BT_W = 760, BT_H = 400, BT_PL = 46, BT_PR = 150, BT_PT = 18, BT_PB = 38;
+const _btPW = BT_W - BT_PL - BT_PR, _btPH = BT_H - BT_PT - BT_PB;
+const _btNS = 'http://www.w3.org/2000/svg';
+const _btEl = (n, a) => { const e = document.createElementNS(_btNS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+function _btX(i) { return _btEvents.length <= 1 ? BT_PL + _btPW / 2 : BT_PL + i / (_btEvents.length - 1) * _btPW; }
+function _btYMax() { let m = 10; _btActive().forEach(a => { const arr = _btPts[a.d.id] || []; arr.forEach(v => { if (v > m) m = v; }); }); return Math.ceil(m / 50) * 50 || 50; }
+function _btY(v, max) { return BT_PT + _btPH - (v / max) * _btPH; }
+
+let _btSvg, _btSeriesG, _btGuide, _btYCache = 200;
+function btGrid() {
+    _btSvg = document.getElementById('bt-chart'); _btSvg.innerHTML = '';
+    _btGridG = _btEl('g', {}); _btSvg.appendChild(_btGridG);
+    _btAttachHover();
+}
+let _btGridG;
+function btDrawGrid(max) {
+    _btGridG.innerHTML = '';
+    for (let v = 0; v <= max; v += Math.max(50, Math.round(max / 4 / 50) * 50)) {
+        _btGridG.appendChild(_btEl('line', { class: 'bt-grid', x1: BT_PL, y1: _btY(v, max), x2: BT_PL + _btPW, y2: _btY(v, max) }));
+        const t = _btEl('text', { class: 'bt-yax', x: BT_PL - 10, y: _btY(v, max) + 3, 'text-anchor': 'end' }); t.textContent = v; _btGridG.appendChild(t);
+    }
+    _btEvents.forEach((e, i) => { const t = _btEl('text', { class: 'bt-axis', x: _btX(i), y: BT_H - BT_PB + 20, 'text-anchor': 'middle' }); t.textContent = 'R' + e.round; _btGridG.appendChild(t); });
+}
+function btDraw() {
+    if (_btSeriesG) _btSeriesG.remove();
+    const max = _btYMax(); _btYCache = max; btDrawGrid(max);
+    _btSeriesG = _btEl('g', {}); _btSvg.appendChild(_btSeriesG);
+    const active = _btActive();
+    if (!active.length) { const t = _btEl('text', { class: 'bt-empty', x: BT_PL + _btPW / 2, y: BT_PT + _btPH / 2, 'text-anchor': 'middle' }); t.textContent = 'Pick a driver to start comparing.'; _btSeriesG.appendChild(t); return; }
+    active.forEach(a => {
+        const arr = _btPts[a.d.id] || [];
+        const dstr = arr.map((v, i) => `${i ? 'L' : 'M'}${_btX(i)},${_btY(v, max)}`).join(' ');
+        _btSeriesG.appendChild(_btEl('path', { class: 'bt-line', d: dstr, stroke: a.color }));
+        arr.forEach((v, i) => _btSeriesG.appendChild(_btEl('circle', { class: 'bt-dot', cx: _btX(i), cy: _btY(v, max), r: 3.4, fill: a.color })));
+    });
+    const labels = active.map(a => { const arr = _btPts[a.d.id] || []; const last = arr[arr.length - 1] || 0; return { a, last, y: _btY(last, max) }; }).sort((x, y) => x.y - y.y);
+    const GAP = 30;
+    for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
+    labels.forEach(L => {
+        const anchorY = _btY(L.last, max), lx = BT_PL + _btPW + 12;
+        if (Math.abs(L.y - anchorY) > 3) _btSeriesG.appendChild(_btEl('line', { x1: BT_PL + _btPW + 4, y1: anchorY, x2: lx - 2, y2: L.y - 4, stroke: L.a.color, 'stroke-width': 1, opacity: 0.4 }));
+        const nm = _btEl('text', { class: 'bt-end', x: lx, y: L.y - 4, fill: L.a.color }); nm.textContent = L.a.d.name; _btSeriesG.appendChild(nm);
+        const pt = _btEl('text', { class: 'bt-endpts', x: lx, y: L.y + 8 }); pt.textContent = Math.round(L.last) + ' pts'; _btSeriesG.appendChild(pt);
+    });
+    _btGuide = _btEl('line', { class: 'bt-guide', x1: 0, y1: BT_PT, x2: 0, y2: BT_PT + _btPH, opacity: 0 }); _btSeriesG.appendChild(_btGuide);
+}
+function _btAttachHover() {
+    _btSvg.addEventListener('mousemove', e => {
+        const active = _btActive(); if (!active.length || !_btGuide) return;
+        const rect = _btSvg.getBoundingClientRect(), sx = (e.clientX - rect.left) / rect.width * BT_W;
+        let i = _btEvents.length <= 1 ? 0 : Math.round((sx - BT_PL) / _btPW * (_btEvents.length - 1));
+        i = Math.max(0, Math.min(_btEvents.length - 1, i));
+        _btGuide.setAttribute('x1', _btX(i)); _btGuide.setAttribute('x2', _btX(i)); _btGuide.setAttribute('opacity', 1);
+        const rows = active.map(a => ({ name: a.d.name, color: a.color, v: Math.round((_btPts[a.d.id] || [])[i] || 0) })).sort((x, y) => y.v - x.v);
+        const tt = document.getElementById('bt-tt');
+        tt.innerHTML = `<div class="bt-tt-round">Round ${_btEvents[i].round}</div>` + rows.map(x => `<div class="bt-tt-row"><span class="bt-tt-dot" style="background:${x.color}"></span><span class="bt-tt-name">${esc(x.name)}</span><span class="bt-tt-val" style="color:${x.color}">${x.v}</span></div>`).join('');
+        tt.style.opacity = 1; const px = _btX(i) / BT_W * rect.width; tt.style.left = Math.min(px + 16, rect.width - 168) + 'px'; tt.style.top = '8px';
+    });
+    _btSvg.addEventListener('mouseleave', () => { const tt = document.getElementById('bt-tt'); if (tt) tt.style.opacity = 0; if (_btGuide) _btGuide.setAttribute('opacity', 0); });
+}
+function btRefresh() { btSelected(); btHint(); btDraw(); }
 
 // Strip out the latest event's points-contribution per driver, re-rank,
 // and return a map of driver_id → previous position (1-based) so we can
