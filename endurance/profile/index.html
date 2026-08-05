@@ -1909,9 +1909,9 @@ let _currentDriver = null;
 async function loadTeamingSections(driver) {
     _currentDriver = driver;
 
-    // Check whether the team transfer window is open. Closed once the
-    // active season has any results recorded — fresh applications and
-    // approvals are blocked until the season ends. Admin can override.
+    // Check whether the team transfer window is open. Closed for the whole
+    // duration of any active season — fresh applications and approvals are
+    // blocked until the season ends (no active season). Admin can override.
     const { data: windowOpen } = await sb.rpc('is_team_window_open');
     const teamWindowOpen = windowOpen !== false;
 
