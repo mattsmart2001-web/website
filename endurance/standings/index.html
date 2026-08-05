@@ -1332,8 +1332,21 @@ function btDraw() {
     const lastX = _btX(_btLastIdx);
     const labelX = BT_PL + _btPW + 12;
     const labels = active.map(a => { const v = (_btPts[a.d.id] || [])[_btLastIdx]; const last = v == null ? 0 : v; return { a, last, y: _btY(last, max) }; }).sort((x, y) => x.y - y.y);
-    const GAP = 30;
-    for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
+    // Place the name labels: nudge apart to avoid overlaps, but keep them by
+    // their line heights when the field is spread. When drivers are bunched
+    // (early season) the stack saturates — then centre it vertically in the
+    // chart rather than letting it spill off the bottom.
+    const GAP = 30, topLimit = BT_PT + 12, botLimit = BT_PT + _btPH - 6;
+    const n = labels.length, blockH = (n - 1) * GAP, avail = botLimit - topLimit;
+    for (let i = 1; i < n; i++) if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
+    const saturated = n > 1 && (labels[n - 1].y - labels[0].y) <= blockH + 0.5;
+    if (saturated && blockH < avail) {
+        const start = topLimit + (avail - blockH) / 2;
+        labels.forEach((L, i) => { L.y = start + i * GAP; });
+    } else {
+        const over = labels[n - 1].y - botLimit; if (over > 0) labels.forEach(L => { L.y -= over; });
+        const under = topLimit - labels[0].y; if (under > 0) labels.forEach(L => { L.y += under; });
+    }
     labels.forEach(L => {
         const anchorY = _btY(L.last, max);
         if (lastX < labelX - 20 || Math.abs(L.y - anchorY) > 3)
