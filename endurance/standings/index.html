@@ -1285,7 +1285,7 @@ const BT_W = 760, BT_H = 400, BT_PL = 46, BT_PR = 150, BT_PT = 18, BT_PB = 38;
 const _btPW = BT_W - BT_PL - BT_PR, _btPH = BT_H - BT_PT - BT_PB;
 const _btNS = 'http://www.w3.org/2000/svg';
 const _btEl = (n, a) => { const e = document.createElementNS(_btNS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
-function _btX(i) { return _btEvents.length <= 1 ? BT_PL + _btPW / 2 : BT_PL + i / (_btEvents.length - 1) * _btPW; }
+function _btX(i) { return _btEvents.length <= 1 ? BT_PL : BT_PL + i / (_btEvents.length - 1) * _btPW; }
 function _btYMax() { let m = 10; _btActive().forEach(a => { const arr = _btPts[a.d.id] || []; arr.forEach(v => { if (v > m) m = v; }); }); return Math.ceil(m / 50) * 50 || 50; }
 function _btY(v, max) { return BT_PT + _btPH - (v / max) * _btPH; }
 
@@ -1316,12 +1316,16 @@ function btDraw() {
         _btSeriesG.appendChild(_btEl('path', { class: 'bt-line', d: dstr, stroke: a.color }));
         arr.forEach((v, i) => _btSeriesG.appendChild(_btEl('circle', { class: 'bt-dot', cx: _btX(i), cy: _btY(v, max), r: 3.4, fill: a.color })));
     });
+    // End-labels sit just past the last plotted point — which is the right
+    // edge in a full season, but hugs R1 early on so labels stay next to the
+    // data instead of floating at the far right.
+    const lastX = _btX(_btEvents.length - 1);
     const labels = active.map(a => { const arr = _btPts[a.d.id] || []; const last = arr[arr.length - 1] || 0; return { a, last, y: _btY(last, max) }; }).sort((x, y) => x.y - y.y);
     const GAP = 30;
     for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
     labels.forEach(L => {
-        const anchorY = _btY(L.last, max), lx = BT_PL + _btPW + 12;
-        if (Math.abs(L.y - anchorY) > 3) _btSeriesG.appendChild(_btEl('line', { x1: BT_PL + _btPW + 4, y1: anchorY, x2: lx - 2, y2: L.y - 4, stroke: L.a.color, 'stroke-width': 1, opacity: 0.4 }));
+        const anchorY = _btY(L.last, max), lx = lastX + 12;
+        if (Math.abs(L.y - anchorY) > 3) _btSeriesG.appendChild(_btEl('line', { x1: lastX + 4, y1: anchorY, x2: lx - 2, y2: L.y - 4, stroke: L.a.color, 'stroke-width': 1, opacity: 0.4 }));
         const nm = _btEl('text', { class: 'bt-end', x: lx, y: L.y - 4, fill: L.a.color }); nm.textContent = L.a.d.name; _btSeriesG.appendChild(nm);
         const pt = _btEl('text', { class: 'bt-endpts', x: lx, y: L.y + 8 }); pt.textContent = Math.round(L.last) + ' pts'; _btSeriesG.appendChild(pt);
     });
