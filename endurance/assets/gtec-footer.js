@@ -32,6 +32,25 @@
             }
             #gtec-footer a:hover { color: #ffd166; }
             #gtec-footer .gtec-footer-dot { color: rgba(255, 209, 102, 0.55); margin: 0 0.4em; }
+            #gtec-footer .gtec-footer-partner {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.45em;
+                margin-bottom: 0.95rem;
+                padding: 0.55rem 1.1rem;
+                border-radius: 999px;
+                border: 1px solid rgba(255, 209, 102, 0.4);
+                background: rgba(255, 209, 102, 0.08);
+                color: #ffd166;
+                font-size: 0.6rem;
+                letter-spacing: 0.2em;
+                transition: background 0.15s ease, border-color 0.15s ease;
+            }
+            #gtec-footer .gtec-footer-partner:hover {
+                background: rgba(255, 209, 102, 0.16);
+                border-color: rgba(255, 209, 102, 0.7);
+                color: #ffd166;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -40,13 +59,14 @@
     const footer = document.createElement('footer');
     footer.id = 'gtec-footer';
     footer.innerHTML = `
-        GTEC
-        <span class="gtec-footer-dot">·</span>
-        A <a href="/" title="SparksTheory">SparksTheory</a> Championship
-        <span class="gtec-footer-dot">·</span>
-        <a href="/endurance/partners/" title="Partner with GTEC">Partner with GTEC</a>
-        <span class="gtec-footer-dot">·</span>
-        © ${year}
+        <a class="gtec-footer-partner" href="/endurance/partners/" title="Partner with GTEC">🤝 Partner with GTEC</a>
+        <div>
+            GTEC
+            <span class="gtec-footer-dot">·</span>
+            A <a href="/" title="SparksTheory">SparksTheory</a> Championship
+            <span class="gtec-footer-dot">·</span>
+            © ${year}
+        </div>
     `;
     document.body.appendChild(footer);
 })();
