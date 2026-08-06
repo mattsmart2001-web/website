@@ -44,6 +44,8 @@
         <span class="gtec-footer-dot">·</span>
         A <a href="/" title="SparksTheory">SparksTheory</a> Championship
         <span class="gtec-footer-dot">·</span>
+        <a href="/endurance/partners/" title="Partner with GTEC">Partner with GTEC</a>
+        <span class="gtec-footer-dot">·</span>
         © ${year}
     `;
     document.body.appendChild(footer);
