@@ -400,6 +400,8 @@
         .wm-legend { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.9rem; font-size: 0.72rem; color: var(--muted); }
         .wm-legend .wm-sw { display: inline-block; width: 22px; height: 12px; border-radius: 3px; }
         .wm-legend .wm-lg-lo { letter-spacing: 0.02em; }
+        .wm-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+        .wm-tb-lbl { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-right: 0.15rem; }
         .wm-loading { padding: 2rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
 
         /* Recent-form pills */
@@ -612,7 +614,9 @@ let _nations = [];   // aggregated by driver nationality (avg points per driver)
 let _nationsNoCountry = 0; // drivers with no nationality set (shown as a footnote)
 let _wmSvg = null;   // cached world SVG text (fetched once, lazily)
 let _wmOpen = false; // world-map accordion open state (persisted)
+let _wmMetric = 'avg'; // 'avg' | 'total' | 'drivers' — what the map shades by
 try { _wmOpen = localStorage.getItem('gtec_nations_map') === '1'; } catch (e) {}
+try { const m = localStorage.getItem('gtec_nations_metric'); if (m) _wmMetric = m; } catch (e) {}
 let _ratings = null; // loaded lazily
 let _season  = null;
 let _tab     = 'drivers';
@@ -1009,11 +1013,17 @@ function renderNations(panel) {
           <div class="bt-ic">🗺️</div>
           <div class="bt-titles">
             <div class="bt-title">World Map</div>
-            <div class="bt-sub">Where the grid races from — countries shaded by average points per driver.</div>
+            <div class="bt-sub">Where the grid races from — shade by average, total points or driver count.</div>
           </div>
           <svg class="bt-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="bt-body">
+          <div class="wm-toolbar">
+            <span class="wm-tb-lbl">Shade by</span>
+            <button class="bt-preset ${_wmMetric === 'avg' ? 'gold' : ''}" onclick="mapSetMetric('avg')">Avg / driver</button>
+            <button class="bt-preset ${_wmMetric === 'total' ? 'gold' : ''}" onclick="mapSetMetric('total')">Total points</button>
+            <button class="bt-preset ${_wmMetric === 'drivers' ? 'gold' : ''}" onclick="mapSetMetric('drivers')">Drivers</button>
+          </div>
           <div class="wm-shell">
             <div id="wm-host"><div class="wm-loading">Loading map…</div></div>
             <div class="wm-tt" id="wm-tt"></div>
@@ -1071,20 +1081,28 @@ async function mapEnsureLoaded() {
     }
 }
 
+function wmMetricVal(nat) {
+    return _wmMetric === 'total' ? nat.points : _wmMetric === 'drivers' ? nat.drivers : nat.avg;
+}
+function wmMetricLabel() {
+    return _wmMetric === 'total' ? 'Total points' : _wmMetric === 'drivers' ? 'Drivers' : 'Avg points / driver';
+}
+
 function applyMapColors() {
     const svg = document.querySelector('#wm-host svg');
     if (!svg) return;
     const n = _nations.length;
-    const byCode = {};
-    _nations.forEach((nat, i) => { byCode[nat.code] = { nat, rank: i }; });
+    // Rank countries by the selected metric so the shading always shows
+    // contrast (even when values are bunched); brightest = highest.
+    const rankByCode = {};
+    [..._nations].sort((a, b) => wmMetricVal(b) - wmMetricVal(a))
+        .forEach((nat, i) => { rankByCode[nat.code] = i; });
 
-    // Rank-based tiers so the map always shows contrast even when averages
-    // are bunched. Leader tier is brightest.
     svg.querySelectorAll('path').forEach(p => {
-        const rec = byCode[p.id];
-        if (!rec) { p.classList.remove('wm-data'); p.style.fill = ''; return; }
+        const rank = rankByCode[p.id];
+        if (rank === undefined) { p.classList.remove('wm-data'); p.style.fill = ''; return; }
         const tier = n <= 1 ? WM_RAMP.length - 1
-            : Math.round((1 - rec.rank / (n - 1)) * (WM_RAMP.length - 1));
+            : Math.round((1 - rank / (n - 1)) * (WM_RAMP.length - 1));
         p.style.fill = WM_RAMP[tier];
         p.classList.add('wm-data');
         p.addEventListener('mousemove', wmMove);
@@ -1095,11 +1113,20 @@ function applyMapColors() {
     const lg = document.getElementById('wm-legend');
     if (lg) {
         lg.innerHTML =
-            `<span class="wm-lg-lo">Avg points / driver:</span> <span>lower</span>` +
+            `<span class="wm-lg-lo">${wmMetricLabel()}:</span> <span>lower</span>` +
             WM_RAMP.map(c => `<span class="wm-sw" style="background:${c}"></span>`).join('') +
             `<span>higher</span>` +
             `<span style="margin-left:0.6rem"><span class="wm-sw" style="background:#171d29;border:1px solid var(--border)"></span> no entrants</span>`;
     }
+}
+
+function mapSetMetric(m) {
+    _wmMetric = m;
+    try { localStorage.setItem('gtec_nations_metric', m); } catch (e) {}
+    document.querySelectorAll('.wm-toolbar .bt-preset').forEach(b => {
+        b.classList.toggle('gold', b.getAttribute('onclick') === `mapSetMetric('${m}')`);
+    });
+    applyMapColors();
 }
 
 function wmMove(e) {
