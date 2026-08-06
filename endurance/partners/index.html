@@ -40,6 +40,8 @@
 
   .stats{display:flex;flex-wrap:wrap;justify-content:center;gap:.9rem;margin-top:1.6rem}
   .stat{flex:1 1 240px;max-width:290px;background:var(--bg-1);border:1px solid var(--border);border-radius:14px;padding:1.3rem 1rem;text-align:center;position:relative;overflow:hidden}
+  .stat-link{display:block;text-decoration:none;color:inherit;transition:border-color .15s,transform .15s}
+  .stat-link:hover{border-color:rgba(255,209,102,.4);transform:translateY(-2px)}
   .stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold-deep),var(--gold))}
   .stat-num{font-family:'Anton',sans-serif;font-size:2.3rem;line-height:1;letter-spacing:.02em}
   .stat-num .fill{font-family:'Anton',sans-serif;border-bottom-width:2px}
@@ -116,8 +118,8 @@
     <div class="stats">
       <div class="stat"><div class="stat-num"><span class="set">38K</span></div><div class="stat-lbl">Channel Subscribers</div></div>
       <div class="stat"><div class="stat-num"><span class="set">1,000+</span></div><div class="stat-lbl">Combined Live Viewers</div></div>
-      <div class="stat"><div class="stat-num"><span class="set">162</span></div><div class="stat-lbl">Registered Drivers</div></div>
-      <div class="stat"><div class="stat-num"><span class="set">10+</span></div><div class="stat-lbl">Splits / Divisions</div></div>
+      <a class="stat stat-link" href="/endurance/drivers/"><div class="stat-num"><span class="set" id="stat-drivers">162</span></div><div class="stat-lbl">Registered Drivers</div></a>
+      <div class="stat"><div class="stat-num"><span class="set" id="stat-splits">10+</span></div><div class="stat-lbl">Splits / Divisions</div></div>
       <div class="stat"><div class="stat-num"><span class="set">8</span></div><div class="stat-lbl">Rounds / Season</div></div>
     </div>
     <p class="body" style="margin-top:1.2rem">Every round is broadcast live on <span class="set">YouTube</span> by SparksTheory and streamed by drivers across the grid, for a combined <span class="set">1,000+</span> concurrent audience.</p>
@@ -215,4 +217,27 @@
     <div class="foot">GTEC · Gran Turismo 7 Endurance Championship · Powered by SparksTheory · sparkstheory.co.uk</div>
   </div>
 
-</div></body></html>
+</div>
+<!-- Pull the live driver (and split) counts so the kit stays current. Falls
+     back silently to the static numbers if anything is unavailable. -->
+<script src="/endurance/assets/gtec-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+(async function () {
+  try {
+    if (!window.GTEC_CONFIG || !window.supabase) return;
+    const sb = window.supabase.createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+    const { count } = await sb.from('drivers').select('id', { count: 'exact', head: true });
+    if (count) { const el = document.getElementById('stat-drivers'); if (el) el.textContent = count; }
+    const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+    if (season) {
+      const { data: ents } = await sb.from('entries').select('lobby_number, events!inner(season_id)').eq('events.season_id', season.id);
+      if (ents && ents.length) {
+        const splits = new Set(ents.map(e => e.lobby_number).filter(n => n != null)).size;
+        if (splits) { const el = document.getElementById('stat-splits'); if (el) el.textContent = splits + '+'; }
+      }
+    }
+  } catch (e) { /* keep the static fallbacks */ }
+})();
+</script>
+</body></html>
