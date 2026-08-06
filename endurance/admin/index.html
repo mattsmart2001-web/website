@@ -4628,6 +4628,7 @@ async function viewEventPenalties(eventId, eventName) {
             <td class="td-muted">${esc(p.penalty_value) || '—'}</td>
             <td class="td-muted" style="max-width:280px">${esc(p.reason)}</td>
             <td><div class="row-actions">
+                <button class="btn-icon" onclick="openEditPenaltyModal('${p.id}','${eventId}','${esc(eventName)}')">Edit</button>
                 <button class="btn-icon danger" onclick="deletePenalty('${p.id}','${eventId}','${esc(eventName)}')">Delete</button>
             </div></td>
         </tr>`).join('');
@@ -4647,16 +4648,30 @@ async function viewEventPenalties(eventId, eventName) {
         </div>`;
 }
 
-async function openAddPenaltyModal(eventId, eventName) {
+function openAddPenaltyModal(eventId, eventName) {
+    return openPenaltyModal(eventId, eventName, null);
+}
+
+async function openEditPenaltyModal(penaltyId, eventId, eventName) {
+    const { data, error } = await sb.from('penalties').select('*').eq('id', penaltyId).single();
+    if (error || !data) { toast(error?.message || 'Penalty not found.', 'error'); return; }
+    return openPenaltyModal(eventId, eventName, data);
+}
+
+// Shared add/edit penalty modal. Pass `penalty` = null to add, or the
+// existing penalty row to edit it in place.
+async function openPenaltyModal(eventId, eventName, penalty) {
+    const editing = !!penalty;
     const { data: entries } = await sb.from('entries')
         .select('id, car_number, teams(name), entry_drivers(driver_id, drivers(display_name))')
         .eq('event_id', eventId)
         .order('car_number');
 
+    const selEntry = penalty?.entry_id || '';
     const entryOpts = (entries || []).map(en => {
         const driverNames = (en.entry_drivers || []).map(ed => ed.drivers?.display_name).filter(Boolean).join(' / ');
         const label = en.teams?.name || driverNames || 'Unnamed entry';
-        return `<option value="${esc(en.id)}">${en.car_number != null ? '#' + en.car_number + ' — ' : ''}${esc(label)}</option>`;
+        return `<option value="${esc(en.id)}" ${en.id === selEntry ? 'selected' : ''}>${en.car_number != null ? '#' + en.car_number + ' — ' : ''}${esc(label)}</option>`;
     }).join('');
 
     const penaltyTypes = [
@@ -4666,8 +4681,9 @@ async function openAddPenaltyModal(eventId, eventName) {
         { value: 'warning',          label: 'Warning' },
         { value: 'reprimand',        label: 'Reprimand' },
     ];
+    const selType = penalty?.penalty_type || 'time_add';
 
-    openModal(`Add Penalty — ${esc(eventName)}`,
+    openModal(`${editing ? 'Edit' : 'Add'} Penalty — ${esc(eventName)}`,
         `<form id="entity-form">
             <div class="form-group">
                 <label>Entry <span class="required">*</span></label>
@@ -4687,17 +4703,17 @@ async function openAddPenaltyModal(eventId, eventName) {
                 <div class="form-group">
                     <label>Type <span class="required">*</span></label>
                     <select name="penalty_type" id="pen-type" onchange="onPenaltyTypeChange(this)">
-                        ${penaltyTypes.map(p => `<option value="${esc(p.value)}" ${p.value === 'time_add' ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}
+                        ${penaltyTypes.map(p => `<option value="${esc(p.value)}" ${p.value === selType ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}
                     </select>
                 </div>
                 <div class="form-group" id="pen-value-row">
                     <label>Value</label>
-                    <input type="text" name="penalty_value" id="pen-value" placeholder="+10s, 3 places, etc.">
+                    <input type="text" name="penalty_value" id="pen-value" placeholder="+10s, 3 places, etc." value="${esc(penalty?.penalty_value || '')}">
                 </div>
             </div>
             <div class="form-group" id="pen-amount-row" style="display:none">
                 <label>Points to deduct <span class="required">*</span></label>
-                <input type="number" name="points_amount" id="pen-amount" min="1" max="999" placeholder="e.g. 5">
+                <input type="number" name="points_amount" id="pen-amount" min="1" max="999" placeholder="e.g. 5" value="${penalty?.points_amount != null ? penalty.points_amount : ''}">
                 <div class="form-hint">Subtracted from the driver's season points (and the team's, if the entry has a team).</div>
             </div>
             <div id="pen-dsq-note" style="display:none;padding:0.6rem 0.85rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:6px;font-size:0.82rem;color:#fca5a5;margin-bottom:0.85rem">
@@ -4705,15 +4721,26 @@ async function openAddPenaltyModal(eventId, eventName) {
             </div>
             <div class="form-group">
                 <label>Reason <span class="required">*</span></label>
-                <textarea name="reason" placeholder="Causing a collision at turn 3…" required></textarea>
+                <textarea name="reason" placeholder="Causing a collision at turn 3…" required>${esc(penalty?.reason || '')}</textarea>
             </div>
         </form>`,
         `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-         <button class="btn btn-primary" onclick="savePenalty('${eventId}','${esc(eventName)}')">Add Penalty</button>`
+         <button class="btn btn-primary" onclick="${editing ? `updatePenalty('${penalty.id}','${eventId}','${esc(eventName)}')` : `savePenalty('${eventId}','${esc(eventName)}')`}">${editing ? 'Save Changes' : 'Add Penalty'}</button>`
     );
 
     // Cache entries for driver loading
     window._penaltyEntries = entries || [];
+
+    // Reflect the current type (show/hide the points + DSQ rows), and when
+    // editing an existing penalty, populate its entry's drivers and reselect
+    // the one it was recorded against.
+    const typeSel = document.getElementById('pen-type');
+    if (typeSel) onPenaltyTypeChange(typeSel);
+    if (editing && selEntry) {
+        loadEntryDriversForPenalty(document.getElementById('pen-entry'));
+        const drvSel = document.getElementById('pen-driver');
+        if (drvSel) drvSel.value = penalty.driver_id || '';
+    }
 }
 
 function loadEntryDriversForPenalty(sel) {
@@ -4788,6 +4815,33 @@ async function savePenalty(eventId, eventName) {
     });
     if (error) { toast(error.message, 'error'); return; }
     toast('Penalty added.', 'success');
+    closeModal();
+    await viewEventPenalties(eventId, eventName);
+}
+
+async function updatePenalty(id, eventId, eventName) {
+    const d = getFormData('entity-form');
+    if (!d.entry_id || !d.penalty_type || !d.reason) {
+        toast('Entry, type and reason are required.', 'error'); return;
+    }
+    let pointsAmount = null;
+    if (d.penalty_type === 'points_deduction') {
+        const raw = parseInt(d.points_amount, 10);
+        if (!raw || raw < 1) {
+            toast('Enter the number of points to deduct.', 'error'); return;
+        }
+        pointsAmount = raw;
+    }
+    const { error } = await sb.from('penalties').update({
+        entry_id: d.entry_id,
+        driver_id: d.driver_id || null,
+        penalty_type: d.penalty_type,
+        penalty_value: d.penalty_value || (pointsAmount ? `-${pointsAmount} pts` : null),
+        points_amount: pointsAmount,
+        reason: d.reason,
+    }).eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Penalty updated.', 'success');
     closeModal();
     await viewEventPenalties(eventId, eventName);
 }
