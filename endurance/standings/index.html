@@ -384,6 +384,23 @@
         .mfr-badge-lg .mfr-logo { width: 26px; height: 26px; object-fit: contain; }
         .nat-flag { font-size: 1.7rem; line-height: 1; width: 34px; text-align: center; flex-shrink: 0; }
         .nat-note { color: var(--muted); font-size: 0.8rem; padding: 0.9rem 1.25rem 0; }
+        tr.nat-hi td { animation: natHi 1.8s ease; }
+        @keyframes natHi { 0%,30% { background: rgba(255,209,102,0.16); } 100% { background: transparent; } }
+        /* World map (Nations tab, collapsible) */
+        .wm-shell { position: relative; }
+        .gtec-worldmap { width: 100%; height: auto; display: block; }
+        .wm-countries path { fill: #171d29; stroke: #0a0e14; stroke-width: 0.4; vector-effect: non-scaling-stroke; }
+        .wm-countries path.wm-data { cursor: pointer; transition: fill 0.15s ease, filter 0.15s ease; }
+        .wm-countries path.wm-data:hover { filter: brightness(1.25); }
+        .wm-tt { position: absolute; z-index: 12; pointer-events: none; display: none; background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.5rem 0.7rem; box-shadow: 0 10px 30px rgba(0,0,0,0.55); font-size: 0.8rem; min-width: 150px; }
+        .wm-tt .wm-tt-h { display: flex; align-items: center; gap: 0.45rem; font-weight: 700; color: var(--text); }
+        .wm-tt .wm-tt-flag { font-size: 1.1rem; }
+        .wm-tt .wm-tt-r { display: flex; justify-content: space-between; gap: 1rem; color: var(--muted); margin-top: 0.25rem; }
+        .wm-tt .wm-tt-r b { color: var(--gold); font-family: 'Orbitron', sans-serif; }
+        .wm-legend { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.9rem; font-size: 0.72rem; color: var(--muted); }
+        .wm-legend .wm-sw { display: inline-block; width: 22px; height: 12px; border-radius: 3px; }
+        .wm-legend .wm-lg-lo { letter-spacing: 0.02em; }
+        .wm-loading { padding: 2rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
 
         /* Recent-form pills */
         .form-strip { display: inline-flex; gap: 3px; }
@@ -593,6 +610,9 @@ let _drivers = [];
 let _teams   = [];
 let _nations = [];   // aggregated by driver nationality (avg points per driver)
 let _nationsNoCountry = 0; // drivers with no nationality set (shown as a footnote)
+let _wmSvg = null;   // cached world SVG text (fetched once, lazily)
+let _wmOpen = false; // world-map accordion open state (persisted)
+try { _wmOpen = localStorage.getItem('gtec_nations_map') === '1'; } catch (e) {}
 let _ratings = null; // loaded lazily
 let _season  = null;
 let _tab     = 'drivers';
@@ -957,7 +977,7 @@ function renderNations(panel) {
                     ? `<a href="/endurance/drivers/?slug=${esc(n.topSlug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(n.topName)}</a>`
                     : esc(n.topName)} · ${fmt(n.topPoints)} pts</div>`
             : '';
-        return `<tr class="${rankCls(pos)}">
+        return `<tr class="${rankCls(pos)}" id="nat-row-${esc(n.code)}">
             <td class="${posCls(pos)}">${pos}</td>
             <td>
                 <div class="driver-cell">
@@ -984,7 +1004,24 @@ function renderNations(panel) {
         : '';
 
     panel.innerHTML = `
-        <div class="standings">
+      <div class="bt-acc ${_wmOpen ? '' : 'collapsed'}" id="map-acc">
+        <div class="bt-head" onclick="mapToggle()">
+          <div class="bt-ic">🗺️</div>
+          <div class="bt-titles">
+            <div class="bt-title">World Map</div>
+            <div class="bt-sub">Where the grid races from — countries shaded by average points per driver.</div>
+          </div>
+          <svg class="bt-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="bt-body">
+          <div class="wm-shell">
+            <div id="wm-host"><div class="wm-loading">Loading map…</div></div>
+            <div class="wm-tt" id="wm-tt"></div>
+          </div>
+          <div class="wm-legend" id="wm-legend"></div>
+        </div>
+      </div>
+      <div class="standings" style="margin-top:1rem">
             <table>
                 <thead><tr>
                     <th style="width:64px">#</th>
@@ -998,7 +1035,105 @@ function renderNations(panel) {
                 <tbody>${rows}</tbody>
             </table>
             ${foot}
-        </div>`;
+      </div>`;
+
+    if (_wmOpen) mapEnsureLoaded();
+}
+
+// ===== Nations world map (collapsible, lazy-loaded) =====
+const WM_RAMP = ['#4a3d1a', '#7a6320', '#a8842a', '#d8ab38', '#ffd166']; // low → high avg
+
+function mapToggle() {
+    const a = document.getElementById('map-acc');
+    if (!a) return;
+    a.classList.toggle('collapsed');
+    _wmOpen = !a.classList.contains('collapsed');
+    try { localStorage.setItem('gtec_nations_map', _wmOpen ? '1' : '0'); } catch (e) {}
+    if (_wmOpen) mapEnsureLoaded();
+}
+
+async function mapEnsureLoaded() {
+    const host = document.getElementById('wm-host');
+    if (!host) return;
+    if (_wmSvg === null) {
+        try {
+            const r = await fetch('/endurance/assets/world-110m.svg');
+            _wmSvg = await r.text();
+        } catch (e) {
+            host.innerHTML = '<div class="wm-loading">Map unavailable.</div>';
+            return;
+        }
+    }
+    // Inject once per render (host is rebuilt each renderNations).
+    if (!host.querySelector('svg')) {
+        host.innerHTML = _wmSvg;
+        applyMapColors();
+    }
+}
+
+function applyMapColors() {
+    const svg = document.querySelector('#wm-host svg');
+    if (!svg) return;
+    const n = _nations.length;
+    const byCode = {};
+    _nations.forEach((nat, i) => { byCode[nat.code] = { nat, rank: i }; });
+
+    // Rank-based tiers so the map always shows contrast even when averages
+    // are bunched. Leader tier is brightest.
+    svg.querySelectorAll('path').forEach(p => {
+        const rec = byCode[p.id];
+        if (!rec) { p.classList.remove('wm-data'); p.style.fill = ''; return; }
+        const tier = n <= 1 ? WM_RAMP.length - 1
+            : Math.round((1 - rec.rank / (n - 1)) * (WM_RAMP.length - 1));
+        p.style.fill = WM_RAMP[tier];
+        p.classList.add('wm-data');
+        p.addEventListener('mousemove', wmMove);
+        p.addEventListener('mouseleave', wmLeave);
+        p.addEventListener('click', () => wmClick(p.id));
+    });
+
+    const lg = document.getElementById('wm-legend');
+    if (lg) {
+        lg.innerHTML =
+            `<span class="wm-lg-lo">Avg points / driver:</span> <span>lower</span>` +
+            WM_RAMP.map(c => `<span class="wm-sw" style="background:${c}"></span>`).join('') +
+            `<span>higher</span>` +
+            `<span style="margin-left:0.6rem"><span class="wm-sw" style="background:#171d29;border:1px solid var(--border)"></span> no entrants</span>`;
+    }
+}
+
+function wmMove(e) {
+    const tt = document.getElementById('wm-tt');
+    const rec = _nations.find(x => x.code === e.currentTarget.id);
+    if (!tt || !rec) return;
+    const fmt = v => (Number(v) % 1 === 0 ? Number(v).toFixed(0) : Number(v).toFixed(1));
+    tt.innerHTML =
+        `<div class="wm-tt-h"><span class="wm-tt-flag">${rec.flag || ''}</span>${esc(rec.name)}</div>
+         <div class="wm-tt-r"><span>Avg / driver</span><b>${fmt(rec.avg)}</b></div>
+         <div class="wm-tt-r"><span>Drivers</span><span>${rec.drivers}</span></div>
+         <div class="wm-tt-r"><span>Total</span><span>${fmt(rec.points)}</span></div>
+         ${rec.topName ? `<div class="wm-tt-r"><span>Top</span><span>${esc(rec.topName)}</span></div>` : ''}`;
+    tt.style.display = 'block';
+    const shell = tt.parentElement.getBoundingClientRect();
+    let x = e.clientX - shell.left + 14;
+    let y = e.clientY - shell.top + 14;
+    if (x + tt.offsetWidth > shell.width) x = e.clientX - shell.left - tt.offsetWidth - 14;
+    tt.style.left = Math.max(0, x) + 'px';
+    tt.style.top = Math.max(0, y) + 'px';
+}
+
+function wmLeave() {
+    const tt = document.getElementById('wm-tt');
+    if (tt) tt.style.display = 'none';
+}
+
+function wmClick(code) {
+    const row = document.getElementById('nat-row-' + code);
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.remove('nat-hi');
+    void row.offsetWidth; // restart the highlight animation
+    row.classList.add('nat-hi');
 }
 
 function renderRatings(panel) {
