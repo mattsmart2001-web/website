@@ -1231,7 +1231,7 @@ const _btActive = () => _btSlots.filter(s => s.id && _btById(s.id)).map(s => ({ 
 const _btById = id => _btList().find(x => x.id === id);
 const _btOn = id => _btSlots.some(s => s.id === id);
 function _btAdd(id) { if (_btOn(id)) return true; const slot = _btSlots.find(s => !s.id); if (!slot) return false; slot.id = id; return true; }
-function btRemove(id) { const s = _btSlots.find(x => x.id === id); if (s) s.id = null; btRefresh(); }
+function btRemove(id) { const s = _btSlots.find(x => x.id === id); if (s) s.id = null; btRefresh(); btSave(); }
 function btTop() { _btSlots.forEach(s => s.id = null); _btList().slice(0, 8).forEach(x => _btAdd(x.id)); btRefresh(); }
 function btMe() { _btSlots.forEach(s => s.id = null); if (_btMine()) _btAdd(_btMine()); _btList().slice(0, 3).forEach(x => _btAdd(x.id)); btRefresh(); }
 function btClear() { _btSlots.forEach(s => s.id = null); btRefresh(); }
@@ -1252,7 +1252,23 @@ function btSetMode(mode) {
         if (_btMine()) { cmp.style.display = ''; cmp.textContent = mode === 'teams' ? 'My team' : 'Compare me'; }
         else cmp.style.display = 'none';
     }
-    btTop();
+    // Restore the viewer's last selection for this mode; else default to Top 8.
+    if (btRestore(mode)) btRefresh(); else btTop();
+}
+
+// Remember the chart selection across refreshes, per mode, in localStorage.
+function btStorageKey(m) { return 'gtec_battle_' + m; }
+function btSave() { try { localStorage.setItem(btStorageKey(_btMode), JSON.stringify(_btSlots.filter(s => s.id).map(s => s.id))); } catch (e) {} }
+function btRestore(mode) {
+    let raw; try { raw = localStorage.getItem(btStorageKey(mode)); } catch (e) { return false; }
+    if (raw == null) return false;
+    let ids; try { ids = JSON.parse(raw); } catch (e) { return false; }
+    if (!Array.isArray(ids)) return false;
+    const valid = ids.filter(id => _btById(id));
+    if (ids.length > 0 && valid.length === 0) return false;   // all stale (e.g. new season) → default
+    _btSlots.forEach(s => s.id = null);
+    valid.slice(0, _btSlots.length).forEach(id => _btAdd(id));
+    return true;
 }
 
 function renderBattle() {
@@ -1273,9 +1289,9 @@ function renderBattle() {
               <input class="bt-search" id="bt-search" placeholder="🔍  Add a driver by name…" autocomplete="off" oninput="btSearch()" onfocus="btSearch()">
               <div class="bt-results" id="bt-results"></div>
             </div>
-            <button class="bt-preset gold" onclick="btTop()">Top 8</button>
-            <button class="bt-preset" id="bt-compare" onclick="btMe()" style="display:none">Compare me</button>
-            <button class="bt-preset" onclick="btClear()">Clear</button>
+            <button class="bt-preset gold" onclick="btTop();btSave()">Top 8</button>
+            <button class="bt-preset" id="bt-compare" onclick="btMe();btSave()" style="display:none">Compare me</button>
+            <button class="bt-preset" onclick="btClear();btSave()">Clear</button>
           </div>
           <div class="bt-selected" id="bt-selected"></div>
           <div class="bt-hint" id="bt-hint"></div>
@@ -1313,6 +1329,7 @@ function btPick(id) {
     document.getElementById('bt-search').value = '';
     document.getElementById('bt-results').classList.remove('open');
     btRefresh();
+    btSave();
 }
 document.addEventListener('click', e => {
     if (!e.target.closest('.bt-search-wrap')) { const r = document.getElementById('bt-results'); if (r) r.classList.remove('open'); }
