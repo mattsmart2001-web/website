@@ -9038,8 +9038,21 @@ function hcStartCountdown() {
     }, 30000);
 }
 
+// Which Health Check sections the admin last had open — remembered across
+// refreshes so the page reopens exactly what they were looking at.
+let _hcOpenKeys = new Set();
+function hcToggle(header) {
+    const sec = header.closest('.hc-section');
+    if (!sec) return;
+    sec.classList.toggle('collapsed');
+    const key = sec.getAttribute('data-hc-key');
+    if (sec.classList.contains('collapsed')) _hcOpenKeys.delete(key); else _hcOpenKeys.add(key);
+    try { localStorage.setItem('gtec_hc_open', JSON.stringify([..._hcOpenKeys])); } catch (e) {}
+}
+
 async function renderHealthCheck() {
     const content = document.getElementById('content');
+    try { const raw = localStorage.getItem('gtec_hc_open'); const a = raw ? JSON.parse(raw) : null; _hcOpenKeys = new Set(Array.isArray(a) ? a : []); } catch (e) { _hcOpenKeys = new Set(); }
 
     // Fetch solo drivers (claimed, no team)
     const { data: soloDrivers, error: e1 } = await sb.from('drivers')
@@ -9380,15 +9393,18 @@ async function renderHealthCheck() {
     // otherwise (nothing to action, or a purely informational section) — so
     // a healthy page is compact and problems are already expanded.
     const hcSection = (variant, title, desc, count, bodyHtml, extraHeader = '') => {
-        const collapsed = count === 0 || variant === 'neutral';
+        // Default every section closed; reopen only the ones the admin last
+        // had open (remembered in localStorage, keyed by title).
+        const key = slugify(title);
+        const collapsed = !_hcOpenKeys.has(key);
         // A pass/fail check with nothing outstanding is clean — show it green
         // rather than its severity colour. Neutral (informational) sections stay neutral.
         const shownVariant = (variant !== 'neutral' && count === 0) ? 'ok' : variant;
         return `
-        <div class="hc-section hc-section--${shownVariant}${collapsed ? ' collapsed' : ''}">
+        <div class="hc-section hc-section--${shownVariant}${collapsed ? ' collapsed' : ''}" data-hc-key="${esc(key)}">
             <div class="hc-section-header" role="button" tabindex="0"
-                 onclick="this.closest('.hc-section').classList.toggle('collapsed')"
-                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.closest('.hc-section').classList.toggle('collapsed');}">
+                 onclick="hcToggle(this)"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();hcToggle(this);}">
                 <span class="hc-chevron" aria-hidden="true">▾</span>
                 <div style="flex:1;min-width:0">
                     <div class="hc-section-title">${title}</div>
