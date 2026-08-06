@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="GTEC partnership prospectus. A Gran Turismo 7 endurance championship powered by SparksTheory. Sponsorship opportunities for hardware, energy, coffee and lifestyle brands.">
+<meta name="robots" content="noindex">
+<title>GTEC Partnership Prospectus</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050608; --bg-1:#0a0e15; --bg-2:#11161f; --bg-3:#171d27;
+    --text:#f1f5f9; --muted:#94a3b8; --gold:#ffd166; --gold-deep:#c79a3a;
+    --cyan:#0ea5e9; --green:#34d399; --border:rgba(255,255,255,0.09);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:920px;margin:0 auto;padding:0 22px 70px}
+  .fill{color:var(--gold);font-weight:700;border-bottom:1.5px dashed rgba(255,209,102,.5);padding-bottom:1px;white-space:nowrap}
+  .set{color:var(--gold);font-weight:700}
+
+  /* draft banner (delete before sending) */
+  .draft{background:rgba(255,209,102,.1);border:1px dashed rgba(255,209,102,.4);border-radius:8px;color:#fde68a;font-size:.8rem;padding:.6rem .9rem;margin:18px 0 0;text-align:center}
+
+  /* hero */
+  .hero{position:relative;text-align:center;padding:64px 20px 52px;border-bottom:1px solid var(--border);overflow:hidden}
+  .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(1000px 380px at 50% -10%,rgba(255,209,102,.10),transparent 70%);pointer-events:none}
+  .eyebrow{font-family:'Orbitron',sans-serif;font-size:.66rem;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem}
+  .wordmark{font-family:'Anton',sans-serif;font-size:clamp(3.2rem,11vw,6rem);letter-spacing:.04em;line-height:.92;background:linear-gradient(180deg,#fff,#cbd5e1);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .wordmark-img{display:block;margin:0 auto;width:min(430px,82%);height:auto}
+  .hero-line{font-family:'Orbitron',sans-serif;font-size:clamp(.7rem,2.3vw,.95rem);letter-spacing:.22em;text-transform:uppercase;color:var(--text);margin-top:.5rem}
+  .hero-tag{max-width:640px;margin:1.4rem auto 0;color:var(--muted);font-size:1.02rem}
+  .hero-by{margin-top:1.5rem;font-size:.82rem;color:var(--muted);font-family:'Orbitron',sans-serif;letter-spacing:.12em;text-transform:uppercase}
+  .hero-by b{color:var(--gold)}
+
+  section{padding:52px 0;border-bottom:1px solid var(--border)}
+  .sec-label{font-family:'Orbitron',sans-serif;font-size:.64rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin-bottom:.7rem}
+  h2{font-family:'Anton',sans-serif;font-size:clamp(1.7rem,5vw,2.4rem);letter-spacing:.02em;line-height:1.05;margin-bottom:1rem}
+  h2 .thin{color:var(--muted)}
+  p.lead{font-size:1.06rem;color:#d7dde6;max-width:760px}
+  p.body{color:var(--muted);max-width:760px;margin-top:.8rem}
+
+  .stats{display:flex;flex-wrap:wrap;justify-content:center;gap:.9rem;margin-top:1.6rem}
+  .stat{flex:1 1 240px;max-width:290px;background:var(--bg-1);border:1px solid var(--border);border-radius:14px;padding:1.3rem 1rem;text-align:center;position:relative;overflow:hidden}
+  .stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold-deep),var(--gold))}
+  .stat-num{font-family:'Anton',sans-serif;font-size:2.3rem;line-height:1;letter-spacing:.02em}
+  .stat-num .fill{font-family:'Anton',sans-serif;border-bottom-width:2px}
+  .stat-lbl{font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:.5rem}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-top:1.6rem}
+  @media(max-width:680px){.two{grid-template-columns:1fr}}
+  .panel{background:var(--bg-1);border:1px solid var(--border);border-radius:14px;padding:1.3rem 1.4rem}
+  .panel h3{font-family:'Orbitron',sans-serif;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:.7rem}
+  .panel ul{list-style:none;display:flex;flex-direction:column;gap:.55rem}
+  .panel li{display:flex;gap:.6rem;font-size:.92rem;color:#d7dde6}
+  .panel li::before{content:'▸';color:var(--gold);flex-shrink:0}
+
+  .inv{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin-top:1.6rem}
+  @media(max-width:680px){.inv{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:440px){.inv{grid-template-columns:1fr}}
+  .inv-card{background:var(--bg-1);border:1px solid var(--border);border-radius:12px;padding:1.1rem}
+  .inv-ic{font-size:1.3rem;margin-bottom:.5rem}
+  .inv-t{font-weight:700;font-size:.95rem;margin-bottom:.25rem}
+  .inv-d{font-size:.82rem;color:var(--muted)}
+
+  .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1.6rem}
+  @media(max-width:760px){.tiers{grid-template-columns:1fr}}
+  .tier{background:var(--bg-1);border:1px solid var(--border);border-radius:16px;padding:1.4rem 1.3rem;display:flex;flex-direction:column}
+  .tier.featured{border-color:rgba(255,209,102,.5);background:linear-gradient(180deg,rgba(255,209,102,.06),var(--bg-1))}
+  .tier-name{font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+  .tier-sub{font-size:.74rem;color:var(--muted);margin:.3rem 0 1rem}
+  .tier-badge{align-self:flex-start;font-family:'Orbitron',sans-serif;font-size:.54rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1a1206;background:var(--gold);border-radius:5px;padding:.2rem .45rem;margin-bottom:.7rem}
+  .tier ul{list-style:none;display:flex;flex-direction:column;gap:.5rem;margin-top:.4rem;flex:1}
+  .tier li{display:flex;gap:.5rem;font-size:.86rem;color:#d7dde6}
+  .tier li::before{content:'✓';color:var(--green);flex-shrink:0;font-weight:700}
+  .tier li.off{color:#5b6472}
+  .tier li.off::before{content:'–';color:#3f4854}
+  .tier-price{margin-top:1.1rem;padding-top:1rem;border-top:1px solid var(--border);font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.06em;color:var(--gold)}
+
+  .partners{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1.3rem}
+  .plogo{font-family:'Orbitron',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.05em;color:var(--text);background:var(--bg-1);border:1px solid var(--border);border-radius:10px;padding:.6rem 1rem}
+
+  .cta{text-align:center;padding:58px 20px}
+  .cta h2{margin-bottom:.6rem}
+  .cta-row{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center;margin-top:1.4rem}
+  .btn{font-family:'Orbitron',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:.85rem 1.5rem;border-radius:10px;text-decoration:none;display:inline-block}
+  .btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-deep));color:#1a1206}
+  .btn-ghost{border:1px solid var(--border);color:var(--text)}
+  .foot{text-align:center;color:#5b6472;font-size:.74rem;padding:24px 0 0}
+
+  @media print{ body{background:#fff;color:#111} .draft{display:none} .hero,section{border-color:#ddd} }
+</style></head>
+<body><div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="eyebrow">Partnership Prospectus</div>
+    <img class="wordmark-img" src="/endurance/assets/gtec-logo.png" alt="GTEC Gran Turismo 7 Endurance Championship">
+    <div class="hero-line">Gran Turismo 7 Endurance Championship</div>
+    <p class="hero-tag">A premium, season-long GT7 endurance championship: broadcast live, run on a professional platform, racing a grid that only grows.</p>
+    <div class="hero-by">Powered by <b>SparksTheory</b> · <span class="set">38K</span> subscribers</div>
+  </div>
+
+  <!-- OPPORTUNITY -->
+  <section>
+    <div class="sec-label">The Opportunity</div>
+    <h2>Not a shout-out. <span class="thin">A campaign.</span></h2>
+    <p class="lead">GTEC pairs an established <span class="set">38K</span>-subscriber GT7 creator with a fully-branded championship: a recurring season of live-broadcast racing that draws <span class="set">1,000+</span> combined concurrent viewers across the grid's streams, a driver grid of <span class="set">162</span> across <span class="set">10+</span> splits, and a purpose-built platform with standings, ratings and broadcast graphics.</p>
+    <p class="body">The result is something a one-off influencer post can't offer: an ongoing, ownable property in front of a young, engaged gaming audience. The people who buy the hardware, and exactly who energy, coffee and lifestyle brands compete to reach, season after season, race after race.</p>
+  </section>
+
+  <!-- NUMBERS -->
+  <section>
+    <div class="sec-label">By The Numbers</div>
+    <h2>The reach.</h2>
+    <div class="stats">
+      <div class="stat"><div class="stat-num"><span class="set">38K</span></div><div class="stat-lbl">Channel Subscribers</div></div>
+      <div class="stat"><div class="stat-num"><span class="set">1,000+</span></div><div class="stat-lbl">Combined Live Viewers</div></div>
+      <div class="stat"><div class="stat-num"><span class="set">162</span></div><div class="stat-lbl">Registered Drivers</div></div>
+      <div class="stat"><div class="stat-num"><span class="set">10+</span></div><div class="stat-lbl">Splits / Divisions</div></div>
+      <div class="stat"><div class="stat-num"><span class="set">8</span></div><div class="stat-lbl">Rounds / Season</div></div>
+    </div>
+    <p class="body" style="margin-top:1.2rem">Every round is broadcast live on <span class="set">YouTube</span> by SparksTheory and streamed by drivers across the grid, for a combined <span class="set">1,000+</span> concurrent audience.</p>
+  </section>
+
+  <!-- AUDIENCE -->
+  <section>
+    <div class="sec-label">The Audience</div>
+    <h2>Buyers, <span class="thin">not just viewers.</span></h2>
+    <div class="two">
+      <div class="panel">
+        <h3>Who they are</h3>
+        <ul>
+          <li>Dedicated Gran Turismo 7 players on PlayStation 5</li>
+          <li>Sim-racing enthusiasts who own, and upgrade, wheels, pedals, rigs and cockpits</li>
+          <li>Highly engaged: they follow a season, not a single clip</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Why brands want them</h3>
+        <ul>
+          <li>High purchase intent for sim hardware &amp; peripherals</li>
+          <li>Repeat exposure across a whole season, not one video</li>
+          <li>A trusted creator's endorsement, in context, mid-race</li>
+          <li>A natural fit for hardware, <b>energy, coffee &amp; lifestyle</b> brands, since endurance racing is all focus and stamina</li>
+          <li>A community that talks: Discord, socials, word of mouth</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLATFORM -->
+  <section>
+    <div class="sec-label">The Platform</div>
+    <h2>A real championship. <span class="thin">Built like one.</span></h2>
+    <p class="body">GTEC isn't a spreadsheet and a Discord. It's a purpose-built championship platform, which is exactly what makes the broadcast, and your brand alongside it, look the part.</p>
+    <div class="inv">
+      <div class="inv-card"><div class="inv-ic">📊</div><div class="inv-t">Live standings &amp; ELO</div><div class="inv-d">Driver &amp; constructor tables, ratings, form guides, updated every round.</div></div>
+      <div class="inv-card"><div class="inv-ic">📈</div><div class="inv-t">Championship Battle graphics</div><div class="inv-d">Animated points-by-round charts that make the title fight a story.</div></div>
+      <div class="inv-card"><div class="inv-ic">📺</div><div class="inv-t">Broadcast overlays</div><div class="inv-d">Data-driven on-stream graphics: driver cards, standings tickers.</div></div>
+      <div class="inv-card"><div class="inv-ic">🏆</div><div class="inv-t">Teams, badges &amp; awards</div><div class="inv-d">Constructors, career honours and season superlatives to sponsor.</div></div>
+      <div class="inv-card"><div class="inv-ic">🎬</div><div class="inv-t">Clip &amp; incident content</div><div class="inv-d">Race highlights and steward clips, ready for short-form socials.</div></div>
+      <div class="inv-card"><div class="inv-ic">📅</div><div class="inv-t">A full season calendar</div><div class="inv-d">Recurring, scheduled content, for predictable exposure all year.</div></div>
+    </div>
+  </section>
+
+  <!-- INVENTORY -->
+  <section>
+    <div class="sec-label">What Partners Get</div>
+    <h2>Where your brand lives.</h2>
+    <div class="inv">
+      <div class="inv-card"><div class="inv-ic">🖥</div><div class="inv-t">Broadcast overlay</div><div class="inv-d">Logo on the live on-stream graphics, every race.</div></div>
+      <div class="inv-card"><div class="inv-ic">🌐</div><div class="inv-t">Website sponsor rail</div><div class="inv-d">Persistent placement across the GTEC platform.</div></div>
+      <div class="inv-card"><div class="inv-ic">🏁</div><div class="inv-t">Award naming rights</div><div class="inv-d">e.g. the "[Brand] Pole Position Award", presented each round.</div></div>
+      <div class="inv-card"><div class="inv-ic">🗣</div><div class="inv-t">On-stream &amp; social shout-outs</div><div class="inv-d">Read live by SparksTheory, plus scheduled social posts.</div></div>
+      <div class="inv-card"><div class="inv-ic">🎁</div><div class="inv-t">Product &amp; prize integration</div><div class="inv-d">Your gear as season prizes, placed in front of the whole grid.</div></div>
+      <div class="inv-card"><div class="inv-ic">⭐</div><div class="inv-t">Championship title naming</div><div class="inv-d">"GTEC, presented by [Brand]". The marquee placement.</div></div>
+    </div>
+  </section>
+
+  <!-- TIERS -->
+  <section>
+    <div class="sec-label">Partnership Tiers</div>
+    <h2>Ways to partner.</h2>
+    <p class="body">A starting structure. Tiers and pricing flex to the partner, and everything's negotiable, including product-for-placement deals.</p>
+    <div class="tiers">
+      <div class="tier">
+        <div class="tier-name">Grid Partner</div>
+        <div class="tier-sub">Entry-level / affiliate</div>
+        <ul>
+          <li>Website sponsor-rail logo</li>
+          <li>Social media mentions</li>
+          <li>Affiliate / product link</li>
+          <li class="off">Broadcast overlay</li>
+          <li class="off">Award naming</li>
+        </ul>
+        <div class="tier-price">Enquire</div>
+      </div>
+      <div class="tier featured">
+        <div class="tier-badge">Most Popular</div>
+        <div class="tier-name">Official Partner</div>
+        <div class="tier-sub">Season-long presence</div>
+        <ul>
+          <li>Everything in Grid, plus:</li>
+          <li>Logo on <b>broadcast overlays</b></li>
+          <li>A <b>sponsored award</b> each round</li>
+          <li>Live on-stream shout-outs</li>
+          <li>Prize / product integration</li>
+        </ul>
+        <div class="tier-price">Enquire</div>
+      </div>
+      <div class="tier">
+        <div class="tier-name">Title Partner</div>
+        <div class="tier-sub">Exclusive: one only</div>
+        <ul>
+          <li>Everything in Official, plus:</li>
+          <li><b>Championship naming rights</b></li>
+          <li>Premier overlay &amp; site placement</li>
+          <li>Dedicated features &amp; segments</li>
+          <li>First right of renewal</li>
+        </ul>
+        <div class="tier-price">Enquire</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROOF -->
+  <section>
+    <div class="sec-label">Trusted By</div>
+    <h2>Already in the paddock.</h2>
+    <p class="body">GTEC already works with leading sim-racing brands:</p>
+    <div class="partners">
+      <span class="plogo">Sim-Lab</span>
+      <span class="plogo" style="opacity:.5">[ Your brand here ]</span>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta">
+    <div class="sec-label" style="text-align:center">Let's Talk</div>
+    <h2>Put your brand on the grid.</h2>
+    <p class="lead" style="margin:0 auto">Tell us what you want to achieve and we'll build a package around it.</p>
+    <div class="cta-row">
+      <a class="btn btn-gold" href="mailto:mattsmart2001@gmail.com">Contact SparksTheory</a>
+      <a class="btn btn-ghost" href="https://sparkstheory.co.uk/endurance/standings/">See the championship live</a>
+    </div>
+    <div class="foot">GTEC · Gran Turismo 7 Endurance Championship · Powered by SparksTheory · sparkstheory.co.uk</div>
+  </div>
+
+</div></body></html>
