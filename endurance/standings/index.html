@@ -1060,11 +1060,17 @@ async function load() {
     };
     (deds.data || []).forEach(p => {
         if (!p.points_amount) return;
-        _addDed(_dedByTeam, p.entries?.team_id, p.points_amount, p.reason);
         if (p.driver_id) {
+            // Driver-specific: the named driver loses it, and the team
+            // (sum of its drivers) loses it once.
             _addDed(_dedByDriver, p.driver_id, p.points_amount, p.reason);
+            _addDed(_dedByTeam, p.entries?.team_id, p.points_amount, p.reason);
         } else {
-            (p.entries?.entry_drivers || []).forEach(ed => _addDed(_dedByDriver, ed.driver_id, p.points_amount, p.reason));
+            // Whole-team: cascades to every driver on the entry, so the
+            // team loses it once per driver (matches team_standings).
+            const eds = p.entries?.entry_drivers || [];
+            eds.forEach(ed => _addDed(_dedByDriver, ed.driver_id, p.points_amount, p.reason));
+            _addDed(_dedByTeam, p.entries?.team_id, p.points_amount * (eds.length || 1), p.reason);
         }
     });
 
@@ -1203,7 +1209,14 @@ async function buildBattle(perEvent, deds, seasonEvents, myUser) {
     const tGross = {}, tDed = {};
     const tAdd = (map, tid, ev, amt) => { if (!tid || !ev) return; (map[tid] = map[tid] || {})[ev] = (map[tid]?.[ev] || 0) + amt; };
     inSeason.forEach(r => tAdd(tGross, r.results?.entries?.team_id, r.results?.event_id, Number(r.points_awarded || 0)));
-    deds.forEach(p => { if (p.points_amount && p.event_id) tAdd(tDed, p.entries?.team_id, p.event_id, Number(p.points_amount)); });
+    deds.forEach(p => {
+        if (!p.points_amount || !p.event_id) return;
+        // Driver-specific → team loses it once; whole-team → once per
+        // driver on the entry, so the team line matches the sum of its
+        // drivers (mirrors team_standings and the per-driver ded above).
+        const mult = p.driver_id ? 1 : ((p.entries?.entry_drivers || []).length || 1);
+        tAdd(tDed, p.entries?.team_id, p.event_id, Number(p.points_amount) * mult);
+    });
     _btTeamPts = {};
     _teams.forEach(t => { _btTeamPts[t.team_id] = cumulative(t.team_id, tGross, tDed); });
     _btTeams = _teams.map((t, i) => ({ id: t.team_id, name: t.team_name, slug: t.team_slug, pos: i + 1, total: Number(t.points) || 0 }));
