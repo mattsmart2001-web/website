@@ -382,6 +382,8 @@
         .std-avatar-init { font-family: 'Anton', sans-serif; font-size: 0.95rem; color: var(--muted); opacity: 0.7; }
         .mfr-badge-lg { display: inline-flex; align-items: center; justify-content: center; width: 34px; flex-shrink: 0; }
         .mfr-badge-lg .mfr-logo { width: 26px; height: 26px; object-fit: contain; }
+        .nat-flag { font-size: 1.7rem; line-height: 1; width: 34px; text-align: center; flex-shrink: 0; }
+        .nat-note { color: var(--muted); font-size: 0.8rem; padding: 0.9rem 1.25rem 0; }
 
         /* Recent-form pills */
         .form-strip { display: inline-flex; gap: 3px; }
@@ -561,6 +563,7 @@
     <button class="tab active" data-tab="drivers" onclick="setTab('drivers')">Drivers</button>
     <button class="tab" data-tab="teams" onclick="setTab('teams')">Teams</button>
     <button class="tab" data-tab="manufacturers" onclick="setTab('manufacturers')">Manufacturers</button>
+    <button class="tab" data-tab="nations" onclick="setTab('nations')">Nations</button>
     <button class="tab" data-tab="ratings" onclick="setTab('ratings')">Ratings</button>
 </div>
 
@@ -574,6 +577,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
+<script src="/endurance/assets/countries.js"></script>
 <script>
 'use strict';
 const { createClient } = window.supabase;
@@ -587,6 +591,8 @@ sb.auth.getSession().then(({ data }) => {
 
 let _drivers = [];
 let _teams   = [];
+let _nations = [];   // aggregated by driver nationality (avg points per driver)
+let _nationsNoCountry = 0; // drivers with no nationality set (shown as a footnote)
 let _ratings = null; // loaded lazily
 let _season  = null;
 let _tab     = 'drivers';
@@ -710,6 +716,7 @@ function render() {
     if (_tab === 'drivers')  renderDrivers(panel);
     else if (_tab === 'teams') renderTeams(panel);
     else if (_tab === 'manufacturers') renderManufacturers(panel);
+    else if (_tab === 'nations') renderNations(panel);
     else renderRatings(panel);
 }
 
@@ -931,6 +938,69 @@ function renderManufacturers(panel) {
         </div>`;
 }
 
+function renderNations(panel) {
+    if (!_nations.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Results Yet</h3><p>The Nations Cup appears once drivers with a set nationality have scored points.</p></div>`;
+        return;
+    }
+    const fmt = v => (Number(v) % 1 === 0 ? Number(v).toFixed(0) : Number(v).toFixed(1));
+    const leaderAvg = Number(_nations[0].avg) || 0;
+    const rows = _nations.map((n, i) => {
+        const pos = i + 1;
+        const avg = Number(n.avg) || 0;
+        const gap = pos === 1
+            ? `<span class="leader-pip">LEADER</span>`
+            : `<span class="points-gap">−${fmt(leaderAvg - avg)}</span>`;
+        const flag = n.flag ? `<span class="nat-flag">${n.flag}</span>` : '';
+        const top = n.topName
+            ? `<div class="meta-line">${n.topSlug
+                    ? `<a href="/endurance/drivers/?slug=${esc(n.topSlug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(n.topName)}</a>`
+                    : esc(n.topName)} · ${fmt(n.topPoints)} pts</div>`
+            : '';
+        return `<tr class="${rankCls(pos)}">
+            <td class="${posCls(pos)}">${pos}</td>
+            <td>
+                <div class="driver-cell">
+                    ${flag}
+                    <div>
+                        <div class="name">${esc(n.name)}</div>
+                        ${top}
+                    </div>
+                </div>
+            </td>
+            <td class="lighter center hide-mob">${n.drivers}</td>
+            <td class="lighter center hide-mob">${n.wins}</td>
+            <td class="lighter center hide-mob">${n.podiums}</td>
+            <td class="lighter center hide-mob">${fmt(n.points)}</td>
+            <td class="right">
+                <div class="points">${fmt(avg)}</div>
+                ${gap}
+            </td>
+        </tr>`;
+    }).join('');
+
+    const foot = _nationsNoCountry
+        ? `<p class="nat-note">${_nationsNoCountry} driver${_nationsNoCountry === 1 ? '' : 's'} without a nationality set ${_nationsNoCountry === 1 ? 'is' : 'are'} not shown. Set it in their profile to add them.</p>`
+        : '';
+
+    panel.innerHTML = `
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:64px">#</th>
+                    <th>Nation</th>
+                    <th class="center hide-mob">Drivers</th>
+                    <th class="center hide-mob">Wins</th>
+                    <th class="center hide-mob">Pod</th>
+                    <th class="center hide-mob">Total</th>
+                    <th class="right">Avg&nbsp;Pts</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+            ${foot}
+        </div>`;
+}
+
 function renderRatings(panel) {
     if (!_ratings?.length) {
         panel.innerHTML = `<div class="state-msg"><h3>No Ratings Yet</h3><p>Ratings appear here after running Compute Elo on a completed event.</p></div>`;
@@ -1143,6 +1213,34 @@ async function load() {
         m.drivers += 1;
     });
     _manufacturers = Object.values(_mMap).sort((a, b) => (b.points - a.points) || (b.wins - a.wins));
+
+    // Nations Cup — group every driver by nationality (ISO alpha-2) and rank
+    // by AVERAGE points per driver, so a small nation with strong drivers
+    // isn't buried under a big one. Total + counts shown for context.
+    const _cty = {};
+    (window.GTEC_COUNTRIES || []).forEach(c => { _cty[c.code] = c; });
+    const _nMap = {};
+    let _noNation = 0;
+    _drivers.forEach(dr => {
+        const code = (dr.nationality || '').toUpperCase();
+        if (!code) { _noNation += 1; return; }
+        const n = _nMap[code] || (_nMap[code] = {
+            code,
+            name: _cty[code]?.name || code,
+            flag: _cty[code]?.flag || '',
+            points: 0, drivers: 0, wins: 0, podiums: 0,
+            topName: null, topSlug: null, topPoints: -Infinity,
+        });
+        const pts = Number(dr.points) || 0;
+        n.points  += pts;
+        n.drivers += 1;
+        n.wins    += Number(dr.wins)    || 0;
+        n.podiums += Number(dr.podiums) || 0;
+        if (pts > n.topPoints) { n.topPoints = pts; n.topName = dr.driver_name; n.topSlug = dr.driver_slug; }
+    });
+    _nations = Object.values(_nMap).map(n => ({ ...n, avg: n.drivers ? n.points / n.drivers : 0 }))
+        .sort((a, b) => (b.avg - a.avg) || (b.points - a.points) || (b.drivers - a.drivers));
+    _nationsNoCountry = _noNation;
 
     await buildBattle(perEvent.data || [], deds.data || [], seasonEvents.data || [], myUser);
     render();
