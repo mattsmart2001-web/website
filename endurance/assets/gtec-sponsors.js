@@ -25,12 +25,6 @@
             className: '',
         },
         {
-            name: 'YFood',
-            href: 'https://bit.ly/Sparkstheory_yfood_Tasterpacks',
-            img:  '/yfood_logo_black-960x264.png',
-            className: 'gtec-sponsor-yfood',
-        },
-        {
             name: 'All Mapped Out',
             href: 'https://allmappedout.com/',
             img:  '/all-mapped-out-logo.png',
@@ -90,12 +84,6 @@
             }
             #gtec-sponsors .gtec-sponsor:hover img {
                 filter: brightness(1.15) drop-shadow(0 0 6px rgba(255,209,102,0.35));
-            }
-            /* YFood logo is dark on a transparent background — invert so it
-               reads against the dark badge fill. */
-            #gtec-sponsors .gtec-sponsor-yfood img { filter: invert(1) brightness(0.9); }
-            #gtec-sponsors .gtec-sponsor-yfood:hover img {
-                filter: invert(1) brightness(1.15) drop-shadow(0 0 6px rgba(255,209,102,0.35));
             }
             /* Small "SPONSORS" eyebrow tag at the top of the rail. */
             #gtec-sponsors .gtec-sponsor-eyebrow {

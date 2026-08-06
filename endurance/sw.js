@@ -3,7 +3,7 @@
 'use strict';
 
 // Bump this string to force every client to refetch their shell.
-const CACHE_NAME = 'gtec-shell-v27';
+const CACHE_NAME = 'gtec-shell-v28';
 
 // Assets to pre-cache on install. Keep this short — fonts and Supabase
 // data are intentionally omitted so they always come fresh. The list is
@@ -40,7 +40,6 @@ const PRECACHE = [
     '/sparks_logo.jpg',
     '/simlab.png',
     '/logo_tm_simracing.png',
-    '/yfood_logo_black-960x264.png',
 ];
 
 self.addEventListener('install', (event) => {
