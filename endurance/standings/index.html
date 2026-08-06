@@ -1232,8 +1232,8 @@ const _btById = id => _btList().find(x => x.id === id);
 const _btOn = id => _btSlots.some(s => s.id === id);
 function _btAdd(id) { if (_btOn(id)) return true; const slot = _btSlots.find(s => !s.id); if (!slot) return false; slot.id = id; return true; }
 function btRemove(id) { const s = _btSlots.find(x => x.id === id); if (s) s.id = null; btRefresh(); btSave(); }
-function btTop() { _btSlots.forEach(s => s.id = null); _btList().slice(0, 8).forEach(x => _btAdd(x.id)); btRefresh(); }
-function btMe() { _btSlots.forEach(s => s.id = null); if (_btMine()) _btAdd(_btMine()); _btList().slice(0, 3).forEach(x => _btAdd(x.id)); btRefresh(); }
+function btTop() { _btSlots.forEach(s => s.id = null); _btList().slice(0, 8).forEach(x => _btAdd(x.id)); btRefresh('full'); }
+function btMe() { _btSlots.forEach(s => s.id = null); if (_btMine()) _btAdd(_btMine()); _btList().slice(0, 3).forEach(x => _btAdd(x.id)); btRefresh('full'); }
 function btClear() { _btSlots.forEach(s => s.id = null); btRefresh(); }
 
 // Switch the chart between the drivers' and constructors' championships.
@@ -1253,7 +1253,7 @@ function btSetMode(mode) {
         else cmp.style.display = 'none';
     }
     // Restore the viewer's last selection for this mode; else default to Top 8.
-    if (btRestore(mode)) btRefresh(); else btTop();
+    if (btRestore(mode)) btRefresh('full'); else btTop();
 }
 
 // Remember the chart selection across refreshes, per mode, in localStorage.
@@ -1275,7 +1275,7 @@ function renderBattle() {
     const host = document.getElementById('battle');
     host.innerHTML = `
       <div class="bt-acc collapsed" id="bt-acc">
-        <div class="bt-head" onclick="document.getElementById('bt-acc').classList.toggle('collapsed')">
+        <div class="bt-head" onclick="btToggle()">
           <div class="bt-ic">📈</div>
           <div class="bt-titles">
             <div class="bt-title">Championship Battle</div>
@@ -1328,7 +1328,7 @@ function btPick(id) {
     if (_btAdd(id) === false) { btFlash(`That\'s 8 — remove one to add another.`); return; }
     document.getElementById('bt-search').value = '';
     document.getElementById('bt-results').classList.remove('open');
-    btRefresh();
+    btRefresh('grow');
     btSave();
 }
 document.addEventListener('click', e => {
@@ -1372,51 +1372,76 @@ function btDrawGrid(max) {
     }
     _btEvents.forEach((e, i) => { const t = _btEl('text', { class: 'bt-axis', x: _btX(i), y: BT_H - BT_PB + 20, 'text-anchor': 'middle' }); t.textContent = 'R' + e.round; _btGridG.appendChild(t); });
 }
-function btDraw() {
+// ---- animation ------------------------------------------------------------
+const BT_DUR = 1500, BT_STAG = 140;   // staggered "draw the season", mid-speed
+let _btRaf = [], _btDrawnIds = [];
+function _btClearRaf() { _btRaf.forEach(id => cancelAnimationFrame(id)); _btRaf = []; }
+function _btExpanded() { const a = document.getElementById('bt-acc'); return !!a && !a.classList.contains('collapsed'); }
+function _btReduceMotion() { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+function btToggle() { const a = document.getElementById('bt-acc'); if (!a) return; a.classList.toggle('collapsed'); if (!a.classList.contains('collapsed')) btDraw('full'); }
+
+// Animate one series: draw its line left→right, pop dots as the draw passes,
+// count its points up, and fade the name/leader in at the finish.
+function _btAnimateSeries(h, delay) {
+    const len = h.path.getTotalLength();
+    h.path.style.strokeDasharray = len; h.path.style.strokeDashoffset = len;
+    h.dots.forEach(c => { c.style.opacity = 0; c.style.transform = 'scale(0)'; });
+    [h.nm, h.pt, h.leader].forEach(n => { if (n) n.style.opacity = 0; });
+    const nP = h.dots.length, t0 = performance.now() + delay;
+    const step = now => {
+        const t = Math.max(0, Math.min(1, (now - t0) / BT_DUR)), e = 1 - Math.pow(1 - t, 3);
+        h.path.style.strokeDashoffset = len * (1 - e);
+        h.dots.forEach((c, i) => { const f = nP <= 1 ? 0 : i / (nP - 1); if (e >= f) { c.style.transition = 'opacity .18s, transform .18s'; c.style.opacity = 1; c.style.transform = 'scale(1)'; } });
+        h.pt.textContent = Math.round(h.last * e) + ' pts';
+        if (t >= 1) { [h.nm, h.pt, h.leader].forEach(n => { if (n) { n.style.transition = 'opacity .3s'; n.style.opacity = ''; } }); h.pt.textContent = Math.round(h.last) + ' pts'; return; }
+        _btRaf.push(requestAnimationFrame(step));
+    };
+    _btRaf.push(requestAnimationFrame(step));
+}
+
+function btDraw(anim) {
+    _btClearRaf();
     if (_btSeriesG) _btSeriesG.remove();
     const max = _btYMax(); _btYCache = max; btDrawGrid(max);
     _btSeriesG = _btEl('g', {}); _btSvg.appendChild(_btSeriesG);
     const active = _btActive();
-    if (!active.length) { const t = _btEl('text', { class: 'bt-empty', x: BT_PL + _btPW / 2, y: BT_PT + _btPH / 2, 'text-anchor': 'middle' }); t.textContent = `Pick a ${_btMode === 'teams' ? 'team' : 'driver'} to start comparing.`; _btSeriesG.appendChild(t); return; }
-    active.forEach(a => {
-        const pts = [];
-        (_btSeries(a.d.id) || []).forEach((v, i) => { if (v != null) pts.push({ i, v }); });
-        if (!pts.length) return;
-        const dstr = pts.map((p, k) => `${k ? 'L' : 'M'}${_btX(p.i)},${_btY(p.v, max)}`).join(' ');
-        _btSeriesG.appendChild(_btEl('path', { class: 'bt-line', d: dstr, stroke: a.color }));
-        pts.forEach(p => _btSeriesG.appendChild(_btEl('circle', { class: 'bt-dot', cx: _btX(p.i), cy: _btY(p.v, max), r: 3.4, fill: a.color })));
-    });
-    // End-labels sit at the far-right edge; a leader line runs back to each
-    // driver's last plotted point. Early in the season the point is near R1
-    // on the left, so the leader spans the chart; in a full season the point
-    // is already at the right edge, so the leader only appears when a label
-    // was nudged to avoid a collision.
-    const lastX = _btX(_btLastIdx);
-    const labelX = BT_PL + _btPW + 12;
+    if (!active.length) { const t = _btEl('text', { class: 'bt-empty', x: BT_PL + _btPW / 2, y: BT_PT + _btPH / 2, 'text-anchor': 'middle' }); t.textContent = `Pick a ${_btMode === 'teams' ? 'team' : 'driver'} to start comparing.`; _btSeriesG.appendChild(t); _btDrawnIds = []; return; }
+
+    // Compute end-label positions (de-collide; centre the stack when the
+    // field is bunched, else keep labels by their line heights, clamped).
+    const lastX = _btX(_btLastIdx), labelX = BT_PL + _btPW + 12;
     const labels = active.map(a => { const v = (_btSeries(a.d.id) || [])[_btLastIdx]; const last = v == null ? 0 : v; return { a, last, y: _btY(last, max) }; }).sort((x, y) => x.y - y.y);
-    // Place the name labels: nudge apart to avoid overlaps, but keep them by
-    // their line heights when the field is spread. When drivers are bunched
-    // (early season) the stack saturates — then centre it vertically in the
-    // chart rather than letting it spill off the bottom.
     const GAP = 30, topLimit = BT_PT + 12, botLimit = BT_PT + _btPH - 6;
     const n = labels.length, blockH = (n - 1) * GAP, avail = botLimit - topLimit;
     for (let i = 1; i < n; i++) if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
     const saturated = n > 1 && (labels[n - 1].y - labels[0].y) <= blockH + 0.5;
-    if (saturated && blockH < avail) {
-        const start = topLimit + (avail - blockH) / 2;
-        labels.forEach((L, i) => { L.y = start + i * GAP; });
-    } else {
-        const over = labels[n - 1].y - botLimit; if (over > 0) labels.forEach(L => { L.y -= over; });
-        const under = topLimit - labels[0].y; if (under > 0) labels.forEach(L => { L.y += under; });
-    }
-    labels.forEach(L => {
+    if (saturated && blockH < avail) { const start = topLimit + (avail - blockH) / 2; labels.forEach((L, i) => { L.y = start + i * GAP; }); }
+    else { const over = labels[n - 1].y - botLimit; if (over > 0) labels.forEach(L => { L.y -= over; }); const under = topLimit - labels[0].y; if (under > 0) labels.forEach(L => { L.y += under; }); }
+    const labY = new Map(labels.map(L => [L.a.d.id, { y: L.y, last: L.last }]));
+
+    const canAnim = anim && anim !== 'none' && _btExpanded() && !_btReduceMotion();
+
+    active.forEach((a, idx) => {
+        const pts = [];
+        (_btSeries(a.d.id) || []).forEach((v, i) => { if (v != null) pts.push({ i, v }); });
+        if (!pts.length) return;
+        const dstr = pts.map((p, k) => `${k ? 'L' : 'M'}${_btX(p.i)},${_btY(p.v, max)}`).join(' ');
+        const path = _btEl('path', { class: 'bt-line', d: dstr, stroke: a.color }); _btSeriesG.appendChild(path);
+        const dots = pts.map(p => { const c = _btEl('circle', { class: 'bt-dot', cx: _btX(p.i), cy: _btY(p.v, max), r: 3.4, fill: a.color }); _btSeriesG.appendChild(c); return c; });
+        const L = labY.get(a.d.id) || { y: _btY(0, max), last: 0 };
+        let leader = null;
         const anchorY = _btY(L.last, max);
-        if (lastX < labelX - 20 || Math.abs(L.y - anchorY) > 3)
-            _btSeriesG.appendChild(_btEl('line', { x1: lastX + 4, y1: anchorY, x2: labelX - 4, y2: L.y - 4, stroke: L.a.color, 'stroke-width': 1, opacity: 0.4 }));
-        const nm = _btEl('text', { class: 'bt-end', x: labelX, y: L.y - 4, fill: L.a.color }); nm.textContent = L.a.d.name; _btSeriesG.appendChild(nm);
+        if (lastX < labelX - 20 || Math.abs(L.y - anchorY) > 3) { leader = _btEl('line', { x1: lastX + 4, y1: anchorY, x2: labelX - 4, y2: L.y - 4, stroke: a.color, 'stroke-width': 1, opacity: 0.4 }); _btSeriesG.appendChild(leader); }
+        const nm = _btEl('text', { class: 'bt-end', x: labelX, y: L.y - 4, fill: a.color }); nm.textContent = a.d.name; _btSeriesG.appendChild(nm);
         const pt = _btEl('text', { class: 'bt-endpts', x: labelX, y: L.y + 8 }); pt.textContent = Math.round(L.last) + ' pts'; _btSeriesG.appendChild(pt);
+
+        const isNew = _btDrawnIds.indexOf(a.d.id) === -1;
+        const animateThis = canAnim && (anim === 'full' || (anim === 'grow' && isNew));
+        if (animateThis) _btAnimateSeries({ path, dots, nm, pt, leader, last: L.last }, anim === 'full' ? idx * BT_STAG : 0);
     });
+
     _btGuide = _btEl('line', { class: 'bt-guide', x1: 0, y1: BT_PT, x2: 0, y2: BT_PT + _btPH, opacity: 0 }); _btSeriesG.appendChild(_btGuide);
+    _btDrawnIds = active.map(a => a.d.id);
 }
 function _btAttachHover() {
     _btSvg.addEventListener('mousemove', e => {
@@ -1432,7 +1457,7 @@ function _btAttachHover() {
     });
     _btSvg.addEventListener('mouseleave', () => { const tt = document.getElementById('bt-tt'); if (tt) tt.style.opacity = 0; if (_btGuide) _btGuide.setAttribute('opacity', 0); });
 }
-function btRefresh() { btSelected(); btHint(); btDraw(); }
+function btRefresh(anim) { btSelected(); btHint(); btDraw(anim || 'none'); }
 
 // Strip out the latest event's points-contribution per driver, re-rank,
 // and return a map of driver_id → previous position (1-based) so we can
