@@ -541,11 +541,11 @@ async function load() {
         // is derived from — aggregated client-side into career totals below,
         // same reduce() pattern teams/index.html's own profile page already uses.
         sb.from('team_standings').select('*'),
-        // Positions Gained (grid → flag): entry results with their drivers,
-        // matched to qualifying grid slots. Attributed to each driver on the
-        // car, classified finishes only.
-        sb.from('results').select('event_id, entry_id, finish_position, status, result_drivers(driver_id)'),
-        sb.from('qualifying_results').select('event_id, entry_id, position'),
+        // Positions Gained (grid → flag). Qualifying and finishing positions
+        // are both per-driver (migrations 27/28), so match on driver_id, not
+        // the car — classified finishes with a per-driver qualifying slot.
+        sb.from('result_drivers').select('driver_id, finish_position, status, results!inner(event_id)'),
+        sb.from('qualifying_results').select('event_id, driver_id, position'),
         sb.from('drivers').select('id, display_name, slug, nationality, photo_url'),
     ]);
 
@@ -693,21 +693,20 @@ async function load() {
             <div id="compare-result"></div>
         </div>` : '';
 
-    // Positions Gained — grid slot vs finish, per entry-result, attributed to
-    // each driver on the car (classified finishes with a qualifying time).
+    // Positions Gained — per-driver grid slot vs per-driver finish (both keyed
+    // on driver_id), for classified finishes that have a qualifying time.
     const gridByKey = new Map();
-    (qualiRes.data || []).forEach(q => gridByKey.set(q.event_id + ':' + q.entry_id, q.position));
+    (qualiRes.data || []).forEach(q => { if (q.driver_id) gridByKey.set(q.event_id + ':' + q.driver_id, q.position); });
     const pgAcc = new Map();
-    (resultsRes.data || []).forEach(r => {
-        if (r.status !== 'classified' || r.finish_position == null) return;
-        const grid = gridByKey.get(r.event_id + ':' + r.entry_id);
+    (resultsRes.data || []).forEach(rd => {
+        if (rd.status !== 'classified' || rd.finish_position == null) return;
+        const ev = rd.results?.event_id;
+        if (!ev) return;
+        const grid = gridByKey.get(ev + ':' + rd.driver_id);
         if (grid == null) return;
-        const net = grid - r.finish_position;
-        (r.result_drivers || []).forEach(rd => {
-            const a = pgAcc.get(rd.driver_id) || { net: 0, races: 0 };
-            a.net += net; a.races += 1;
-            pgAcc.set(rd.driver_id, a);
-        });
+        const a = pgAcc.get(rd.driver_id) || { net: 0, races: 0 };
+        a.net += grid - rd.finish_position; a.races += 1;
+        pgAcc.set(rd.driver_id, a);
     });
     const driverById = new Map((driversRes.data || []).map(d => [d.id, d]));
     const pgRows = [...pgAcc.entries()].map(([id, a]) => {

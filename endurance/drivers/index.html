@@ -1353,19 +1353,19 @@ async function showProfile() {
             .eq('penalty_type', 'points_deduction'),
     ]);
 
-    // Positions Gained (grid → flag): net places made up across this driver's
-    // classified finishes that also have a qualifying grid slot.
+    // Positions Gained (grid → flag): per-driver grid slot vs per-driver
+    // finish, across this driver's classified finishes. Qualifying is
+    // per-driver (migrations 27/28), so key the grid by event for this driver.
     let posGained = null;
     const pgRaces = (historyRes.data || []).filter(r =>
-        r.status === 'classified' && r.finish_position != null && r.results?.entry_id && r.results?.event_id);
-    const pgEntryIds = [...new Set(pgRaces.map(r => r.results.entry_id))];
-    if (pgEntryIds.length) {
+        r.status === 'classified' && r.finish_position != null && r.results?.event_id);
+    if (pgRaces.length) {
         const { data: pgQuali } = await sb.from('qualifying_results')
-            .select('event_id, entry_id, position').in('entry_id', pgEntryIds);
-        const pgGrid = new Map((pgQuali || []).map(q => [q.event_id + ':' + q.entry_id, q.position]));
+            .select('event_id, position').eq('driver_id', driver.id);
+        const pgGrid = new Map((pgQuali || []).map(q => [q.event_id, q.position]));
         let net = 0, n = 0;
         pgRaces.forEach(r => {
-            const g = pgGrid.get(r.results.event_id + ':' + r.results.entry_id);
+            const g = pgGrid.get(r.results.event_id);
             if (g == null) return;
             net += g - r.finish_position; n += 1;
         });
