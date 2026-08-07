@@ -384,6 +384,21 @@
         .mfr-badge-lg .mfr-logo { width: 26px; height: 26px; object-fit: contain; }
         .nat-flag { font-size: 1.7rem; line-height: 1; width: 34px; text-align: center; flex-shrink: 0; }
         .nat-note { color: var(--muted); font-size: 0.8rem; padding: 0.9rem 1.25rem 0; }
+        /* Manufacturer drill-in */
+        tr.mfr-row { cursor: pointer; }
+        tr.mfr-row:hover td { background: rgba(255,255,255,0.03); }
+        .mfr-go { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.06em; color: var(--gold); opacity: 0; transition: opacity 0.15s ease; margin-left: 0.4rem; }
+        tr.mfr-row:hover .mfr-go { opacity: 0.85; }
+        .mfr-detail-head { padding: 0.2rem 0 1.1rem; }
+        .mfr-back { background: none; border: none; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; padding: 0.3rem 0; transition: color 0.15s ease; }
+        .mfr-back:hover { color: var(--gold); }
+        .mfr-title { display: flex; align-items: center; gap: 0.9rem; margin-top: 0.7rem; }
+        .mfr-title .mfr-name { font-family: 'Anton', sans-serif; font-size: 1.7rem; line-height: 1; letter-spacing: 0.01em; }
+        .mfr-title .mfr-totals { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; }
+        th.mfr-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+        th.mfr-sort:hover { color: var(--gold); }
+        .sort-arr { color: var(--gold); margin-left: 0.15em; font-size: 0.8em; }
+        td.pos-num { font-family: 'Orbitron', sans-serif; color: var(--muted); text-align: center; font-size: 0.85rem; }
         tr.nat-hi td { animation: natHi 1.8s ease; }
         @keyframes natHi { 0%,30% { background: rgba(255,209,102,0.16); } 100% { background: transparent; } }
         /* World map (Nations tab, collapsible) */
@@ -620,6 +635,8 @@ try { const m = localStorage.getItem('gtec_nations_metric'); if (m) _wmMetric = 
 let _ratings = null; // loaded lazily
 let _season  = null;
 let _tab     = 'drivers';
+let _mfrDetail = null;                       // manufacturer id being drilled into (null = overview)
+let _mfrSort   = { key: 'points', dir: -1 }; // sort for the manufacturer driver board
 let _ceiling  = null; // max points still available across all remaining rounds (Split-1 ceiling), for Live Battles
 let _remaining = 0;
 
@@ -721,6 +738,13 @@ function renderPodium(list) {
 
 async function setTab(t) {
     _tab = t;
+    // Switching tabs always returns the Manufacturers view to its overview
+    // (rather than a previously drilled-in manufacturer), and clears the
+    // deep-link param so the URL matches what's shown.
+    if (_mfrDetail) {
+        _mfrDetail = null;
+        try { const url = new URL(location.href); url.searchParams.delete('mfr'); history.replaceState(null, '', url); } catch (e) {}
+    }
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
     // The Championship Battle chart runs on both the Drivers and Teams tabs,
     // switching which championship it plots.
@@ -913,6 +937,7 @@ function renderTeams(panel) {
 }
 
 function renderManufacturers(panel) {
+    if (_mfrDetail) { renderMfrDetail(panel); return; }
     if (!_manufacturers.length) {
         panel.innerHTML = `<div class="state-msg"><h3>No Results Yet</h3><p>Manufacturer standings appear once race results are recorded.</p></div>`;
         return;
@@ -924,12 +949,12 @@ function renderManufacturers(panel) {
         const gap = pos === 1
             ? `<span class="leader-pip">LEADER</span>`
             : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>`;
-        return `<tr class="${rankCls(pos)}">
+        return `<tr class="${rankCls(pos)} mfr-row" onclick="openMfr('${esc(m.id)}')" title="View ${esc(m.name)} drivers">
             <td class="${posCls(pos)}" style="${m.color ? `border-left:3px solid ${esc(m.color)}` : 'border-left:3px solid transparent'}">${pos}</td>
             <td>
                 <div class="driver-cell">
                     <span class="mfr-badge-lg">${mfrBadge(m.logo, m.color, m.name)}</span>
-                    <div class="name">${esc(m.name)}</div>
+                    <div class="name">${esc(m.name)} <span class="mfr-go">View drivers ›</span></div>
                 </div>
             </td>
             <td class="lighter center hide-mob">${m.drivers}</td>
@@ -956,6 +981,132 @@ function renderManufacturers(panel) {
                     <th class="center hide-mob">Pole</th>
                     <th class="center hide-mob">FL</th>
                     <th class="right">Points</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+}
+
+// ===== Manufacturer drill-in: sortable driver leaderboard =====
+function openMfr(id) {
+    _mfrDetail = id;
+    _mfrSort = { key: 'points', dir: -1 };
+    syncMfrUrl();
+    render();
+}
+function closeMfr() {
+    _mfrDetail = null;
+    syncMfrUrl();
+    render();
+}
+function syncMfrUrl() {
+    try {
+        const url = new URL(location.href);
+        if (_mfrDetail) {
+            const m = _manufacturers.find(x => x.id === _mfrDetail);
+            url.searchParams.set('tab', 'manufacturers');
+            if (m) url.searchParams.set('mfr', m.slug); else url.searchParams.delete('mfr');
+        } else {
+            url.searchParams.delete('mfr');
+        }
+        history.replaceState(null, '', url);
+    } catch (e) {}
+}
+function mfrSortBy(key) {
+    if (_mfrSort.key === key) { _mfrSort.dir *= -1; }
+    else { _mfrSort = { key, dir: key === 'name' ? 1 : -1 }; }
+    render();
+}
+
+function renderMfrDetail(panel) {
+    const m = _manufacturers.find(x => x.id === _mfrDetail);
+    if (!m) { _mfrDetail = null; renderManufacturers(panel); return; }
+
+    // Every driver scoring under this manufacturer (team lock or solo lock).
+    const drivers = _drivers.filter(d =>
+        (d.manufacturer_id || _ratingByDriver[d.driver_id]?.manufacturerId) === m.id
+    ).map(d => {
+        const r = _ratingByDriver[d.driver_id] || {};
+        return {
+            driver_id: d.driver_id, name: d.driver_name, slug: d.driver_slug,
+            nationality: d.nationality, career_number: d.career_number,
+            team_name: d.team_name, team_slug: d.team_slug, photo: r.photo,
+            points: Number(d.points) || 0,
+            elo: r.rating != null ? Number(r.rating) : null, rated: !!r.rated,
+            wins: Number(d.wins) || 0, podiums: Number(d.podiums) || 0,
+            poles: Number(d.poles) || 0, fl: Number(d.fastest_laps) || 0,
+            races: Number(d.races) || 0,
+        };
+    });
+
+    const { key, dir } = _mfrSort;
+    const val = (o) => {
+        if (key === 'name') return (o.name || '').toLowerCase();
+        if (key === 'elo')  return o.elo == null ? -Infinity : o.elo;
+        return o[key] ?? 0;
+    };
+    drivers.sort((a, b) => {
+        const av = val(a), bv = val(b);
+        if (av < bv) return -1 * dir;
+        if (av > bv) return 1 * dir;
+        return (b.points - a.points) || (a.name || '').localeCompare(b.name || '');
+    });
+
+    const arrow = k => key === k ? `<span class="sort-arr">${dir < 0 ? '▾' : '▴'}</span>` : '';
+    const th = (k, label, cls) => `<th class="${cls || ''} mfr-sort" onclick="mfrSortBy('${k}')">${label}${arrow(k)}</th>`;
+
+    const rows = drivers.map((d, i) => {
+        const num = d.career_number ? `<span class="career-num">#${d.career_number}</span>` : '';
+        const teamLine = d.team_name
+            ? `<div class="meta-line">${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
+            : `<div class="meta-line"><em style="opacity:0.75">Solo</em></div>`;
+        const eloHTML = d.elo != null
+            ? `<span class="elo-num">${Math.round(d.elo)}</span>${window.eloTierBadge ? window.eloTierBadge(d.elo, { provisional: !d.rated }) : ''}`
+            : '<span class="lighter">—</span>';
+        return `<tr class="driver-row">
+            <td class="pos-num">${i + 1}</td>
+            <td>
+                <div class="driver-cell">
+                    ${driverAvatar(d.photo, d.name)}
+                    <div class="driver-cell-text">
+                        <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.name)}</a></div>
+                        ${teamLine}
+                    </div>
+                </div>
+            </td>
+            <td class="center hide-mob"><div class="elo-cell">${eloHTML}</div></td>
+            <td class="lighter center hide-mob">${d.races}</td>
+            <td class="lighter center hide-mob">${d.wins}</td>
+            <td class="lighter center hide-mob">${d.podiums}</td>
+            <td class="lighter center hide-mob">${d.poles}</td>
+            <td class="lighter center hide-mob">${d.fl}</td>
+            <td class="right"><div class="points">${d.points.toFixed(d.points % 1 === 0 ? 0 : 1)}</div></td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="mfr-detail-head">
+            <button class="mfr-back" onclick="closeMfr()">‹ All manufacturers</button>
+            <div class="mfr-title">
+                <span class="mfr-badge-lg">${mfrBadge(m.logo, m.color, m.name)}</span>
+                <div>
+                    <div class="mfr-name">${esc(m.name)}</div>
+                    <div class="mfr-totals">${m.drivers} driver${m.drivers === 1 ? '' : 's'} · ${Number(m.points).toFixed(Number(m.points) % 1 === 0 ? 0 : 1)} pts · ${m.wins} win${m.wins === 1 ? '' : 's'}</div>
+                </div>
+            </div>
+        </div>
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:52px">#</th>
+                    ${th('name', 'Driver')}
+                    ${th('elo', 'ELO', 'center hide-mob')}
+                    ${th('races', 'Rac', 'center hide-mob')}
+                    ${th('wins', 'Wins', 'center hide-mob')}
+                    ${th('podiums', 'Pod', 'center hide-mob')}
+                    ${th('poles', 'Pole', 'center hide-mob')}
+                    ${th('fl', 'FL', 'center hide-mob')}
+                    ${th('points', 'Points', 'right')}
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
@@ -1374,6 +1525,7 @@ async function load() {
         m.fl      += Number(dr.fastest_laps) || 0;
         m.drivers += 1;
     });
+    Object.values(_mMap).forEach(m => { m.slug = String(m.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); });
     _manufacturers = Object.values(_mMap).sort((a, b) => (b.points - a.points) || (b.wins - a.wins));
 
     // Nations Cup — group every driver by nationality (ISO alpha-2) and rank
@@ -1405,7 +1557,16 @@ async function load() {
     _nationsNoCountry = _noNation;
 
     await buildBattle(perEvent.data || [], deds.data || [], seasonEvents.data || [], myUser);
-    render();
+
+    // Deep-link support: ?tab=… and ?mfr=<manufacturer-slug> open the right
+    // tab (and a manufacturer's driver board) straight from a shared link.
+    const params = new URLSearchParams(location.search);
+    const wantMfr = params.get('mfr');
+    const mfrMatch = wantMfr ? _manufacturers.find(x => x.slug === wantMfr) : null;
+    const wantTab = params.get('tab');
+    if (mfrMatch) { await setTab('manufacturers'); openMfr(mfrMatch.id); }
+    else if (wantTab && ['drivers', 'teams', 'manufacturers', 'nations', 'ratings'].includes(wantTab)) { await setTab(wantTab); }
+    else render();
 }
 
 // ===== Championship Battle chart =====
