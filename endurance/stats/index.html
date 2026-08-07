@@ -284,6 +284,10 @@
         @media (max-width: 640px) { .pg-board th.hide-mob, .pg-board td.hide-mob { display: none; } .pg-board th.net-col { width: auto; } }
 
         /* Compare Drivers */
+        .compare-feature { background: linear-gradient(160deg, rgba(255,209,102,0.09), rgba(255,209,102,0.015)); border: 1px solid rgba(255,209,102,0.30); border-radius: 16px; padding: 1.5rem 1.5rem 1.75rem; box-shadow: 0 10px 40px rgba(0,0,0,0.35); }
+        .compare-feature .section-title { margin-bottom: 0.35rem; }
+        .compare-feature-sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.25rem; max-width: 660px; line-height: 1.5; }
+        .compare-feature .compare-picker { margin-bottom: 0; }
         .compare-picker { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
         .compare-picker select { flex: 1; min-width: 180px; padding: 0.6rem 0.8rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.9rem; }
         .compare-vs { font-family: 'Anton', sans-serif; color: var(--gold); font-size: 1.1rem; }
@@ -683,8 +687,9 @@ async function load() {
         .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
         .map(d => `<option value="${esc(d.driver_id)}">${esc(d.driver_name)}</option>`).join('');
     const compareHTML = career.length ? `
-        <div class="section">
-            <div class="section-title">Compare Drivers</div>
+        <div class="section compare-feature">
+            <div class="section-title">Head to Head</div>
+            <p class="compare-feature-sub">Pick any two drivers to see who comes out on top — points, wins, ratings and the season fight, side by side.</p>
             <div class="compare-picker">
                 <select id="compare-a"><option value="">— Select driver —</option>${driverOptions}</select>
                 <span class="compare-vs">VS</span>
@@ -715,7 +720,7 @@ async function load() {
     }).filter(r => r.races > 0)
       .sort((x, y) => (y.net - x.net) || (y.races - x.races) || (x.name || '').localeCompare(y.name || ''));
 
-    content.innerHTML = hofHTML + leaderboardsHTML + positionsGainedHTML(pgRows) + compareHTML + recordsHTML;
+    content.innerHTML = compareHTML + hofHTML + leaderboardsHTML + positionsGainedHTML(pgRows) + recordsHTML;
 
     // Unfiltered ratings (not just last_rated_at like the leaderboards use)
     // so an unraced driver still shows their real provisional DR/SR-seeded
