@@ -1329,6 +1329,7 @@ async function showProfile() {
         .select(`
             finish_position, status, points_awarded, pole_point, fastest_lap_point, laps_driven,
             results(
+                event_id, entry_id,
                 entries(car_number, lobby_number, teams(name)),
                 events(id, round, name, starts_at, circuit_name, seasons(year, name))
             )
@@ -1351,6 +1352,25 @@ async function showProfile() {
             .select('points_amount, reason, driver_id, entry_id, event_id, entries(entry_drivers(driver_id)), events(seasons(year))')
             .eq('penalty_type', 'points_deduction'),
     ]);
+
+    // Positions Gained (grid → flag): net places made up across this driver's
+    // classified finishes that also have a qualifying grid slot.
+    let posGained = null;
+    const pgRaces = (historyRes.data || []).filter(r =>
+        r.status === 'classified' && r.finish_position != null && r.results?.entry_id && r.results?.event_id);
+    const pgEntryIds = [...new Set(pgRaces.map(r => r.results.entry_id))];
+    if (pgEntryIds.length) {
+        const { data: pgQuali } = await sb.from('qualifying_results')
+            .select('event_id, entry_id, position').in('entry_id', pgEntryIds);
+        const pgGrid = new Map((pgQuali || []).map(q => [q.event_id + ':' + q.entry_id, q.position]));
+        let net = 0, n = 0;
+        pgRaces.forEach(r => {
+            const g = pgGrid.get(r.results.event_id + ':' + r.results.entry_id);
+            if (g == null) return;
+            net += g - r.finish_position; n += 1;
+        });
+        if (n > 0) posGained = net;
+    }
 
     // Sum this driver's deductions, keyed both by season year (Career Stats)
     // and by event (Race History).
@@ -1663,6 +1683,7 @@ async function showProfile() {
                 <div class="stat-item"><div class="stat-label">Wins</div><div class="stat-value">${totals.wins}</div></div>
                 <div class="stat-item hide-mob"><div class="stat-label">Podiums</div><div class="stat-value">${totals.podiums}</div></div>
                 <div class="stat-item hide-mob"><div class="stat-label">Poles</div><div class="stat-value">${totals.poles}</div></div>
+                ${posGained != null ? `<div class="stat-item hide-mob"><div class="stat-label">Net Positions</div><div class="stat-value" style="color:${posGained > 0 ? '#22c55e' : posGained < 0 ? '#f87171' : ''}">${posGained > 0 ? '+' : ''}${posGained}</div></div>` : ''}
             </div>
 
             ${seasonStakesHTML}
