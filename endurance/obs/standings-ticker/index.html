@@ -91,38 +91,37 @@
     .entry .pts-label { font-size: 0.62rem; color: var(--muted); margin-left: 0.15em; }
     .entry .sep { color: var(--border); font-size: 0.9rem; }
 
-    /* Sponsor strip — sits directly beneath the ticker, subordinate to it. */
-    #sponsors {
+    /* Sponsor bookend — a fixed "Powered by" block on the right end of the
+       ticker, mirroring the gold GTEC label on the left. Dark panel with a
+       gold eyebrow so the GTEC brand stays the hero. */
+    .sponsor-end {
         display: none;
-        align-items: center;
-        gap: 1.1rem;
-        height: 40px;
-        width: 100%;
-        background: rgba(8, 11, 16, 0.82);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid var(--border);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.35);
-        padding: 0 1.1rem;
-        overflow: hidden;
-    }
-    #sponsors.ready { display: flex; }
-    #sponsors .sp-label {
         flex-shrink: 0;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0 1.1rem 0 1.35rem;
+        background: rgba(19, 25, 34, 0.96);
+        position: relative;
+        z-index: 2;
+    }
+    .sponsor-end.ready { display: flex; }
+    .sponsor-end::before {
+        content: '';
+        position: absolute; top: 0; left: -14px; bottom: 0; width: 14px;
+        background: inherit;
+        clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    }
+    .se-eyebrow {
         font-family: 'Orbitron', sans-serif;
-        font-size: 0.55rem;
+        font-size: 0.5rem;
         font-weight: 800;
-        letter-spacing: 0.22em;
+        letter-spacing: 0.2em;
         text-transform: uppercase;
         color: var(--gold);
-        padding-right: 1.1rem;
-        border-right: 1px solid var(--border);
+        white-space: nowrap;
     }
-    #sponsors .sp-logos { display: flex; align-items: center; gap: 1.5rem; min-width: 0; overflow: hidden; }
-    #sponsors .sp { display: inline-flex; align-items: center; height: 24px; flex-shrink: 0; }
-    #sponsors .sp img {
-        height: 100%; width: auto; max-width: 130px; object-fit: contain;
-        filter: brightness(1.05); opacity: 0.95;
-    }
+    .se-logo { display: flex; align-items: center; height: 22px; transition: opacity 0.25s ease; }
+    .se-logo img { height: 100%; width: auto; max-width: 120px; object-fit: contain; filter: brightness(1.08); }
 
     #err { display: none; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 1rem; }
 </style>
@@ -132,10 +131,10 @@
 <div id="bar">
     <div class="label"><span class="l1">GTEC</span><span class="l2">STANDINGS</span></div>
     <div class="track-wrap"><div class="track" id="track"></div></div>
-</div>
-<div id="sponsors">
-    <span class="sp-label">Partners</span>
-    <div class="sp-logos" id="sp-logos"></div>
+    <div class="sponsor-end" id="sponsor-end">
+        <span class="se-eyebrow" id="se-eyebrow">Powered by</span>
+        <div class="se-logo" id="se-logo"></div>
+    </div>
 </div>
 <div id="err">No standings to show yet.</div>
 
@@ -160,14 +159,32 @@ const SPONSORS = [
     { name: 'Sim-Lab', href: 'https://sim-lab.eu/?ref=SPARKSTHEORY', img: '/simlab.png' },
 ];
 
+// Seconds each partner shows before rotating (only when there's >1).
+const SPONSOR_ROTATE_MS = 6000;
+
 function renderSponsors() {
     const params = new URLSearchParams(location.search);
-    if (params.get('sponsors') === 'off' || !SPONSORS.length) return;
-    const wrap = document.getElementById('sp-logos');
-    wrap.innerHTML = SPONSORS.map(s =>
-        `<span class="sp"><img src="${esc(s.img)}" alt="${esc(s.name)}" title="${esc(s.name)}"></span>`
-    ).join('');
-    document.getElementById('sponsors').classList.add('ready');
+    const end = document.getElementById('sponsor-end');
+    if (params.get('sponsors') === 'off' || !SPONSORS.length) { end.style.display = 'none'; return; }
+
+    const logo = document.getElementById('se-logo');
+    document.getElementById('se-eyebrow').textContent = SPONSORS.length > 1 ? 'Partners' : 'Powered by';
+    const show = i => {
+        const s = SPONSORS[i];
+        logo.innerHTML = `<img src="${esc(s.img)}" alt="${esc(s.name)}" title="${esc(s.name)}">`;
+    };
+    show(0);
+    end.classList.add('ready');
+
+    // Rotate through partners one at a time when there's more than one.
+    if (SPONSORS.length > 1) {
+        let i = 0;
+        setInterval(() => {
+            i = (i + 1) % SPONSORS.length;
+            logo.style.opacity = '0';
+            setTimeout(() => { show(i); logo.style.opacity = '1'; }, 250);
+        }, SPONSOR_ROTATE_MS);
+    }
 }
 renderSponsors();
 
