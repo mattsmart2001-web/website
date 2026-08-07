@@ -250,6 +250,39 @@
         .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
         .empty-msg { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
 
+        /* Positions Gained */
+        .pg-mover { background: linear-gradient(160deg, rgba(255,209,102,0.10), rgba(255,209,102,0.02)); border: 1px solid rgba(255,209,102,0.28); border-radius: 14px; padding: 1.1rem 1.3rem; display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.1rem; }
+        .pg-mover .pg-label { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+        .pg-mover .pg-name { font-weight: 700; font-size: 1.05rem; margin-top: 0.15rem; }
+        .pg-mover .pg-name a { color: var(--text); text-decoration: none; }
+        .pg-mover .pg-name a:hover { color: var(--gold); }
+        .pg-mover .pg-meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.1rem; }
+        .pg-mover .pg-net { font-family: 'Anton', sans-serif; font-size: 2.4rem; line-height: 1; color: var(--green); margin-left: auto; }
+        .pg-av { width: 40px; height: 40px; border-radius: 50%; background: #1b2230; display: inline-flex; align-items: center; justify-content: center; font-family: 'Anton', sans-serif; color: var(--muted); font-size: 1rem; flex-shrink: 0; object-fit: cover; }
+        .pg-board { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .pg-board table { width: 100%; border-collapse: collapse; }
+        .pg-board th { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+        .pg-board th.center { text-align: center; } .pg-board th.net-col { text-align: center; width: 34%; }
+        .pg-board td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; vertical-align: middle; }
+        .pg-board tr:last-child td { border-bottom: none; }
+        .pg-board tr:hover td { background: rgba(255,255,255,0.02); }
+        .pg-pos { font-family: 'Orbitron', sans-serif; color: var(--muted); text-align: center; width: 44px; }
+        .pg-board tr.r1 .pg-pos { color: var(--gold); } .pg-board tr.r2 .pg-pos { color: var(--silver); } .pg-board tr.r3 .pg-pos { color: var(--bronze); }
+        .pg-dcell { display: flex; align-items: center; gap: 0.6rem; }
+        .pg-dname { font-weight: 700; } .pg-dname a { color: var(--text); text-decoration: none; } .pg-dname a:hover { color: var(--gold); }
+        .pg-flag { margin-right: 0.2rem; }
+        .pg-avg { font-family: 'Orbitron', sans-serif; font-size: 0.82rem; text-align: center; }
+        .pg-netwrap { display: flex; align-items: center; gap: 0.7rem; }
+        .pg-bar { position: relative; flex: 1; height: 15px; background: rgba(255,255,255,0.04); border-radius: 4px; min-width: 90px; }
+        .pg-bar .mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: rgba(255,255,255,0.18); }
+        .pg-bar .fill { position: absolute; top: 2px; bottom: 2px; border-radius: 3px; }
+        .pg-bar .fill.pos { left: 50%; background: linear-gradient(90deg, rgba(34,197,94,0.5), var(--green)); }
+        .pg-bar .fill.neg { right: 50%; background: linear-gradient(270deg, rgba(248,113,113,0.5), #f87171); }
+        .pg-netnum { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 0.92rem; min-width: 44px; text-align: right; }
+        .pg-netnum.pos { color: var(--green); } .pg-netnum.neg { color: #f87171; } .pg-netnum.zero { color: var(--muted); }
+        .pg-foot { color: var(--muted); font-size: 0.78rem; margin-top: 0.8rem; line-height: 1.5; }
+        @media (max-width: 640px) { .pg-board th.hide-mob, .pg-board td.hide-mob { display: none; } .pg-board th.net-col { width: auto; } }
+
         /* Compare Drivers */
         .compare-picker { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
         .compare-picker select { flex: 1; min-width: 180px; padding: 0.6rem 0.8rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.9rem; }
@@ -428,8 +461,77 @@ function teamLeaderboardHTML(title, rows, valueFmt = v => v) {
     </div>`;
 }
 
+// ISO alpha-2 → flag emoji (regional indicator letters), no dependency.
+function flagEmoji(cc) {
+    if (!cc || cc.length !== 2) return '';
+    return String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+function pgAvatar(photo, name) {
+    if (photo) return `<img class="pg-av" src="${esc(photo)}" alt="" loading="lazy">`;
+    const init = (name || '?').trim().charAt(0).toUpperCase() || '#';
+    return `<span class="pg-av">${esc(init)}</span>`;
+}
+
+// Positions Gained section — biggest mover highlight + a diverging-bar board.
+function positionsGainedHTML(rows) {
+    if (!rows.length) return '';
+    const sign = n => (n > 0 ? '+' : '') + n;
+    const maxAbs = Math.max(1, ...rows.map(r => Math.abs(r.net)));
+    const top = rows[0];
+    const mover = top && top.net > 0 ? `
+        <div class="pg-mover">
+            ${pgAvatar(top.photo, top.name)}
+            <div>
+                <div class="pg-label">Top overtaker</div>
+                <div class="pg-name">${flagEmoji(top.nationality)} ${top.slug ? `<a href="/endurance/drivers/?slug=${esc(top.slug)}">${esc(top.name)}</a>` : esc(top.name)}</div>
+                <div class="pg-meta">${top.races} race${top.races === 1 ? '' : 's'} · +${(top.net / top.races).toFixed(1)} avg / race</div>
+            </div>
+            <span class="pg-net">+${top.net}</span>
+        </div>` : '';
+
+    const body = rows.map((d, i) => {
+        const pct = Math.abs(d.net) / maxAbs * 50;
+        const cls = d.net > 0 ? 'pos' : d.net < 0 ? 'neg' : 'zero';
+        const fill = d.net === 0 ? '' : `<span class="fill ${d.net > 0 ? 'pos' : 'neg'}" style="width:${pct.toFixed(1)}%"></span>`;
+        const avg = d.net / d.races;
+        const avgColor = d.net > 0 ? 'var(--green)' : d.net < 0 ? '#f87171' : 'var(--muted)';
+        const nameLink = d.slug ? `<a href="/endurance/drivers/?slug=${esc(d.slug)}">${esc(d.name)}</a>` : esc(d.name);
+        return `<tr class="r${i + 1}">
+            <td class="pg-pos">${i + 1}</td>
+            <td><div class="pg-dcell">${pgAvatar(d.photo, d.name)}<div class="pg-dname"><span class="pg-flag">${flagEmoji(d.nationality)}</span>${nameLink}</div></div></td>
+            <td class="center muted hide-mob">${d.races}</td>
+            <td class="pg-avg hide-mob" style="color:${avgColor}">${d.net === 0 ? '0.0' : sign(avg.toFixed(1))}</td>
+            <td>
+                <div class="pg-netwrap">
+                    <div class="pg-bar"><span class="mid"></span>${fill}</div>
+                    <span class="pg-netnum ${cls}">${d.net === 0 ? '0' : sign(d.net)}</span>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `
+        <div class="section">
+            <div class="section-title">Positions Gained</div>
+            ${mover}
+            <div class="pg-board">
+                <table>
+                    <thead><tr>
+                        <th class="center">#</th>
+                        <th>Driver</th>
+                        <th class="center hide-mob">Races</th>
+                        <th class="center hide-mob">Avg</th>
+                        <th class="net-col">Net Positions</th>
+                    </tr></thead>
+                    <tbody>${body}</tbody>
+                </table>
+            </div>
+            <p class="pg-foot">Grid position minus finishing position, across all classified finishes with a qualifying time. Co-drivers share their car's result.</p>
+        </div>`;
+}
+
 async function load() {
-    const [hofRes, careerRes, ratingsRes, circuitsRes, seasonRes, teamStandingsRes] = await Promise.all([
+    const [hofRes, careerRes, ratingsRes, circuitsRes, seasonRes, teamStandingsRes, resultsRes, qualiRes, driversRes] = await Promise.all([
         sb.from('hall_of_fame_records').select('*, drivers(display_name,slug)').order('sort_order'),
         sb.from('driver_career_stats').select('*'),
         sb.from('driver_current_ratings').select('driver_id, driver_name, driver_slug, rating, peak_rating, last_rated_at'),
@@ -439,6 +541,12 @@ async function load() {
         // is derived from — aggregated client-side into career totals below,
         // same reduce() pattern teams/index.html's own profile page already uses.
         sb.from('team_standings').select('*'),
+        // Positions Gained (grid → flag): entry results with their drivers,
+        // matched to qualifying grid slots. Attributed to each driver on the
+        // car, classified finishes only.
+        sb.from('results').select('event_id, entry_id, finish_position, status, result_drivers(driver_id)'),
+        sb.from('qualifying_results').select('event_id, entry_id, position'),
+        sb.from('drivers').select('id, display_name, slug, nationality, photo_url'),
     ]);
 
     const content = document.getElementById('content');
@@ -585,7 +693,30 @@ async function load() {
             <div id="compare-result"></div>
         </div>` : '';
 
-    content.innerHTML = hofHTML + leaderboardsHTML + compareHTML + recordsHTML;
+    // Positions Gained — grid slot vs finish, per entry-result, attributed to
+    // each driver on the car (classified finishes with a qualifying time).
+    const gridByKey = new Map();
+    (qualiRes.data || []).forEach(q => gridByKey.set(q.event_id + ':' + q.entry_id, q.position));
+    const pgAcc = new Map();
+    (resultsRes.data || []).forEach(r => {
+        if (r.status !== 'classified' || r.finish_position == null) return;
+        const grid = gridByKey.get(r.event_id + ':' + r.entry_id);
+        if (grid == null) return;
+        const net = grid - r.finish_position;
+        (r.result_drivers || []).forEach(rd => {
+            const a = pgAcc.get(rd.driver_id) || { net: 0, races: 0 };
+            a.net += net; a.races += 1;
+            pgAcc.set(rd.driver_id, a);
+        });
+    });
+    const driverById = new Map((driversRes.data || []).map(d => [d.id, d]));
+    const pgRows = [...pgAcc.entries()].map(([id, a]) => {
+        const d = driverById.get(id) || {};
+        return { id, name: d.display_name || 'Unknown', slug: d.slug, nationality: d.nationality, photo: d.photo_url, net: a.net, races: a.races };
+    }).filter(r => r.races > 0)
+      .sort((x, y) => (y.net - x.net) || (y.races - x.races) || (x.name || '').localeCompare(y.name || ''));
+
+    content.innerHTML = hofHTML + leaderboardsHTML + positionsGainedHTML(pgRows) + compareHTML + recordsHTML;
 
     // Unfiltered ratings (not just last_rated_at like the leaderboards use)
     // so an unraced driver still shows their real provisional DR/SR-seeded
