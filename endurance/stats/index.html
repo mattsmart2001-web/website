@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Statistics &amp; Hall of Fame — GTEC Gran Turismo 7 Endurance Championship</title>
+    <title>Statistics &amp; Hall of Fame | GTEC Gran Turismo 7 Endurance Championship</title>
     <meta name="description" content="Hall of Fame, championship records and all-time statistics from GTEC, the Gran Turismo 7 endurance championship.">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <link rel="canonical" href="https://sparkstheory.co.uk/endurance/stats/">
@@ -386,7 +386,7 @@
 <div class="hero">
     <div class="hero-eyebrow">All-Time Records</div>
     <div class="hero-title">Statistics</div>
-    <div class="hero-sub">Hall of Fame, career leaderboards, and circuit records.</div>
+    <div class="hero-sub">Head-to-head driver compare, Hall of Fame, career leaderboards and circuit records.</div>
 </div>
 
 <div class="content" id="content">
@@ -583,13 +583,18 @@ async function load() {
     // Fetched once here (doesn't depend on which two drivers get picked)
     // rather than re-fetched on every dropdown change.
     let seasonFight = null;
+    let topTwo = [];
     const season = seasonRes.data;
     if (season) {
         const [{ count: remaining }, { data: standings }] = await Promise.all([
             sb.from('events').select('id', { count: 'exact', head: true })
                 .eq('season_id', season.id).in('status', ['scheduled', 'in_progress']),
-            sb.from('driver_standings').select('driver_id, points').eq('season_id', season.id),
+            sb.from('driver_standings').select('driver_id, points, wins, podiums').eq('season_id', season.id),
         ]);
+        // Current championship top two — used to pre-fill the compare panel.
+        topTwo = (standings || []).slice()
+            .sort((a, b) => (Number(b.points) - Number(a.points)) || (Number(b.wins || 0) - Number(a.wins || 0)) || (Number(b.podiums || 0) - Number(a.podiums || 0)))
+            .slice(0, 2).map(s => s.driver_id);
         const ps = season.points_systems;
         if (remaining && ps) {
             const maxPos = Math.max(0, ...(ps.points || []).map(p => Number(p.points) || 0));
@@ -623,7 +628,7 @@ async function load() {
         </div>` : `
         <div class="section">
             <div class="section-title">Hall of Fame</div>
-            <div class="empty-msg">No records yet — admins can populate this from the admin dashboard.</div>
+            <div class="empty-msg">No records yet. Admins can populate this from the admin dashboard.</div>
         </div>`;
 
     // Career leaderboards — annotate each with __value for the metric
@@ -689,11 +694,11 @@ async function load() {
     const compareHTML = career.length ? `
         <div class="section compare-feature">
             <div class="section-title">Head to Head</div>
-            <p class="compare-feature-sub">Pick any two drivers to see who comes out on top — points, wins, ratings and the season fight, side by side.</p>
+            <p class="compare-feature-sub">Pick any two drivers to see who comes out on top: points, wins, ratings and the season fight, side by side.</p>
             <div class="compare-picker">
-                <select id="compare-a"><option value="">— Select driver —</option>${driverOptions}</select>
+                <select id="compare-a"><option value="">Select a driver</option>${driverOptions}</select>
                 <span class="compare-vs">VS</span>
-                <select id="compare-b"><option value="">— Select driver —</option>${driverOptions}</select>
+                <select id="compare-b"><option value="">Select a driver</option>${driverOptions}</select>
             </div>
             <div id="compare-result"></div>
         </div>` : '';
@@ -725,7 +730,7 @@ async function load() {
     // Unfiltered ratings (not just last_rated_at like the leaderboards use)
     // so an unraced driver still shows their real provisional DR/SR-seeded
     // rating instead of a misleading 0.
-    if (career.length) setupCompare(career, ratingsRes.data || [], seasonFight);
+    if (career.length) setupCompare(career, ratingsRes.data || [], seasonFight, topTwo);
 }
 
 // Splits a formatted value like "1799<span class=...>Platinum</span>" into
@@ -785,7 +790,7 @@ function championshipFight(seasonFight, driverIdA, driverIdB) {
     return { tied: false, leaderIsA, gap, stillAlive, remaining: seasonFight.remaining };
 }
 
-function setupCompare(career, ratings, seasonFight) {
+function setupCompare(career, ratings, seasonFight, preselect) {
     const selA = document.getElementById('compare-a');
     const selB = document.getElementById('compare-b');
     const result = document.getElementById('compare-result');
@@ -902,6 +907,17 @@ function setupCompare(career, ratings, seasonFight) {
 
     selA.addEventListener('change', update);
     selB.addEventListener('change', update);
+
+    // Pre-fill with the current championship top two so the panel shows a live
+    // comparison on load instead of two empty selects.
+    if (Array.isArray(preselect) && preselect.length === 2) {
+        const [a, b] = preselect;
+        const has = id => career.some(d => d.driver_id === id);
+        if (a && b && a !== b && has(a) && has(b)) {
+            selA.value = a; selB.value = b;
+            update();
+        }
+    }
 }
 
 load();
