@@ -91,6 +91,39 @@
     .entry .pts-label { font-size: 0.62rem; color: var(--muted); margin-left: 0.15em; }
     .entry .sep { color: var(--border); font-size: 0.9rem; }
 
+    /* Sponsor strip — sits directly beneath the ticker, subordinate to it. */
+    #sponsors {
+        display: none;
+        align-items: center;
+        gap: 1.1rem;
+        height: 40px;
+        width: 100%;
+        background: rgba(8, 11, 16, 0.82);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+        padding: 0 1.1rem;
+        overflow: hidden;
+    }
+    #sponsors.ready { display: flex; }
+    #sponsors .sp-label {
+        flex-shrink: 0;
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.55rem;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--gold);
+        padding-right: 1.1rem;
+        border-right: 1px solid var(--border);
+    }
+    #sponsors .sp-logos { display: flex; align-items: center; gap: 1.5rem; min-width: 0; overflow: hidden; }
+    #sponsors .sp { display: inline-flex; align-items: center; height: 24px; flex-shrink: 0; }
+    #sponsors .sp img {
+        height: 100%; width: auto; max-width: 130px; object-fit: contain;
+        filter: brightness(1.05); opacity: 0.95;
+    }
+
     #err { display: none; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 1rem; }
 </style>
 </head>
@@ -99,6 +132,10 @@
 <div id="bar">
     <div class="label"><span class="l1">GTEC</span><span class="l2">STANDINGS</span></div>
     <div class="track-wrap"><div class="track" id="track"></div></div>
+</div>
+<div id="sponsors">
+    <span class="sp-label">Partners</span>
+    <div class="sp-logos" id="sp-logos"></div>
 </div>
 <div id="err">No standings to show yet.</div>
 
@@ -115,6 +152,26 @@ const esc = s => { if (s == null) return ''; return String(s).replace(/&/g,'&amp
 const REFRESH_MS = 90000;
 // Seconds of scroll per entry — tune the overall speed here.
 const SECONDS_PER_ENTRY = 1.8;
+
+// Sponsor strip beneath the ticker. Edit this list to add/remove partners
+// (logos live at the site root). Add ?sponsors=off to the browser-source
+// URL to hide the strip for a ticker-only scene.
+const SPONSORS = [
+    { name: 'Sim-Lab',        href: 'https://sim-lab.eu/?ref=SPARKSTHEORY',                   img: '/simlab.png' },
+    { name: 'Thrustmaster',   href: 'https://shop.thrustmaster.com/',                         img: '/logo_tm_simracing.png' },
+    { name: 'All Mapped Out', href: 'https://allmappedout.com/',                              img: '/all-mapped-out-logo.png' },
+];
+
+function renderSponsors() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('sponsors') === 'off' || !SPONSORS.length) return;
+    const wrap = document.getElementById('sp-logos');
+    wrap.innerHTML = SPONSORS.map(s =>
+        `<span class="sp"><img src="${esc(s.img)}" alt="${esc(s.name)}" title="${esc(s.name)}"></span>`
+    ).join('');
+    document.getElementById('sponsors').classList.add('ready');
+}
+renderSponsors();
 
 async function render() {
     const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
