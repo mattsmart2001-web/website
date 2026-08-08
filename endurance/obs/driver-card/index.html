@@ -30,6 +30,7 @@
 
     #card {
         display: none;
+        position: relative;
         align-items: stretch;
         gap: 0;
         background: linear-gradient(115deg, rgba(12, 16, 23, 0.95), rgba(8, 11, 16, 0.82));
@@ -45,6 +46,26 @@
     #card.ready { display: flex; }
     @keyframes cardIn {
         to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Periodic shine sweep (added via the .flash class every ~45s). */
+    #card::after {
+        content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+        border-radius: inherit;
+        background: linear-gradient(105deg, transparent 34%, rgba(255,255,255,0.16) 47%, rgba(255,209,102,0.12) 50%, transparent 63%);
+        transform: translateX(-130%);
+    }
+    #card.flash::after { animation: shineSweep 1.15s ease-in-out; }
+    @keyframes shineSweep { from { transform: translateX(-130%); } to { transform: translateX(130%); } }
+    #card.flash .stat-value { animation: statPop 1.1s ease-in-out; }
+    @keyframes statPop {
+        0%, 100% { transform: scale(1); filter: none; }
+        42% { transform: scale(1.13); filter: drop-shadow(0 0 10px rgba(255,209,102,0.55)); }
+    }
+    #card.flash .mfr-accent { animation: accentPulse 1.15s ease-in-out; }
+    @keyframes accentPulse {
+        0%, 100% { box-shadow: 0 0 14px -2px var(--mfr-color, var(--gold)); }
+        45% { box-shadow: 0 0 22px 1px var(--mfr-color, var(--gold)); }
     }
 
     .mfr-accent { width: 6px; flex-shrink: 0; background: var(--mfr-color, var(--gold)); box-shadow: 0 0 14px -2px var(--mfr-color, var(--gold)); }
@@ -165,6 +186,32 @@ async function render() {
     document.getElementById('d-stats').innerHTML = stats.join('');
 
     card.classList.add('ready');
+
+    // Count the headline numbers up on entrance so the card feels alive.
+    countUpStats();
+
+    // Every ~45s, sweep a shine across the card and pop the stats — a subtle,
+    // recurring flourish for a card that lives on screen the whole stream.
+    setInterval(() => {
+        card.classList.remove('flash');
+        void card.offsetWidth;           // restart the animation
+        card.classList.add('flash');
+    }, 45000);
+}
+
+function countUpStats() {
+    document.querySelectorAll('#d-stats .stat-value').forEach(el => {
+        const target = parseInt(el.textContent, 10);
+        if (!Number.isFinite(target)) return;
+        const dur = 850, start = performance.now();
+        const tick = now => {
+            const t = Math.min(1, (now - start) / dur);
+            el.textContent = Math.round(target * (1 - Math.pow(1 - t, 3)));
+            if (t < 1) requestAnimationFrame(tick);
+            else el.textContent = target;
+        };
+        requestAnimationFrame(tick);
+    });
 }
 
 render();
