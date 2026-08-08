@@ -148,10 +148,31 @@ async function render() {
     if (!driver) { document.getElementById('err').textContent = 'Driver not found.'; document.getElementById('err').style.display = 'block'; return; }
 
     const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
-    const [{ data: rating }, { data: standing }] = await Promise.all([
+    const [{ data: rating }, { data: standing }, splitRes] = await Promise.all([
         sb.from('driver_current_ratings').select('rating').eq('driver_id', driver.id).maybeSingle(),
         season ? sb.from('driver_standings').select('points').eq('driver_id', driver.id).eq('season_id', season.id).maybeSingle() : Promise.resolve({ data: null }),
+        // The driver's split (lobby) for the live/next round of the season —
+        // only known once admin has allocated splits for that event.
+        season ? sb.from('entry_drivers')
+            .select('entries!inner(lobby_number, events!inner(status, starts_at, season_id))')
+            .eq('driver_id', driver.id)
+            .eq('entries.events.season_id', season.id)
+            .in('entries.events.status', ['in_progress', 'scheduled'])
+            : Promise.resolve({ data: [] }),
     ]);
+
+    // Prefer an in-progress round, else the soonest upcoming one; only if a
+    // split has actually been allocated.
+    let splitNumber = null;
+    const splitCands = (splitRes.data || []).map(r => r.entries).filter(e => e && e.lobby_number != null);
+    if (splitCands.length) {
+        splitCands.sort((a, b) => {
+            const ai = a.events.status === 'in_progress' ? 0 : 1;
+            const bi = b.events.status === 'in_progress' ? 0 : 1;
+            return (ai - bi) || (new Date(a.events.starts_at) - new Date(b.events.starts_at));
+        });
+        splitNumber = splitCands[0].lobby_number;
+    }
 
     const card = document.getElementById('card');
     if (driver.manufacturers?.brand_color) card.style.setProperty('--mfr-color', driver.manufacturers.brand_color);
@@ -176,6 +197,9 @@ async function render() {
     document.getElementById('d-sub').innerHTML = subParts.join(' <span style="opacity:0.4">·</span> ');
 
     const stats = [];
+    if (splitNumber != null) {
+        stats.push(`<div class="stat"><div class="stat-label">Split</div><div class="stat-value gold no-count">${splitNumber}</div></div>`);
+    }
     if (standing?.points != null) {
         stats.push(`<div class="stat"><div class="stat-label">Points</div><div class="stat-value gold">${Number(standing.points)}</div></div>`);
     }
@@ -200,7 +224,7 @@ async function render() {
 }
 
 function countUpStats() {
-    document.querySelectorAll('#d-stats .stat-value').forEach(el => {
+    document.querySelectorAll('#d-stats .stat-value:not(.no-count)').forEach(el => {
         const target = parseInt(el.textContent, 10);
         if (!Number.isFinite(target)) return;
         const dur = 850, start = performance.now();
