@@ -107,6 +107,22 @@
     }
     .stat-tier { margin-top: 4px; transform: scale(0.9); transform-origin: center; }
 
+    /* Large ghosted manufacturer logo bleeding in from the right, faded so it
+       reads as a brand watermark without fighting the text. */
+    .mfr-ghost {
+        position: absolute; top: 50%; right: -20px; transform: translateY(-50%);
+        height: 235%; aspect-ratio: 1 / 1; z-index: 0; pointer-events: none;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .mfr-ghost img {
+        height: 100%; width: 100%; object-fit: contain;
+        opacity: 0.2; filter: saturate(1.15);
+        -webkit-mask-image: linear-gradient(100deg, transparent 8%, #000 60%);
+                mask-image: linear-gradient(100deg, transparent 8%, #000 60%);
+    }
+    /* Keep all card content above the watermark. */
+    .mfr-accent, .avatar-wrap, .info, .stats { position: relative; z-index: 1; }
+
     .gtec-mark {
         position: absolute; bottom: 4px; right: 8px;
         font-family: 'Orbitron', sans-serif; font-size: 0.5rem; font-weight: 700;
@@ -118,7 +134,7 @@
 </head>
 <body>
 
-<div id="card"><div class="mfr-accent"></div><div class="avatar-wrap" id="avatar"></div><div class="info">
+<div id="card"><div class="mfr-ghost" id="mfr-ghost"></div><div class="mfr-accent"></div><div class="avatar-wrap" id="avatar"></div><div class="info">
     <div class="name-row"><span class="name" id="d-name"></span><span class="car-num" id="d-num"></span></div>
     <div class="sub-row" id="d-sub"></div>
 </div><div class="stats" id="d-stats"></div></div>
@@ -176,6 +192,11 @@ async function render() {
 
     const card = document.getElementById('card');
     if (driver.manufacturers?.brand_color) card.style.setProperty('--mfr-color', driver.manufacturers.brand_color);
+
+    // Big ghosted manufacturer logo behind the card.
+    if (driver.manufacturers?.logo_url) {
+        document.getElementById('mfr-ghost').innerHTML = `<img src="${esc(driver.manufacturers.logo_url)}" alt="">`;
+    }
 
     const avatar = document.getElementById('avatar');
     avatar.innerHTML = driver.photo_url
