@@ -110,7 +110,7 @@
   <section>
     <div class="sec-label">The Opportunity</div>
     <h2>Not a shout-out. <span class="thin">A campaign.</span></h2>
-    <p class="lead">GTEC pairs an established <span class="set">38.9K</span>-subscriber GT7 creator (<span class="set">1.7M+</span> views) with a fully-branded championship: a recurring season of live-broadcast racing that draws <span class="set">1,000+</span> combined concurrent viewers across the grid's streams, a driver grid of <span class="set">162</span> across <span class="set">10+</span> splits, and a purpose-built platform with standings, ratings and broadcast graphics.</p>
+    <p class="lead">GTEC pairs an established <span class="set">38.9K</span>-subscriber GT7 creator (<span class="set">1.7M+</span> views) with a fully-branded championship: a recurring season of live-broadcast racing that draws <span class="set">1,000+</span> combined concurrent viewers across the grid's streams, a driver grid of <span class="set" id="stat-drivers-inline">162</span> across <span class="set">10+</span> splits, and a purpose-built platform with standings, ratings and broadcast graphics.</p>
     <p class="body">The result is something a one-off influencer post can't offer: an ongoing, ownable property in front of a young, engaged gaming audience. The people who buy the hardware, and exactly who energy, coffee and lifestyle brands compete to reach, season after season, race after race.</p>
   </section>
 
@@ -234,7 +234,10 @@
     if (!window.GTEC_CONFIG || !window.supabase) return;
     const sb = window.supabase.createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
     const { count } = await sb.from('drivers').select('id', { count: 'exact', head: true });
-    if (count) { const el = document.getElementById('stat-drivers'); if (el) el.textContent = count; }
+    if (count) {
+        const el = document.getElementById('stat-drivers'); if (el) el.textContent = count;
+        const inl = document.getElementById('stat-drivers-inline'); if (inl) inl.textContent = count;
+    }
     const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
     if (season) {
       const { data: ents } = await sb.from('entries').select('lobby_number, events!inner(season_id)').eq('events.season_id', season.id);
