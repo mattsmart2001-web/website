@@ -566,8 +566,8 @@ async function loadResults(slug) {
 function renderLobbySection(title, rows) {
     const classified = rows.filter(r => r.rd?.finish_position != null && (r.rd?.status === 'classified' || r.rd?.classified !== false))
         .sort((a, b) => (a.rd.finish_position || 999) - (b.rd.finish_position || 999));
-    // Non-classified drivers, ordered DNS first, then DNF, then DSQ / withdrawn.
-    const UNCL_RANK = { dns: 0, dnf: 1, dsq: 2, withdrawn: 3 };
+    // Non-classified drivers, ordered DNF first, then DNS, then DSQ / withdrawn.
+    const UNCL_RANK = { dnf: 0, dns: 1, dsq: 2, withdrawn: 3 };
     const unclassified = rows.filter(r => r.rd && (r.rd.classified === false || (r.rd.status && r.rd.status !== 'classified')))
         .sort((a, b) => {
             const ra = UNCL_RANK[a.rd.status] ?? 9;
