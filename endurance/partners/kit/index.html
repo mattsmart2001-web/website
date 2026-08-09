@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>GTEC-SparksTheory-Media-Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  :root{
+    --bg:#0a0e14; --bg2:#0f1520; --card:#141b28; --line:rgba(255,255,255,.08);
+    --ink:#eef2f7; --mut:#94a3b8; --dim:#64748b; --gold:#ffd166; --gold2:#f0b429;
+  }
+  html,body{ background:var(--bg); color:var(--ink); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  .set{ font-family:'Orbitron',sans-serif; }
+  .page{
+    width:210mm; height:297mm; position:relative; overflow:hidden;
+    background:
+      radial-gradient(1200px 400px at 80% -5%, rgba(255,209,102,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(59,130,246,.08), transparent 55%),
+      var(--bg);
+    padding:14mm 14mm 12mm;
+    display:flex; flex-direction:column;
+  }
+  .page + .page{ page-break-before:always; }
+
+  .label{ font-family:'Orbitron',sans-serif; font-size:8.5pt; font-weight:600; letter-spacing:.32em; text-transform:uppercase; color:var(--gold); margin-bottom:5pt; }
+  h2{ font-family:'Orbitron',sans-serif; font-weight:700; font-size:18pt; letter-spacing:-.01em; line-height:1.08; margin-bottom:7pt; }
+  h2 .thin{ color:var(--dim); font-weight:500; }
+  .lead{ font-size:10.5pt; line-height:1.5; color:#cbd5e1; }
+  .body{ font-size:9.5pt; line-height:1.55; color:var(--mut); }
+  .gold{ color:var(--gold); }
+
+  .top{ display:flex; align-items:center; justify-content:space-between; gap:10mm; padding-bottom:9mm; border-bottom:1px solid var(--line); }
+  .brand{ display:flex; flex-direction:column; align-items:center; gap:6pt; flex:1; }
+  .brand img.g{ height:22mm; width:auto; }
+  .brand img.s{ height:24mm; width:auto; }
+  .brand .cap{ font-family:'Orbitron',sans-serif; font-size:7.5pt; letter-spacing:.28em; text-transform:uppercase; color:var(--dim); }
+  .times{ font-family:'Orbitron',sans-serif; font-size:20pt; font-weight:700; color:var(--gold); opacity:.85; }
+
+  .hero{ margin-top:10mm; }
+  .hero .kick{ font-family:'Orbitron',sans-serif; font-size:8.5pt; letter-spacing:.3em; text-transform:uppercase; color:var(--gold); margin-bottom:8pt; }
+  .hero h1{ font-family:'Orbitron',sans-serif; font-weight:800; font-size:29pt; line-height:1.05; letter-spacing:-.015em; margin-bottom:10pt; }
+  .hero h1 .thin{ color:var(--dim); font-weight:500; }
+  .hero p{ font-size:11pt; line-height:1.55; color:#cbd5e1; max-width:150mm; }
+  .hero p b{ color:var(--ink); }
+
+  .dual{ margin-top:11mm; display:grid; grid-template-columns:1fr 1fr; gap:6mm; }
+  .dcard{ background:var(--card); border:1px solid var(--line); border-radius:10pt; padding:6mm 6mm 5mm; }
+  .dcard .dh{ display:flex; align-items:center; gap:6pt; margin-bottom:7pt; }
+  .dcard .dh .tag{ font-family:'Orbitron',sans-serif; font-size:8pt; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); }
+  .dcard h3{ font-family:'Orbitron',sans-serif; font-size:12.5pt; font-weight:700; margin-bottom:3pt; }
+  .dcard .sub{ font-size:9pt; color:var(--mut); line-height:1.45; margin-bottom:8pt; }
+  .dcard .rows{ display:flex; flex-direction:column; gap:5pt; margin-top:auto; }
+  .drow{ display:flex; align-items:baseline; justify-content:space-between; padding:4pt 0; border-top:1px solid var(--line); }
+  .drow:first-child{ border-top:none; }
+  .drow .n{ font-family:'Orbitron',sans-serif; font-size:15pt; font-weight:700; color:var(--gold); }
+  .drow .l{ font-size:8.5pt; color:var(--mut); text-transform:uppercase; letter-spacing:.08em; text-align:right; }
+
+  .reach{ margin-top:7mm; }
+  .reach .rlab{ font-family:'Orbitron',sans-serif; font-size:8pt; font-weight:600; letter-spacing:.28em; text-transform:uppercase; color:var(--gold); margin-bottom:5pt; }
+  .reach .rgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:5mm; }
+  .rtile{ background:var(--card); border:1px solid var(--line); border-radius:9pt; padding:5mm 4mm 4.5mm; text-align:center; }
+  .rtile .rn{ font-family:'Orbitron',sans-serif; font-size:19pt; font-weight:800; color:var(--gold); line-height:1; }
+  .rtile .rl{ font-size:8.2pt; color:var(--mut); text-transform:uppercase; letter-spacing:.08em; margin-top:5pt; line-height:1.3; }
+
+  .band{ margin-top:auto; padding-top:7mm; }
+  .band .combo{ background:linear-gradient(90deg, rgba(255,209,102,.10), rgba(255,209,102,.03)); border:1px solid rgba(255,209,102,.25); border-radius:10pt; padding:6mm 7mm; display:flex; align-items:center; justify-content:space-between; gap:6mm; }
+  .band .combo .big{ font-family:'Orbitron',sans-serif; font-size:22pt; font-weight:800; color:var(--gold); line-height:1; }
+  .band .combo .txt{ font-size:9.5pt; color:#cbd5e1; line-height:1.45; }
+
+  .p2head{ display:flex; align-items:center; justify-content:space-between; padding-bottom:6mm; border-bottom:1px solid var(--line); margin-bottom:8mm; }
+  .p2head img{ height:9mm; }
+  .p2head .r{ font-family:'Orbitron',sans-serif; font-size:7.5pt; letter-spacing:.26em; text-transform:uppercase; color:var(--dim); }
+
+  section{ margin-bottom:8mm; }
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:5mm; margin-top:5pt; }
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:9pt; padding:5mm 5.5mm; }
+  .panel h4{ font-family:'Orbitron',sans-serif; font-size:9.5pt; font-weight:700; color:var(--ink); margin-bottom:6pt; letter-spacing:.02em; }
+  .panel ul{ list-style:none; }
+  .panel li{ position:relative; padding-left:13pt; font-size:9pt; line-height:1.45; color:var(--mut); margin-bottom:5pt; }
+  .panel li:last-child{ margin-bottom:0; }
+  .panel li::before{ content:'▸'; position:absolute; left:0; top:0; color:var(--gold); font-size:8pt; }
+  .panel li b{ color:#cbd5e1; }
+
+  .inv{ display:grid; grid-template-columns:repeat(3,1fr); gap:4mm; margin-top:5pt; }
+  .ic{ background:var(--card); border:1px solid var(--line); border-radius:8pt; padding:4.5mm 4mm; }
+  .ic .em{ font-size:14pt; margin-bottom:4pt; }
+  .ic .t{ font-family:'Orbitron',sans-serif; font-size:8.5pt; font-weight:700; margin-bottom:2pt; letter-spacing:.01em; }
+  .ic .d{ font-size:7.8pt; color:var(--dim); line-height:1.35; }
+
+  .ways{ display:flex; flex-wrap:wrap; gap:3mm; margin-top:6pt; }
+  .way{ font-family:'Orbitron',sans-serif; font-size:8pt; font-weight:600; letter-spacing:.04em; color:var(--gold); border:1px solid rgba(255,209,102,.35); background:rgba(255,209,102,.06); border-radius:999px; padding:4pt 10pt; }
+
+  .cta{ margin-top:auto; background:linear-gradient(180deg, rgba(255,209,102,.08), rgba(255,209,102,.02)); border:1px solid rgba(255,209,102,.28); border-radius:11pt; padding:7mm 8mm; text-align:center; }
+  .cta h2{ font-size:16pt; margin-bottom:5pt; }
+  .cta p{ font-size:9.5pt; color:#cbd5e1; margin-bottom:8pt; }
+  .contact{ display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:wrap; font-family:'Orbitron',sans-serif; font-size:9.5pt; font-weight:600; }
+  .contact a{ color:var(--gold); text-decoration:none; padding:0 10pt; }
+  .contact .sep{ color:var(--dim); }
+  .foot{ text-align:center; font-family:'Orbitron',sans-serif; font-size:7pt; letter-spacing:.22em; text-transform:uppercase; color:var(--dim); margin-top:6mm; }
+
+  /* Screen-only chrome: a small toolbar and centred document preview. */
+  .toolbar{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    padding:.7rem 1.1rem; background:rgba(8,11,16,.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .toolbar .tl{ font-family:'Orbitron',sans-serif; font-size:.62rem; letter-spacing:.18em; text-transform:uppercase; color:var(--mut); }
+  .toolbar .tl b{ color:var(--gold); }
+  .toolbar button{
+    font-family:'Orbitron',sans-serif; font-size:.66rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    color:#14100a; background:linear-gradient(135deg,var(--gold),var(--gold2)); border:none;
+    padding:.6rem 1.1rem; border-radius:999px; cursor:pointer;
+  }
+  @media screen{
+    body{ background:#05070b; padding:64px 16px 48px; display:flex; flex-direction:column; align-items:center; gap:18px; }
+    .page{ box-shadow:0 24px 70px rgba(0,0,0,.55); border-radius:6px; }
+  }
+  @media print{ .toolbar{ display:none !important; } body{ background:#fff; padding:0; } }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="tl"><b>GTEC × SparksTheory</b> · Media Kit · choose <b>Save as PDF</b> as the destination</div>
+  <button onclick="window.print()">⬇ Save as PDF</button>
+</div>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <div class="top">
+    <div class="brand">
+      <img class="s" src="/endurance/assets/Sparks_logo_small.png" alt="SparksTheory">
+      <div class="cap">The Channel</div>
+    </div>
+    <div class="times">×</div>
+    <div class="brand">
+      <img class="g" src="/endurance/assets/gtec-logo.png" alt="GTEC">
+      <div class="cap">The Championship</div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="kick">Partnership Media Kit · 2026</div>
+    <h1>An established GT7 creator.<br><span class="thin">A championship to match.</span></h1>
+    <p>SparksTheory is a <b>38.9K-subscriber</b> Gran Turismo 7 channel with <b>1.7M+ views</b>. GTEC is the season-long endurance championship it runs and broadcasts live, week after week. Together they give a brand something a single sponsored post can't: an <b>ongoing, ownable property</b> in front of a young, hardware-hungry sim-racing audience.</p>
+  </div>
+
+  <div class="dual">
+    <div class="dcard">
+      <div class="dh"><span class="tag">▶ The Channel</span></div>
+      <h3>SparksTheory</h3>
+      <div class="sub">A dedicated Gran Turismo 7 creator on YouTube: live races, setups, and the home broadcast of every GTEC round.</div>
+      <div class="rows">
+        <div class="drow"><span class="n set">38.9K</span><span class="l">Subscribers</span></div>
+        <div class="drow"><span class="n set">1.7M</span><span class="l">Total views</span></div>
+        <div class="drow"><span class="n set">655</span><span class="l">Videos published</span></div>
+      </div>
+    </div>
+    <div class="dcard">
+      <div class="dh"><span class="tag">🏁 The Series</span></div>
+      <h3>GTEC</h3>
+      <div class="sub">Gran Turismo 7 Endurance Championship: a full season on a purpose-built platform with standings, ratings and broadcast graphics.</div>
+      <div class="rows">
+        <div class="drow"><span class="n set" id="k-drivers">162</span><span class="l">Registered drivers</span></div>
+        <div class="drow"><span class="n set" id="k-splits">10+</span><span class="l">Splits / divisions</span></div>
+        <div class="drow"><span class="n set">8</span><span class="l">Rounds per season</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reach">
+    <div class="rlab">Per-race reach</div>
+    <div class="rgrid">
+      <div class="rtile"><div class="rn set">5K</div><div class="rl">Avg views<br>per video</div></div>
+      <div class="rtile"><div class="rn set">6K</div><div class="rl">Avg views<br>per GTEC race</div></div>
+      <div class="rtile"><div class="rn set">350</div><div class="rl">Avg concurrent<br>on the live stream</div></div>
+    </div>
+  </div>
+
+  <div class="band">
+    <div class="combo">
+      <div class="big set">1,000+</div>
+      <div class="txt"><b style="color:#fff">Combined live viewers, every round.</b><br>Broadcast by SparksTheory and streamed by drivers across the grid, for a combined 1,000+ concurrent audience each race.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <div class="p2head">
+    <img src="/endurance/assets/gtec-logo.png" alt="GTEC">
+    <div class="r">Partnership Media Kit · SparksTheory</div>
+  </div>
+
+  <section>
+    <div class="label">The Audience</div>
+    <h2>Not just <span class="thin">viewers.</span></h2>
+    <div class="two">
+      <div class="panel">
+        <h4>Who they are</h4>
+        <ul>
+          <li>Dedicated Gran Turismo 7 players on PlayStation 5</li>
+          <li>Sim-racing enthusiasts who own, and upgrade, wheels, pedals, rigs and cockpits</li>
+          <li>Highly engaged: they follow a whole season, not a single clip</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>Why brands want them</h4>
+        <ul>
+          <li>High purchase intent for sim hardware &amp; peripherals</li>
+          <li>Repeat exposure across a whole season, not one video</li>
+          <li>A trusted creator's endorsement, in context, mid-race</li>
+          <li>A natural fit for hardware, <b>energy, coffee &amp; lifestyle</b> brands</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">What Partners Get</div>
+    <h2>Where your brand lives.</h2>
+    <div class="inv">
+      <div class="ic"><div class="em">🖥</div><div class="t">Broadcast overlay</div><div class="d">Logo on the live on-stream graphics, every race.</div></div>
+      <div class="ic"><div class="em">🌐</div><div class="t">Website sponsor rail</div><div class="d">Persistent placement across the GTEC platform.</div></div>
+      <div class="ic"><div class="em">🏁</div><div class="t">Award naming rights</div><div class="d">e.g. the "[Brand] Pole Position Award".</div></div>
+      <div class="ic"><div class="em">🗣</div><div class="t">On-stream shout-outs</div><div class="d">Read live by SparksTheory, plus social posts.</div></div>
+      <div class="ic"><div class="em">🎁</div><div class="t">Product &amp; prizes</div><div class="d">Your gear as season prizes for the grid.</div></div>
+      <div class="ic"><div class="em">⭐</div><div class="t">Title naming</div><div class="d">"GTEC, presented by [Brand]". The marquee slot.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Let's Build It</div>
+    <h2>Partnerships, <span class="thin">your way.</span></h2>
+    <p class="body">No rigid packages. A logo across the broadcast and platform, an affiliate arrangement, product and prizes for the grid, or your name on the whole championship: we'll shape a partnership around your brand, your goals and your budget.</p>
+    <div class="ways">
+      <span class="way">🌐 Logo placement</span>
+      <span class="way">🔗 Affiliate deals</span>
+      <span class="way">🎁 Product &amp; prizes</span>
+      <span class="way">🏁 Award naming</span>
+      <span class="way">⭐ Title sponsorship</span>
+    </div>
+  </section>
+
+  <div class="cta">
+    <div class="label" style="color:var(--gold)">Let's Talk</div>
+    <h2>Put your brand on the grid.</h2>
+    <p>Tell us what you want to achieve and we'll build a package around it.</p>
+    <div class="contact">
+      <a href="mailto:mattsmart2001@gmail.com">mattsmart2001@gmail.com</a><span class="sep">·</span>
+      <a href="https://sparkstheory.co.uk">sparkstheory.co.uk</a><span class="sep">·</span>
+      <a href="https://sparkstheory.co.uk/endurance/">GTEC live</a>
+    </div>
+  </div>
+  <div class="foot">GTEC · Gran Turismo 7 Endurance Championship · Powered by SparksTheory</div>
+</div>
+
+<script src="/endurance/assets/gtec-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+(async function () {
+  // Pull the current driver count + split count so the kit is always current;
+  // fall back silently to the static numbers if anything is unavailable.
+  try {
+    if (window.GTEC_CONFIG && window.supabase) {
+      const sb = window.supabase.createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+      const { count } = await sb.from('drivers').select('id', { count: 'exact', head: true });
+      if (count) { const el = document.getElementById('k-drivers'); if (el) el.textContent = count; }
+      const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+      if (season) {
+        const { data: ents } = await sb.from('entries').select('lobby_number, events!inner(season_id)').eq('events.season_id', season.id);
+        if (ents && ents.length) {
+          const splits = new Set(ents.map(e => e.lobby_number).filter(n => n != null)).size;
+          if (splits) { const el = document.getElementById('k-splits'); if (el) el.textContent = splits + '+'; }
+        }
+      }
+    }
+  } catch (e) { /* keep static fallbacks */ }
+
+  // Wait for fonts so the printed PDF renders in Orbitron, then open the
+  // browser's print dialog (choose "Save as PDF"). ?auto=0 skips auto-print.
+  try { await document.fonts.ready; } catch (e) {}
+  const params = new URLSearchParams(location.search);
+  if (params.get('auto') !== '0') {
+    setTimeout(() => window.print(), 400);
+  }
+})();
+</script>
+</body>
+</html>
