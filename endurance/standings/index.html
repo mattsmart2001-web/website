@@ -450,6 +450,9 @@
         .spot-3 .pod-av { border-color: rgba(224,165,110,0.85); box-shadow: 0 0 0 3px rgba(224,165,110,0.10), 0 6px 16px rgba(0,0,0,0.5); }
         .podium-gap { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; margin-top: 0.35rem; display: inline-block; padding: 0.14rem 0.55rem; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
         .podium-gap.leader { color: var(--gold); background: rgba(255,209,102,0.12); border-color: rgba(255,209,102,0.32); }
+        /* Team podium: manufacturer logo avatar + a small manufacturer caption. */
+        .pod-av-logo { object-fit: contain; padding: 16%; background: radial-gradient(circle at 50% 38%, rgba(255,255,255,0.05), var(--bg-2)); }
+        .podium-sub { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 0.04em; color: var(--muted); margin-top: 0.15rem; }
         .pod-av-init { font-family: 'Anton', sans-serif; color: var(--muted); }
         .podium-name { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.02em; line-height: 1.1; }
         .podium-pts { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
@@ -784,6 +787,38 @@ function animatePodium() {
     });
 }
 
+// Constructors rostrum — same design as the drivers podium, but the avatar
+// is the team's manufacturer logo (or a monogram) rather than a photo.
+function teamPodiumSpot(t, place, leaderPts) {
+    if (!t) return '';
+    const pts = Number(t.points) || 0;
+    const av = t.manufacturer_logo_url
+        ? `<img class="pod-av pod-av-logo" src="${esc(t.manufacturer_logo_url)}" alt="" loading="lazy">`
+        : `<span class="pod-av pod-av-init">${esc((t.team_name || '?').trim().charAt(0).toUpperCase())}</span>`;
+    const crown = place === 1 ? '<div class="pod-crown">👑</div>' : '';
+    const gapNum = leaderPts - pts;
+    const gap = place === 1
+        ? '<div class="podium-gap leader">★ Leader</div>'
+        : `<div class="podium-gap">−${gapNum.toFixed(gapNum % 1 === 0 ? 0 : 1)}</div>`;
+    const sub = t.manufacturer_name ? `<div class="podium-sub">${esc(t.manufacturer_name)}</div>` : '';
+    return `<div class="podium-spot spot-${place}">
+        <a class="podium-driver" href="/endurance/teams/?slug=${esc(t.team_slug)}">
+            <div class="pod-av-wrap">${crown}<span class="pod-halo"></span>${av}</div>
+            <div class="podium-name">${esc(t.team_name)}</div>
+            ${sub}
+            <div class="podium-pts"><span class="pod-pts-num" data-pts="${pts}">${pts.toFixed(pts % 1 === 0 ? 0 : 1)}</span> pts</div>
+            ${gap}
+        </a>
+        <div class="podium-step step-${place}"><span class="podium-rank">${place}</span></div>
+    </div>`;
+}
+function renderTeamPodium(list) {
+    if (!list || list.length < 3) return '';
+    const [p1, p2, p3] = list;
+    const leaderPts = Number(p1.points) || 0;
+    return `<div class="podium">${teamPodiumSpot(p2, 2, leaderPts)}${teamPodiumSpot(p1, 1, leaderPts)}${teamPodiumSpot(p3, 3, leaderPts)}</div>`;
+}
+
 async function setTab(t) {
     _tab = t;
     // Switching tabs always returns the Manufacturers view to its overview
@@ -969,6 +1004,7 @@ function renderTeams(panel) {
     }).join('');
 
     panel.innerHTML = `
+        ${renderTeamPodium(_teams)}
         <div class="standings">
             <table>
                 <thead><tr>
@@ -984,6 +1020,7 @@ function renderTeams(panel) {
                 <tbody>${rows}</tbody>
             </table>
         </div>`;
+    animatePodium();
 }
 
 function renderManufacturers(panel) {
