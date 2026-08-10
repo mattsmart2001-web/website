@@ -1049,6 +1049,7 @@ function renderManufacturers(panel) {
             <td class="lighter center hide-mob">${m.podiums}</td>
             <td class="lighter center hide-mob">${m.poles}</td>
             <td class="lighter center hide-mob">${m.fl}</td>
+            <td class="center hide-mob" style="font-family:'Orbitron',sans-serif;font-size:0.82rem;color:#cbd5e1">${m.drivers ? (points / m.drivers).toFixed(1) : '—'}</td>
             <td class="right">
                 <div class="points">${points.toFixed(points % 1 === 0 ? 0 : 1)}</div>
                 ${gap}
@@ -1067,6 +1068,7 @@ function renderManufacturers(panel) {
                     <th class="center hide-mob">Pod</th>
                     <th class="center hide-mob">Pole</th>
                     <th class="center hide-mob">FL</th>
+                    <th class="center hide-mob" title="Points per driver">Avg</th>
                     <th class="right">Points</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
@@ -1117,7 +1119,7 @@ function renderMfrDetail(panel) {
                 <span class="mfr-badge-lg">${mfrBadge(m.logo, m.color, m.name)}</span>
                 <div>
                     <div class="mfr-name">${esc(m.name)}</div>
-                    <div class="mfr-totals">${m.drivers} driver${m.drivers === 1 ? '' : 's'} · ${Number(m.points).toFixed(Number(m.points) % 1 === 0 ? 0 : 1)} pts · ${m.wins} win${m.wins === 1 ? '' : 's'}</div>
+                    <div class="mfr-totals">${m.drivers} driver${m.drivers === 1 ? '' : 's'} · ${Number(m.points).toFixed(Number(m.points) % 1 === 0 ? 0 : 1)} pts · ${m.drivers ? (Number(m.points) / m.drivers).toFixed(1) : '0'} avg · ${m.wins} win${m.wins === 1 ? '' : 's'}</div>
                 </div>
             </div>
         </div>
