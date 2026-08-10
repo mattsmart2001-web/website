@@ -464,7 +464,7 @@ async function loadResults(slug) {
             .in('status', ['confirmed']),
         sb.from('results').select('*').eq('event_id', event.id),
         sb.from('qualifying_results').select('*').eq('event_id', event.id),
-        sb.from('penalties').select('*, entries(car_number, teams(name)), drivers(display_name, slug)').eq('event_id', event.id),
+        sb.from('penalties').select('*, entries(car_number, teams(name), entry_drivers(driver_id)), drivers(display_name, slug)').eq('event_id', event.id),
         sb.from('steward_decisions')
             .select('*, entries(car_number, teams(name)), drivers(display_name, slug)')
             .eq('event_id', event.id)
@@ -907,12 +907,25 @@ function renderPenaltiesTable(pens) {
         const drv = p.drivers?.slug
             ? `<a class="entity-link" href="/endurance/drivers/?slug=${encodeURIComponent(p.drivers.slug)}">${esc(p.drivers.display_name)}</a>`
             : (p.drivers?.display_name ? esc(p.drivers.display_name) : '<span class="td-muted">Whole team</span>');
+        // A whole-team points deduction is recorded per driver, so its team
+        // impact is the amount times the number of drivers on the entry.
+        let valueCell;
+        const isWholeTeamDed = p.penalty_type === 'points_deduction' && !p.driver_id && p.points_amount != null;
+        if (isWholeTeamDed) {
+            const n = (p.entries?.entry_drivers || []).length || 1;
+            const total = p.points_amount * n;
+            valueCell = n > 1
+                ? `-${total} pts <span class="td-muted" style="font-weight:400;font-size:0.75rem">(-${p.points_amount} each)</span>`
+                : `-${total} pts`;
+        } else {
+            valueCell = p.penalty_value ? esc(p.penalty_value) : '—';
+        }
         return `<tr>
             <td class="td-num">${p.entries?.car_number != null ? '#' + esc(p.entries.car_number) : '—'}</td>
             <td>${esc(p.entries?.teams?.name) || '<em>Solo</em>'}</td>
             <td>${drv}</td>
             <td class="td-muted">${esc(p.penalty_type?.replace(/_/g,' '))}</td>
-            <td style="color:var(--red);font-weight:600">${p.penalty_value ? esc(p.penalty_value) : '—'}</td>
+            <td style="color:var(--red);font-weight:600">${valueCell}</td>
             <td class="td-muted">${esc(p.reason) || '—'}</td>
         </tr>`;
     }).join('');
