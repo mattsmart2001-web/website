@@ -561,6 +561,10 @@
         .bt-preset { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-2); color: var(--muted); cursor: pointer; transition: all 0.12s; white-space: nowrap; }
         .bt-preset:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
         .bt-preset.gold { color: var(--gold); border-color: rgba(255,209,102,0.35); background: rgba(255,209,102,0.08); }
+        .bt-metric { display: inline-flex; margin-left: auto; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg-2); }
+        .bt-mbtn { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; padding: 0.5rem 0.7rem; border: none; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+        .bt-mbtn:hover { color: var(--text); }
+        .bt-mbtn.active { color: var(--gold); background: rgba(255,209,102,0.12); }
         .bt-selected { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.85rem 0 0.2rem; min-height: 1.9rem; }
         .bt-chip { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.35rem 0.3rem 0.6rem; border-radius: 20px; border: 1px solid var(--border); background: var(--bg-2); color: var(--text); }
         .bt-chip .cdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
@@ -830,10 +834,10 @@ async function setTab(t) {
         try { const url = new URL(location.href); url.searchParams.delete('mfr'); url.searchParams.delete('nat'); history.replaceState(null, '', url); } catch (e) {}
     }
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-    // The Championship Battle chart runs on both the Drivers and Teams tabs,
-    // switching which championship it plots.
+    // The Championship Battle chart runs on the Drivers, Teams and Manufacturers
+    // tabs, switching which championship it plots.
     const battle = document.getElementById('battle');
-    const showBattle = (t === 'drivers' || t === 'teams') && _btLastIdx >= 0;
+    const showBattle = (t === 'drivers' || t === 'teams' || t === 'manufacturers') && _btLastIdx >= 0;
     if (battle) battle.style.display = showBattle ? '' : 'none';
     if (showBattle && document.getElementById('bt-acc') && _btMode !== t) btSetMode(t);
     if (t === 'ratings' && _ratings === null) {
@@ -1030,6 +1034,7 @@ function renderManufacturers(panel) {
         return;
     }
     const leaderPoints = Number(_manufacturers[0].points) || 0;
+    const gridTotal = _manufacturers.reduce((s, m) => s + (Number(m.drivers) || 0), 0) || 1;
     const rows = _manufacturers.map((m, i) => {
         const pos = i + 1;
         const points = Number(m.points) || 0;
@@ -1045,6 +1050,7 @@ function renderManufacturers(panel) {
                 </div>
             </td>
             <td class="lighter center hide-mob">${m.drivers}</td>
+            <td class="lighter center hide-mob" title="Share of the grid">${Math.round((Number(m.drivers) || 0) / gridTotal * 100)}%</td>
             <td class="lighter center hide-mob">${m.wins}</td>
             <td class="lighter center hide-mob">${m.podiums}</td>
             <td class="lighter center hide-mob">${m.poles}</td>
@@ -1064,6 +1070,7 @@ function renderManufacturers(panel) {
                     <th style="width:64px">#</th>
                     <th>Manufacturer</th>
                     <th class="center hide-mob">Drivers</th>
+                    <th class="center hide-mob" title="Share of the grid">Grid</th>
                     <th class="center hide-mob">Wins</th>
                     <th class="center hide-mob">Pod</th>
                     <th class="center hide-mob">Pole</th>
@@ -1714,6 +1721,9 @@ let _btMyId   = null;        // signed-in user's driver_id, if racing this seaso
 let _btTeamPts = {};         // team_id -> cumulative points, same shape as _btPts
 let _btTeams   = [];         // [{id, name, slug, pos, total}] ranked teams
 let _btMyTeamId = null;      // signed-in driver's current team, if any
+let _btMfrPts = {};          // manufacturer_id -> cumulative points
+let _btMfrs   = [];          // [{id, name, slug, pos, total, drivers}] ranked marques
+let _btMetric = 'total';     // 'total' | 'avg' — metric for the manufacturers chart
 let _btMode   = 'drivers';   // which championship the chart is showing
 
 async function buildBattle(perEvent, deds, seasonEvents, myUser) {
@@ -1775,6 +1785,28 @@ async function buildBattle(perEvent, deds, seasonEvents, myUser) {
     _teams.forEach(t => { _btTeamPts[t.team_id] = cumulative(t.team_id, tGross, tDed); });
     _btTeams = _teams.map((t, i) => ({ id: t.team_id, name: t.team_name, slug: t.team_slug, pos: i + 1, total: Number(t.points) || 0 }));
 
+    // ----- Manufacturers: sum each driver's per-event net points under their
+    // manufacturer, so a marque's line matches the manufacturers standings. -----
+    const driverMfr = {};
+    _drivers.forEach(d => {
+        const info = _ratingByDriver[d.driver_id] || {};
+        const mid = d.manufacturer_id || info.manufacturerId;
+        if (mid) driverMfr[d.driver_id] = mid;
+    });
+    const mGross = {}, mDed = {};
+    inSeason.forEach(r => {
+        const mid = driverMfr[r.driver_id], ev = r.results?.event_id;
+        if (!mid || !ev) return;
+        (mGross[mid] = mGross[mid] || {})[ev] = (mGross[mid]?.[ev] || 0) + Number(r.points_awarded || 0);
+    });
+    Object.keys(ded).forEach(drv => {
+        const mid = driverMfr[drv]; if (!mid) return;
+        Object.entries(ded[drv]).forEach(([ev, amt]) => { (mDed[mid] = mDed[mid] || {})[ev] = (mDed[mid]?.[ev] || 0) + amt; });
+    });
+    _btMfrPts = {};
+    _manufacturers.forEach(m => { _btMfrPts[m.id] = cumulative(m.id, mGross, mDed); });
+    _btMfrs = _manufacturers.map((m, i) => ({ id: m.id, name: m.name, slug: m.slug, pos: i + 1, total: Number(m.points) || 0, drivers: Number(m.drivers) || 1 }));
+
     // Signed-in driver → "Compare me" (their line) and "My team".
     _btMyId = null; _btMyTeamId = null;
     const uid = myUser?.data?.user?.id;
@@ -1787,10 +1819,19 @@ async function buildBattle(perEvent, deds, seasonEvents, myUser) {
     renderBattle();
 }
 
-// Mode-aware accessors so the same picker/chart drives both championships.
-function _btList()   { return _btMode === 'teams' ? _btTeams : _btDrivers; }
-function _btSeries(id) { return (_btMode === 'teams' ? _btTeamPts : _btPts)[id]; }
-function _btMine()   { return _btMode === 'teams' ? _btMyTeamId : _btMyId; }
+// Mode-aware accessors so the same picker/chart drives all three championships.
+function _btList()   { return _btMode === 'teams' ? _btTeams : _btMode === 'manufacturers' ? _btMfrs : _btDrivers; }
+function _btSeries(id) {
+    if (_btMode === 'manufacturers') {
+        const s = _btMfrPts[id]; if (!s) return s;
+        if (_btMetric === 'avg') { const n = _btById(id)?.drivers || 1; return s.map(v => v == null ? v : v / n); }
+        return s;
+    }
+    return (_btMode === 'teams' ? _btTeamPts : _btPts)[id];
+}
+function _btMine()   { return _btMode === 'teams' ? _btMyTeamId : _btMode === 'manufacturers' ? null : _btMyId; }
+// Singular/plural noun for the current mode, for hints and empty states.
+function _btNoun(pl) { const s = _btMode === 'teams' ? 'team' : _btMode === 'manufacturers' ? 'manufacturer' : 'driver'; return pl ? s + 's' : s; }
 
 const BT_PALETTE = ['#ffd166', '#38bdf8', '#34d399', '#c084fc', '#f87171', '#fb923c', '#818cf8', '#f472b6'];
 let _btSlots = BT_PALETTE.map(c => ({ color: c, id: null }));
@@ -1810,17 +1851,38 @@ function btSetMode(mode) {
     const sub = document.querySelector('#bt-acc .bt-sub');
     const inp = document.getElementById('bt-search');
     const cmp = document.getElementById('bt-compare');
-    if (sub) sub.textContent = mode === 'teams'
-        ? "See how the constructors' fight unfolded — search any team, or load the top 8."
-        : 'See how the title fight unfolded — search any driver, or load the top 8.';
-    if (inp) { inp.placeholder = mode === 'teams' ? '🔍  Add a team by name…' : '🔍  Add a driver by name…'; inp.value = ''; }
+    const subs = {
+        teams: "See how the constructors' fight unfolded — search any team, or load the top 8.",
+        manufacturers: 'See how each marque built its haul — search any manufacturer, or load the top 8.',
+        drivers: 'See how the title fight unfolded — search any driver, or load the top 8.'
+    };
+    if (sub) sub.textContent = subs[mode] || subs.drivers;
+    if (inp) { inp.placeholder = `🔍  Add a ${_btNoun(false)} by name…`; inp.value = ''; }
     const res = document.getElementById('bt-results'); if (res) res.classList.remove('open');
     if (cmp) {
         if (_btMine()) { cmp.style.display = ''; cmp.textContent = mode === 'teams' ? 'My team' : 'Compare me'; }
         else cmp.style.display = 'none';
     }
+    // The Total / Avg toggle only makes sense for the manufacturers chart.
+    const met = document.getElementById('bt-metric');
+    if (met) met.style.display = mode === 'manufacturers' ? '' : 'none';
+    _btUpdateMetricButtons();
     // Restore the viewer's last selection for this mode; else default to Top 8.
     if (btRestore(mode)) btRefresh('full'); else btTop();
+}
+
+// Manufacturers chart: swap between marque totals and points-per-driver.
+function btSetMetric(m) {
+    if (m !== 'avg') m = 'total';
+    if (_btMetric === m) return;
+    _btMetric = m;
+    _btUpdateMetricButtons();
+    btRefresh('full');
+}
+function _btUpdateMetricButtons() {
+    const t = document.getElementById('bt-m-total'), a = document.getElementById('bt-m-avg');
+    if (t) t.classList.toggle('active', _btMetric === 'total');
+    if (a) a.classList.toggle('active', _btMetric === 'avg');
 }
 
 // Remember the chart selection across refreshes, per mode, in localStorage.
@@ -1859,6 +1921,10 @@ function renderBattle() {
             <button class="bt-preset gold" onclick="btTop();btSave()">Top 8</button>
             <button class="bt-preset" id="bt-compare" onclick="btMe();btSave()" style="display:none">Compare me</button>
             <button class="bt-preset" onclick="btClear();btSave()">Clear</button>
+            <span class="bt-metric" id="bt-metric" style="display:none">
+              <button class="bt-mbtn active" id="bt-m-total" onclick="btSetMetric('total')">Total</button>
+              <button class="bt-mbtn" id="bt-m-avg" onclick="btSetMetric('avg')">Avg / driver</button>
+            </span>
           </div>
           <div class="bt-selected" id="bt-selected"></div>
           <div class="bt-hint" id="bt-hint"></div>
@@ -1870,7 +1936,7 @@ function renderBattle() {
       </div>`;
     btGrid();
     btSetMode(_btMode);
-    if (_tab === 'drivers' || _tab === 'teams') host.style.display = '';
+    if (_tab === 'drivers' || _tab === 'teams' || _tab === 'manufacturers') host.style.display = '';
 }
 
 function btSearch() {
@@ -1880,7 +1946,7 @@ function btSearch() {
     let list = _btList();
     if (q) list = list.filter(d => (d.name || '').toLowerCase().includes(q));
     list = list.slice(0, 8);
-    if (!list.length) { box.innerHTML = `<div class="bt-none">No ${_btMode === 'teams' ? 'team' : 'driver'} found.</div>`; box.classList.add('open'); return; }
+    if (!list.length) { box.innerHTML = `<div class="bt-none">No ${_btNoun(false)} found.</div>`; box.classList.add('open'); return; }
     box.innerHTML = list.map(d => {
         const on = _btOn(d.id);
         const me = d.id === _btMine() ? ` <span class="me" style="font-size:.6rem">${meLabel}</span>` : '';
@@ -1904,8 +1970,8 @@ document.addEventListener('click', e => {
 
 let _btHintTimer;
 function btFlash(msg) { const h = document.getElementById('bt-hint'); if (!h) return; h.textContent = msg; h.style.color = '#fca5a5'; clearTimeout(_btHintTimer); _btHintTimer = setTimeout(btHint, 1800); }
-function btHint() { const h = document.getElementById('bt-hint'); if (!h) return; const n = _btActive().length; const noun = _btMode === 'teams' ? 'teams' : 'drivers'; h.style.color = '#5b6472';
-    h.textContent = n ? `${n} of 8 lines · search ${_btList().length} ${noun} or use a preset` : `Nothing selected — search a ${_btMode === 'teams' ? 'team' : 'driver'} or hit a preset.`; }
+function btHint() { const h = document.getElementById('bt-hint'); if (!h) return; const n = _btActive().length; const noun = _btNoun(true); h.style.color = '#5b6472';
+    h.textContent = n ? `${n} of 8 lines · search ${_btList().length} ${noun} or use a preset` : `Nothing selected — search a ${_btNoun(false)} or hit a preset.`; }
 function btSelected() {
     const wrap = document.getElementById('bt-selected'); if (!wrap) return;
     const meLabel = _btMode === 'teams' ? 'MINE' : 'YOU';
@@ -1921,7 +1987,10 @@ const _btPW = BT_W - BT_PL - BT_PR, _btPH = BT_H - BT_PT - BT_PB;
 const _btNS = 'http://www.w3.org/2000/svg';
 const _btEl = (n, a) => { const e = document.createElementNS(_btNS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
 function _btX(i) { return _btEvents.length <= 1 ? BT_PL : BT_PL + i / (_btEvents.length - 1) * _btPW; }
-function _btYMax() { let m = 10; _btActive().forEach(a => { (_btSeries(a.d.id) || []).forEach(v => { if (v != null && v > m) m = v; }); }); return Math.ceil(m / 50) * 50 || 50; }
+// A round-ish axis step scaled to the data — so an Avg/driver chart (values
+// in the single/low-double digits) isn't squashed against a 50-unit grid.
+function _btNiceStep(m) { for (const s of [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500]) { if (m / s <= 5) return s; } return Math.ceil(m / 5 / 500) * 500; }
+function _btYMax() { let m = 0; _btActive().forEach(a => { (_btSeries(a.d.id) || []).forEach(v => { if (v != null && v > m) m = v; }); }); const step = _btNiceStep(m || 10); return Math.max(step, Math.ceil((m || 10) / step) * step); }
 function _btY(v, max) { return BT_PT + _btPH - (v / max) * _btPH; }
 
 let _btSvg, _btSeriesG, _btGuide, _btYCache = 200;
@@ -1933,7 +2002,7 @@ function btGrid() {
 let _btGridG;
 function btDrawGrid(max) {
     _btGridG.innerHTML = '';
-    for (let v = 0; v <= max; v += Math.max(50, Math.round(max / 4 / 50) * 50)) {
+    for (let v = 0; v <= max; v += _btNiceStep(max)) {
         _btGridG.appendChild(_btEl('line', { class: 'bt-grid', x1: BT_PL, y1: _btY(v, max), x2: BT_PL + _btPW, y2: _btY(v, max) }));
         const t = _btEl('text', { class: 'bt-yax', x: BT_PL - 10, y: _btY(v, max) + 3, 'text-anchor': 'end' }); t.textContent = v; _btGridG.appendChild(t);
     }
@@ -1972,7 +2041,7 @@ function btDraw(anim) {
     const max = _btYMax(); _btYCache = max; btDrawGrid(max);
     _btSeriesG = _btEl('g', {}); _btSvg.appendChild(_btSeriesG);
     const active = _btActive();
-    if (!active.length) { const t = _btEl('text', { class: 'bt-empty', x: BT_PL + _btPW / 2, y: BT_PT + _btPH / 2, 'text-anchor': 'middle' }); t.textContent = `Pick a ${_btMode === 'teams' ? 'team' : 'driver'} to start comparing.`; _btSeriesG.appendChild(t); _btDrawnIds = []; return; }
+    if (!active.length) { const t = _btEl('text', { class: 'bt-empty', x: BT_PL + _btPW / 2, y: BT_PT + _btPH / 2, 'text-anchor': 'middle' }); t.textContent = `Pick a ${_btNoun(false)} to start comparing.`; _btSeriesG.appendChild(t); _btDrawnIds = []; return; }
 
     // Compute end-label positions (de-collide; centre the stack when the
     // field is bunched, else keep labels by their line heights, clamped).
