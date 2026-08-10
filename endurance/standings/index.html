@@ -1841,17 +1841,22 @@ async function buildEloBattle() {
         rows = data || [];
     } catch (e) { rows = []; }
 
-    // driver_id -> { event_id -> rating_after }
-    const byDrv = {};
-    rows.forEach(r => { (byDrv[r.driver_id] = byDrv[r.driver_id] || {})[r.event_id] = Number(r.rating_after); });
+    // driver_id -> { event_id -> rating_after }, plus the set of rounds that
+    // have been rated at all, so lines stop at the last completed round rather
+    // than carrying flat into rounds that haven't happened yet.
+    const byDrv = {}, ratedEv = new Set();
+    rows.forEach(r => { (byDrv[r.driver_id] = byDrv[r.driver_id] || {})[r.event_id] = Number(r.rating_after); ratedEv.add(r.event_id); });
+    let lastRatedIdx = -1;
+    _btEvents.forEach((e, i) => { if (ratedEv.has(e.id)) lastRatedIdx = i; });
 
     // Carry each rating forward across rounds the driver skipped; leave null
-    // before their first rated round so the line simply starts when they debut.
+    // before their first rated round (line starts at their debut) and after the
+    // last completed round (no flat tail into un-raced rounds).
     Object.keys(byDrv).forEach(id => {
         let cur = null;
-        _btEloPts[id] = _btEvents.map(e => {
+        _btEloPts[id] = _btEvents.map((e, i) => {
             if (byDrv[id][e.id] != null) cur = byDrv[id][e.id];
-            return cur;   // null until the first rated round, then last-known
+            return i <= lastRatedIdx ? cur : null;   // null until debut, then last-known, null past the final rated round
         });
     });
 
