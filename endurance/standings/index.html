@@ -433,12 +433,23 @@
         .form-empty { color: var(--muted); opacity: 0.5; }
 
         /* Top-3 rostrum */
-        .podium { display: flex; justify-content: center; align-items: flex-end; gap: 0.75rem; margin: 0.25rem 0 1.75rem; }
-        .podium-spot { display: flex; flex-direction: column; align-items: center; width: 32%; max-width: 190px; }
+        .podium { position: relative; display: flex; justify-content: center; align-items: flex-end; gap: 0.75rem; margin: 0.25rem 0 1.75rem; }
+        .podium::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 34px; background: radial-gradient(ellipse at center, rgba(255,209,102,0.10), transparent 72%); filter: blur(3px); pointer-events: none; z-index: 0; }
+        .podium-spot { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; width: 32%; max-width: 190px; }
         .podium-driver { text-decoration: none; color: var(--text); text-align: center; display: block; margin-bottom: 0.55rem; transition: transform 0.15s; }
         .podium-driver:hover { transform: translateY(-3px); }
-        .pod-av-wrap { display: flex; justify-content: center; margin-bottom: 0.5rem; }
-        .pod-av { border-radius: 50%; object-fit: cover; background: var(--bg-2); display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--border); }
+        .pod-av-wrap { position: relative; display: flex; justify-content: center; margin-bottom: 0.5rem; }
+        .pod-av { position: relative; z-index: 1; border-radius: 50%; object-fit: cover; background: var(--bg-2); display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--border); }
+        /* Soft gold halo behind the leader's photo. */
+        .pod-halo { display: none; }
+        .spot-1 .pod-halo { display: block; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 150%; height: 150%; border-radius: 50%; background: radial-gradient(circle, rgba(255,209,102,0.30), transparent 62%); filter: blur(7px); z-index: 0; pointer-events: none; }
+        .pod-crown { position: absolute; top: -19px; left: 50%; transform: translateX(-50%); font-size: 1.15rem; z-index: 2; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55)); }
+        /* Tiered rings: gold / silver / bronze, each with a matching glow. */
+        .spot-1 .pod-av { border-color: rgba(255,209,102,0.9); box-shadow: 0 0 0 3px rgba(255,209,102,0.14), 0 6px 20px rgba(0,0,0,0.5); }
+        .spot-2 .pod-av { border-color: rgba(226,232,240,0.85); box-shadow: 0 0 0 3px rgba(226,232,240,0.10), 0 6px 16px rgba(0,0,0,0.5); }
+        .spot-3 .pod-av { border-color: rgba(224,165,110,0.85); box-shadow: 0 0 0 3px rgba(224,165,110,0.10), 0 6px 16px rgba(0,0,0,0.5); }
+        .podium-gap { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; margin-top: 0.35rem; display: inline-block; padding: 0.14rem 0.55rem; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+        .podium-gap.leader { color: var(--gold); background: rgba(255,209,102,0.12); border-color: rgba(255,209,102,0.32); }
         .pod-av-init { font-family: 'Anton', sans-serif; color: var(--muted); }
         .podium-name { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.02em; line-height: 1.1; }
         .podium-pts { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
@@ -449,12 +460,24 @@
         .spot-1 .pod-av-init { font-size: 2rem; }
         .spot-2 .pod-av-init, .spot-3 .pod-av-init { font-size: 1.4rem; }
         .spot-1 .podium-name { font-size: 1.1rem; }
-        .step-1 { height: 120px; background: linear-gradient(180deg, rgba(255,209,102,0.22), rgba(255,209,102,0.05)); }
-        .step-2 { height: 92px;  background: linear-gradient(180deg, rgba(203,213,225,0.20), rgba(203,213,225,0.04)); }
-        .step-3 { height: 72px;  background: linear-gradient(180deg, rgba(209,154,102,0.20), rgba(209,154,102,0.04)); }
-        .step-1 .podium-rank { color: var(--gold); font-size: 2rem; }
-        .step-2 .podium-rank { color: #cbd5e1; font-size: 1.6rem; }
-        .step-3 .podium-rank { color: #d19a66; font-size: 1.6rem; }
+        .podium-step { position: relative; overflow: hidden; }
+        /* Metallic plinths with a top highlight and a soft diagonal sheen. */
+        .step-1 { height: 122px; background: linear-gradient(180deg, rgba(255,209,102,0.30) 0%, rgba(255,209,102,0.08) 45%, rgba(20,24,33,0.55) 100%); border-color: rgba(255,209,102,0.42); box-shadow: inset 0 1px 0 rgba(255,255,255,0.18); }
+        .step-2 { height: 94px;  background: linear-gradient(180deg, rgba(226,232,240,0.26) 0%, rgba(203,213,225,0.06) 45%, rgba(20,24,33,0.55) 100%); border-color: rgba(203,213,225,0.34); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
+        .step-3 { height: 74px;  background: linear-gradient(180deg, rgba(214,164,120,0.26) 0%, rgba(209,154,102,0.06) 45%, rgba(20,24,33,0.55) 100%); border-color: rgba(209,154,102,0.32); box-shadow: inset 0 1px 0 rgba(255,255,255,0.12); }
+        .podium-step::before { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.07) 50%, transparent 58%); pointer-events: none; }
+        .step-1 .podium-rank { color: var(--gold); font-size: 2.1rem; text-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .step-2 .podium-rank { color: #e2e8f0; font-size: 1.65rem; text-shadow: 0 2px 8px rgba(226,232,240,0.22); }
+        .step-3 .podium-rank { color: #e0a56e; font-size: 1.65rem; text-shadow: 0 2px 8px rgba(224,165,110,0.22); }
+        /* Classy staggered reveal: plinths rise from the floor, drivers fade in. */
+        @media (prefers-reduced-motion: no-preference) {
+            .podium-step { animation: podRise 0.6s cubic-bezier(0.16,1,0.3,1) both; transform-origin: bottom center; }
+            .step-2 { animation-delay: 0.04s; } .step-1 { animation-delay: 0.12s; } .step-3 { animation-delay: 0.20s; }
+            @keyframes podRise { from { transform: scaleY(0.35); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+            .podium-driver { animation: podFade 0.5s ease both; }
+            .spot-2 .podium-driver { animation-delay: 0.16s; } .spot-1 .podium-driver { animation-delay: 0.26s; } .spot-3 .podium-driver { animation-delay: 0.34s; }
+            @keyframes podFade { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+        }
         @media (max-width: 520px) {
             .podium { gap: 0.4rem; }
             .podium-name { font-size: 0.78rem; }
@@ -715,7 +738,7 @@ function formStrip(form) {
 
 // Top-3 rostrum above the driver standings — P2 · P1 · P3, tallest in the
 // middle. Only shown once there's a genuine top three.
-function podiumSpot(d, place) {
+function podiumSpot(d, place, leaderPts) {
     if (!d) return '';
     const info = _ratingByDriver[d.driver_id] || {};
     const pts  = Number(d.points) || 0;
@@ -723,11 +746,17 @@ function podiumSpot(d, place) {
         ? `<img class="pod-av" src="${esc(info.photo)}" alt="" loading="lazy">`
         : `<span class="pod-av pod-av-init">${esc((d.driver_name || '?').trim().charAt(0).toUpperCase())}</span>`;
     const flg = d.nationality ? `<span class="driver-flag">${flag(d.nationality)}</span> ` : '';
+    const crown = place === 1 ? '<div class="pod-crown">👑</div>' : '';
+    const gapNum = leaderPts - pts;
+    const gap = place === 1
+        ? '<div class="podium-gap leader">★ Leader</div>'
+        : `<div class="podium-gap">−${gapNum.toFixed(gapNum % 1 === 0 ? 0 : 1)}</div>`;
     return `<div class="podium-spot spot-${place}">
         <a class="podium-driver" href="/endurance/drivers/?slug=${esc(d.driver_slug)}">
-            <div class="pod-av-wrap">${av}</div>
+            <div class="pod-av-wrap">${crown}<span class="pod-halo"></span>${av}</div>
             <div class="podium-name">${flg}${esc(d.driver_name)}</div>
-            <div class="podium-pts">${pts.toFixed(pts % 1 === 0 ? 0 : 1)} pts</div>
+            <div class="podium-pts"><span class="pod-pts-num" data-pts="${pts}">${pts.toFixed(pts % 1 === 0 ? 0 : 1)}</span> pts</div>
+            ${gap}
         </a>
         <div class="podium-step step-${place}"><span class="podium-rank">${place}</span></div>
     </div>`;
@@ -735,7 +764,24 @@ function podiumSpot(d, place) {
 function renderPodium(list) {
     if (!list || list.length < 3) return '';
     const [p1, p2, p3] = list;
-    return `<div class="podium">${podiumSpot(p2, 2)}${podiumSpot(p1, 1)}${podiumSpot(p3, 3)}</div>`;
+    const leaderPts = Number(p1.points) || 0;
+    return `<div class="podium">${podiumSpot(p2, 2, leaderPts)}${podiumSpot(p1, 1, leaderPts)}${podiumSpot(p3, 3, leaderPts)}</div>`;
+}
+
+// Count the podium points up on render (skipped when reduced motion is on).
+function animatePodium() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelectorAll('.pod-pts-num[data-pts]').forEach(el => {
+        const target = Number(el.dataset.pts) || 0;
+        const dec = target % 1 === 0 ? 0 : 1;
+        const dur = 850, start = performance.now();
+        const tick = now => {
+            const t = Math.min(1, (now - start) / dur);
+            el.textContent = (target * (1 - Math.pow(1 - t, 3))).toFixed(dec);
+            if (t < 1) requestAnimationFrame(tick); else el.textContent = target.toFixed(dec);
+        };
+        requestAnimationFrame(tick);
+    });
 }
 
 async function setTab(t) {
@@ -882,6 +928,7 @@ function renderDrivers(panel) {
                 <tbody>${rows}</tbody>
             </table>
         </div>`;
+    animatePodium();
 }
 
 function renderTeams(panel) {
