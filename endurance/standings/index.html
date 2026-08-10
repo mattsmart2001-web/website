@@ -834,10 +834,10 @@ async function setTab(t) {
         try { const url = new URL(location.href); url.searchParams.delete('mfr'); url.searchParams.delete('nat'); history.replaceState(null, '', url); } catch (e) {}
     }
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-    // The Championship Battle chart runs on the Drivers, Teams and Manufacturers
-    // tabs, switching which championship it plots.
+    // The battle chart runs on the Drivers, Teams, Manufacturers and Ratings
+    // tabs, switching which contest it plots (points, or ELO on Ratings).
     const battle = document.getElementById('battle');
-    const showBattle = (t === 'drivers' || t === 'teams' || t === 'manufacturers') && _btLastIdx >= 0;
+    const showBattle = (t === 'drivers' || t === 'teams' || t === 'manufacturers' || t === 'ratings') && _btLastIdx >= 0;
     if (battle) battle.style.display = showBattle ? '' : 'none';
     if (showBattle && document.getElementById('bt-acc') && _btMode !== t) btSetMode(t);
     if (t === 'ratings' && _ratings === null) {
@@ -1724,7 +1724,9 @@ let _btMyTeamId = null;      // signed-in driver's current team, if any
 let _btMfrPts = {};          // manufacturer_id -> cumulative points
 let _btMfrs   = [];          // [{id, name, slug, pos, total, drivers}] ranked marques
 let _btMetric = 'total';     // 'total' | 'avg' — metric for the manufacturers chart
-let _btMode   = 'drivers';   // which championship the chart is showing
+let _btEloPts = {};          // driver_id -> ELO rating after each round (carried forward; null before first rated round)
+let _btElo    = [];          // [{id, name, slug, pos, total}] drivers ranked by current ELO
+let _btMode   = 'drivers';   // which championship the chart is showing ('drivers' | 'teams' | 'manufacturers' | 'ratings')
 
 async function buildBattle(perEvent, deds, seasonEvents, myUser) {
     const inSeason = perEvent.filter(r => r.results?.events?.season_id === _season.id);
@@ -1807,6 +1809,11 @@ async function buildBattle(perEvent, deds, seasonEvents, myUser) {
     _manufacturers.forEach(m => { _btMfrPts[m.id] = cumulative(m.id, mGross, mDed); });
     _btMfrs = _manufacturers.map((m, i) => ({ id: m.id, name: m.name, slug: m.slug, pos: i + 1, total: Number(m.points) || 0, drivers: Number(m.drivers) || 1 }));
 
+    // ----- ELO battle: each driver's rating *after* every round, carried
+    // forward across rounds they sat out, so the line traces their rating
+    // trajectory rather than a cumulative total. -----
+    await buildEloBattle();
+
     // Signed-in driver → "Compare me" (their line) and "My team".
     _btMyId = null; _btMyTeamId = null;
     const uid = myUser?.data?.user?.id;
@@ -1819,9 +1826,52 @@ async function buildBattle(perEvent, deds, seasonEvents, myUser) {
     renderBattle();
 }
 
-// Mode-aware accessors so the same picker/chart drives all three championships.
-function _btList()   { return _btMode === 'teams' ? _btTeams : _btMode === 'manufacturers' ? _btMfrs : _btDrivers; }
+// Pull the per-round ELO history (driver_ratings.rating_after) for this
+// season and turn it into one carried-forward series per driver, aligned to
+// the same round axis as the points chart.
+async function buildEloBattle() {
+    _btEloPts = {}; _btElo = [];
+    const evIds = _btEvents.map(e => e.id);
+    if (!evIds.length) return;
+    let rows = [];
+    try {
+        const { data } = await sb.from('driver_ratings')
+            .select('driver_id, event_id, rating_after')
+            .in('event_id', evIds);
+        rows = data || [];
+    } catch (e) { rows = []; }
+
+    // driver_id -> { event_id -> rating_after }
+    const byDrv = {};
+    rows.forEach(r => { (byDrv[r.driver_id] = byDrv[r.driver_id] || {})[r.event_id] = Number(r.rating_after); });
+
+    // Carry each rating forward across rounds the driver skipped; leave null
+    // before their first rated round so the line simply starts when they debut.
+    Object.keys(byDrv).forEach(id => {
+        let cur = null;
+        _btEloPts[id] = _btEvents.map(e => {
+            if (byDrv[id][e.id] != null) cur = byDrv[id][e.id];
+            return cur;   // null until the first rated round, then last-known
+        });
+    });
+
+    // Rank the picker list by current rating (last known point on each line),
+    // richest first, so "Top 8" loads the strongest drivers.
+    _btElo = _drivers
+        .filter(d => _btEloPts[d.driver_id] && _btEloPts[d.driver_id].some(v => v != null))
+        .map(d => {
+            const s = _btEloPts[d.driver_id];
+            let last = 0; for (let i = s.length - 1; i >= 0; i--) { if (s[i] != null) { last = s[i]; break; } }
+            return { id: d.driver_id, name: d.driver_name, slug: d.driver_slug, total: Math.round(last) };
+        })
+        .sort((a, b) => b.total - a.total)
+        .map((d, i) => ({ ...d, pos: i + 1 }));
+}
+
+// Mode-aware accessors so the same picker/chart drives every championship.
+function _btList()   { return _btMode === 'teams' ? _btTeams : _btMode === 'manufacturers' ? _btMfrs : _btMode === 'ratings' ? _btElo : _btDrivers; }
 function _btSeries(id) {
+    if (_btMode === 'ratings') return _btEloPts[id];
     if (_btMode === 'manufacturers') {
         const s = _btMfrPts[id]; if (!s) return s;
         if (_btMetric === 'avg') { const n = _btById(id)?.drivers || 1; return s.map(v => v == null ? v : v / n); }
@@ -1829,9 +1879,11 @@ function _btSeries(id) {
     }
     return (_btMode === 'teams' ? _btTeamPts : _btPts)[id];
 }
-function _btMine()   { return _btMode === 'teams' ? _btMyTeamId : _btMode === 'manufacturers' ? null : _btMyId; }
+function _btMine()   { return _btMode === 'teams' ? _btMyTeamId : (_btMode === 'manufacturers' || _btMode === 'ratings') ? null : _btMyId; }
 // Singular/plural noun for the current mode, for hints and empty states.
 function _btNoun(pl) { const s = _btMode === 'teams' ? 'team' : _btMode === 'manufacturers' ? 'manufacturer' : 'driver'; return pl ? s + 's' : s; }
+// Unit suffix on end-labels / count-ups: points everywhere except the ELO chart.
+function _btUnit() { return _btMode === 'ratings' ? 'ELO' : 'pts'; }
 
 const BT_PALETTE = ['#ffd166', '#38bdf8', '#34d399', '#c084fc', '#f87171', '#fb923c', '#818cf8', '#f472b6'];
 let _btSlots = BT_PALETTE.map(c => ({ color: c, id: null }));
@@ -1854,9 +1906,12 @@ function btSetMode(mode) {
     const subs = {
         teams: "See how the constructors' fight unfolded. Search any team, or load the top 8.",
         manufacturers: 'See how each marque built its haul. Search any manufacturer, or load the top 8.',
+        ratings: 'See how driver ELO climbed and fell round by round. Search any driver, or load the top 8.',
         drivers: 'See how the title fight unfolded. Search any driver, or load the top 8.'
     };
     if (sub) sub.textContent = subs[mode] || subs.drivers;
+    const ttl = document.querySelector('#bt-acc .bt-title');
+    if (ttl) ttl.textContent = mode === 'ratings' ? 'ELO Battle' : 'Championship Battle';
     if (inp) { inp.placeholder = `🔍  Add a ${_btNoun(false)} by name…`; inp.value = ''; }
     const res = document.getElementById('bt-results'); if (res) res.classList.remove('open');
     if (cmp) {
@@ -1936,7 +1991,7 @@ function renderBattle() {
       </div>`;
     btGrid();
     btSetMode(_btMode);
-    if (_tab === 'drivers' || _tab === 'teams' || _tab === 'manufacturers') host.style.display = '';
+    if (_tab === 'drivers' || _tab === 'teams' || _tab === 'manufacturers' || _tab === 'ratings') host.style.display = '';
 }
 
 function btSearch() {
@@ -1953,7 +2008,7 @@ function btSearch() {
         return `<div class="bt-res ${on ? 'added' : ''}" ${on ? '' : `onclick="btPick('${d.id}')"`}>
           <span class="bt-res-pos">P${d.pos}</span>
           <span class="bt-res-name">${esc(d.name)}${me}</span>
-          <span class="bt-res-pts">${on ? '✓ added' : d.total + ' pts'}</span></div>`;
+          <span class="bt-res-pts">${on ? '✓ added' : d.total + ' ' + _btUnit()}</span></div>`;
     }).join('');
     box.classList.add('open');
 }
@@ -1990,19 +2045,35 @@ function _btX(i) { return _btEvents.length <= 1 ? BT_PL : BT_PL + i / (_btEvents
 // A round-ish axis step scaled to the data — so an Avg/driver chart (values
 // in the single/low-double digits) isn't squashed against a 50-unit grid.
 function _btNiceStep(m) { for (const s of [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500]) { if (m / s <= 5) return s; } return Math.ceil(m / 5 / 500) * 500; }
-function _btYMax() { let m = 0; _btActive().forEach(a => { (_btSeries(a.d.id) || []).forEach(v => { if (v != null && v > m) m = v; }); }); const step = _btNiceStep(m || 10); return Math.max(step, Math.ceil((m || 10) / step) * step); }
-function _btY(v, max) { return BT_PT + _btPH - (v / max) * _btPH; }
+// The ELO chart floats its baseline (ratings sit in a high, narrow band, so a
+// 0-based axis would flatten every line); points charts always start at 0.
+function _btYMin() {
+    if (_btMode !== 'ratings') return 0;
+    let lo = Infinity; _btActive().forEach(a => { (_btSeries(a.d.id) || []).forEach(v => { if (v != null && v < lo) lo = v; }); });
+    if (!isFinite(lo)) return 0;
+    let hi = 0; _btActive().forEach(a => { (_btSeries(a.d.id) || []).forEach(v => { if (v != null && v > hi) hi = v; }); });
+    const step = _btNiceStep(Math.max(hi - lo, 20) * 1.25);
+    return Math.max(800, Math.floor((lo - step * 0.5) / step) * step);   // pad below, floor to a gridline, never under the ELO floor
+}
+function _btYMax(min) {
+    min = min || 0;
+    let m = min; _btActive().forEach(a => { (_btSeries(a.d.id) || []).forEach(v => { if (v != null && v > m) m = v; }); });
+    const range = Math.max(m - min, 10), step = _btNiceStep(range);
+    return min + Math.max(step, Math.ceil(range / step) * step);
+}
+function _btY(v, max) { const min = _btYMinCache; return BT_PT + _btPH - ((v - min) / (max - min)) * _btPH; }
 
-let _btSvg, _btSeriesG, _btGuide, _btYCache = 200;
+let _btSvg, _btSeriesG, _btGuide, _btYCache = 200, _btYMinCache = 0;
 function btGrid() {
     _btSvg = document.getElementById('bt-chart'); _btSvg.innerHTML = '';
     _btGridG = _btEl('g', {}); _btSvg.appendChild(_btGridG);
     _btAttachHover();
 }
 let _btGridG;
-function btDrawGrid(max) {
+function btDrawGrid(max, min) {
     _btGridG.innerHTML = '';
-    for (let v = 0; v <= max; v += _btNiceStep(max)) {
+    min = min || 0;
+    for (let v = min; v <= max + 0.5; v += _btNiceStep(max - min)) {
         _btGridG.appendChild(_btEl('line', { class: 'bt-grid', x1: BT_PL, y1: _btY(v, max), x2: BT_PL + _btPW, y2: _btY(v, max) }));
         const t = _btEl('text', { class: 'bt-yax', x: BT_PL - 10, y: _btY(v, max) + 3, 'text-anchor': 'end' }); t.textContent = v; _btGridG.appendChild(t);
     }
@@ -2028,8 +2099,8 @@ function _btAnimateSeries(h, delay) {
         const t = Math.max(0, Math.min(1, (now - t0) / BT_DUR)), e = 1 - Math.pow(1 - t, 3);
         h.path.style.strokeDashoffset = len * (1 - e);
         h.dots.forEach((c, i) => { const f = nP <= 1 ? 0 : i / (nP - 1); if (e >= f) { c.style.transition = 'opacity .18s, transform .18s'; c.style.opacity = 1; c.style.transform = 'scale(1)'; } });
-        h.pt.textContent = Math.round(h.last * e) + ' pts';
-        if (t >= 1) { [h.nm, h.pt, h.leader].forEach(n => { if (n) { n.style.transition = 'opacity .3s'; n.style.opacity = ''; } }); h.pt.textContent = Math.round(h.last) + ' pts'; return; }
+        h.pt.textContent = Math.round(h.last * e) + ' ' + h.unit;
+        if (t >= 1) { [h.nm, h.pt, h.leader].forEach(n => { if (n) { n.style.transition = 'opacity .3s'; n.style.opacity = ''; } }); h.pt.textContent = Math.round(h.last) + ' ' + h.unit; return; }
         _btRaf.push(requestAnimationFrame(step));
     };
     _btRaf.push(requestAnimationFrame(step));
@@ -2038,7 +2109,8 @@ function _btAnimateSeries(h, delay) {
 function btDraw(anim) {
     _btClearRaf();
     if (_btSeriesG) _btSeriesG.remove();
-    const max = _btYMax(); _btYCache = max; btDrawGrid(max);
+    const min = _btYMin(); _btYMinCache = min;
+    const max = _btYMax(min); _btYCache = max; btDrawGrid(max, min);
     _btSeriesG = _btEl('g', {}); _btSvg.appendChild(_btSeriesG);
     const active = _btActive();
     if (!active.length) { const t = _btEl('text', { class: 'bt-empty', x: BT_PL + _btPW / 2, y: BT_PT + _btPH / 2, 'text-anchor': 'middle' }); t.textContent = `Pick a ${_btNoun(false)} to start comparing.`; _btSeriesG.appendChild(t); _btDrawnIds = []; return; }
@@ -2064,16 +2136,16 @@ function btDraw(anim) {
         const dstr = pts.map((p, k) => `${k ? 'L' : 'M'}${_btX(p.i)},${_btY(p.v, max)}`).join(' ');
         const path = _btEl('path', { class: 'bt-line', d: dstr, stroke: a.color }); _btSeriesG.appendChild(path);
         const dots = pts.map(p => { const c = _btEl('circle', { class: 'bt-dot', cx: _btX(p.i), cy: _btY(p.v, max), r: 3.4, fill: a.color }); _btSeriesG.appendChild(c); return c; });
-        const L = labY.get(a.d.id) || { y: _btY(0, max), last: 0 };
+        const L = labY.get(a.d.id) || { y: _btY(_btYMinCache, max), last: _btYMinCache };
         let leader = null;
         const anchorY = _btY(L.last, max);
         if (lastX < labelX - 20 || Math.abs(L.y - anchorY) > 3) { leader = _btEl('line', { x1: lastX + 4, y1: anchorY, x2: labelX - 4, y2: L.y - 4, stroke: a.color, 'stroke-width': 1, opacity: 0.4 }); _btSeriesG.appendChild(leader); }
         const nm = _btEl('text', { class: 'bt-end', x: labelX, y: L.y - 4, fill: a.color }); nm.textContent = a.d.name; _btSeriesG.appendChild(nm);
-        const pt = _btEl('text', { class: 'bt-endpts', x: labelX, y: L.y + 8 }); pt.textContent = Math.round(L.last) + ' pts'; _btSeriesG.appendChild(pt);
+        const pt = _btEl('text', { class: 'bt-endpts', x: labelX, y: L.y + 8 }); pt.textContent = Math.round(L.last) + ' ' + _btUnit(); _btSeriesG.appendChild(pt);
 
         const isNew = _btDrawnIds.indexOf(a.d.id) === -1;
         const animateThis = canAnim && (anim === 'full' || (anim === 'grow' && isNew));
-        if (animateThis) _btAnimateSeries({ path, dots, nm, pt, leader, last: L.last }, anim === 'full' ? idx * BT_STAG : 0);
+        if (animateThis) _btAnimateSeries({ path, dots, nm, pt, leader, last: L.last, unit: _btUnit() }, anim === 'full' ? idx * BT_STAG : 0);
     });
 
     _btGuide = _btEl('line', { class: 'bt-guide', x1: 0, y1: BT_PT, x2: 0, y2: BT_PT + _btPH, opacity: 0 }); _btSeriesG.appendChild(_btGuide);
