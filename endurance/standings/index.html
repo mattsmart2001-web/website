@@ -1305,7 +1305,7 @@ function renderNations(panel) {
           <div class="bt-ic">🗺️</div>
           <div class="bt-titles">
             <div class="bt-title">World Map</div>
-            <div class="bt-sub">Where the grid races from — shade by average, total points or driver count.</div>
+            <div class="bt-sub">Where the grid races from. Shade by average, total points or driver count.</div>
           </div>
           <svg class="bt-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -1852,9 +1852,9 @@ function btSetMode(mode) {
     const inp = document.getElementById('bt-search');
     const cmp = document.getElementById('bt-compare');
     const subs = {
-        teams: "See how the constructors' fight unfolded — search any team, or load the top 8.",
-        manufacturers: 'See how each marque built its haul — search any manufacturer, or load the top 8.',
-        drivers: 'See how the title fight unfolded — search any driver, or load the top 8.'
+        teams: "See how the constructors' fight unfolded. Search any team, or load the top 8.",
+        manufacturers: 'See how each marque built its haul. Search any manufacturer, or load the top 8.',
+        drivers: 'See how the title fight unfolded. Search any driver, or load the top 8.'
     };
     if (sub) sub.textContent = subs[mode] || subs.drivers;
     if (inp) { inp.placeholder = `🔍  Add a ${_btNoun(false)} by name…`; inp.value = ''; }
@@ -1908,7 +1908,7 @@ function renderBattle() {
           <div class="bt-ic">📈</div>
           <div class="bt-titles">
             <div class="bt-title">Championship Battle</div>
-            <div class="bt-sub">See how the title fight unfolded — search any driver, or load the top 8.</div>
+            <div class="bt-sub">See how the title fight unfolded. Search any driver, or load the top 8.</div>
           </div>
           <svg class="bt-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -1958,7 +1958,7 @@ function btSearch() {
     box.classList.add('open');
 }
 function btPick(id) {
-    if (_btAdd(id) === false) { btFlash(`That\'s 8 — remove one to add another.`); return; }
+    if (_btAdd(id) === false) { btFlash(`That\'s 8. Remove one to add another.`); return; }
     document.getElementById('bt-search').value = '';
     document.getElementById('bt-results').classList.remove('open');
     btRefresh('grow');
@@ -1971,7 +1971,7 @@ document.addEventListener('click', e => {
 let _btHintTimer;
 function btFlash(msg) { const h = document.getElementById('bt-hint'); if (!h) return; h.textContent = msg; h.style.color = '#fca5a5'; clearTimeout(_btHintTimer); _btHintTimer = setTimeout(btHint, 1800); }
 function btHint() { const h = document.getElementById('bt-hint'); if (!h) return; const n = _btActive().length; const noun = _btNoun(true); h.style.color = '#5b6472';
-    h.textContent = n ? `${n} of 8 lines · search ${_btList().length} ${noun} or use a preset` : `Nothing selected — search a ${_btNoun(false)} or hit a preset.`; }
+    h.textContent = n ? `${n} of 8 lines · search ${_btList().length} ${noun} or use a preset` : `Nothing selected. Search a ${_btNoun(false)} or hit a preset.`; }
 function btSelected() {
     const wrap = document.getElementById('bt-selected'); if (!wrap) return;
     const meLabel = _btMode === 'teams' ? 'MINE' : 'YOU';
