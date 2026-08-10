@@ -188,8 +188,17 @@
             display: inline-block;
         }
 
-        /* Car color dot */
+        /* Car color dot / manufacturer logo */
         .mfr-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 0.45rem; vertical-align: middle; box-shadow: 0 0 6px rgba(0,0,0,0.4); }
+        .mfr-logo-sm { width: 19px; height: 19px; object-fit: contain; margin-right: 0.5rem; vertical-align: middle; }
+        /* Quiet placeholder for empty cells so they recede. */
+        .dash { color: rgba(148,163,184,0.32); }
+        /* Podium row emphasis + gentle striping for scanability. */
+        tbody tr.row-pos-1 { background: linear-gradient(90deg, rgba(255,209,102,0.07), transparent 55%); }
+        tbody tr.row-pos-2 { background: linear-gradient(90deg, rgba(199,201,201,0.055), transparent 55%); }
+        tbody tr.row-pos-3 { background: linear-gradient(90deg, rgba(205,127,50,0.05), transparent 55%); }
+        tbody tr.row-dnf { background: rgba(239,68,68,0.028); }
+        tbody tr:nth-child(even):not(.row-pos-1):not(.row-pos-2):not(.row-pos-3):not(.row-dnf) { background: rgba(255,255,255,0.014); }
         .driver-list { font-size: 0.78rem; color: var(--muted); }
         .driver-list a { color: inherit; text-decoration: none; }
         .driver-list a:hover { color: var(--text); }
@@ -712,22 +721,26 @@ function renderResultsTable(classified, unclassified, flRow) {
         const isFL = flRow && row.driver && row.rd?.fastest_lap_point;
         const isPole = row.rd?.pole_point;
         const carNum = row.driver?.career_number ?? row.entry.car_number;
-        const color = row.entry.manufacturers?.brand_color;
-        const teamCell = row.entry.teams?.name
-            ? `${color ? `<span class="mfr-dot" style="background:${esc(color)}"></span>` : ''}<strong>${
-                row.entry.teams.slug
-                    ? `<a class="entity-link" href="/endurance/teams/?slug=${encodeURIComponent(row.entry.teams.slug)}">${esc(row.entry.teams.name)}</a>`
-                    : esc(row.entry.teams.name)
-              }</strong>`
+        const mfr = row.entry.manufacturers;
+        const color = mfr?.brand_color;
+        // Manufacturer logo where available, else the brand-colour dot.
+        const mark = mfr?.logo_url
+            ? `<img class="mfr-logo-sm" src="${esc(mfr.logo_url)}" alt="${esc(mfr.name || '')}">`
+            : (color ? `<span class="mfr-dot" style="background:${esc(color)}"></span>` : '');
+        const teamName = row.entry.teams?.name
+            ? (row.entry.teams.slug
+                ? `<a class="entity-link" href="/endurance/teams/?slug=${encodeURIComponent(row.entry.teams.slug)}">${esc(row.entry.teams.name)}</a>`
+                : esc(row.entry.teams.name))
             : '<em class="td-muted">Solo</em>';
+        const teamCell = `${mark}<strong>${teamName}</strong>`;
         const flTime = rd.fastest_lap_ms
             ? `<span class="${isFL ? 'fl-time' : 'td-muted'}">${fmtMs(rd.fastest_lap_ms)}${isFL ? '<span class="fl-badge">FL</span>' : ''}</span>`
-            : (isFL ? '<span class="fl-badge">FL</span>' : '<span class="td-muted">—</span>');
+            : (isFL ? '<span class="fl-badge">FL</span>' : '<span class="dash">—</span>');
         const earned = rd.points_awarded;
         const deduct = row.deducted || 0;
         let ptsCell;
         if (earned == null && !deduct) {
-            ptsCell = '<span class="td-muted">—</span>';
+            ptsCell = '<span class="dash">—</span>';
         } else {
             const net = (earned || 0) - deduct;
             ptsCell = `<div class="pts-net">${net}</div>`;
@@ -742,9 +755,9 @@ function renderResultsTable(classified, unclassified, flRow) {
             <td><span class="td-num">${carNum != null ? '#' + carNum : '—'}</span></td>
             <td>${driverCell(row)}</td>
             <td>${teamCell}${row.entry.car_model ? `<div style="font-size:0.72rem;color:var(--muted)">${esc(row.entry.car_model)}</div>` : ''}</td>
-            <td class="td-muted td-center">${rd.laps_driven ?? '—'}</td>
+            <td class="td-muted td-center">${rd.laps_driven != null ? rd.laps_driven : '<span class="dash">—</span>'}</td>
             <td>${flTime}</td>
-            <td class="td-center" style="font-size:1rem">${isPole ? '<span style="color:var(--gold)">★</span>' : '<span class="td-muted">—</span>'}</td>
+            <td class="td-center" style="font-size:1rem">${isPole ? '<span style="color:var(--gold)">★</span>' : '<span class="dash">—</span>'}</td>
             <td class="td-center">${ptsCell}</td>
         </tr>`;
     };
