@@ -632,11 +632,11 @@
 
 <div class="tab-bar">
     <button class="tab active" data-tab="drivers" onclick="setTab('drivers')">Drivers</button>
-    <button class="tab" data-tab="form" onclick="setTab('form')">Form</button>
     <button class="tab" data-tab="teams" onclick="setTab('teams')">Teams</button>
     <button class="tab" data-tab="manufacturers" onclick="setTab('manufacturers')">Manufacturers</button>
     <button class="tab" data-tab="nations" onclick="setTab('nations')">Nations</button>
     <button class="tab" data-tab="ratings" onclick="setTab('ratings')">Ratings</button>
+    <button class="tab" data-tab="form" onclick="setTab('form')">Form</button>
 </div>
 
 <div class="content">
@@ -1514,7 +1514,15 @@ function _formWindow() { return Math.min(3, _btLastIdx + 1); }
 function _cumAt(id, i) { if (i < 0) return 0; const c = _btPts[id] || []; return c[i] == null ? 0 : c[i]; }
 function _recentPts(id, k) { return _cumAt(id, _btLastIdx) - _cumAt(id, _btLastIdx - k); }
 function _eloAt(id, i) { const s = _btEloPts[id] || []; for (let j = Math.min(i, s.length - 1); j >= 0; j--) { if (s[j] != null) return s[j]; } return null; }
-function _eloMomentum(id, k) { const now = _eloAt(id, _btLastIdx), then = _eloAt(id, _btLastIdx - k); return (now != null && then != null) ? now - then : null; }
+// Momentum baseline: the driver's ELO k rounds ago — but if that reaches
+// before their first race (or before round 1), fall back to their DR/SR seed,
+// so a driver's whole climb from where they started is counted.
+function _eloMomentum(id, k) {
+    const now = _eloAt(id, _btLastIdx);
+    const bi = _btLastIdx - k;
+    const then = (bi >= 0 ? _eloAt(id, bi) : null) ?? _btEloSeed[id] ?? null;
+    return (now != null && then != null) ? now - then : null;
+}
 function _lastRoundPts(id, n) { const start = Math.max(0, _btLastIdx - n + 1), a = []; for (let i = start; i <= _btLastIdx; i++) a.push(_cumAt(id, i) - _cumAt(id, i - 1)); return a; }
 function _lastRoundElo(id, n) { const start = Math.max(0, _btLastIdx - n + 1), a = []; for (let i = start; i <= _btLastIdx; i++) a.push(_eloAt(id, i)); return a; }
 
@@ -1543,6 +1551,7 @@ function renderForm(panel) {
         return;
     }
     const K = _formWindow();
+    const showSpark = _btLastIdx >= 1;   // a trend needs 2+ completed rounds
     const champPos = {}; _drivers.forEach((d, i) => { champPos[d.driver_id] = i + 1; });
 
     let rows = _drivers.map(d => ({ d, id: d.driver_id, recent: _recentPts(d.driver_id, K), mom: _eloMomentum(d.driver_id, K), champ: champPos[d.driver_id] }));
@@ -1586,7 +1595,7 @@ function renderForm(panel) {
                     </div>
                 </div>
             </td>
-            <td class="center hide-mob">${spark}</td>
+            ${showSpark ? `<td class="center hide-mob">${spark}</td>` : ''}
             <td class="right">${figure}${sub}</td>
         </tr>`;
     }).join('');
@@ -1605,7 +1614,7 @@ function renderForm(panel) {
                 <thead><tr>
                     <th style="width:50px">#</th>
                     <th>Driver</th>
-                    <th class="center hide-mob">Last ${K}</th>
+                    ${showSpark ? `<th class="center hide-mob">Last ${Math.min(5, _btLastIdx + 1)}</th>` : ''}
                     <th class="right">${metricLabel}</th>
                 </tr></thead>
                 <tbody>${body}</tbody>
@@ -1846,6 +1855,7 @@ let _btMfrPts = {};          // manufacturer_id -> cumulative points
 let _btMfrs   = [];          // [{id, name, slug, pos, total, drivers}] ranked marques
 let _btMetric = 'total';     // 'total' | 'avg' — metric for the manufacturers chart
 let _btEloPts = {};          // driver_id -> ELO rating after each round (carried forward; null before first rated round)
+let _btEloSeed = {};         // driver_id -> DR/SR-based rating going INTO round 1 (rating_before of first rated round)
 let _btElo    = [];          // [{id, name, slug, pos, total}] drivers ranked by current ELO
 let _btMode   = 'drivers';   // which championship the chart is showing ('drivers' | 'teams' | 'manufacturers' | 'ratings')
 
@@ -1951,13 +1961,13 @@ async function buildBattle(perEvent, deds, seasonEvents, myUser) {
 // season and turn it into one carried-forward series per driver, aligned to
 // the same round axis as the points chart.
 async function buildEloBattle() {
-    _btEloPts = {}; _btElo = [];
+    _btEloPts = {}; _btElo = []; _btEloSeed = {};
     const evIds = _btEvents.map(e => e.id);
     if (!evIds.length) return;
     let rows = [];
     try {
         const { data } = await sb.from('driver_ratings')
-            .select('driver_id, event_id, rating_after')
+            .select('driver_id, event_id, rating_after, rating_before')
             .in('event_id', evIds);
         rows = data || [];
     } catch (e) { rows = []; }
@@ -1965,8 +1975,20 @@ async function buildEloBattle() {
     // driver_id -> { event_id -> rating_after }, plus the set of rounds that
     // have been rated at all, so lines stop at the last completed round rather
     // than carrying flat into rounds that haven't happened yet.
-    const byDrv = {}, ratedEv = new Set();
-    rows.forEach(r => { (byDrv[r.driver_id] = byDrv[r.driver_id] || {})[r.event_id] = Number(r.rating_after); ratedEv.add(r.event_id); });
+    const evIndex = {}; _btEvents.forEach((e, i) => { evIndex[e.id] = i; });
+    const byDrv = {}, ratedEv = new Set(), seedIdx = {};
+    rows.forEach(r => {
+        const i = evIndex[r.event_id]; if (i == null) return;
+        (byDrv[r.driver_id] = byDrv[r.driver_id] || {})[r.event_id] = Number(r.rating_after);
+        ratedEv.add(r.event_id);
+        // Seed = the DR/SR-based rating the driver carried INTO their first
+        // rated round (rating_before of their earliest event), so ELO momentum
+        // can measure from where they actually started, not from round 1's result.
+        if (seedIdx[r.driver_id] == null || i < seedIdx[r.driver_id]) {
+            seedIdx[r.driver_id] = i;
+            _btEloSeed[r.driver_id] = Number(r.rating_before);
+        }
+    });
     let lastRatedIdx = -1;
     _btEvents.forEach((e, i) => { if (ratedEv.has(e.id)) lastRatedIdx = i; });
 
