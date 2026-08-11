@@ -565,6 +565,13 @@
         .bt-mbtn { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; padding: 0.5rem 0.7rem; border: none; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.12s; white-space: nowrap; }
         .bt-mbtn:hover { color: var(--text); }
         .bt-mbtn.active { color: var(--gold); background: rgba(255,209,102,0.12); }
+
+        /* Form tab */
+        .form-toolbar { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin:0 0.15rem 1rem; }
+        .form-caption { font-size:0.82rem; color:var(--muted); }
+        .spark { display:block; margin:0 auto; }
+        .form-sub { font-size:0.68rem; color:var(--muted); margin-top:0.12rem; white-space:nowrap; }
+        .form-climb { color:#4ade80; font-size:0.62rem; margin-left:0.34rem; vertical-align:middle; }
         .bt-selected { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.85rem 0 0.2rem; min-height: 1.9rem; }
         .bt-chip { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.35rem 0.3rem 0.6rem; border-radius: 20px; border: 1px solid var(--border); background: var(--bg-2); color: var(--text); }
         .bt-chip .cdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
@@ -625,6 +632,7 @@
 
 <div class="tab-bar">
     <button class="tab active" data-tab="drivers" onclick="setTab('drivers')">Drivers</button>
+    <button class="tab" data-tab="form" onclick="setTab('form')">Form</button>
     <button class="tab" data-tab="teams" onclick="setTab('teams')">Teams</button>
     <button class="tab" data-tab="manufacturers" onclick="setTab('manufacturers')">Manufacturers</button>
     <button class="tab" data-tab="nations" onclick="setTab('nations')">Nations</button>
@@ -850,6 +858,7 @@ async function setTab(t) {
 function render() {
     const panel = document.getElementById('panel');
     if (_tab === 'drivers')  renderDrivers(panel);
+    else if (_tab === 'form') renderForm(panel);
     else if (_tab === 'teams') renderTeams(panel);
     else if (_tab === 'manufacturers') renderManufacturers(panel);
     else if (_tab === 'nations') renderNations(panel);
@@ -1491,6 +1500,118 @@ function renderRatings(panel) {
             </table>
         </div>
         <p style="font-size:0.72rem;color:var(--muted);margin-top:0.85rem;padding:0 0.25rem">Pairwise Elo per split (K=20, seeded from GT7 DR/SR until raced). Clamped to [800–3000].</p>`;
+}
+
+// ============================================================
+// FORM — "who's hot right now": the last few rounds only, ranked by
+// points scored in the window or by ELO gained over it. Built entirely
+// from the per-round series the battle chart already computes.
+// ============================================================
+let _formMetric = 'points';   // 'points' | 'elo'
+function setFormMetric(m) { m = m === 'elo' ? 'elo' : 'points'; if (m === _formMetric) return; _formMetric = m; renderForm(document.getElementById('panel')); }
+
+function _formWindow() { return Math.min(3, _btLastIdx + 1); }
+function _cumAt(id, i) { if (i < 0) return 0; const c = _btPts[id] || []; return c[i] == null ? 0 : c[i]; }
+function _recentPts(id, k) { return _cumAt(id, _btLastIdx) - _cumAt(id, _btLastIdx - k); }
+function _eloAt(id, i) { const s = _btEloPts[id] || []; for (let j = Math.min(i, s.length - 1); j >= 0; j--) { if (s[j] != null) return s[j]; } return null; }
+function _eloMomentum(id, k) { const now = _eloAt(id, _btLastIdx), then = _eloAt(id, _btLastIdx - k); return (now != null && then != null) ? now - then : null; }
+function _lastRoundPts(id, n) { const start = Math.max(0, _btLastIdx - n + 1), a = []; for (let i = start; i <= _btLastIdx; i++) a.push(_cumAt(id, i) - _cumAt(id, i - 1)); return a; }
+function _lastRoundElo(id, n) { const start = Math.max(0, _btLastIdx - n + 1), a = []; for (let i = start; i <= _btLastIdx; i++) a.push(_eloAt(id, i)); return a; }
+
+// Little inline sparkline: bars for round-by-round points, a line for ELO.
+function sparkBars(vals) {
+    const w = 78, h = 26, n = Math.max(1, vals.length), gap = 3, bw = (w - (n - 1) * gap) / n, max = Math.max(1, ...vals);
+    const bars = vals.map((v, i) => { const bh = Math.max(2, (v / max) * (h - 4)), x = i * (bw + gap), y = h - bh, last = i === vals.length - 1;
+        return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="${last ? '#ffd166' : 'rgba(255,255,255,0.26)'}"/>`; }).join('');
+    return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${bars}</svg>`;
+}
+function sparkLine(vals) {
+    const w = 78, h = 26, n = Math.max(1, vals.length);
+    const pts = vals.map((v, i) => ({ v, i })).filter(p => p.v != null);
+    if (!pts.length) return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"></svg>`;
+    const nums = pts.map(p => p.v), min = Math.min(...nums), max = Math.max(...nums), rng = (max - min) || 1;
+    const X = i => n <= 1 ? w / 2 : i / (n - 1) * (w - 4) + 2, Y = v => (h - 3) - ((v - min) / rng) * (h - 6);
+    const col = nums[nums.length - 1] >= nums[0] ? '#4ade80' : '#f87171';
+    const d = pts.map((p, k) => `${k ? 'L' : 'M'}${X(p.i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ');
+    const dots = pts.map(p => `<circle cx="${X(p.i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="1.7" fill="${col}"/>`).join('');
+    return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/>${dots}</svg>`;
+}
+
+function renderForm(panel) {
+    if (_btLastIdx < 0 || !_drivers.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Form Yet</h3><p>The form guide fills in once a round or two has been raced.</p></div>`;
+        return;
+    }
+    const K = _formWindow();
+    const champPos = {}; _drivers.forEach((d, i) => { champPos[d.driver_id] = i + 1; });
+
+    let rows = _drivers.map(d => ({ d, id: d.driver_id, recent: _recentPts(d.driver_id, K), mom: _eloMomentum(d.driver_id, K), champ: champPos[d.driver_id] }));
+    if (_formMetric === 'points') {
+        rows.sort((a, b) => (b.recent - a.recent) || ((Number(b.d.points) || 0) - (Number(a.d.points) || 0)) || (a.d.driver_name || '').localeCompare(b.d.driver_name || ''));
+    } else {
+        const key = r => r.mom == null ? -1e9 : r.mom;
+        rows.sort((a, b) => (key(b) - key(a)) || ((_ratingByDriver[b.id]?.rating || 0) - (_ratingByDriver[a.id]?.rating || 0)) || (a.d.driver_name || '').localeCompare(b.d.driver_name || ''));
+    }
+
+    const body = rows.map((r, i) => {
+        const pos = i + 1, d = r.d, id = r.id, _rInfo = _ratingByDriver[id];
+        const num = d.career_number ? `<span class="career-num">#${d.career_number}</span>` : '';
+        const soloMfrName = d.manufacturer_name || _rInfo?.manufacturerName;
+        const teamLine = d.team_name
+            ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name)}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
+            : (soloMfrName ? `<div class="meta-line">${mfrBadge(_rInfo?.manufacturerLogoUrl, _rInfo?.brandColor, soloMfrName)}<em style="opacity:0.75">Solo</em></div>` : '');
+        const spark = _formMetric === 'points' ? sparkBars(_lastRoundPts(id, 5)) : sparkLine(_lastRoundElo(id, 5));
+        // The ranked figure, plus a "vs championship position" line so a
+        // low-standing driver on a tear stands out.
+        let figure, sub;
+        if (_formMetric === 'points') {
+            figure = `<span class="points">${r.recent > 0 ? '+' : ''}${r.recent % 1 === 0 ? r.recent : r.recent.toFixed(1)}</span>`;
+            sub = `<div class="form-sub">${(Number(d.points) || 0)} pts total · P${r.champ} overall</div>`;
+        } else {
+            figure = r.mom == null ? `<span class="lighter">—</span>` : `<span class="points" style="color:${r.mom >= 0 ? '#4ade80' : '#f87171'}">${r.mom >= 0 ? '+' : ''}${r.mom}</span>`;
+            const cur = _rInfo?.rating != null ? Math.round(_rInfo.rating) + ' ELO' : '';
+            sub = `<div class="form-sub">${cur ? cur + ' · ' : ''}P${r.champ} overall</div>`;
+        }
+        const hotVal = _formMetric === 'points' ? r.recent : (r.mom || 0);
+        const flame = (pos === 1 && hotVal > 0) ? ' <span title="Hottest right now">🔥</span>' : '';
+        const climbing = (r.champ - pos >= 5) ? `<span class="form-climb" title="Climbing vs championship position">▲</span>` : '';
+        return `<tr class="${rankCls(pos)}">
+            <td class="${posCls(pos)}">${pos}</td>
+            <td>
+                <div class="driver-cell">
+                    ${driverAvatar(_rInfo?.photo, d.driver_name)}
+                    <div class="driver-cell-text">
+                        <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${flame}${climbing}</div>
+                        ${teamLine}
+                    </div>
+                </div>
+            </td>
+            <td class="center hide-mob">${spark}</td>
+            <td class="right">${figure}${sub}</td>
+        </tr>`;
+    }).join('');
+
+    const metricLabel = _formMetric === 'points' ? `Points won` : `ELO gained`;
+    panel.innerHTML = `
+        <div class="form-toolbar">
+            <div class="form-caption">Who's hot over the last ${K} round${K === 1 ? '' : 's'}.</div>
+            <span class="bt-metric" style="display:inline-flex">
+                <button class="bt-mbtn ${_formMetric === 'points' ? 'active' : ''}" onclick="setFormMetric('points')">Points form</button>
+                <button class="bt-mbtn ${_formMetric === 'elo' ? 'active' : ''}" onclick="setFormMetric('elo')">ELO momentum</button>
+            </span>
+        </div>
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:50px">#</th>
+                    <th>Driver</th>
+                    <th class="center hide-mob">Last ${K}</th>
+                    <th class="right">${metricLabel}</th>
+                </tr></thead>
+                <tbody>${body}</tbody>
+            </table>
+        </div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.85rem;padding:0 0.25rem">Form = ${_formMetric === 'points' ? `net points scored over the last ${K} completed round${K === 1 ? '' : 's'}` : `change in ELO across the last ${K} completed round${K === 1 ? '' : 's'}`}. The bars show each of the last five rounds.</p>`;
 }
 
 async function load() {
