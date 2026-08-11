@@ -1098,7 +1098,7 @@ async function showListing() {
         const mfrColor = d.manufacturers?.brand_color || '';
         const badgeRow = cardBadges(d, winsMap[d.id] || 0, racesMap[d.id] || 0, seasonFinishesMap[d.id]);
         return `
-        <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" data-mfr="${esc(d.manufacturers?.name || '')}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-left-color:${esc(mfrColor)}` : ''}">
+        <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" data-wins="${winsMap[d.id] || 0}" data-mfr="${esc(d.manufacturers?.name || '')}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-left-color:${esc(mfrColor)}` : ''}">
             <div class="grid-pos"></div>
             <div class="driver-card-photo">
                 ${avatarHTML(d.photo_url, d.display_name, 'card')}
@@ -1223,7 +1223,7 @@ async function showListing() {
             const grid = document.querySelector('.driver-grid');
             grid?.classList.add('view-grid');
             document.getElementById('grid-gantry')?.classList.add('show');
-            sortCards('.driver-grid', '.driver-card', 'elo');   // rank the grid on merit, lays out too
+            sortCards('.driver-grid', '.driver-card', 'points');   // championship order, lays out too
             playGridEntrance();
         }
     }
@@ -1318,11 +1318,22 @@ function sortCards(gridSel, cardSel, sortKey) {
     const grid = document.querySelector(gridSel);
     if (!grid) return;
     const cards = Array.from(grid.querySelectorAll(cardSel));
+    const num = (c, k) => Number(c.dataset[k]) || 0;
+    const byName = (a, b) => (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' });
     cards.sort((a, b) => {
-        if (sortKey === 'alpha') {
-            return (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' });
+        if (sortKey === 'alpha') return byName(a, b);
+        // Championship order: points, then wins, then ELO, then name — so a
+        // driver on 0 points never outranks one who has actually scored.
+        if (sortKey === 'points') {
+            return (num(b, 'points') - num(a, 'points'))
+                || (num(b, 'wins') - num(a, 'wins'))
+                || (num(b, 'elo') - num(a, 'elo'))
+                || byName(a, b);
         }
-        return (Number(b.dataset[sortKey]) || 0) - (Number(a.dataset[sortKey]) || 0);
+        // ELO/pace order: rating, then points, then name.
+        return (num(b, 'elo') - num(a, 'elo'))
+            || (num(b, 'points') - num(a, 'points'))
+            || byName(a, b);
     });
     cards.forEach(c => grid.appendChild(c));
     if (grid.classList.contains('view-grid')) layoutGrid();
@@ -1367,9 +1378,9 @@ function setDriverView(view, btn) {
     if (_driverView === 'grid') {
         grid.classList.add('view-grid');
         if (gantry) gantry.classList.add('show');
-        // A starting grid ranks on merit — nudge an alphabetical sort to ELO.
+        // A starting grid ranks on merit — nudge an alphabetical sort to points.
         const active = document.querySelector('.sort-btn.sort-btn-active:not(.mfr-filter-btn)');
-        if (active && active.dataset.sort === 'alpha') sortCards('.driver-grid', '.driver-card', 'elo');
+        if (active && active.dataset.sort === 'alpha') sortCards('.driver-grid', '.driver-card', 'points');
         else layoutGrid();
         playGridEntrance();
     } else {
