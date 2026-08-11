@@ -1535,10 +1535,16 @@ function _eloSpark(id, n) {
 }
 
 // Little inline sparkline: bars for round-by-round points, a line for ELO.
-function sparkBars(vals) {
-    const w = 78, h = 26, n = Math.max(1, vals.length), gap = 3, bw = (w - (n - 1) * gap) / n, max = Math.max(1, ...vals);
-    const bars = vals.map((v, i) => { const bh = Math.max(2, (v / max) * (h - 4)), x = i * (bw + gap), y = h - bh, last = i === vals.length - 1;
-        return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="${last ? '#ffd166' : 'rgba(255,255,255,0.26)'}"/>`; }).join('');
+// scaleMax = a shared points ceiling across the whole table, so bar heights are
+// comparable driver-to-driver (a 25-point round towers over an 8-point one).
+function sparkBars(vals, scaleMax) {
+    const w = 78, h = 28, n = Math.max(1, vals.length), gap = 3, bw = (w - (n - 1) * gap) / n;
+    const max = (scaleMax && scaleMax > 0) ? scaleMax : Math.max(1, ...vals);
+    const bars = vals.map((v, i) => {
+        const bh = Math.max(2, (Math.min(v, max) / max) * (h - 3)), x = i * (bw + gap), y = h - bh, last = i === vals.length - 1;
+        const fill = v <= 0 ? 'rgba(255,255,255,0.14)' : (last ? '#ffd166' : 'rgba(255,209,102,0.5)');
+        return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="${fill}"/>`;
+    }).join('');
     return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${bars}</svg>`;
 }
 // scaleMax = a shared vertical span (ELO units) across the whole table, so the
@@ -1571,11 +1577,14 @@ function renderForm(panel) {
     const showSpark = _formMetric === 'elo' ? (_btLastIdx >= 0 && eloHasData) : (_btLastIdx >= 1);
     const champPos = {}; _drivers.forEach((d, i) => { champPos[d.driver_id] = i + 1; });
 
-    // One shared vertical scale for every ELO sparkline, so line angles are
-    // comparable across drivers (the biggest swing draws the steepest line).
-    let eloScaleMax = 0;
+    // One shared vertical scale per metric so sparklines are comparable across
+    // drivers — the biggest ELO swing draws the steepest line, and the biggest
+    // single-round points haul draws the tallest bar.
+    let eloScaleMax = 0, ptsScaleMax = 0;
     if (_formMetric === 'elo') {
         _drivers.forEach(d => { const s = _eloSpark(d.driver_id, 6).filter(v => v != null); if (s.length > 1) { const r = Math.max(...s) - Math.min(...s); if (r > eloScaleMax) eloScaleMax = r; } });
+    } else {
+        _drivers.forEach(d => { const s = _lastRoundPts(d.driver_id, 5); const m = Math.max(0, ...s); if (m > ptsScaleMax) ptsScaleMax = m; });
     }
 
     let rows = _drivers.map(d => ({ d, id: d.driver_id, recent: _recentPts(d.driver_id, K), mom: _eloMomentum(d.driver_id, K), champ: champPos[d.driver_id] }));
@@ -1593,7 +1602,7 @@ function renderForm(panel) {
         const teamLine = d.team_name
             ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name)}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
             : (soloMfrName ? `<div class="meta-line">${mfrBadge(_rInfo?.manufacturerLogoUrl, _rInfo?.brandColor, soloMfrName)}<em style="opacity:0.75">Solo</em></div>` : '');
-        const spark = _formMetric === 'points' ? sparkBars(_lastRoundPts(id, 5)) : sparkLine(_eloSpark(id, 6), eloScaleMax);
+        const spark = _formMetric === 'points' ? sparkBars(_lastRoundPts(id, 5), ptsScaleMax) : sparkLine(_eloSpark(id, 6), eloScaleMax);
         // The ranked figure, plus a "vs championship position" line so a
         // low-standing driver on a tear stands out.
         let figure, sub;
