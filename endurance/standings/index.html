@@ -571,7 +571,6 @@
         .form-caption { font-size:0.82rem; color:var(--muted); }
         .spark { display:block; margin:0 auto; }
         .form-sub { font-size:0.68rem; color:var(--muted); margin-top:0.12rem; white-space:nowrap; }
-        .form-climb { color:#4ade80; font-size:0.62rem; margin-left:0.34rem; vertical-align:middle; }
         .bt-selected { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.85rem 0 0.2rem; min-height: 1.9rem; }
         .bt-chip { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.35rem 0.3rem 0.6rem; border-radius: 20px; border: 1px solid var(--border); background: var(--bg-2); color: var(--text); }
         .bt-chip .cdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
@@ -1622,14 +1621,13 @@ function renderForm(panel) {
         }
         const hotVal = _formMetric === 'points' ? r.recent : (r.mom || 0);
         const flame = (pos === 1 && hotVal > 0) ? ' <span title="Hottest right now">🔥</span>' : '';
-        const climbing = (r.champ - pos >= 5) ? `<span class="form-climb" title="Climbing vs championship position">▲</span>` : '';
         return `<tr class="${rankCls(pos)}">
             <td class="${posCls(pos)}">${pos}</td>
             <td>
                 <div class="driver-cell">
                     ${driverAvatar(_rInfo?.photo, d.driver_name)}
                     <div class="driver-cell-text">
-                        <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${flame}${climbing}</div>
+                        <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${flame}</div>
                         ${teamLine}
                     </div>
                 </div>
