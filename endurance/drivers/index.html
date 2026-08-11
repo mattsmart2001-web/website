@@ -280,6 +280,55 @@
         }
         .driver-card:hover { border-color: rgba(255,209,102,0.45); }
 
+        /* ===== THE GRID — starting-grid formation view ===== */
+        /* View toggle (segmented control) */
+        .view-toggle { display:inline-flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; background:var(--bg-1); }
+        .view-toggle .vt-btn { font-family:'Orbitron',sans-serif; font-size:0.6rem; letter-spacing:0.09em; text-transform:uppercase; font-weight:700; padding:0.5rem 0.85rem; border:none; background:transparent; color:var(--muted); cursor:pointer; transition:all 0.14s; display:inline-flex; align-items:center; gap:0.4rem; white-space:nowrap; }
+        .view-toggle .vt-btn svg { width:13px; height:13px; }
+        .view-toggle .vt-btn:hover { color:var(--text); }
+        .view-toggle .vt-btn.active { color:#0c0d10; background:var(--gold); }
+        .view-bar { display:flex; justify-content:center; margin:0 auto 1.1rem; }
+
+        /* Start-lights gantry — the ceremony above the formation */
+        .grid-gantry { display:none; flex-direction:column; align-items:center; gap:0.55rem; margin:0.4rem auto 1.6rem; }
+        .driver-grid.view-grid ~ .grid-gantry, .grid-gantry.show { display:flex; }
+        .gantry-lights { display:flex; gap:0.5rem; padding:0.5rem 0.8rem; background:linear-gradient(#15171c,#0b0c0f); border:1px solid var(--border); border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.4); }
+        .gantry-lights .lamp { width:15px; height:15px; border-radius:50%; background:#2a0d0d; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06); transition:background 0.18s, box-shadow 0.18s; }
+        .gantry-lights .lamp.on { background:radial-gradient(circle at 40% 35%, #ff6b6b, #d61f1f 70%); box-shadow:0 0 10px 2px rgba(220,31,31,0.7), inset 0 0 0 1px rgba(255,255,255,0.15); }
+        .gantry-lights.go .lamp { background:radial-gradient(circle at 40% 35%, #7bffa8, #16b34a 70%); box-shadow:0 0 12px 3px rgba(22,179,74,0.7), inset 0 0 0 1px rgba(255,255,255,0.18); }
+        .gantry-label { font-family:'Orbitron',sans-serif; font-size:0.58rem; letter-spacing:0.34em; text-transform:uppercase; color:var(--muted); font-weight:700; }
+
+        /* Formation layout: alternate columns drop half a card (echelon).
+           Offset via position (not transform) so the 3-D hover tilt is free. */
+        .driver-grid.view-grid { align-items:start; }
+        .driver-grid.view-grid .driver-card[data-col-odd] { position:relative; top:2.15rem; }
+        .driver-grid.view-grid { margin-bottom:2.15rem; }
+
+        /* Rank chip (P1, P2 …) — hidden in card view, shown in the formation */
+        .grid-pos { display:none; position:absolute; top:0; left:0; z-index:4;
+            font-family:'Orbitron',sans-serif; font-weight:800; font-size:0.62rem; letter-spacing:0.04em;
+            padding:0.2rem 0.44rem; border-bottom-right-radius:9px; border-top-left-radius:9px;
+            background:rgba(10,11,14,0.82); color:var(--muted); backdrop-filter:blur(4px);
+            box-shadow:0 2px 8px rgba(0,0,0,0.4); }
+        .driver-grid.view-grid .grid-pos { display:block; }
+        .driver-card.gp-1 .grid-pos { color:#0c0d10; background:linear-gradient(135deg,#ffe08a,#f0b429); }
+        .driver-card.gp-2 .grid-pos { color:#0c0d10; background:linear-gradient(135deg,#f4f6fb,#c2cad6); }
+        .driver-card.gp-3 .grid-pos { color:#0c0d10; background:linear-gradient(135deg,#f0b78a,#cd7f42); }
+        /* Podium glow on the front row (base state; hover tilt takes over inline) */
+        .driver-grid.view-grid .driver-card.gp-1 { border-color:rgba(240,180,41,0.55); box-shadow:0 0 0 1px rgba(240,180,41,0.35), 0 10px 26px rgba(240,180,41,0.14); }
+        .driver-grid.view-grid .driver-card.gp-2 { border-color:rgba(194,202,214,0.5); box-shadow:0 0 0 1px rgba(194,202,214,0.28), 0 10px 24px rgba(194,202,214,0.1); }
+        .driver-grid.view-grid .driver-card.gp-3 { border-color:rgba(205,127,66,0.5); box-shadow:0 0 0 1px rgba(205,127,66,0.28), 0 10px 24px rgba(205,127,66,0.1); }
+
+        /* Grid-walk entrance */
+        @keyframes gridIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+        .driver-grid.grid-walk .driver-card { opacity:0; animation:gridIn 0.5s cubic-bezier(.2,.7,.3,1) both; animation-delay:calc(var(--gi,0) * 45ms); }
+        .driver-grid.grid-walk .driver-card[data-col-odd] { /* keep echelon offset during entrance */ }
+
+        @media (prefers-reduced-motion: reduce) {
+            .driver-grid.grid-walk .driver-card { animation:none; opacity:1; }
+            .gantry-lights .lamp, .gantry-lights.go .lamp { transition:none; }
+        }
+
         /* Photo fills the whole card */
         .driver-card-photo {
             position: absolute;
@@ -1050,6 +1099,7 @@ async function showListing() {
         const badgeRow = cardBadges(d, winsMap[d.id] || 0, racesMap[d.id] || 0, seasonFinishesMap[d.id]);
         return `
         <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" data-mfr="${esc(d.manufacturers?.name || '')}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-left-color:${esc(mfrColor)}` : ''}">
+            <div class="grid-pos"></div>
             <div class="driver-card-photo">
                 ${avatarHTML(d.photo_url, d.display_name, 'card')}
             </div>
@@ -1136,6 +1186,16 @@ async function showListing() {
                     <input class="gtec-search-input" id="drivers-search" type="search" autocomplete="off"
                            placeholder="Search driver, team, nationality or #number" oninput="applyDriverFilters()">
                 </div>
+                <div class="view-bar">
+                    <div class="view-toggle" role="tablist" aria-label="Roster layout">
+                        <button class="vt-btn" id="vt-grid" onclick="setDriverView('grid',this)" aria-label="Starting grid view">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3v18M18 3v18"/><path d="M4 7h4M16 11h4M4 15h4M16 19h4"/></svg>The Grid
+                        </button>
+                        <button class="vt-btn" id="vt-cards" onclick="setDriverView('cards',this)" aria-label="Card view">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Cards
+                        </button>
+                    </div>
+                </div>
                 <div class="sort-pills">
                     <span class="sort-label">Sort:</span>
                     <button class="sort-btn sort-btn-active" data-sort="alpha" onclick="sortCards('.driver-grid','.driver-card','alpha')">A–Z</button>
@@ -1143,10 +1203,30 @@ async function showListing() {
                     <button class="sort-btn" data-sort="points" onclick="sortCards('.driver-grid','.driver-card','points')">Points</button>
                 </div>
                 ${mfrFilterHtml}
+                <div class="grid-gantry" id="grid-gantry">
+                    <div class="gantry-lights" id="gantry-lights">
+                        <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
+                    </div>
+                    <div class="gantry-label">Starting Grid</div>
+                </div>
                 <div class="driver-grid">${cards}</div>
                 <div class="empty-msg" id="drivers-empty" style="display:none">No drivers match your search.</div>
             ` : `<div class="empty-msg">No drivers registered yet.</div>`}
         </div>`;
+
+    // Apply the saved layout. The Grid is the default — a merit-ranked
+    // starting formation with a lights-out reveal on load.
+    if (data.length) {
+        document.getElementById('vt-grid')?.classList.toggle('active', _driverView === 'grid');
+        document.getElementById('vt-cards')?.classList.toggle('active', _driverView === 'cards');
+        if (_driverView === 'grid') {
+            const grid = document.querySelector('.driver-grid');
+            grid?.classList.add('view-grid');
+            document.getElementById('grid-gantry')?.classList.add('show');
+            sortCards('.driver-grid', '.driver-card', 'elo');   // rank the grid on merit, lays out too
+            playGridEntrance();
+        }
+    }
 }
 
 // 3-D tilt on driver cards — event delegation so it works after sort re-renders
@@ -1204,6 +1284,7 @@ function applyDriverFilters() {
         : `${cards.length} registered driver${cards.length !== 1 ? 's' : ''}`;
     const emptyEl = document.getElementById('drivers-empty');
     if (emptyEl) emptyEl.style.display = ((q || mfr) && shown === 0) ? '' : 'none';
+    if (_driverView === 'grid') layoutGrid();
 }
 
 // Generic card filter — reads data-search attributes and toggles
@@ -1244,7 +1325,88 @@ function sortCards(gridSel, cardSel, sortKey) {
         return (Number(b.dataset[sortKey]) || 0) - (Number(a.dataset[sortKey]) || 0);
     });
     cards.forEach(c => grid.appendChild(c));
+    if (grid.classList.contains('view-grid')) layoutGrid();
 }
+
+// ===== THE GRID — starting-grid formation =====
+let _driverView = 'grid';
+try { const v = localStorage.getItem('gtec_driver_view'); if (v === 'cards' || v === 'grid') _driverView = v; } catch (e) {}
+
+// Number the visible cards in their current (sorted/filtered) order, mark the
+// echelon columns, and crown the front row. Re-run after any sort/filter/resize.
+function layoutGrid() {
+    const grid = document.querySelector('.driver-grid');
+    if (!grid || !grid.classList.contains('view-grid')) return;
+    const cardW = 160 + 0.85 * 16;                       // min card width + grid gap
+    const cols = Math.max(1, Math.floor((grid.clientWidth + 0.85 * 16) / cardW));
+    const vis = Array.from(grid.querySelectorAll('.driver-card')).filter(c => c.style.display !== 'none');
+    vis.forEach((c, i) => {
+        const col = i % cols;
+        if (col % 2 === 1) c.setAttribute('data-col-odd', ''); else c.removeAttribute('data-col-odd');
+        c.classList.toggle('gp-1', i === 0);
+        c.classList.toggle('gp-2', i === 1);
+        c.classList.toggle('gp-3', i === 2);
+        const chip = c.querySelector('.grid-pos');
+        if (chip) chip.textContent = 'P' + (i + 1);
+    });
+    // Cards hidden by a filter shouldn't keep a stale rank/echelon class.
+    grid.querySelectorAll('.driver-card').forEach(c => {
+        if (c.style.display === 'none') { c.removeAttribute('data-col-odd'); c.classList.remove('gp-1', 'gp-2', 'gp-3'); }
+    });
+}
+
+// Flip between the formation and the plain card matrix.
+function setDriverView(view, btn) {
+    _driverView = view === 'cards' ? 'cards' : 'grid';
+    try { localStorage.setItem('gtec_driver_view', _driverView); } catch (e) {}
+    const grid = document.querySelector('.driver-grid');
+    const gantry = document.getElementById('grid-gantry');
+    document.getElementById('vt-grid')?.classList.toggle('active', _driverView === 'grid');
+    document.getElementById('vt-cards')?.classList.toggle('active', _driverView === 'cards');
+    if (!grid) return;
+    if (_driverView === 'grid') {
+        grid.classList.add('view-grid');
+        if (gantry) gantry.classList.add('show');
+        // A starting grid ranks on merit — nudge an alphabetical sort to ELO.
+        const active = document.querySelector('.sort-btn.sort-btn-active:not(.mfr-filter-btn)');
+        if (active && active.dataset.sort === 'alpha') sortCards('.driver-grid', '.driver-card', 'elo');
+        else layoutGrid();
+        playGridEntrance();
+    } else {
+        grid.classList.remove('view-grid', 'grid-walk');
+        if (gantry) gantry.classList.remove('show');
+        grid.querySelectorAll('.driver-card').forEach(c => { c.removeAttribute('data-col-odd'); c.classList.remove('gp-1', 'gp-2', 'gp-3'); c.style.removeProperty('--gi'); });
+    }
+}
+
+// Staggered "grid walk" reveal + a quick lights-out cue (once, on entry).
+function playGridEntrance() {
+    const grid = document.querySelector('.driver-grid');
+    if (!grid) return;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const vis = Array.from(grid.querySelectorAll('.driver-card')).filter(c => c.style.display !== 'none');
+    vis.forEach((c, i) => c.style.setProperty('--gi', Math.min(i, 22)));   // cap the cascade so the tail doesn't lag
+    if (reduce) { runLights(true); return; }
+    grid.classList.remove('grid-walk'); void grid.offsetWidth; grid.classList.add('grid-walk');
+    runLights(false);
+}
+
+// Five reds on, then out → green. Purely decorative; skipped for reduced motion.
+let _lightsTimers = [];
+function runLights(instant) {
+    const box = document.getElementById('gantry-lights');
+    if (!box) return;
+    _lightsTimers.forEach(clearTimeout); _lightsTimers = [];
+    const lamps = [...box.querySelectorAll('.lamp')];
+    box.classList.remove('go'); lamps.forEach(l => l.classList.remove('on'));
+    if (instant) { box.classList.add('go'); return; }
+    lamps.forEach((l, i) => _lightsTimers.push(setTimeout(() => l.classList.add('on'), 160 + i * 150)));
+    _lightsTimers.push(setTimeout(() => { lamps.forEach(l => l.classList.remove('on')); box.classList.add('go'); }, 160 + lamps.length * 150 + 260));
+}
+
+// Keep the echelon columns correct as the viewport (and column count) change.
+let _gridResizeT;
+window.addEventListener('resize', () => { clearTimeout(_gridResizeT); _gridResizeT = setTimeout(() => { if (_driverView === 'grid') layoutGrid(); }, 120); });
 
 // ============================================================
 // SEASON STAKES — best/worst possible finish still mathematically
