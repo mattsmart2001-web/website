@@ -1524,7 +1524,15 @@ function _eloMomentum(id, k) {
     return (now != null && then != null) ? now - then : null;
 }
 function _lastRoundPts(id, n) { const start = Math.max(0, _btLastIdx - n + 1), a = []; for (let i = start; i <= _btLastIdx; i++) a.push(_cumAt(id, i) - _cumAt(id, i - 1)); return a; }
-function _lastRoundElo(id, n) { const start = Math.max(0, _btLastIdx - n + 1), a = []; for (let i = start; i <= _btLastIdx; i++) a.push(_eloAt(id, i)); return a; }
+// ELO spark: the rating trajectory, anchored on the DR/SR seed so the very
+// first round's move (seed → after R1) is visible even at one round in. Keeps
+// the last n points, so the seed naturally drops off once the season is long.
+function _eloSpark(id, n) {
+    const s = _btEloPts[id] || [], series = [];
+    if (_btEloSeed[id] != null) series.push(_btEloSeed[id]);
+    for (let i = 0; i <= _btLastIdx; i++) if (s[i] != null) series.push(s[i]);
+    return series.slice(-n);
+}
 
 // Little inline sparkline: bars for round-by-round points, a line for ELO.
 function sparkBars(vals) {
@@ -1551,7 +1559,10 @@ function renderForm(panel) {
         return;
     }
     const K = _formWindow();
-    const showSpark = _btLastIdx >= 1;   // a trend needs 2+ completed rounds
+    // Points need two rounds to trend; ELO already has the pre-R1 seed, so a
+    // seed → after-R1 line is drawable from the very first round.
+    const eloHasData = _drivers.some(d => _btEloSeed[d.driver_id] != null || (_btEloPts[d.driver_id] || []).some(v => v != null));
+    const showSpark = _formMetric === 'elo' ? (_btLastIdx >= 0 && eloHasData) : (_btLastIdx >= 1);
     const champPos = {}; _drivers.forEach((d, i) => { champPos[d.driver_id] = i + 1; });
 
     let rows = _drivers.map(d => ({ d, id: d.driver_id, recent: _recentPts(d.driver_id, K), mom: _eloMomentum(d.driver_id, K), champ: champPos[d.driver_id] }));
@@ -1569,7 +1580,7 @@ function renderForm(panel) {
         const teamLine = d.team_name
             ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name)}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
             : (soloMfrName ? `<div class="meta-line">${mfrBadge(_rInfo?.manufacturerLogoUrl, _rInfo?.brandColor, soloMfrName)}<em style="opacity:0.75">Solo</em></div>` : '');
-        const spark = _formMetric === 'points' ? sparkBars(_lastRoundPts(id, 5)) : sparkLine(_lastRoundElo(id, 5));
+        const spark = _formMetric === 'points' ? sparkBars(_lastRoundPts(id, 5)) : sparkLine(_eloSpark(id, 6));
         // The ranked figure, plus a "vs championship position" line so a
         // low-standing driver on a tear stands out.
         let figure, sub;
@@ -1614,7 +1625,7 @@ function renderForm(panel) {
                 <thead><tr>
                     <th style="width:50px">#</th>
                     <th>Driver</th>
-                    ${showSpark ? `<th class="center hide-mob">Last ${Math.min(5, _btLastIdx + 1)}</th>` : ''}
+                    ${showSpark ? `<th class="center hide-mob">${_formMetric === 'elo' ? 'ELO trend' : 'Last ' + Math.min(5, _btLastIdx + 1)}</th>` : ''}
                     <th class="right">${metricLabel}</th>
                 </tr></thead>
                 <tbody>${body}</tbody>
