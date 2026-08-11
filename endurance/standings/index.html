@@ -1537,12 +1537,16 @@ function _eloSpark(id, n) {
 // Little inline sparkline: bars for round-by-round points, a line for ELO.
 // scaleMax = a shared points ceiling across the whole table, so bar heights are
 // comparable driver-to-driver (a 25-point round towers over an 8-point one).
+// Bar width is capped and the group centred, so a single round reads as a neat
+// bar rather than one cell-wide block.
 function sparkBars(vals, scaleMax) {
-    const w = 78, h = 28, n = Math.max(1, vals.length), gap = 3, bw = (w - (n - 1) * gap) / n;
+    const w = 78, h = 28, n = Math.max(1, vals.length), gap = 3;
+    const bw = Math.min(13, (w - (n - 1) * gap) / n);
+    const x0 = (w - (n * bw + (n - 1) * gap)) / 2;   // centre the group
     const max = (scaleMax && scaleMax > 0) ? scaleMax : Math.max(1, ...vals);
     const bars = vals.map((v, i) => {
-        const bh = Math.max(2, (Math.min(v, max) / max) * (h - 3)), x = i * (bw + gap), y = h - bh, last = i === vals.length - 1;
-        const fill = v <= 0 ? 'rgba(255,255,255,0.14)' : (last ? '#ffd166' : 'rgba(255,209,102,0.5)');
+        const bh = Math.max(2, (Math.min(v, max) / max) * (h - 3)), x = x0 + i * (bw + gap), y = h - bh, last = i === vals.length - 1;
+        const fill = v <= 0 ? 'rgba(255,255,255,0.14)' : (last ? '#ffd166' : 'rgba(255,209,102,0.55)');
         return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="${fill}"/>`;
     }).join('');
     return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${bars}</svg>`;
@@ -1574,7 +1578,9 @@ function renderForm(panel) {
     // Points need two rounds to trend; ELO already has the pre-R1 seed, so a
     // seed → after-R1 line is drawable from the very first round.
     const eloHasData = _drivers.some(d => _btEloSeed[d.driver_id] != null || (_btEloPts[d.driver_id] || []).some(v => v != null));
-    const showSpark = _formMetric === 'elo' ? (_btLastIdx >= 0 && eloHasData) : (_btLastIdx >= 1);
+    // Points bars share a scale now, so even one round is a meaningful (and
+    // comparable) bar rather than the old cell-wide "yellow box".
+    const showSpark = _formMetric === 'elo' ? (_btLastIdx >= 0 && eloHasData) : (_btLastIdx >= 0);
     const champPos = {}; _drivers.forEach((d, i) => { champPos[d.driver_id] = i + 1; });
 
     // One shared vertical scale per metric so sparklines are comparable across
@@ -1653,7 +1659,7 @@ function renderForm(panel) {
                 <tbody>${body}</tbody>
             </table>
         </div>
-        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.85rem;padding:0 0.25rem">Form = ${_formMetric === 'points' ? `net points scored over the last ${K} completed round${K === 1 ? '' : 's'}. The bars show each of the last five rounds.` : `change in ELO across the last ${K} completed round${K === 1 ? '' : 's'}, from the DR/SR seed onward. Steeper lines mean a bigger swing; every line shares the same scale.`}</p>`;
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.85rem;padding:0 0.25rem">Form = ${_formMetric === 'points' ? `net points scored over the last ${K} completed round${K === 1 ? '' : 's'}. The bars show each of the last ${Math.min(5, _btLastIdx + 1)} round${Math.min(5, _btLastIdx + 1) === 1 ? '' : 's'} on one shared scale, so taller means more.` : `change in ELO across the last ${K} completed round${K === 1 ? '' : 's'}, from the DR/SR seed onward. Steeper lines mean a bigger swing; every line shares the same scale.`}</p>`;
 }
 
 async function load() {
