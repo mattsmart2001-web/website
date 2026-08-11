@@ -1541,12 +1541,18 @@ function sparkBars(vals) {
         return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="${last ? '#ffd166' : 'rgba(255,255,255,0.26)'}"/>`; }).join('');
     return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${bars}</svg>`;
 }
-function sparkLine(vals) {
-    const w = 78, h = 26, n = Math.max(1, vals.length);
+// scaleMax = a shared vertical span (ELO units) across the whole table, so the
+// line's angle encodes the real amount gained/lost — a bigger swing draws a
+// steeper line. Each series is centred in the cell so none clip. Without a
+// shared scale it falls back to filling the cell (per-series normalisation).
+function sparkLine(vals, scaleMax) {
+    const w = 78, h = 28, n = Math.max(1, vals.length), pad = 3;
     const pts = vals.map((v, i) => ({ v, i })).filter(p => p.v != null);
     if (!pts.length) return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"></svg>`;
-    const nums = pts.map(p => p.v), min = Math.min(...nums), max = Math.max(...nums), rng = (max - min) || 1;
-    const X = i => n <= 1 ? w / 2 : i / (n - 1) * (w - 4) + 2, Y = v => (h - 3) - ((v - min) / rng) * (h - 6);
+    const nums = pts.map(p => p.v), min = Math.min(...nums), max = Math.max(...nums), mid = (min + max) / 2;
+    const range = (scaleMax && scaleMax > 0) ? scaleMax : ((max - min) || 1);
+    const X = i => n <= 1 ? w / 2 : i / (n - 1) * (w - 4) + 2;
+    const Y = v => (h / 2) - (v - mid) * ((h - pad * 2) / range);
     const col = nums[nums.length - 1] >= nums[0] ? '#4ade80' : '#f87171';
     const d = pts.map((p, k) => `${k ? 'L' : 'M'}${X(p.i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ');
     const dots = pts.map(p => `<circle cx="${X(p.i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="1.7" fill="${col}"/>`).join('');
@@ -1565,6 +1571,13 @@ function renderForm(panel) {
     const showSpark = _formMetric === 'elo' ? (_btLastIdx >= 0 && eloHasData) : (_btLastIdx >= 1);
     const champPos = {}; _drivers.forEach((d, i) => { champPos[d.driver_id] = i + 1; });
 
+    // One shared vertical scale for every ELO sparkline, so line angles are
+    // comparable across drivers (the biggest swing draws the steepest line).
+    let eloScaleMax = 0;
+    if (_formMetric === 'elo') {
+        _drivers.forEach(d => { const s = _eloSpark(d.driver_id, 6).filter(v => v != null); if (s.length > 1) { const r = Math.max(...s) - Math.min(...s); if (r > eloScaleMax) eloScaleMax = r; } });
+    }
+
     let rows = _drivers.map(d => ({ d, id: d.driver_id, recent: _recentPts(d.driver_id, K), mom: _eloMomentum(d.driver_id, K), champ: champPos[d.driver_id] }));
     if (_formMetric === 'points') {
         rows.sort((a, b) => (b.recent - a.recent) || ((Number(b.d.points) || 0) - (Number(a.d.points) || 0)) || (a.d.driver_name || '').localeCompare(b.d.driver_name || ''));
@@ -1580,7 +1593,7 @@ function renderForm(panel) {
         const teamLine = d.team_name
             ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name)}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
             : (soloMfrName ? `<div class="meta-line">${mfrBadge(_rInfo?.manufacturerLogoUrl, _rInfo?.brandColor, soloMfrName)}<em style="opacity:0.75">Solo</em></div>` : '');
-        const spark = _formMetric === 'points' ? sparkBars(_lastRoundPts(id, 5)) : sparkLine(_eloSpark(id, 6));
+        const spark = _formMetric === 'points' ? sparkBars(_lastRoundPts(id, 5)) : sparkLine(_eloSpark(id, 6), eloScaleMax);
         // The ranked figure, plus a "vs championship position" line so a
         // low-standing driver on a tear stands out.
         let figure, sub;
@@ -1631,7 +1644,7 @@ function renderForm(panel) {
                 <tbody>${body}</tbody>
             </table>
         </div>
-        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.85rem;padding:0 0.25rem">Form = ${_formMetric === 'points' ? `net points scored over the last ${K} completed round${K === 1 ? '' : 's'}` : `change in ELO across the last ${K} completed round${K === 1 ? '' : 's'}`}. The bars show each of the last five rounds.</p>`;
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.85rem;padding:0 0.25rem">Form = ${_formMetric === 'points' ? `net points scored over the last ${K} completed round${K === 1 ? '' : 's'}. The bars show each of the last five rounds.` : `change in ELO across the last ${K} completed round${K === 1 ? '' : 's'}, from the DR/SR seed onward. Steeper lines mean a bigger swing; every line shares the same scale.`}</p>`;
 }
 
 async function load() {
