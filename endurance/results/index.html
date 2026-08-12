@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Results — GTEC Gran Turismo 7 Endurance Championship</title>
+    <title>Results | GTEC Gran Turismo 7 Endurance Championship</title>
     <meta name="description" content="Race-by-race results from GTEC, the Gran Turismo 7 endurance championship. Splits, podiums, pole positions, fastest laps and full classifications for every round.">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <link rel="canonical" href="https://sparkstheory.co.uk/endurance/results/">
@@ -455,7 +455,7 @@ async function loadResults(slug) {
         .select('*, seasons(name, year)')
         .eq('slug', slug).maybeSingle();
     if (!event) { app.innerHTML = `<div class="page-wrap">${errMsg('Event not found.')}</div>`; return; }
-    document.title = `${event.name} Results — GTEC`;
+    document.title = `${event.name} Results | GTEC`;
 
     const [entriesRes, rRes, qRes, pRes, sdRes] = await Promise.all([
         sb.from('entries')

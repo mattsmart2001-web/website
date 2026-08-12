@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News &amp; Race Reports — GTEC Gran Turismo 7 Endurance Championship</title>
+    <title>News &amp; Race Reports | GTEC Gran Turismo 7 Endurance Championship</title>
     <meta name="description" content="News, race reports and announcements from GTEC, the Gran Turismo 7 endurance championship. Round-by-round reports, championship analysis and series updates.">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <link rel="canonical" href="https://sparkstheory.co.uk/endurance/news/">
@@ -298,7 +298,7 @@ async function loadArticle(slug) {
         return;
     }
 
-    document.title = `${data.title} — GTEC`;
+    document.title = `${data.title} | GTEC`;
 
     const isReport = Array.isArray(data.tags) && data.tags.includes('race-report');
     const eyebrow  = isReport ? 'Race Report' : 'News';

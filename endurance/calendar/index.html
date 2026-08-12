@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendar — GTEC Gran Turismo 7 Endurance Championship</title>
+    <title>Calendar | GTEC Gran Turismo 7 Endurance Championship</title>
     <meta name="description" content="GTEC Season 1 calendar: an eight-round Gran Turismo 7 endurance championship across Spa, Monza, Suzuka, Bathurst, Daytona, Interlagos, Nordschleife and Le Mans.">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <link rel="canonical" href="https://sparkstheory.co.uk/endurance/calendar/">
@@ -583,7 +583,7 @@ async function load() {
 // ─── Grid modal ─────────────────────────────────────────────────
 async function openGrid(eventId, eventName) {
     const overlay = document.getElementById('grid-overlay');
-    document.getElementById('grid-title').textContent = `${eventName} — Grid`;
+    document.getElementById('grid-title').textContent = `${eventName}: Grid`;
     document.getElementById('grid-body').innerHTML = '<div class="grid-loading">Loading…</div>';
     overlay.classList.add('open');
 
@@ -623,7 +623,7 @@ async function openGrid(eventId, eventName) {
     });
 
     document.getElementById('grid-body').innerHTML = keys.map(n => {
-        const title = n === 0 ? 'Race 1 Roster — No Splits Assigned Yet' : `Split ${n}`;
+        const title = n === 0 ? 'Race 1 Roster: No Splits Assigned Yet' : `Split ${n}`;
         const sorted = groups[n].slice().sort((a, b) => {
             const aCar = a.driver?.career_number ?? a.entry.car_number ?? 999;
             const bCar = b.driver?.career_number ?? b.entry.car_number ?? 999;
@@ -673,7 +673,7 @@ function closeGrid() {
 function openRaceDetails(eventId, eventName) {
     const e = _eventsById[eventId];
     if (!e) return;
-    document.getElementById('details-title').textContent = `${eventName} — Race Details`;
+    document.getElementById('details-title').textContent = `${eventName}: Race Details`;
     const tyrePills = Array.isArray(e.required_tyres) && e.required_tyres.length
         ? e.required_tyres.map(t => `<span class="details-tyre tyre-${esc(String(t).toLowerCase())}">${esc(t)}</span>`).join(' ')
         : null;
@@ -721,7 +721,7 @@ function openRaceDetails(eventId, eventName) {
     let qualiHTML = '';
     if (e.quali_same_as_race != null || e.quali_notes) {
         const qualiBody = e.quali_same_as_race !== false
-            ? `<div class="details-val" style="color:var(--muted);font-size:0.85rem">Same settings as the race — no changes to the lobby required between sessions.</div>`
+            ? `<div class="details-val" style="color:var(--muted);font-size:0.85rem">Same settings as the race. No changes to the lobby required between sessions.</div>`
             : (e.quali_notes
                 ? `<div class="details-briefing-body">${esc(e.quali_notes)}</div>`
                 : `<div class="details-val" style="color:var(--muted);font-size:0.85rem">See briefing for qualifying details.</div>`);

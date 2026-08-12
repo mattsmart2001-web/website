@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drivers — GTEC Gran Turismo 7 Endurance Championship</title>
+    <title>Drivers | GTEC Gran Turismo 7 Endurance Championship</title>
     <meta name="description" content="Driver list for GTEC, the team-based Gran Turismo 7 endurance championship. Profiles, career stats, ELO ratings, achievements, head-to-heads and season form.">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <link rel="canonical" href="https://sparkstheory.co.uk/endurance/drivers/">
@@ -955,7 +955,7 @@ function mfrBadge(logoUrl, brandColor, name, opts = {}) {
 // LISTING
 // ============================================================
 async function showListing() {
-    document.title = 'Drivers — GTEC';
+    document.title = 'Drivers | GTEC';
     const [{ data, error }, { data: ratings }, { data: allSeasons }, { data: standings }, { data: hostEntries }] = await Promise.all([
         sb.from('drivers')
             .select('id, display_name, slug, nationality, career_number, photo_url, manual_badges, willing_host, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url,car_name)')
@@ -1502,7 +1502,7 @@ function setDriverSEO(d, rating) {
     if (rating?.rating) bits.push(`${Math.round(rating.rating)} ELO`);
     const tail = bits.length ? ` — ${bits.join(' · ')}.` : '.';
     const desc = `${num}${d.display_name}${tail} Career stats, ELO rating, race history and season form in GTEC, the Gran Turismo 7 (GT7) endurance championship.`;
-    const title = `${d.display_name} — GTEC Driver`;
+    const title = `${d.display_name} | GTEC Driver`;
     const img = d.photo_url || 'https://sparkstheory.co.uk/endurance/assets/og-card.png';
 
     document.title = title;
@@ -1548,7 +1548,7 @@ async function showProfile() {
             <div class="content"><a class="back-link" href="/endurance/drivers/">← All Drivers</a></div>`;
         return;
     }
-    document.title = `${driver.display_name} — GTEC`;
+    document.title = `${driver.display_name} | GTEC`;
 
     // Season career stats + rating history in parallel with race history
     const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes, hostCountRes, dedRes] = await Promise.all([
