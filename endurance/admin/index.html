@@ -9324,6 +9324,25 @@ async function renderHealthCheck() {
         absentPanelRows = `<div class="empty-state" style="padding:2rem 1rem">No active season.</div>`;
     }
 
+    // Last portal visit / sign-in per driver, so the watch lists can show how
+    // long since we last saw each person (same source as the Drivers table:
+    // prefer the true portal-visit stamp, fall back to last fresh sign-in).
+    const [{ data: lastSignIns }, { data: seenRows }] = await Promise.all([
+        sb.rpc('driver_last_sign_in'),
+        sb.from('drivers').select('id, user_id, last_seen_at'),
+    ]);
+    const lastSeenMap = {};
+    (seenRows || []).forEach(r => { lastSeenMap[r.id] = { claimed: !!r.user_id, iso: r.last_seen_at || null }; });
+    (lastSignIns || []).forEach(r => { const e = lastSeenMap[r.driver_id]; if (e && !e.iso) e.iso = r.last_sign_in_at; });
+    const lastSeenLine = id => {
+        const e = lastSeenMap[id];
+        if (!e || !e.claimed) return '';   // unclaimed profiles have no sign-in history
+        const label = fmtLastSeen(e.iso);
+        if (!label) return ` &middot; <span style="color:#f87171" title="Claimed but never signed in">never seen</span>`;
+        const stale = (Date.now() - new Date(e.iso).getTime()) / 86400000 >= 30;
+        return ` &middot; <span title="Last seen (portal visit or sign-in)" style="${stale ? 'color:#fb923c' : ''}">seen ${label}</span>`;
+    };
+
     // No-show watch
     const { data: noShows } = await sb.rpc('driver_no_show_watch', { p_lookback: 5 });
     const noShowCount = (noShows || []).length;
@@ -9334,7 +9353,7 @@ async function renderHealthCheck() {
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
                     <div>
                         <div style="font-weight:600">${esc(d.display_name)}</div>
-                        <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${esc(d.psn_id || '—')}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${esc(d.psn_id || '—')}${lastSeenLine(d.driver_id)}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
                         <span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)">${d.no_shows} missed / ${d.events_entered}</span>
@@ -9400,7 +9419,7 @@ async function renderHealthCheck() {
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
                     <div>
                         <div style="font-weight:600">${esc(d.display_name)}</div>
-                        <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${d.is_claimed ? 'Claimed' : '<span style="color:#f87171">Unclaimed</span>'}</div>
+                        <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${d.is_claimed ? 'Claimed' : '<span style="color:#f87171">Unclaimed</span>'}${lastSeenLine(d.driver_id)}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
                         ${excused
