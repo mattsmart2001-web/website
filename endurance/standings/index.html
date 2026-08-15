@@ -199,22 +199,24 @@
             border-collapse: collapse;
         }
         thead th {
-            padding: 0.85rem 1.25rem;
+            padding: 0.85rem 0.7rem;
             text-align: left;
             font-size: 0.62rem;
             font-weight: 700;
-            letter-spacing: 0.22em;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
             color: var(--muted);
             background: var(--bg-2);
             border-bottom: 1px solid var(--border);
             white-space: nowrap;
         }
+        /* A touch more breathing room on the first (rank) and driver cells. */
+        thead th:first-child, tbody td:first-child { padding-left: 1.1rem; }
         thead th.right { text-align: right; }
         thead th.center { text-align: center; }
 
         tbody td {
-            padding: 0.95rem 1.25rem;
+            padding: 0.95rem 0.7rem;
             border-bottom: 1px solid var(--border);
             vertical-align: middle;
             position: relative;
@@ -345,6 +347,9 @@
             align-items: center;
             gap: 0.4rem;
         }
+        /* Keep team name + manufacturer as one flowing text run so the
+           manufacturer sits right after the team rather than floating right. */
+        .meta-line .meta-team { min-width: 0; }
         .swatch {
             display: inline-block;
             width: 10px;
@@ -911,7 +916,7 @@ function renderDrivers(panel) {
         const soloMfrLogo  = d.manufacturer_logo_url || _rInfo?.manufacturerLogoUrl;
         const soloMfrColor = d.brand_color           || _rInfo?.brandColor;
         const teamLine = d.team_name
-            ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name, { size: 'lg' })}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='inherit'">${esc(d.team_name)}</a>` : esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</div>`
+            ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name, { size: 'lg' })}<span class="meta-team">${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='inherit'">${esc(d.team_name)}</a>` : esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</span></div>`
             : (soloMfrName ? `<div class="meta-line">${mfrBadge(soloMfrLogo, soloMfrColor, soloMfrName)}<em style="opacity:0.75">Solo</em> · ${esc(soloMfrName)}</div>` : '');
         const movement = movementHTML(pos, _prevDriverRank[d.driver_id]);
         const leaderTag = pos === 1
