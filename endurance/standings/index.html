@@ -279,6 +279,12 @@
             font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em;
             color: #f87171; text-transform: uppercase;
         }
+        .pts-bonus {
+            display: block; margin-top: 0.2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em;
+            color: #4ade80; text-transform: uppercase;
+        }
 
         /* "★ Leader" badge inline with the name. */
         .leader-tag {
@@ -959,6 +965,7 @@ function renderDrivers(panel) {
             <td class="right">
                 <div class="points">${points.toFixed(points % 1 === 0 ? 0 : 1)}</div>
                 ${deductionHtml(_dedByDriver[d.driver_id])}
+                ${bonusHtml(_bonByDriver[d.driver_id])}
                 ${gap}
             </td>
         </tr>`;
@@ -1018,6 +1025,7 @@ function renderTeams(panel) {
             <td class="right">
                 <div class="points">${points}</div>
                 ${deductionHtml(_dedByTeam[t.team_id])}
+                ${bonusHtml(_bonByTeam[t.team_id])}
                 ${gap}
             </td>
         </tr>`;
@@ -1702,8 +1710,8 @@ async function load() {
         // Points-deduction penalties this season, with reason — so the
         // standings can show why points were docked, and from whom.
         sb.from('penalties')
-            .select('points_amount, reason, driver_id, entry_id, event_id, entries(team_id, entry_drivers(driver_id)), events!inner(season_id)')
-            .eq('penalty_type', 'points_deduction')
+            .select('penalty_type, points_amount, reason, driver_id, entry_id, event_id, entries(team_id, entry_drivers(driver_id)), events!inner(season_id)')
+            .in('penalty_type', ['points_deduction', 'points_bonus'])
             .eq('events.season_id', season.id),
         // Events for this season (for the Championship Battle chart's round axis).
         sb.from('events').select('id, round, name, starts_at').eq('season_id', season.id).order('round'),
@@ -1746,7 +1754,9 @@ async function load() {
     // The team always takes the hit via the entry's team.
     _dedByDriver = {};
     _dedByTeam = {};
-    const _addDed = (map, key, amount, reason) => {
+    _bonByDriver = {};
+    _bonByTeam = {};
+    const _addAdj = (map, key, amount, reason) => {
         if (!key) return;
         const e = map[key] || (map[key] = { amount: 0, reasons: [] });
         e.amount += amount;
@@ -1755,17 +1765,18 @@ async function load() {
     };
     (deds.data || []).forEach(p => {
         if (!p.points_amount) return;
+        // Bonuses and deductions cascade identically; only which map they land
+        // in differs, so the standings can show "−X" and "+X" notes separately.
+        const bonus = p.penalty_type === 'points_bonus';
+        const dMap = bonus ? _bonByDriver : _dedByDriver;
+        const tMap = bonus ? _bonByTeam : _dedByTeam;
         if (p.driver_id) {
-            // Driver-specific: the named driver loses it, and the team
-            // (sum of its drivers) loses it once.
-            _addDed(_dedByDriver, p.driver_id, p.points_amount, p.reason);
-            _addDed(_dedByTeam, p.entries?.team_id, p.points_amount, p.reason);
+            _addAdj(dMap, p.driver_id, p.points_amount, p.reason);
+            _addAdj(tMap, p.entries?.team_id, p.points_amount, p.reason);
         } else {
-            // Whole-team: cascades to every driver on the entry, so the
-            // team loses it once per driver (matches team_standings).
             const eds = p.entries?.entry_drivers || [];
-            eds.forEach(ed => _addDed(_dedByDriver, ed.driver_id, p.points_amount, p.reason));
-            _addDed(_dedByTeam, p.entries?.team_id, p.points_amount * (eds.length || 1), p.reason);
+            eds.forEach(ed => _addAdj(dMap, ed.driver_id, p.points_amount, p.reason));
+            _addAdj(tMap, p.entries?.team_id, p.points_amount * (eds.length || 1), p.reason);
         }
     });
 
@@ -2397,12 +2408,21 @@ let _formByDriver   = {};
 let _manufacturers  = [];
 let _dedByDriver    = {};
 let _dedByTeam      = {};
+let _bonByDriver    = {};
+let _bonByTeam      = {};
 
 // Small red "points docked" note with the reason(s), e.g. "−2 · bump drafting".
 function deductionHtml(info) {
     if (!info || !info.amount) return '';
     const why = (info.reasons || []).join(', ');
     return `<div class="pts-deduct" title="${esc(why ? why + ' ' : '')}(−${info.amount} pts)">−${info.amount}${why ? ` · ${esc(why)}` : ''}</div>`;
+}
+
+// Small green "points awarded" note with the reason(s), e.g. "+1 · original pole".
+function bonusHtml(info) {
+    if (!info || !info.amount) return '';
+    const why = (info.reasons || []).join(', ');
+    return `<div class="pts-bonus" title="${esc(why ? why + ' ' : '')}(+${info.amount} pts)">+${info.amount}${why ? ` · ${esc(why)}` : ''}</div>`;
 }
 
 load();

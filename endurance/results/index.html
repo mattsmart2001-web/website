@@ -254,6 +254,7 @@
         /* Pts cell */
         .pts-net { font-family: 'Anton', sans-serif; font-size: 1.25rem; line-height: 1; letter-spacing: 0.02em; color: var(--gold); }
         .pts-deduct { font-size: 0.62rem; color: #f87171; font-weight: 700; font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; margin-top: 0.2rem; }
+        .pts-bonus { font-size: 0.62rem; color: #4ade80; font-weight: 700; font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; margin-top: 0.2rem; }
 
         /* Qualifying, penalties */
         .q-table th, .q-table td { padding: 0.6rem 0.75rem; }
@@ -496,21 +497,22 @@ async function loadResults(slug) {
     const qMap = {};
     qualy.forEach(q => { qMap[`${q.entry_id}|${q.driver_id || ''}`] = q; });
 
-    // Aggregate points_deduction penalties per driver for this event.
-    // Driver-specific penalty (driver_id set) → that driver only.
-    // Whole-team penalty (driver_id NULL) → every entry_driver on that entry.
-    const deductByDriverEntry = {};
+    // Aggregate signed points adjustments per driver for this event: a
+    // deduction is negative, a bonus positive. Driver-specific → that driver;
+    // whole-team (driver_id NULL) → every entry_driver on that entry.
+    const adjustByDriverEntry = {};
     pens.forEach(p => {
-        if (p.penalty_type !== 'points_deduction' || !p.points_amount) return;
+        if (!p.points_amount || (p.penalty_type !== 'points_deduction' && p.penalty_type !== 'points_bonus')) return;
+        const delta = p.penalty_type === 'points_bonus' ? p.points_amount : -p.points_amount;
         if (p.driver_id) {
             const k = `${p.entry_id}|${p.driver_id}`;
-            deductByDriverEntry[k] = (deductByDriverEntry[k] || 0) + p.points_amount;
+            adjustByDriverEntry[k] = (adjustByDriverEntry[k] || 0) + delta;
         } else {
             const en = entries.find(e => e.id === p.entry_id);
             (en?.entry_drivers || []).forEach(ed => {
                 if (!ed.drivers) return;
                 const k = `${p.entry_id}|${ed.drivers.id}`;
-                deductByDriverEntry[k] = (deductByDriverEntry[k] || 0) + p.points_amount;
+                adjustByDriverEntry[k] = (adjustByDriverEntry[k] || 0) + delta;
             });
         }
     });
@@ -523,14 +525,14 @@ async function loadResults(slug) {
             .filter(x => x.driver);
         const result = resultByEntry[en.id] || null;
         if (!drvs.length) {
-            driverRows.push({ entry: en, driver: null, stint_role: null, result, rd: null, quali: null, deducted: 0 });
+            driverRows.push({ entry: en, driver: null, stint_role: null, result, rd: null, quali: null, adjust: 0 });
             return;
         }
         drvs.forEach(({ stint_role, driver }) => {
             const rd = result ? rdMap[`${result.id}|${driver.id}`] || null : null;
             const quali = qMap[`${en.id}|${driver.id}`] || qMap[`${en.id}|`] || null;
-            const deducted = deductByDriverEntry[`${en.id}|${driver.id}`] || 0;
-            driverRows.push({ entry: en, driver, stint_role, result, rd, quali, deducted });
+            const adjust = adjustByDriverEntry[`${en.id}|${driver.id}`] || 0;
+            driverRows.push({ entry: en, driver, stint_role, result, rd, quali, adjust });
         });
     });
 
@@ -587,7 +589,7 @@ async function loadResults(slug) {
         ${lobbySections}
 
         ${pens.length ? `
-            <div class="section-heading">Penalties</div>
+            <div class="section-heading">Penalties & Adjustments</div>
             <div class="table-wrap">
                 ${renderPenaltiesTable(pens)}
             </div>` : ''}
@@ -804,15 +806,17 @@ function renderResultsTable(classified, unclassified, flRow) {
             ? `<span class="${isFL ? 'fl-time' : 'td-muted'}">${fmtMs(rd.fastest_lap_ms)}${isFL ? '<span class="fl-badge">FL</span>' : ''}</span>`
             : (isFL ? '<span class="fl-badge">FL</span>' : '<span class="dash">—</span>');
         const earned = rd.points_awarded;
-        const deduct = row.deducted || 0;
+        const adjust = row.adjust || 0;
         let ptsCell;
-        if (earned == null && !deduct) {
+        if (earned == null && !adjust) {
             ptsCell = '<span class="dash">—</span>';
         } else {
-            const net = (earned || 0) - deduct;
+            const net = (earned || 0) + adjust;
             ptsCell = `<div class="pts-net">${net}</div>`;
-            if (deduct) {
-                ptsCell += `<div class="pts-deduct" title="${earned} earned − ${deduct} deducted">−${deduct}</div>`;
+            if (adjust < 0) {
+                ptsCell += `<div class="pts-deduct" title="${earned} earned − ${-adjust} deducted">−${-adjust}</div>`;
+            } else if (adjust > 0) {
+                ptsCell += `<div class="pts-bonus" title="${earned} earned + ${adjust} bonus">+${adjust}</div>`;
             }
         }
         const classes = [rowClass, isDNF ? 'row-dnf' : '', isFL ? 'row-fl-holder' : ''].filter(Boolean).join(' ');
@@ -910,13 +914,15 @@ function renderPenaltiesTable(pens) {
         // A whole-team points deduction is recorded per driver, so its team
         // impact is the amount times the number of drivers on the entry.
         let valueCell;
-        const isWholeTeamDed = p.penalty_type === 'points_deduction' && !p.driver_id && p.points_amount != null;
-        if (isWholeTeamDed) {
+        const isBonus = p.penalty_type === 'points_bonus';
+        const sign = isBonus ? '+' : '-';
+        const isWholeTeamAmt = (p.penalty_type === 'points_deduction' || isBonus) && !p.driver_id && p.points_amount != null;
+        if (isWholeTeamAmt) {
             const n = (p.entries?.entry_drivers || []).length || 1;
             const total = p.points_amount * n;
             valueCell = n > 1
-                ? `-${total} pts <span class="td-muted" style="font-weight:400;font-size:0.75rem">(-${p.points_amount} each)</span>`
-                : `-${total} pts`;
+                ? `${sign}${total} pts <span class="td-muted" style="font-weight:400;font-size:0.75rem">(${sign}${p.points_amount} each)</span>`
+                : `${sign}${total} pts`;
         } else {
             valueCell = p.penalty_value ? esc(p.penalty_value) : '—';
         }
@@ -925,7 +931,7 @@ function renderPenaltiesTable(pens) {
             <td>${esc(p.entries?.teams?.name) || '<em>Solo</em>'}</td>
             <td>${drv}</td>
             <td class="td-muted">${esc(p.penalty_type?.replace(/_/g,' '))}</td>
-            <td style="color:var(--red);font-weight:600">${valueCell}</td>
+            <td style="color:${isBonus ? '#4ade80' : 'var(--red)'};font-weight:600">${valueCell}</td>
             <td class="td-muted">${esc(p.reason) || '—'}</td>
         </tr>`;
     }).join('');

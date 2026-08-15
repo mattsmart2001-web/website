@@ -4624,7 +4624,7 @@ async function viewEventPenalties(eventId, eventName) {
         : data.map(p => `<tr>
             <td>${p.entries ? `${p.entries.car_number != null ? '<strong>#' + p.entries.car_number + '</strong> ' : ''}${esc(p.entries.teams?.name || '')}` : '—'}</td>
             <td class="td-muted">${esc(p.drivers?.display_name) || '—'}</td>
-            <td><span class="badge badge-gold">${esc(p.penalty_type.replace('_',' '))}</span></td>
+            <td><span class="badge ${p.penalty_type === 'points_bonus' ? 'badge-green' : 'badge-gold'}">${esc(p.penalty_type.replace('_',' '))}</span></td>
             <td class="td-muted">${esc(p.penalty_value) || '—'}</td>
             <td class="td-muted" style="max-width:280px">${esc(p.reason)}</td>
             <td><div class="row-actions">
@@ -4636,10 +4636,10 @@ async function viewEventPenalties(eventId, eventName) {
     panel.innerHTML = `
         <div class="section-card">
             <div class="section-card-header">
-                <span class="section-card-title">Penalties — ${esc(eventName)}</span>
+                <span class="section-card-title">Penalties & Adjustments — ${esc(eventName)}</span>
                 <button class="btn-add" onclick="openAddPenaltyModal('${eventId}','${esc(eventName)}')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Add Penalty
+                    Add Penalty / Bonus
                 </button>
             </div>
             <table><thead><tr>
@@ -4677,6 +4677,7 @@ async function openPenaltyModal(eventId, eventName, penalty) {
     const penaltyTypes = [
         { value: 'time_add',         label: 'Time Added' },
         { value: 'points_deduction', label: 'Points Deduction' },
+        { value: 'points_bonus',     label: 'Points Bonus' },
         { value: 'dsq',              label: 'DSQ' },
         { value: 'warning',          label: 'Warning' },
         { value: 'reprimand',        label: 'Reprimand' },
@@ -4712,9 +4713,9 @@ async function openPenaltyModal(eventId, eventName, penalty) {
                 </div>
             </div>
             <div class="form-group" id="pen-amount-row" style="display:none">
-                <label>Points to deduct <span class="required">*</span></label>
+                <label id="pen-amount-label">Points to deduct <span class="required">*</span></label>
                 <input type="number" name="points_amount" id="pen-amount" min="1" max="999" placeholder="e.g. 5" value="${penalty?.points_amount != null ? penalty.points_amount : ''}">
-                <div class="form-hint">Subtracted from the driver's season points (and the team's, if the entry has a team).</div>
+                <div class="form-hint" id="pen-amount-hint">Subtracted from the driver's season points (and the team's, if the entry has a team).</div>
             </div>
             <div id="pen-dsq-note" style="display:none;padding:0.6rem 0.85rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:6px;font-size:0.82rem;color:#fca5a5;margin-bottom:0.85rem">
                 DSQ auto-zeroes the driver's points for this round and marks their result as DSQ — no value needed.
@@ -4785,9 +4786,18 @@ function onPenaltyTypeChange(sel) {
     const amountRow = document.getElementById('pen-amount-row');
     const valueRow  = document.getElementById('pen-value-row');
     const dsqNote   = document.getElementById('pen-dsq-note');
-    if (amountRow) amountRow.style.display = sel.value === 'points_deduction' ? '' : 'none';
-    if (valueRow)  valueRow.style.display  = sel.value === 'dsq' ? 'none' : '';
+    const isBonus   = sel.value === 'points_bonus';
+    const isAmount  = sel.value === 'points_deduction' || isBonus;
+    if (amountRow) amountRow.style.display = isAmount ? '' : 'none';
+    if (valueRow)  valueRow.style.display  = (sel.value === 'dsq' || isAmount) ? 'none' : '';
     if (dsqNote)   dsqNote.style.display   = sel.value === 'dsq' ? '' : 'none';
+    // The shared amount row reads as "award" for a bonus, "deduct" otherwise.
+    const lbl = document.getElementById('pen-amount-label');
+    const hint = document.getElementById('pen-amount-hint');
+    if (lbl)  lbl.innerHTML = `${isBonus ? 'Points to award' : 'Points to deduct'} <span class="required">*</span>`;
+    if (hint) hint.textContent = isBonus
+        ? "Added to the driver's season points (and the team's, if the entry has a team)."
+        : "Subtracted from the driver's season points (and the team's, if the entry has a team).";
 }
 
 async function savePenalty(eventId, eventName) {
@@ -4795,11 +4805,13 @@ async function savePenalty(eventId, eventName) {
     if (!d.entry_id || !d.penalty_type || !d.reason) {
         toast('Entry, type and reason are required.', 'error'); return;
     }
+    const isAmount = d.penalty_type === 'points_deduction' || d.penalty_type === 'points_bonus';
+    const isBonus  = d.penalty_type === 'points_bonus';
     let pointsAmount = null;
-    if (d.penalty_type === 'points_deduction') {
+    if (isAmount) {
         const raw = parseInt(d.points_amount, 10);
         if (!raw || raw < 1) {
-            toast('Enter the number of points to deduct.', 'error'); return;
+            toast(`Enter the number of points to ${isBonus ? 'award' : 'deduct'}.`, 'error'); return;
         }
         pointsAmount = raw;
     }
@@ -4808,7 +4820,7 @@ async function savePenalty(eventId, eventName) {
         entry_id: d.entry_id,
         driver_id: d.driver_id || null,
         penalty_type: d.penalty_type,
-        penalty_value: d.penalty_value || (pointsAmount ? `-${pointsAmount} pts` : null),
+        penalty_value: d.penalty_value || (pointsAmount ? `${isBonus ? '+' : '-'}${pointsAmount} pts` : null),
         points_amount: pointsAmount,
         reason: d.reason,
         issued_by: currentUser.id,
@@ -4824,11 +4836,13 @@ async function updatePenalty(id, eventId, eventName) {
     if (!d.entry_id || !d.penalty_type || !d.reason) {
         toast('Entry, type and reason are required.', 'error'); return;
     }
+    const isAmount = d.penalty_type === 'points_deduction' || d.penalty_type === 'points_bonus';
+    const isBonus  = d.penalty_type === 'points_bonus';
     let pointsAmount = null;
-    if (d.penalty_type === 'points_deduction') {
+    if (isAmount) {
         const raw = parseInt(d.points_amount, 10);
         if (!raw || raw < 1) {
-            toast('Enter the number of points to deduct.', 'error'); return;
+            toast(`Enter the number of points to ${isBonus ? 'award' : 'deduct'}.`, 'error'); return;
         }
         pointsAmount = raw;
     }
@@ -4836,7 +4850,7 @@ async function updatePenalty(id, eventId, eventName) {
         entry_id: d.entry_id,
         driver_id: d.driver_id || null,
         penalty_type: d.penalty_type,
-        penalty_value: d.penalty_value || (pointsAmount ? `-${pointsAmount} pts` : null),
+        penalty_value: d.penalty_value || (pointsAmount ? `${isBonus ? '+' : '-'}${pointsAmount} pts` : null),
         points_amount: pointsAmount,
         reason: d.reason,
     }).eq('id', id);
