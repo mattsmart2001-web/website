@@ -88,6 +88,19 @@
         .stream-plat { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; }
         .stream-watch { flex-shrink: 0; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #111; background: var(--gold); padding: 0.4rem 0.7rem; border-radius: 999px; }
 
+        /* Season stream archive (collapsible) */
+        .stream-archive-wrap { margin-bottom: 2.5rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-1); overflow: hidden; }
+        .archive-toggle { width: 100%; display: flex; align-items: center; gap: 0.65rem; padding: 0.9rem 1.1rem; background: none; border: none; color: var(--text); cursor: pointer; text-align: left; }
+        .archive-toggle-title { font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+        .archive-toggle-count { font-size: 0.78rem; color: var(--muted); }
+        .archive-chev { width: 18px; height: 18px; margin-left: auto; color: var(--muted); transition: transform 0.2s; }
+        .stream-archive-wrap.open .archive-chev { transform: rotate(180deg); }
+        .archive-body { display: none; padding: 0 1.1rem 1.1rem; }
+        .stream-archive-wrap.open .archive-body { display: block; }
+        .archive-round { margin-top: 1.1rem; }
+        .archive-round-head { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+        .archive-round-count { font-size: 0.68rem; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
+
         /* Category filter chips */
         .media-filters {
             display: flex; flex-wrap: wrap; gap: 0.5rem;
@@ -235,6 +248,14 @@
         </div>
         <div id="streams-grid"></div>
     </div>
+    <div class="stream-archive-wrap" id="stream-archive-wrap" style="display:none">
+        <button class="archive-toggle" onclick="toggleStreamArchive()" aria-label="Toggle stream archive">
+            <span class="archive-toggle-title">Stream Archive</span>
+            <span class="archive-toggle-count" id="stream-archive-count"></span>
+            <svg class="archive-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="archive-body" id="stream-archive-body"></div>
+    </div>
     <div class="media-filters" id="media-filters"></div>
     <div id="media-grid"><div class="loading">Loading…</div></div>
 </div>
@@ -338,6 +359,51 @@ function streamPlatform(url) {
     return { name: 'Live', color: '#38bdf8' };
 }
 
+// One stream card (a link that opens the broadcast).
+function streamCard(s, watchLabel) {
+    const d = s.drivers || {};
+    const p = streamPlatform(s.url);
+    const av = d.photo_url
+        ? `<img src="${esc(d.photo_url)}" alt="" loading="lazy">`
+        : esc((d.display_name || '?').trim().charAt(0).toUpperCase());
+    return `<a class="stream-card" href="${esc(s.url)}" target="_blank" rel="noopener nofollow">
+        <span class="stream-av">${av}</span>
+        <span class="stream-meta">
+            <span class="stream-name">${esc(d.display_name || 'Driver')}</span>
+            <span class="stream-plat" style="color:${p.color}">● ${p.name}</span>
+        </span>
+        <span class="stream-watch">${watchLabel || 'Watch'}</span>
+    </a>`;
+}
+
+// Group a list of streams into Split 1, Split 2, … sections (top split first);
+// anyone without a known split falls into a trailing "Unassigned" group.
+function renderSplitGroups(streams, splitByDriver, watchLabel) {
+    const groups = new Map();
+    streams.forEach(s => { const ln = splitByDriver[s.driver_id]; const key = ln != null ? ln : Infinity; (groups.get(key) || groups.set(key, []).get(key)).push(s); });
+    return [...groups.keys()].sort((a, b) => a - b).map(k => `
+        <div class="stream-split">
+            <div class="stream-split-label">${k === Infinity ? 'Unassigned' : 'Split ' + k}</div>
+            <div class="streams-grid">${groups.get(k).map(s => streamCard(s, watchLabel)).join('')}</div>
+        </div>`).join('');
+}
+
+// Split map for one or more events: event_id -> { driver_id -> lobby_number }.
+async function fetchSplitMap(eventIds) {
+    const map = {};
+    if (!eventIds.length) return map;
+    const { data: rows } = await sb.from('entry_drivers')
+        .select('driver_id, entries!inner(event_id, lobby_number)')
+        .in('entries.event_id', eventIds);
+    (rows || []).forEach(r => {
+        const ev = r.entries?.event_id, ln = r.entries?.lobby_number;
+        if (ev == null) return;
+        (map[ev] = map[ev] || {});
+        if (ln != null) map[ev][r.driver_id] = ln;
+    });
+    return map;
+}
+
 // Driver streams for the current race: the in-progress event if there is one,
 // otherwise the next scheduled event in the active season. Hidden when none.
 async function loadStreams() {
@@ -359,50 +425,51 @@ async function loadStreams() {
             .order('updated_at', { ascending: true });
         if (!streams?.length) return;
 
-        // Each streamer's split for this event (entry.lobby_number), so the
-        // board can be grouped Split 1, Split 2, … like the racing itself.
-        const splitByDriver = {};
-        const { data: entRows } = await sb.from('entry_drivers')
-            .select('driver_id, entries!inner(event_id, lobby_number)')
-            .eq('entries.event_id', ev.id);
-        (entRows || []).forEach(r => { const ln = r.entries?.lobby_number; if (ln != null) splitByDriver[r.driver_id] = ln; });
-
-        const card = s => {
-            const d = s.drivers || {};
-            const p = streamPlatform(s.url);
-            const av = d.photo_url
-                ? `<img src="${esc(d.photo_url)}" alt="" loading="lazy">`
-                : esc((d.display_name || '?').trim().charAt(0).toUpperCase());
-            return `<a class="stream-card" href="${esc(s.url)}" target="_blank" rel="noopener nofollow">
-                <span class="stream-av">${av}</span>
-                <span class="stream-meta">
-                    <span class="stream-name">${esc(d.display_name || 'Driver')}</span>
-                    <span class="stream-plat" style="color:${p.color}">● ${p.name}</span>
-                </span>
-                <span class="stream-watch">Watch</span>
-            </a>`;
-        };
-
-        // Group by split; a stream with no known split (shouldn't happen once a
-        // split is allocated) drops into a trailing "Unassigned" group.
-        const groups = new Map();
-        streams.forEach(s => { const ln = splitByDriver[s.driver_id]; const key = ln != null ? ln : Infinity; (groups.get(key) || groups.set(key, []).get(key)).push(s); });
-        const keys = [...groups.keys()].sort((a, b) => a - b);
-
+        const splitMap = await fetchSplitMap([ev.id]);
         document.getElementById('streams-sub').textContent = `${streams.length} driver${streams.length === 1 ? '' : 's'} streaming R${ev.round} · ${ev.name}`;
-        document.getElementById('streams-grid').innerHTML = keys.map(k => {
-            const label = k === Infinity ? 'Unassigned' : `Split ${k}`;
-            return `<div class="stream-split">
-                <div class="stream-split-label">${label}</div>
-                <div class="streams-grid">${groups.get(k).map(card).join('')}</div>
-            </div>`;
-        }).join('');
+        document.getElementById('streams-grid').innerHTML = renderSplitGroups(streams, splitMap[ev.id] || {});
         wrap.style.display = '';
     } catch (e) { /* streams are a nice-to-have; never block the media grid */ }
 }
 
+// Season stream archive: every completed round's streams, kept as a record
+// (and replay list — most streams stay up as VODs). Collapsed by default.
+async function loadStreamArchive() {
+    const wrap = document.getElementById('stream-archive-wrap');
+    try {
+        const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+        if (!season) return;
+        const { data: streams } = await sb.from('driver_stream_links')
+            .select('url, driver_id, event_id, drivers(display_name, slug, photo_url), events!inner(id, name, round, status, starts_at, season_id)')
+            .eq('events.season_id', season.id)
+            .eq('events.status', 'completed');
+        if (!streams?.length) return;
+
+        const eventIds = [...new Set(streams.map(s => s.event_id))];
+        const splitMap = await fetchSplitMap(eventIds);
+
+        // Group by event, most-recent round first.
+        const byEvent = new Map();
+        streams.forEach(s => { (byEvent.get(s.event_id) || byEvent.set(s.event_id, { ev: s.events, list: [] }).get(s.event_id)).list.push(s); });
+        const rounds = [...byEvent.values()].sort((a, b) => new Date(b.ev.starts_at) - new Date(a.ev.starts_at));
+
+        document.getElementById('stream-archive-count').textContent = `${streams.length} across ${rounds.length} round${rounds.length === 1 ? '' : 's'}`;
+        document.getElementById('stream-archive-body').innerHTML = rounds.map(r => `
+            <div class="archive-round">
+                <div class="archive-round-head">R${r.ev.round} · ${esc(r.ev.name)}<span class="archive-round-count">${r.list.length} stream${r.list.length === 1 ? '' : 's'}</span></div>
+                ${renderSplitGroups(r.list, splitMap[r.ev.id] || {}, 'Replay')}
+            </div>`).join('');
+        wrap.style.display = '';
+    } catch (e) { /* archive is a nice-to-have; never block the page */ }
+}
+
+function toggleStreamArchive() {
+    document.getElementById('stream-archive-wrap').classList.toggle('open');
+}
+
 async function load() {
     loadStreams();
+    loadStreamArchive();
     const grid = document.getElementById('media-grid');
     const { data, error } = await sb.from('media_items')
         .select('*, events(name)')
