@@ -188,7 +188,10 @@
             background: var(--bg-1);
             border: 1px solid var(--border);
             border-radius: 12px;
-            overflow: hidden;
+            /* Scroll the wide driver table inside the card instead of clipping
+               its last column; keeps the rounded corners tidy on both axes. */
+            overflow-x: auto;
+            overflow-y: hidden;
             box-shadow: 0 12px 40px rgba(0,0,0,0.35);
         }
         table {
