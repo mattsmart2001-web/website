@@ -74,6 +74,10 @@
         .streams-live-dot { width: 9px; height: 9px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 0 rgba(239,68,68,0.7); animation: streamPulse 1.8s infinite; }
         @keyframes streamPulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); } 70% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
         .streams-sub { font-size: 0.8rem; color: var(--muted); }
+        .stream-split { margin-bottom: 1.1rem; }
+        .stream-split:last-child { margin-bottom: 0; }
+        .stream-split-label { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.55rem; display: flex; align-items: center; gap: 0.5rem; }
+        .stream-split-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
         .streams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.75rem; }
         .stream-card { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.85rem; background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; text-decoration: none; color: var(--text); transition: border-color 0.15s, transform 0.15s, background 0.15s; }
         .stream-card:hover { border-color: rgba(255,209,102,0.4); transform: translateY(-2px); background: var(--bg-2); }
@@ -229,7 +233,7 @@
             <span class="streams-title"><span class="streams-live-dot"></span>Watch Live</span>
             <span class="streams-sub" id="streams-sub"></span>
         </div>
-        <div class="streams-grid" id="streams-grid"></div>
+        <div id="streams-grid"></div>
     </div>
     <div class="media-filters" id="media-filters"></div>
     <div id="media-grid"><div class="loading">Loading…</div></div>
@@ -350,13 +354,20 @@ async function loadStreams() {
         const ev = evs.find(e => e.status === 'in_progress') || evs[0];
 
         const { data: streams } = await sb.from('driver_stream_links')
-            .select('url, updated_at, drivers(display_name, slug, photo_url)')
+            .select('url, updated_at, driver_id, drivers(display_name, slug, photo_url)')
             .eq('event_id', ev.id)
             .order('updated_at', { ascending: true });
         if (!streams?.length) return;
 
-        document.getElementById('streams-sub').textContent = `${streams.length} driver${streams.length === 1 ? '' : 's'} streaming R${ev.round} · ${ev.name}`;
-        document.getElementById('streams-grid').innerHTML = streams.map(s => {
+        // Each streamer's split for this event (entry.lobby_number), so the
+        // board can be grouped Split 1, Split 2, … like the racing itself.
+        const splitByDriver = {};
+        const { data: entRows } = await sb.from('entry_drivers')
+            .select('driver_id, entries!inner(event_id, lobby_number)')
+            .eq('entries.event_id', ev.id);
+        (entRows || []).forEach(r => { const ln = r.entries?.lobby_number; if (ln != null) splitByDriver[r.driver_id] = ln; });
+
+        const card = s => {
             const d = s.drivers || {};
             const p = streamPlatform(s.url);
             const av = d.photo_url
@@ -370,6 +381,21 @@ async function loadStreams() {
                 </span>
                 <span class="stream-watch">Watch</span>
             </a>`;
+        };
+
+        // Group by split; a stream with no known split (shouldn't happen once a
+        // split is allocated) drops into a trailing "Unassigned" group.
+        const groups = new Map();
+        streams.forEach(s => { const ln = splitByDriver[s.driver_id]; const key = ln != null ? ln : Infinity; (groups.get(key) || groups.set(key, []).get(key)).push(s); });
+        const keys = [...groups.keys()].sort((a, b) => a - b);
+
+        document.getElementById('streams-sub').textContent = `${streams.length} driver${streams.length === 1 ? '' : 's'} streaming R${ev.round} · ${ev.name}`;
+        document.getElementById('streams-grid').innerHTML = keys.map(k => {
+            const label = k === Infinity ? 'Unassigned' : `Split ${k}`;
+            return `<div class="stream-split">
+                <div class="stream-split-label">${label}</div>
+                <div class="streams-grid">${groups.get(k).map(card).join('')}</div>
+            </div>`;
         }).join('');
         wrap.style.display = '';
     } catch (e) { /* streams are a nice-to-have; never block the media grid */ }
