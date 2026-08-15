@@ -534,6 +534,22 @@
         <div id="lobby-room-extra"></div>
     </div>
 
+    <!-- Broadcast your stream — once the split is allocated, a driver can post
+         a live-stream link that shows up on the public Media page. -->
+    <div class="card" id="card-stream-link" style="display:none">
+        <div class="card-title">Broadcast Your Stream</div>
+        <p style="color:var(--muted);font-size:0.85rem;margin:0 0 0.85rem">Streaming this race on YouTube, Twitch or Kick? Post the link and it appears on the GTEC <a href="/endurance/media/" style="color:var(--gold);text-decoration:none">Media page</a> for everyone to watch live.</p>
+        <div class="form-group">
+            <label class="field-label">Your stream link</label>
+            <input type="url" id="stream-link-input" placeholder="e.g. https://youtube.com/watch?v=…" inputmode="url" autocomplete="off">
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-top:0.6rem">
+            <button class="btn-save" id="stream-link-save" onclick="saveStreamLink()">Post Stream</button>
+            <button class="btn-ghost" id="stream-link-remove" onclick="removeStreamLink()" style="display:none">Remove</button>
+            <span id="stream-link-status" style="font-size:0.8rem;color:var(--muted)"></span>
+        </div>
+    </div>
+
     <!-- Split result screenshots — hosts of recently-run splits upload
          their 2 qualifying + 2 race results screenshots here for admin. -->
     <div class="card" id="card-host-screenshots" style="display:none">
@@ -1194,6 +1210,12 @@ async function toggleAbsence(eventId, driverId, checkbox) {
 let _lobbyRoomCtx = null; // { eventId, lobbyNumber, isHost }
 
 async function loadLobbyRoomCode(driverId) {
+    // The stream card unlocks on the same condition as the lobby split; hide it
+    // by default and only show it once we know the driver's split is allocated.
+    const streamCard = document.getElementById('card-stream-link');
+    if (streamCard) streamCard.style.display = 'none';
+    _streamCtx = null;
+
     const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
     if (!season) { document.getElementById('card-lobby-room').style.display = 'none'; return; }
 
@@ -1254,6 +1276,63 @@ async function loadLobbyRoomCode(driverId) {
     }
 
     document.getElementById('card-lobby-room').style.display = '';
+
+    // Split is allocated → the driver can now post a live-stream link.
+    await renderStreamCard(driverId, ev.id, `R${ev.round} · ${ev.name}`);
+}
+
+// Populate + reveal the "Broadcast Your Stream" card for the current event.
+let _streamCtx = null; // { driverId, eventId }
+async function renderStreamCard(driverId, eventId, eventLabel) {
+    const card = document.getElementById('card-stream-link');
+    if (!card) return;
+    _streamCtx = { driverId, eventId };
+    const { data: existing } = await sb.from('driver_stream_links')
+        .select('url').eq('driver_id', driverId).eq('event_id', eventId).maybeSingle();
+    const input = document.getElementById('stream-link-input');
+    const removeBtn = document.getElementById('stream-link-remove');
+    const status = document.getElementById('stream-link-status');
+    input.value = existing?.url || '';
+    removeBtn.style.display = existing?.url ? '' : 'none';
+    status.textContent = existing?.url ? 'Live on the Media page.' : '';
+    status.style.color = existing?.url ? '#4ade80' : 'var(--muted)';
+    card.style.display = '';
+}
+
+async function saveStreamLink() {
+    if (!_streamCtx) return;
+    const input = document.getElementById('stream-link-input');
+    const btn = document.getElementById('stream-link-save');
+    const status = document.getElementById('stream-link-status');
+    let url = input.value.trim();
+    if (!url) { toast('Paste your stream link first.', 'error'); return; }
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;   // be forgiving of a pasted bare link
+    try { new URL(url); } catch (e) { toast('That doesn\'t look like a valid link.', 'error'); return; }
+    btn.disabled = true;
+    const { error } = await sb.from('driver_stream_links').upsert({
+        driver_id: _streamCtx.driverId,
+        event_id:  _streamCtx.eventId,
+        url,
+        updated_at: new Date().toISOString(),
+    }, { onConflict: 'driver_id,event_id' });
+    btn.disabled = false;
+    if (error) { toast('Could not post your stream. Please try again.', 'error'); return; }
+    input.value = url;
+    document.getElementById('stream-link-remove').style.display = '';
+    status.textContent = 'Live on the Media page.'; status.style.color = '#4ade80';
+    toast('Stream posted.', 'success');
+}
+
+async function removeStreamLink() {
+    if (!_streamCtx) return;
+    const { error } = await sb.from('driver_stream_links')
+        .delete().eq('driver_id', _streamCtx.driverId).eq('event_id', _streamCtx.eventId);
+    if (error) { toast('Could not remove. Please try again.', 'error'); return; }
+    document.getElementById('stream-link-input').value = '';
+    document.getElementById('stream-link-remove').style.display = 'none';
+    const status = document.getElementById('stream-link-status');
+    status.textContent = ''; status.style.color = 'var(--muted)';
+    toast('Stream removed.', 'success');
 }
 
 async function saveLobbyRoomCode() {

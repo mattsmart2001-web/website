@@ -67,6 +67,23 @@
         .eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; text-indent: 0.45em; }
         .page-title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: 0.04em; text-transform: uppercase; }
 
+        /* Live streams — drivers broadcasting the current race */
+        .streams-wrap { margin-bottom: 2.5rem; }
+        .streams-head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+        .streams-title { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .streams-live-dot { width: 9px; height: 9px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 0 rgba(239,68,68,0.7); animation: streamPulse 1.8s infinite; }
+        @keyframes streamPulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); } 70% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
+        .streams-sub { font-size: 0.8rem; color: var(--muted); }
+        .streams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.75rem; }
+        .stream-card { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.85rem; background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; text-decoration: none; color: var(--text); transition: border-color 0.15s, transform 0.15s, background 0.15s; }
+        .stream-card:hover { border-color: rgba(255,209,102,0.4); transform: translateY(-2px); background: var(--bg-2); }
+        .stream-av { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--bg-2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: 'Anton', sans-serif; color: var(--muted); font-size: 0.95rem; overflow: hidden; }
+        .stream-av img { width: 100%; height: 100%; object-fit: cover; }
+        .stream-meta { min-width: 0; flex: 1; }
+        .stream-name { font-weight: 600; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stream-plat { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; }
+        .stream-watch { flex-shrink: 0; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #111; background: var(--gold); padding: 0.4rem 0.7rem; border-radius: 999px; }
+
         /* Category filter chips */
         .media-filters {
             display: flex; flex-wrap: wrap; gap: 0.5rem;
@@ -207,6 +224,13 @@
         <div class="eyebrow">Championship</div>
         <div class="page-title">Media</div>
     </div>
+    <div class="streams-wrap" id="streams-wrap" style="display:none">
+        <div class="streams-head">
+            <span class="streams-title"><span class="streams-live-dot"></span>Watch Live</span>
+            <span class="streams-sub" id="streams-sub"></span>
+        </div>
+        <div class="streams-grid" id="streams-grid"></div>
+    </div>
     <div class="media-filters" id="media-filters"></div>
     <div id="media-grid"><div class="loading">Loading…</div></div>
 </div>
@@ -300,7 +324,59 @@ let _view    = [];   // currently filtered list (drives the lightbox nav)
 let _activeCat = 'all';
 let _lbIndex = 0;
 
+// Which streaming platform a link points at, for a coloured label.
+function streamPlatform(url) {
+    const u = (url || '').toLowerCase();
+    if (u.includes('youtube.com') || u.includes('youtu.be')) return { name: 'YouTube', color: '#ff4d4d' };
+    if (u.includes('twitch.tv')) return { name: 'Twitch', color: '#a970ff' };
+    if (u.includes('kick.com')) return { name: 'Kick', color: '#53fc18' };
+    if (u.includes('facebook.com') || u.includes('fb.gg')) return { name: 'Facebook', color: '#4c8bf5' };
+    return { name: 'Live', color: '#38bdf8' };
+}
+
+// Driver streams for the current race: the in-progress event if there is one,
+// otherwise the next scheduled event in the active season. Hidden when none.
+async function loadStreams() {
+    const wrap = document.getElementById('streams-wrap');
+    try {
+        const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+        if (!season) return;
+        const { data: evs } = await sb.from('events')
+            .select('id, name, round, status, starts_at')
+            .eq('season_id', season.id)
+            .in('status', ['in_progress', 'scheduled'])
+            .order('starts_at', { ascending: true });
+        if (!evs?.length) return;
+        const ev = evs.find(e => e.status === 'in_progress') || evs[0];
+
+        const { data: streams } = await sb.from('driver_stream_links')
+            .select('url, updated_at, drivers(display_name, slug, photo_url)')
+            .eq('event_id', ev.id)
+            .order('updated_at', { ascending: true });
+        if (!streams?.length) return;
+
+        document.getElementById('streams-sub').textContent = `${streams.length} driver${streams.length === 1 ? '' : 's'} streaming R${ev.round} · ${ev.name}`;
+        document.getElementById('streams-grid').innerHTML = streams.map(s => {
+            const d = s.drivers || {};
+            const p = streamPlatform(s.url);
+            const av = d.photo_url
+                ? `<img src="${esc(d.photo_url)}" alt="" loading="lazy">`
+                : esc((d.display_name || '?').trim().charAt(0).toUpperCase());
+            return `<a class="stream-card" href="${esc(s.url)}" target="_blank" rel="noopener nofollow">
+                <span class="stream-av">${av}</span>
+                <span class="stream-meta">
+                    <span class="stream-name">${esc(d.display_name || 'Driver')}</span>
+                    <span class="stream-plat" style="color:${p.color}">● ${p.name}</span>
+                </span>
+                <span class="stream-watch">Watch</span>
+            </a>`;
+        }).join('');
+        wrap.style.display = '';
+    } catch (e) { /* streams are a nice-to-have; never block the media grid */ }
+}
+
 async function load() {
+    loadStreams();
     const grid = document.getElementById('media-grid');
     const { data, error } = await sb.from('media_items')
         .select('*, events(name)')
