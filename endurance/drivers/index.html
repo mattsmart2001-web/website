@@ -1823,7 +1823,7 @@ async function showProfile() {
                             const pts = r.points_awarded || 0;
                             const evDed = dedByEvent[ev?.id];
                             const netPts = pts - (evDed?.amount || 0);   // net after this round's deduction, matching the season total
-                            const bonuses = [r.pole_point ? 'P' : '', r.fastest_lap_point ? 'FL' : ''].filter(Boolean).join('+');
+                            const bonuses = [r.pole_point ? 'Pole' : '', r.fastest_lap_point ? 'FL' : ''].filter(Boolean).join(' · ');
                             return `<tr>
                                 <td>
                                     <strong>R${ev?.round ?? '?'} — ${esc(ev?.name)}</strong>
