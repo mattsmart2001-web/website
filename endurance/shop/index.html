@@ -84,6 +84,22 @@
         .shop-note { text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 0.9rem; }
         .shop-note a { color: var(--muted); }
 
+        /* Featured products */
+        .shop-section-label { text-align: center; font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); margin: 3.6rem 0 1.1rem; }
+        .shop-featured { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
+        .prod-card { display: flex; flex-direction: column; background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; text-decoration: none; color: var(--text); transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s; }
+        .prod-card:hover { transform: translateY(-3px); border-color: rgba(255,209,102,0.4); box-shadow: 0 14px 34px rgba(0,0,0,0.45); }
+        .prod-img { aspect-ratio: 1 / 1; background: var(--bg-2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .prod-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .prod-ph { color: var(--muted); opacity: 0.45; }
+        .prod-ph svg { width: 46px; height: 46px; }
+        .prod-body { padding: 0.9rem 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.28rem; flex: 1; }
+        .prod-tag { font-family: 'Orbitron', sans-serif; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
+        .prod-name { font-weight: 600; font-size: 0.92rem; line-height: 1.3; }
+        .prod-view { margin-top: auto; font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding-top: 0.55rem; }
+        .prod-card:hover .prod-view { color: var(--gold); }
+        @media (max-width: 620px) { .shop-featured { grid-template-columns: 1fr; } }
+
         /* Value-prop strip */
         .shop-props { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; margin-top: 3.2rem; }
         .shop-prop { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.1rem; text-align: center; }
@@ -135,6 +151,9 @@
         <p class="shop-note">Opens the GTEC collection in the SparksTheory store on Fourthwall.</p>
     </div>
 
+    <div class="shop-section-label">Featured</div>
+    <div class="shop-featured" id="shop-featured"></div>
+
     <div class="shop-props">
         <div class="shop-prop">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
@@ -154,6 +173,25 @@
     </div>
 </div>
 
+<script>
+    // Featured GTEC products. To add a photo, right-click the product image
+    // in Fourthwall → "Copy image address" and paste it into `img`.
+    const PRODUCTS = [
+        { name: 'GTEC Embroidered Zip-Up Hoodie', tag: 'Hoodie',       url: 'https://mattsmart-shop.fourthwall.com/en-gbp/products/gtec-embroidered-zip-up-hoodie', img: 'https://imgproxy.fourthwall.dev/CbEdNvqlApcDNoAD9yEzCzkrgmwsetmVTcEdNnfOwmQ/w:1920/sm:1/enc/aSLQMCsMSCacOfxW/hFNKfWWateper7zQ/cDmYksU3ESbaHkdE/VcxZI6iMLCvywWk7/q8MU6rEi10s78rBR/IzZD1nypbHed2wXb/JIpMP_6H9hrp4rjD/Z5Lv4kxGbK0ba33B/Ja822eMoQq_mzNG4/GQlNbGN2lo5PZ0JP/2IObJFAMBY0hY-Jy/1R1g74rce-keS0Iz/sanzq89WRNbsnqqY/UsKIJDSBKCUHSGpW/Ovt-Hr0fdcA.jpg' },
+        { name: 'GTEC Sparks Supersoft T-Shirt',  tag: 'T-Shirt',      url: 'https://mattsmart-shop.fourthwall.com/en-gbp/products/gtec-sparks-supersoft-t-shirt',  img: '' },
+        { name: 'GTEC Stainless Steel Water Bottle', tag: 'Water Bottle', url: 'https://mattsmart-shop.fourthwall.com/en-gbp/products/gtec-stainless-steel-water-bottle', img: '' },
+    ];
+    const bagIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
+    document.getElementById('shop-featured').innerHTML = PRODUCTS.map(p => `
+        <a class="prod-card" href="${p.url}" target="_blank" rel="noopener">
+            <div class="prod-img">${p.img ? `<img src="${p.img}" alt="${p.name}" loading="lazy">` : `<span class="prod-ph">${bagIcon}</span>`}</div>
+            <div class="prod-body">
+                <div class="prod-tag">${p.tag}</div>
+                <div class="prod-name">${p.name}</div>
+                <span class="prod-view">View &rarr;</span>
+            </div>
+        </a>`).join('');
+</script>
 <script src="/endurance/assets/gtec-stars.js" defer></script>
 <script src="/endurance/assets/gtec-sponsors.js" defer></script>
 <script src="/endurance/assets/gtec-footer.js" defer></script>
