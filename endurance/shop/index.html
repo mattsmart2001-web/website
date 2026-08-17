@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTEC Shop | Official Gran Turismo 7 Endurance Championship Merch</title>
+    <meta name="description" content="Official GTEC merch — represent the Gran Turismo 7 (GT7) endurance racing league. Shop the GTEC collection in the SparksTheory store.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/shop/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Shop — Official Merch">
+    <meta property="og:description" content="Represent the GT7 endurance racing league. Shop the official GTEC collection.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/shop/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Shop — Official Merch">
+    <meta name="twitter:description" content="Represent the GT7 endurance racing league. Shop the official GTEC collection.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Orbitron:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav (matches the other GTEC pages) */
+        .gtec-nav {
+            position: sticky; top: 0; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5,6,8,0.85); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand-logo { height: 26px; width: auto; display: block; }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; transition: color 0.2s, border-color 0.2s; }
+        .gtec-nav .back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Page */
+        .shop-wrap { max-width: 820px; margin: 0 auto; padding: 4.5rem 2rem 6rem; position: relative; z-index: 1; }
+        .shop-hero { text-align: center; }
+        .shop-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.9rem; text-indent: 0.45em; }
+        .shop-title { font-family: 'Anton', sans-serif; font-size: clamp(2.6rem, 8vw, 4.6rem); letter-spacing: 0.03em; text-transform: uppercase; line-height: 0.95; }
+        .shop-tagline { font-size: clamp(1rem, 2.4vw, 1.25rem); color: var(--text); font-weight: 600; margin-top: 0.9rem; }
+        .shop-lead { color: var(--muted); font-size: 0.98rem; line-height: 1.65; max-width: 560px; margin: 1rem auto 0; }
+
+        /* Big call-to-action into the Fourthwall collection */
+        .shop-cta-row { display: flex; justify-content: center; margin-top: 2.2rem; }
+        .shop-cta {
+            display: inline-flex; align-items: center; gap: 0.7rem;
+            font-family: 'Orbitron', sans-serif; font-size: 0.9rem; font-weight: 800;
+            letter-spacing: 0.12em; text-transform: uppercase; color: #0c0d10;
+            background: linear-gradient(135deg, #ffe08a, #f0b429);
+            text-decoration: none; padding: 1.05rem 2.2rem; border-radius: 999px;
+            box-shadow: 0 10px 32px rgba(255,209,102,0.35);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .shop-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(255,209,102,0.5); }
+        .shop-cta svg { width: 20px; height: 20px; }
+        .shop-note { text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 0.9rem; }
+        .shop-note a { color: var(--muted); }
+
+        /* Value-prop strip */
+        .shop-props { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; margin-top: 3.2rem; }
+        .shop-prop { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.1rem; text-align: center; }
+        .shop-prop svg { width: 26px; height: 26px; color: var(--gold); margin-bottom: 0.6rem; }
+        .shop-prop-title { font-family: 'Orbitron', sans-serif; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.35rem; }
+        .shop-prop-text { font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+        @media (max-width: 620px) { .shop-props { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/" class="active">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div class="shop-wrap">
+    <div class="shop-hero">
+        <div class="shop-eyebrow">Official Merch</div>
+        <h1 class="shop-title">GTEC Shop</h1>
+        <div class="shop-tagline">Wear the series.</div>
+        <p class="shop-lead">Represent the championship with official GTEC gear. Every order is fulfilled through the SparksTheory store, with secure checkout and shipping to your door.</p>
+
+        <div class="shop-cta-row">
+            <a class="shop-cta" href="https://mattsmart-shop.fourthwall.com/en-gbp/collections/gtec" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                Shop GTEC Merch
+            </a>
+        </div>
+        <p class="shop-note">Opens the GTEC collection in the SparksTheory store on Fourthwall.</p>
+    </div>
+
+    <div class="shop-props">
+        <div class="shop-prop">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
+            <div class="shop-prop-title">Official GTEC</div>
+            <div class="shop-prop-text">Designs made for the championship and its drivers.</div>
+        </div>
+        <div class="shop-prop">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <div class="shop-prop-title">Secure Checkout</div>
+            <div class="shop-prop-text">Payments handled safely by Fourthwall.</div>
+        </div>
+        <div class="shop-prop">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <div class="shop-prop-title">Shipped to You</div>
+            <div class="shop-prop-text">Delivered worldwide, straight to your door.</div>
+        </div>
+    </div>
+</div>
+
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>
