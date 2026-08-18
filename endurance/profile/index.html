@@ -460,7 +460,7 @@
 
         <!-- Submission form (hidden until the button is pressed) -->
         <form id="incident-form" style="display:none;margin-bottom:1.25rem" onsubmit="submitIncident(event)">
-            <p class="form-hint" style="margin-bottom:1rem">Contact under braking, a punt, unsafe rejoin. Describe it and link your clips. The stewards review it privately; you'll see the verdict here and in your inbox.</p>
+            <p class="form-hint" style="margin-bottom:1rem">Contact under braking, a punt, unsafe rejoin. Describe it and link your clips. The stewards review it privately; you'll see the verdict here and in your inbox. Reporting stays open for 48 hours after a round ends, then closes.</p>
             <div class="form-group" style="margin-bottom:0.8rem">
                 <label class="field-label">Event <span style="color:#fca5a5">*</span></label>
                 <select id="inc-event" required onchange="onIncidentEventChange()"><option value="">— select an event you raced —</option></select>
@@ -1565,7 +1565,7 @@ async function loadIncidents(driverId) {
     // split each round, and the roster of other drivers to name.
     const [{ data: eds }, { data: roster }, { data: mine }] = await Promise.all([
         sb.from('entry_drivers')
-            .select('entries(event_id, lobby_number, events(name, round, starts_at))')
+            .select('entries(event_id, lobby_number, events(name, round, starts_at, ends_at, status))')
             .eq('driver_id', driverId),
         sb.from('drivers').select('id, display_name, psn_id').order('display_name'),
         // Exclude admin-hidden cases explicitly: RLS already hides them from
@@ -1581,11 +1581,23 @@ async function loadIncidents(driverId) {
         const en = ed.entries; const ev = en?.events;
         if (!en?.event_id || !ev) return;
         _incEventLobby[en.event_id] = en.lobby_number ?? null;
-        if (!evMap.has(en.event_id)) evMap.set(en.event_id, { id: en.event_id, name: ev.name, round: ev.round, starts_at: ev.starts_at });
+        if (!evMap.has(en.event_id)) evMap.set(en.event_id, { id: en.event_id, name: ev.name, round: ev.round, starts_at: ev.starts_at, ends_at: ev.ends_at, status: ev.status });
     });
-    const events = [...evMap.values()].sort((a, b) => new Date(b.starts_at || 0) - new Date(a.starts_at || 0));
 
-    // Only offer the feature to drivers who've actually raced something.
+    // Reporting is only open for 48 hours after a round has been completed.
+    // A round counts once it's marked completed and its scheduled end was
+    // within the last 48h; after that the whole section disappears.
+    const WINDOW_MS = 48 * 60 * 60 * 1000;
+    const now = Date.now();
+    const events = [...evMap.values()]
+        .filter(e => {
+            if (e.status !== 'completed' || !e.ends_at) return false;
+            const ended = new Date(e.ends_at).getTime();
+            return ended <= now && (now - ended) < WINDOW_MS;
+        })
+        .sort((a, b) => new Date(b.ends_at || 0) - new Date(a.ends_at || 0));
+
+    // Nothing inside the window right now -> hide the section entirely.
     if (!events.length) { card.style.display = 'none'; return; }
     card.style.display = '';
 
@@ -1598,7 +1610,10 @@ async function loadIncidents(driverId) {
         (roster || []).filter(d => d.id !== driverId).map(d =>
             `<option value="${esc(d.id)}">${esc(d.display_name)}${d.psn_id ? ' (' + esc(d.psn_id) + ')' : ''}</option>`).join('');
 
-    renderIncidentList(mine || []);
+    // Only the incidents filed for rounds still inside the 48h window; older
+    // ones vanish with their round's section (the verdict still lands in the inbox).
+    const openEventIds = new Set(events.map(e => e.id));
+    renderIncidentList((mine || []).filter(r => openEventIds.has(r.event_id)));
 }
 
 function renderIncidentList(rows) {
