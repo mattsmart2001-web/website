@@ -957,7 +957,7 @@ function mfrBadge(logoUrl, brandColor, name, opts = {}) {
 // ============================================================
 async function showListing() {
     document.title = 'Drivers | GTEC';
-    const [{ data, error }, { data: ratings }, { data: allSeasons }, { data: standings }, { data: hostEntries }] = await Promise.all([
+    const [{ data, error }, { data: ratings }, { data: allSeasons }, { data: standings }, { data: hostEntries }, { data: streamLinks }] = await Promise.all([
         sb.from('drivers')
             .select('id, display_name, slug, nationality, career_number, photo_url, manual_badges, willing_host, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url,car_name)')
             .order('display_name'),
@@ -967,6 +967,8 @@ async function showListing() {
         // Career-wide count of splits actually hosted (not just "willing to
         // host") feeds the Community badge ladder.
         sb.from('entries').select('host_driver_id').not('host_driver_id', 'is', null),
+        // Every driver who's posted a stream link earns the Content Creator badge.
+        sb.from('driver_stream_links').select('driver_id'),
     ]);
 
     if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
@@ -1017,11 +1019,13 @@ async function showListing() {
         hostCountMap[e.host_driver_id] = (hostCountMap[e.host_driver_id] || 0) + 1;
     });
 
+    const streamCreatorSet = new Set((streamLinks || []).map(s => s.driver_id));
+
     function cardBadges(d, totalWins, totalRaces, seasonFinishes) {
         const cats = window.BADGE_CATEGORIES;
         if (!cats) return '';
         const manualBadges = Array.isArray(d.manual_badges) ? d.manual_badges : [];
-        const stats = { wins: totalWins, starts: totalRaces, hostCount: hostCountMap[d.id] || 0, manualBadges, seasonFinishes: seasonFinishes || [], foundingMember: foundingSet.has(d.id) };
+        const stats = { wins: totalWins, starts: totalRaces, hostCount: hostCountMap[d.id] || 0, manualBadges, seasonFinishes: seasonFinishes || [], foundingMember: foundingSet.has(d.id), hasStreamLink: streamCreatorSet.has(d.id) };
 
         const seen = new Set();
         const earned = [];
@@ -1552,7 +1556,7 @@ async function showProfile() {
     document.title = `${driver.display_name} | GTEC`;
 
     // Season career stats + rating history in parallel with race history
-    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes, hostCountRes, dedRes] = await Promise.all([
+    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes, hostCountRes, dedRes, streamLinkRes] = await Promise.all([
         sb.from('driver_standings').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
         sb.from('driver_ratings').select('rating_before, rating_after, delta, event_id, events(round, name)').eq('driver_id', driver.id).order('created_at'),
         sb.from('driver_current_ratings').select('rating, peak_rating').eq('driver_id', driver.id).maybeSingle(),
@@ -1582,6 +1586,8 @@ async function showProfile() {
         sb.from('penalties')
             .select('points_amount, reason, driver_id, entry_id, event_id, entries(entry_drivers(driver_id)), events(seasons(year))')
             .eq('penalty_type', 'points_deduction'),
+        // Any stream link this driver's posted earns the Content Creator badge.
+        sb.from('driver_stream_links').select('id', { count: 'exact', head: true }).eq('driver_id', driver.id),
     ]);
 
     // Make this driver its own indexable, shareable entity (per-driver title,
@@ -1900,7 +1906,7 @@ async function showProfile() {
                     ${driver.career_number ? `<div class="profile-number">#${driver.career_number}</div>` : ''}
                     <div class="profile-name">${esc(driver.display_name)}</div>
                     <div class="profile-tags">${tagsHTML}</div>
-                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [], hostCount, foundingMember }) : ''}
+                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [], hostCount, foundingMember, hasStreamLink: (streamLinkRes?.count || 0) > 0 }) : ''}
                     <button class="share-btn" id="share-profile-btn" type="button">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>

@@ -127,14 +127,16 @@
             // needs every badge in a 'threshold' category to have a numeric
             // threshold) while guaranteeing hostCount can never auto-earn
             // them. founding_member auto-awards to anyone who raced in
-            // Season 1 (stats.foundingMember, computed by each page); the
-            // other three stay manual-grant only via manual_badges. Declared
-            // before the real tiers so the "hardest first" ordering the
-            // ladder renderer assumes still holds.
+            // Season 1 (stats.foundingMember); content_creator auto-awards to
+            // anyone who's posted a stream link from their portal
+            // (stats.hasStreamLink) — both computed by each page. ambassador
+            // and community_voice stay manual-grant only via manual_badges.
+            // Declared before the real tiers so the "hardest first" ordering
+            // the ladder renderer assumes still holds.
             badges: [
                 { key: 'founding_member', name: 'Founding Member',  icon: '/endurance/assets/badges/founding_member.png', threshold: Infinity, evalFn: s => !!s.foundingMember, blurb: 'Part of the GTEC Season 1 grid' },
                 { key: 'ambassador',      name: 'Ambassador',       icon: '/endurance/assets/badges/ambassador.png',      threshold: Infinity, blurb: 'Brought a new driver into GTEC' },
-                { key: 'content_creator', name: 'Content Creator',  icon: '/endurance/assets/badges/content_creator.png', threshold: Infinity, blurb: 'Streams, records, or shares GTEC content' },
+                { key: 'content_creator', name: 'Content Creator',  icon: '/endurance/assets/badges/content_creator.png', threshold: Infinity, evalFn: s => !!s.hasStreamLink, blurb: 'Streams, records, or shares GTEC content' },
                 { key: 'community_voice', name: 'Community Voice', icon: '/endurance/assets/badges/community_voice.png', threshold: Infinity, blurb: 'A consistently helpful, active presence in the community' },
                 { key: 'host_legend',  name: 'Host Legend',  icon: '/endurance/assets/badges/host_legend.png',  threshold: 15, blurb: 'Hosted 15 splits' },
                 { key: 'trusted_host', name: 'Trusted Host', icon: '/endurance/assets/badges/trusted_host.png', threshold:  5, blurb: 'Hosted 5 splits'  },

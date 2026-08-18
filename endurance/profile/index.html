@@ -1460,7 +1460,7 @@ async function loadBadges(driverId) {
     // is the distinct lower-cased events.circuit_name for any classified
     // result_drivers row owned by this driver — the same source the
     // public profile uses for the strip.
-    const [{ data: stats }, { data: circuitRows }, { data: seasons }, { data: allStandings }, { data: secretBadges }, { data: driverRow }, { count: hostCount }] = await Promise.all([
+    const [{ data: stats }, { data: circuitRows }, { data: seasons }, { data: allStandings }, { data: secretBadges }, { data: driverRow }, { count: hostCount }, { count: streamLinkCount }] = await Promise.all([
         sb.from('driver_career_stats').select('starts, wins').eq('driver_id', driverId).maybeSingle(),
         sb.from('result_drivers')
             .select('status, results(events(circuit_name))')
@@ -1472,6 +1472,9 @@ async function loadBadges(driverId) {
         // Career-wide count of splits actually hosted, feeds the Community
         // badge ladder (replaces the old "willing to host" flag check).
         sb.from('entries').select('id', { count: 'exact', head: true }).eq('host_driver_id', driverId),
+        // Has this driver ever posted a stream link from their portal? Any row
+        // earns the Content Creator badge.
+        sb.from('driver_stream_links').select('id', { count: 'exact', head: true }).eq('driver_id', driverId),
     ]);
 
     const completedCircuits = Array.from(new Set(
@@ -1506,6 +1509,7 @@ async function loadBadges(driverId) {
         manualBadges: Array.isArray(driverRow?.manual_badges) ? driverRow.manual_badges : [],
         hostCount: hostCount || 0,
         foundingMember,
+        hasStreamLink: (streamLinkCount || 0) > 0,
     });
     document.getElementById('card-badges').style.display = '';
 }
