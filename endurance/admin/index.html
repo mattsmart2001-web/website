@@ -7865,6 +7865,7 @@ function renderGuide() {
 // ============================================================
 let _disputes = [];
 let _selDisputeId = null;
+let _stwArchiveOpen = false;   // resolved/dismissed cases collapse into an archive
 const _stwStatusLabel = { open: 'Open', under_review: 'Under review', resolved: 'Resolved', dismissed: 'Dismissed' };
 
 function stwFmt(iso) {
@@ -7883,7 +7884,7 @@ async function renderStewards() {
     const counts = { open: 0, under_review: 0, resolved: 0, dismissed: 0 };
     _disputes.forEach(d => { if (counts[d.status] != null) counts[d.status]++; });
 
-    const listRows = _disputes.length ? _disputes.map(d => {
+    const rowHtml = d => {
         const sel = d.id === _selDisputeId ? ' sel' : '';
         return `
         <div class="stw-row${sel}" onclick="selectDispute('${d.id}')">
@@ -7894,7 +7895,29 @@ async function renderStewards() {
             </div>
             <span class="stw-pill sp-${d.status}">${esc(_stwStatusLabel[d.status] || d.status)}</span>
         </div>`;
-    }).join('') : '<div class="empty-state" style="margin:0">No incidents filed yet.</div>';
+    };
+
+    // Keep the working list short: open + under-review cases stay up top,
+    // while resolved/dismissed ones fold into a collapsible archive.
+    const isArchived = d => d.status === 'resolved' || d.status === 'dismissed';
+    const activeDisputes = _disputes.filter(d => !isArchived(d));
+    const archivedDisputes = _disputes.filter(isArchived);
+
+    let listRows;
+    if (!_disputes.length) {
+        listRows = '<div class="empty-state" style="margin:0">No incidents filed yet.</div>';
+    } else {
+        const activeHtml = activeDisputes.length
+            ? activeDisputes.map(rowHtml).join('')
+            : '<div class="empty-state" style="margin:0 0 0.5rem">Nothing open. All incidents are resolved.</div>';
+        const archiveHtml = archivedDisputes.length ? `
+            <button type="button" class="stw-archive-toggle" onclick="toggleStwArchive()">
+                <span class="chev" id="stw-arch-chev">${_stwArchiveOpen ? '▾' : '▸'}</span>
+                <span>Archived · ${archivedDisputes.length} resolved / dismissed</span>
+            </button>
+            <div id="stw-archive" style="display:${_stwArchiveOpen ? '' : 'none'}">${archivedDisputes.map(rowHtml).join('')}</div>` : '';
+        listRows = activeHtml + archiveHtml;
+    }
 
     content.innerHTML = `
     <style>
@@ -7905,6 +7928,10 @@ async function renderStewards() {
         .stw-row { display: grid; grid-template-columns: auto 1fr auto; gap: 0.7rem; align-items: center; background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; cursor: pointer; transition: border-color 0.15s; }
         .stw-row:hover { border-color: rgba(255,209,102,0.3); }
         .stw-row.sel { border-color: rgba(255,209,102,0.55); background: var(--bg-3); }
+        .stw-archive-toggle { display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; background: transparent; border: 1px dashed var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; margin-top: 0.6rem; cursor: pointer; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; transition: border-color 0.15s, color 0.15s; }
+        .stw-archive-toggle:hover { border-color: rgba(255,209,102,0.3); color: var(--text); }
+        .stw-archive-toggle .chev { color: var(--gold); font-size: 0.7rem; }
+        #stw-archive { margin-top: 0.5rem; }
         .stw-ref { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.58rem; letter-spacing: 0.05em; color: var(--cyan); }
         .stw-row-main { min-width: 0; }
         .stw-parties { font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -7953,8 +7980,17 @@ async function renderStewards() {
         </div>
     </div>`;
 
-    if (!_selDisputeId && _disputes.length) _selDisputeId = _disputes[0].id;
+    // Default to the newest still-active case; fall back to the newest overall.
+    if (!_selDisputeId && _disputes.length) _selDisputeId = (activeDisputes[0] || _disputes[0]).id;
     if (_selDisputeId && _disputes.some(d => d.id === _selDisputeId)) selectDispute(_selDisputeId);
+}
+
+function toggleStwArchive() {
+    _stwArchiveOpen = !_stwArchiveOpen;
+    const box = document.getElementById('stw-archive');
+    const chev = document.getElementById('stw-arch-chev');
+    if (box) box.style.display = _stwArchiveOpen ? '' : 'none';
+    if (chev) chev.textContent = _stwArchiveOpen ? '▾' : '▸';
 }
 
 async function selectDispute(id) {
