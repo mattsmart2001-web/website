@@ -17,6 +17,20 @@
         });
     }
 
+    /* -----------------------------------------------------------------
+       "Live on YouTube" badge. Loaded here so every GTEC page that
+       carries the shared nav gets it for free. The script is at the
+       site root and is same-origin, so it satisfies the /endurance/*
+       script-src 'self' CSP.
+    ------------------------------------------------------------------ */
+    if (!document.querySelector('script[data-st-live]')) {
+        const lb = document.createElement('script');
+        lb.src = '/live-banner.js';
+        lb.defer = true;
+        lb.setAttribute('data-st-live', '');
+        document.head.appendChild(lb);
+    }
+
     document.addEventListener('click', function (e) {
         // Toggle drawer
         if (e.target.closest('.gtec-nav-toggle')) {
