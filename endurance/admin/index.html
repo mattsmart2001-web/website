@@ -2546,9 +2546,10 @@ function eventForm(e = {}) {
                     <label>Damage</label>
                     <select name="damage_level">
                         <option value="">—</option>
-                        <option value="off"   ${e.damage_level === 'off'   ? 'selected' : ''}>Off</option>
-                        <option value="light" ${e.damage_level === 'light' ? 'selected' : ''}>Light</option>
-                        <option value="heavy" ${e.damage_level === 'heavy' ? 'selected' : ''}>Heavy</option>
+                        <option value="off"          ${e.damage_level === 'off'          ? 'selected' : ''}>Off</option>
+                        <option value="light"        ${e.damage_level === 'light'        ? 'selected' : ''}>Light</option>
+                        <option value="heavy"        ${e.damage_level === 'heavy'        ? 'selected' : ''}>Heavy</option>
+                        <option value="championship" ${e.damage_level === 'championship' ? 'selected' : ''}>Championship</option>
                     </select>
                 </div>
             </div>
@@ -5454,7 +5455,7 @@ function _hcStartProc(s) {
     return map[(s||'').toLowerCase().replace(/[\s-]+/g,'_')] || s;
 }
 function _hcDamage(d) {
-    const map = { none:'Off', light:'Light', heavy:'Heavy', simulation:'Simulation' };
+    const map = { none:'Off', off:'Off', light:'Light', heavy:'Heavy', championship:'Championship', simulation:'Simulation' };
     return map[(d||'').toLowerCase()] || d;
 }
 function _hcSlipstream(s) {
