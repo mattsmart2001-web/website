@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thumbnail Studio | SparksTheory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --carbon:#0b0c0f; --stage:#111318; --panel:#15181d; --panel2:#1b1f25;
+  --line:#282d35; --line2:#343a44;
+  --gold:#e8b23a; --gold-dim:#7d631f; --gold-soft:#f3d68a;
+  --ink:#e9e6df; --mute:#868d98; --live:#e10600;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--carbon); color:var(--ink);
+  font:400 14px/1.5 "Barlow", system-ui, sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.label,.sec h2,button,.filebtn,.snap b,th{
+  font-family:"Barlow Condensed", "Arial Narrow", sans-serif;
+  text-transform:uppercase; letter-spacing:.09em;
+}
+
+/* ---------- timing strip header ---------- */
+header{
+  display:flex; align-items:baseline; gap:14px;
+  padding:10px 18px 9px; border-bottom:1px solid var(--gold-dim);
+  background:linear-gradient(180deg,#15181d,#0e1014);
+}
+header .mark{font-family:"Archivo Black",sans-serif; font-size:15px; letter-spacing:.02em; color:var(--ink); text-decoration:none}
+header a.mark:hover{color:var(--gold-soft)}
+header .mark span{color:var(--gold)}
+header .back{font-family:"Barlow Condensed",sans-serif; text-transform:uppercase; letter-spacing:.16em; font-size:11px; color:var(--mute); text-decoration:none}
+header .back:hover{color:var(--gold)}
+header .sub{font-family:"Barlow Condensed",sans-serif; text-transform:uppercase; letter-spacing:.22em; font-size:11px; color:var(--mute)}
+header .dims{margin-left:auto; font-family:"Barlow Condensed",sans-serif; font-size:12px; letter-spacing:.14em; color:var(--gold)}
+
+/* ---------- layout ---------- */
+main{display:grid; grid-template-columns:minmax(0,1fr) 352px; min-height:calc(100vh - 41px)}
+@media (max-width:1040px){ main{grid-template-columns:1fr} }
+
+/* ---------- stage ---------- */
+.stagewrap{
+  background:
+    radial-gradient(120% 90% at 50% 0%, #1a1e25 0%, var(--stage) 55%, #0a0b0e 100%);
+  padding:26px; display:flex; flex-direction:column; gap:14px; align-items:center; justify-content:flex-start;
+}
+.frame{position:relative; width:100%; max-width:1000px}
+.frame::before,.frame::after{
+  content:""; position:absolute; width:16px; height:16px; border:1px solid var(--gold-dim); pointer-events:none;
+}
+.frame::before{left:-9px; top:-9px; border-right:0; border-bottom:0}
+.frame::after{right:-9px; bottom:-9px; border-left:0; border-top:0}
+canvas{
+  display:block; width:100%; aspect-ratio:16/9; height:auto;
+  border:1px solid var(--line2); background:#000; cursor:grab; touch-action:none;
+}
+canvas:active{cursor:grabbing}
+canvas:focus-visible{outline:2px solid var(--gold); outline-offset:3px}
+.stagebar{
+  width:100%; max-width:1000px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  font-family:"Barlow Condensed",sans-serif; text-transform:uppercase; letter-spacing:.12em; font-size:11.5px; color:var(--mute);
+}
+.stagebar .sel{color:var(--gold)}
+.stagebar .hint{margin-left:auto; text-transform:none; letter-spacing:.02em; font-family:"Barlow",sans-serif; font-size:12px}
+kbd{
+  font:500 11px/1 "Barlow Condensed",sans-serif; letter-spacing:.06em;
+  border:1px solid var(--line2); border-bottom-width:2px; padding:2px 5px; border-radius:2px; color:var(--ink);
+}
+
+/* ---------- rail ---------- */
+.rail{
+  border-left:1px solid var(--line); background:var(--panel);
+  max-height:calc(100vh - 41px); overflow-y:auto; scrollbar-width:thin;
+}
+@media (max-width:1040px){ .rail{max-height:none; border-left:0; border-top:1px solid var(--line)} }
+.intro{padding:14px 16px; border-bottom:1px solid var(--line); color:var(--mute); font-size:12.5px}
+.sec{border-bottom:1px solid var(--line)}
+.sec h2{
+  display:flex; align-items:center; gap:9px; margin:0;
+  padding:11px 16px 9px; font-size:12.5px; font-weight:600; color:var(--ink);
+  background:var(--panel2);
+}
+.sec h2 i{
+  font-style:normal; font-size:10px; letter-spacing:.1em; color:var(--gold);
+  border:1px solid var(--gold-dim); padding:1px 4px 0;
+}
+.sec .body{padding:6px 16px 15px}
+
+.row{display:flex; align-items:center; gap:10px; min-height:31px; border-bottom:1px solid #1f242b}
+.row:last-child{border-bottom:0}
+.row .label{flex:0 0 96px; font-size:11px; font-weight:500; color:var(--mute)}
+.row .ctl{flex:1; display:flex; align-items:center; gap:8px; min-width:0}
+.row output{
+  flex:0 0 42px; text-align:right; font:500 12px/1 "Barlow Condensed",sans-serif; letter-spacing:.06em; color:var(--gold);
+}
+
+input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:20px; background:transparent; margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:2px; background:var(--line2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:12px; height:12px; margin-top:-5px; background:var(--gold); border:0; border-radius:0; transform:rotate(45deg)}
+input[type=range]::-moz-range-track{height:2px; background:var(--line2)}
+input[type=range]::-moz-range-thumb{width:11px; height:11px; background:var(--gold); border:0; border-radius:0}
+input[type=range]:focus-visible{outline:1px solid var(--gold); outline-offset:4px}
+
+input[type=text],textarea,select{
+  width:100%; background:#0e1116; color:var(--ink); border:1px solid var(--line2); border-radius:2px;
+  font:400 13px/1.35 "Barlow",sans-serif; padding:6px 7px;
+}
+textarea{resize:vertical; min-height:52px}
+input[type=text]:focus,textarea:focus,select:focus{outline:0; border-color:var(--gold)}
+input[type=color]{width:30px; height:24px; padding:0; border:1px solid var(--line2); background:#0e1116; border-radius:2px; cursor:pointer}
+
+input[type=checkbox]{
+  appearance:none; width:15px; height:15px; margin:0; border:1px solid var(--line2); background:#0e1116; cursor:pointer; position:relative; border-radius:2px;
+}
+input[type=checkbox]:checked{background:var(--gold); border-color:var(--gold)}
+input[type=checkbox]:checked::after{content:""; position:absolute; inset:3px 3px; border:2px solid #14161a; border-top:0; border-left:0; transform:rotate(45deg) translate(-1px,-1px)}
+input:focus-visible{outline:1px solid var(--gold); outline-offset:2px}
+
+button,.filebtn{
+  font-size:11.5px; font-weight:600; color:var(--ink); background:#20252c; border:1px solid var(--line2);
+  border-radius:2px; padding:6px 9px; cursor:pointer; display:inline-block; text-align:center;
+}
+button:hover,.filebtn:hover{border-color:var(--gold-dim); color:var(--gold-soft)}
+button:focus-visible,.filebtn:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+button.go{background:var(--gold); border-color:var(--gold); color:#14161a}
+button.go:hover{background:var(--gold-soft); color:#14161a}
+.filebtn input{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none}
+.btns{display:flex; gap:6px; flex-wrap:wrap; padding-top:9px}
+.btns.tight{padding-top:6px}
+.snap{display:flex; gap:4px}
+.snap button{padding:5px 7px; font-size:10.5px; letter-spacing:.06em}
+.looks{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:9px 0 4px}
+.fname{font-size:11.5px; color:var(--mute); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.readout{
+  margin-top:10px; padding:8px 9px; border:1px solid var(--line2); background:#0e1116;
+  font:400 12px/1.4 "Barlow",sans-serif; color:var(--mute);
+}
+.readout b{color:var(--gold); font-weight:500}
+.readout.warn{border-color:#7a2a10; color:#f0b79b}
+.foot{padding:14px 16px 22px; color:#5f6672; font-size:11.5px}
+.foot a{color:var(--mute)}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="mark" href="/">SPARKS<span>THEORY</span></a>
+  <span class="sub">Thumbnail Studio</span>
+  <a class="back" href="/#tools" style="margin-left:auto">&larr; Back to site</a>
+  <span class="dims" id="dimreadout" style="margin-left:14px">1280 &times; 720</span>
+</header>
+
+<main>
+  <div class="stagewrap">
+    <div class="frame">
+      <canvas id="stage" tabindex="0" aria-label="Thumbnail preview. Click a layer to select it, drag to move it."></canvas>
+    </div>
+    <div class="stagebar">
+      <span>Selected: <span class="sel" id="selname">nothing</span></span>
+      <span class="hint">Drag to move. <kbd>&larr;</kbd><kbd>&rarr;</kbd> nudge, <kbd>Shift</kbd> for 10px. Paste with <kbd>Ctrl</kbd>+<kbd>V</kbd>.</span>
+    </div>
+  </div>
+
+  <aside class="rail">
+    <div class="intro">Drop a GT7 screenshot onto the canvas to start. Every control below updates the preview live, and nothing leaves your machine.</div>
+
+    <!-- 01 IMAGES -->
+    <section class="sec">
+      <h2><i>01</i> Images</h2>
+      <div class="body">
+        <div class="row"><span class="label">Screenshot</span><div class="ctl">
+          <label class="filebtn">Choose file<input type="file" accept="image/*" data-load="bg"></label>
+          <span class="fname" id="fn-bg">none yet</span>
+        </div></div>
+        <div class="row"><span class="label">Zoom</span><div class="ctl"><input type="range" data-bind="bg.zoom" min="1" max="2.6" step="0.01"></div><output data-out="bg.zoom"></output></div>
+        <div class="row"><span class="label">Brightness</span><div class="ctl"><input type="range" data-bind="bg.bri" min="0.5" max="1.5" step="0.01"></div><output data-out="bg.bri"></output></div>
+        <div class="row"><span class="label">Contrast</span><div class="ctl"><input type="range" data-bind="bg.con" min="0.7" max="1.6" step="0.01"></div><output data-out="bg.con"></output></div>
+        <div class="row"><span class="label">Colour</span><div class="ctl"><input type="range" data-bind="bg.sat" min="0" max="1.8" step="0.01"></div><output data-out="bg.sat"></output></div>
+
+        <div class="row" style="margin-top:8px"><span class="label">Logo</span><div class="ctl">
+          <label class="filebtn">Choose file<input type="file" accept="image/*" data-load="logo"></label>
+          <span class="fname" id="fn-logo">none yet</span>
+        </div></div>
+        <div class="row"><span class="label">Logo size</span><div class="ctl"><input type="range" data-bind="logo.w" min="0.05" max="0.45" step="0.005"></div><output data-out="logo.w"></output></div>
+        <div class="row"><span class="label">Logo fade</span><div class="ctl"><input type="range" data-bind="logo.op" min="0.15" max="1" step="0.01"></div><output data-out="logo.op"></output></div>
+        <div class="row"><span class="label">Logo shadow</span><div class="ctl"><input type="checkbox" data-bind="logo.shadow"></div></div>
+        <div class="row"><span class="label">Logo corner</span><div class="ctl"><span class="snap" data-snap="logo"><button data-c="tl">TL</button><button data-c="tr">TR</button><button data-c="bl">BL</button><button data-c="br">BR</button></span></div></div>
+
+        <div class="row" style="margin-top:8px"><span class="label">Cut-out</span><div class="ctl">
+          <label class="filebtn">Choose file<input type="file" accept="image/*" data-load="cut"></label>
+          <span class="fname" id="fn-cut">none yet</span>
+        </div></div>
+        <div class="row"><span class="label">Cut-out size</span><div class="ctl"><input type="range" data-bind="cut.w" min="0.1" max="0.95" step="0.005"></div><output data-out="cut.w"></output></div>
+        <div class="row"><span class="label">Flip it</span><div class="ctl"><input type="checkbox" data-bind="cut.flip"><span style="font-size:11.5px;color:var(--mute)">mirror left to right</span></div></div>
+        <div class="row"><span class="label">Cut-out shadow</span><div class="ctl"><input type="checkbox" data-bind="cut.shadow"></div></div>
+        <div class="row"><span class="label">Goes on top</span><div class="ctl"><input type="checkbox" data-bind="cut.front"><span style="font-size:11.5px;color:var(--mute)">covers the text</span></div></div>
+      </div>
+    </section>
+
+    <!-- 02 LOOK -->
+    <section class="sec">
+      <h2><i>02</i> Look</h2>
+      <div class="body">
+        <div class="looks">
+          <button data-look="endurance">Night race</button>
+          <button data-look="pitboard">Pit board</button>
+          <button data-look="gold">Gold leaf</button>
+        </div>
+        <div class="row"><span class="label">Darken all</span><div class="ctl"><input type="range" data-bind="fx.dark" min="0" max="0.6" step="0.01"></div><output data-out="fx.dark"></output></div>
+        <div class="row"><span class="label">Bottom fade</span><div class="ctl"><input type="range" data-bind="fx.bottom" min="0" max="0.95" step="0.01"></div><output data-out="fx.bottom"></output></div>
+        <div class="row"><span class="label">Vignette</span><div class="ctl"><input type="range" data-bind="fx.vig" min="0" max="0.8" step="0.01"></div><output data-out="fx.vig"></output></div>
+      </div>
+    </section>
+
+    <!-- 03 TEXT -->
+    <section class="sec">
+      <h2><i>03</i> Text</h2>
+      <div class="body">
+        <div class="row"><span class="label">Top line</span><div class="ctl"><input type="checkbox" data-bind="kick.on"><span style="font-size:11.5px;color:var(--mute)">show the small line</span></div></div>
+        <div class="row"><div class="ctl"><input type="text" data-bind="kick.text" placeholder="GTEC round 5"></div></div>
+        <div class="row"><span class="label">Size</span><div class="ctl"><input type="range" data-bind="kick.size" min="16" max="78" step="1"></div><output data-out="kick.size"></output></div>
+        <div class="row"><span class="label">Spacing</span><div class="ctl"><input type="range" data-bind="kick.track" min="0" max="20" step="0.5"></div><output data-out="kick.track"></output></div>
+        <div class="row"><span class="label">Colour</span><div class="ctl">
+          <input type="color" data-bind="kick.color">
+          <select data-bind="kick.plate"><option value="none">no panel behind</option><option value="black">black panel</option><option value="gold">gold panel</option></select>
+        </div></div>
+        <div class="row"><span class="label">Corner</span><div class="ctl"><span class="snap" data-snap="kick"><button data-c="tl">TL</button><button data-c="tr">TR</button><button data-c="bl">BL</button><button data-c="br">BR</button></span></div></div>
+
+        <div class="row" style="margin-top:10px"><span class="label">Headline</span><div class="ctl"><input type="checkbox" data-bind="head.on"><span style="font-size:11.5px;color:var(--mute)">show the big text</span></div></div>
+        <div class="row"><div class="ctl"><textarea data-bind="head.text" rows="2" placeholder="One line per row"></textarea></div></div>
+        <div class="row"><span class="label">Typeface</span><div class="ctl"><select data-bind="head.font">
+          <option value="anton">Anton, tall and tight</option>
+          <option value="archivo">Archivo Black, fat and square</option>
+          <option value="barlow">Barlow Condensed, narrow</option>
+          <option value="black">Arial Black, safe fallback</option>
+        </select></div></div>
+        <div class="row"><span class="label">Size</span><div class="ctl"><input type="range" data-bind="head.size" min="36" max="180" step="1"></div><output data-out="head.size"></output></div>
+        <div class="row"><span class="label">Line gap</span><div class="ctl"><input type="range" data-bind="head.lh" min="0.78" max="1.5" step="0.01"></div><output data-out="head.lh"></output></div>
+        <div class="row"><span class="label">Fill</span><div class="ctl">
+          <input type="color" data-bind="head.color">
+          <input type="checkbox" data-bind="head.grad"><span style="font-size:11.5px;color:var(--mute)">gold gradient</span>
+        </div></div>
+        <div class="row"><span class="label">Outline</span><div class="ctl"><input type="color" data-bind="head.stroke"><input type="range" data-bind="head.sw" min="0" max="26" step="1"></div><output data-out="head.sw"></output></div>
+        <div class="row"><span class="label">Panel</span><div class="ctl"><select data-bind="head.plate"><option value="none">no panel behind</option><option value="black">black panel</option><option value="gold">gold panel</option></select></div></div>
+        <div class="row"><span class="label">Drop shadow</span><div class="ctl"><input type="checkbox" data-bind="head.shadow"></div></div>
+        <div class="row"><span class="label">Line up</span><div class="ctl"><select data-bind="head.align"><option value="left">left</option><option value="center">centre</option><option value="right">right</option></select></div></div>
+        <div class="row"><span class="label">Corner</span><div class="ctl"><span class="snap" data-snap="head"><button data-c="tl">TL</button><button data-c="tr">TR</button><button data-c="bl">BL</button><button data-c="br">BR</button></span></div></div>
+      </div>
+    </section>
+
+    <!-- 04 LIVE BADGE -->
+    <section class="sec">
+      <h2><i>04</i> Live badge</h2>
+      <div class="body">
+        <div class="row"><span class="label">Show it</span><div class="ctl"><input type="checkbox" data-bind="live.on"></div></div>
+        <div class="row"><span class="label">Wording</span><div class="ctl"><input type="text" data-bind="live.label" placeholder="LIVE"></div></div>
+        <div class="row"><span class="label">Size</span><div class="ctl"><input type="range" data-bind="live.size" min="0.6" max="2.2" step="0.02"></div><output data-out="live.size"></output></div>
+        <div class="row"><span class="label">Colour</span><div class="ctl"><input type="color" data-bind="live.color"><input type="color" data-bind="live.ink"><span style="font-size:11.5px;color:var(--mute)">badge, then text</span></div></div>
+        <div class="row"><span class="label">Corner</span><div class="ctl"><span class="snap" data-snap="live"><button data-c="tl">TL</button><button data-c="tr">TR</button><button data-c="bl">BL</button><button data-c="br">BR</button></span></div></div>
+      </div>
+    </section>
+
+    <!-- 05 EXPORT -->
+    <section class="sec">
+      <h2><i>05</i> Export</h2>
+      <div class="body">
+        <div class="row"><span class="label">Guides</span><div class="ctl"><input type="checkbox" data-bind="guides"><span style="font-size:11.5px;color:var(--mute)">safe area and thirds</span></div></div>
+        <div class="row"><span class="label">Pixels</span><div class="ctl"><select id="exsize"><option value="720">1280 x 720</option><option value="1080">1920 x 1080</option></select></div></div>
+        <div class="row"><span class="label">File type</span><div class="ctl"><select id="exfmt"><option value="jpeg">JPEG, smaller file</option><option value="png">PNG, sharpest text</option></select></div></div>
+        <div class="btns">
+          <button class="go" id="dl">Download thumbnail</button>
+          <button id="cp">Copy image</button>
+          <button id="rs">Reset styling</button>
+        </div>
+        <div class="readout" id="out">YouTube wants 1280 x 720 or larger, 16:9, and under 2 MB. The file size shows here after you download.</div>
+      </div>
+    </section>
+
+    <div class="foot">Single file, no install. Keep it in a folder with your logo and open it whenever you need a thumbnail, or drop it on sparkstheory.co.uk to use it from any machine.</div>
+  </aside>
+</main>
+
+<script>
+const W = 1280, H = 720;
+const cv = document.getElementById('stage');
+const ctx = cv.getContext('2d');
+cv.width = W; cv.height = H;
+
+const FONTS = {
+  anton:'"Anton","Arial Narrow",Impact,sans-serif',
+  archivo:'"Archivo Black","Arial Black",sans-serif',
+  barlow:'"Barlow Condensed","Arial Narrow",sans-serif',
+  black:'"Arial Black","Helvetica Neue",sans-serif'
+};
+const UI_FONT = FONTS.barlow;
+
+function defaults(){
+  return {
+    bg:   {img:null, zoom:1, x:.5, y:.5, bri:1, con:1.04, sat:1.06},
+    fx:   {dark:.10, bottom:.55, vig:.34},
+    logo: {img:null, x:.030, y:.042, w:.17, op:1, shadow:true},
+    cut:  {img:null, x:.62, y:.24, w:.40, shadow:true, flip:false, front:false},
+    live: {on:true, x:.775, y:.045, size:1, label:'LIVE', color:'#e10600', ink:'#ffffff'},
+    kick: {on:true, text:'GTEC ROUND 5', x:.040, y:.655, size:36, color:'#e8b23a',
+           font:'barlow', track:7, lh:1.1, align:'left', plate:'none', stroke:'#000000', sw:0, shadow:true, up:true, grad:false},
+    head: {on:true, text:'24 HOURS OF\nTHE NORDSCHLEIFE', x:.040, y:.715, size:86, color:'#ffffff',
+           font:'anton', track:0, lh:.95, align:'left', plate:'none', stroke:'#000000', sw:12, shadow:true, up:true, grad:false},
+    guides:false
+  };
+}
+let S = defaults();
+
+const NAMES = {bg:'screenshot', logo:'logo', cut:'cut-out', live:'live badge', kick:'top line', head:'headline'};
+const get = p => p.split('.').reduce((o,k)=>o[k], S);
+const set = (p,v) => { const a=p.split('.'); const o=a.slice(0,-1).reduce((o,k)=>o[k],S); o[a.at(-1)]=v; };
+const clamp = (v,a,b) => Math.min(b, Math.max(a,v));
+
+let g = ctx, K = 1, exporting = false, sel = null, hits = [], drag = null;
+
+/* ---------- drawing ---------- */
+function shadowOn(a, blur, dy){ g.shadowColor = 'rgba(0,0,0,'+a+')'; g.shadowBlur = blur*K; g.shadowOffsetY = dy*K; }
+function shadowOff(){ g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0; }
+function track(px){ if('letterSpacing' in g) g.letterSpacing = (px*K) + 'px'; }
+function rrect(x,y,w,h,r){
+  g.beginPath();
+  if (g.roundRect) g.roundRect(x,y,w,h,r);
+  else { g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+}
+
+function bgRect(){
+  const im = S.bg.img;
+  const base = Math.max(W/im.width, H/im.height) * S.bg.zoom;
+  const dw = im.width*base, dh = im.height*base;
+  return {dw, dh, dx:(W-dw)*S.bg.x, dy:(H-dh)*S.bg.y};
+}
+
+function drawBG(){
+  g.fillStyle = '#07080a'; g.fillRect(0,0,W,H);
+  if (!S.bg.img){ drawEmpty(); return; }
+  const r = bgRect();
+  g.filter = 'brightness('+S.bg.bri+') contrast('+S.bg.con+') saturate('+S.bg.sat+')';
+  g.drawImage(S.bg.img, r.dx, r.dy, r.dw, r.dh);
+  g.filter = 'none';
+  hits.push({id:'bg', x:0, y:0, w:W, h:H});
+}
+
+function drawEmpty(){
+  g.strokeStyle = '#2c313a'; g.lineWidth = 1;
+  g.setLineDash([10,8]); g.strokeRect(40,40,W-80,H-80); g.setLineDash([]);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#e8b23a'; g.font = '600 30px ' + UI_FONT; track(6);
+  g.fillText('DROP A GT7 SCREENSHOT HERE', W/2, H/2 - 16);
+  track(0);
+  g.fillStyle = '#7c838e'; g.font = '400 21px "Barlow",sans-serif';
+  g.fillText('or paste one with Ctrl+V, or use Choose file on the right', W/2, H/2 + 24);
+}
+
+function drawFX(){
+  const f = S.fx;
+  if (f.dark > 0){ g.fillStyle = 'rgba(0,0,0,'+f.dark+')'; g.fillRect(0,0,W,H); }
+  if (f.bottom > 0){
+    const gr = g.createLinearGradient(0, H*.32, 0, H);
+    gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,'+f.bottom+')');
+    g.fillStyle = gr; g.fillRect(0,0,W,H);
+  }
+  if (f.vig > 0){
+    const gr = g.createRadialGradient(W/2,H/2,H*.30,W/2,H/2,H*.98);
+    gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(1,'rgba(0,0,0,'+f.vig+')');
+    g.fillStyle = gr; g.fillRect(0,0,W,H);
+  }
+}
+
+function drawPic(o, id){
+  if (!o.img) return;
+  const w = o.w*W, h = w * (o.img.height/o.img.width), x = o.x*W, y = o.y*H;
+  g.save();
+  g.globalAlpha = o.op != null ? o.op : 1;
+  if (o.shadow) shadowOn(.55, 26, 9);
+  if (o.flip){ g.translate(x+w, y); g.scale(-1,1); g.drawImage(o.img, 0, 0, w, h); }
+  else g.drawImage(o.img, x, y, w, h);
+  g.restore(); shadowOff();
+  hits.push({id, x, y, w, h});
+}
+
+function textLines(o, maxW){
+  g.font = (o.font === 'barlow' ? 700 : 400) + ' ' + o.size + 'px ' + (FONTS[o.font] || FONTS.anton);
+  track(o.track || 0);
+  const src = o.up ? o.text.toUpperCase() : o.text;
+  const out = [];
+  src.split('\n').forEach(par => {
+    if (!par.trim()){ out.push(''); return; }
+    let cur = '';
+    par.trim().split(/\s+/).forEach(word => {
+      const t = cur ? cur + ' ' + word : word;
+      if (g.measureText(t).width > maxW && cur){ out.push(cur); cur = word; }
+      else cur = t;
+    });
+    out.push(cur);
+  });
+  return out;
+}
+
+function drawText(o, id){
+  if (!o.on || !o.text.trim()) return;
+  const xPx = o.x*W, yPx = o.y*H, m = W*.025;
+  const maxW = o.align === 'left' ? Math.max(120, W - xPx - m)
+             : o.align === 'right' ? Math.max(120, xPx - m)
+             : Math.max(120, Math.min(xPx, W - xPx)*2 - m);
+  const L = textLines(o, maxW);
+  const lh = o.size * o.lh;
+  let minX = Infinity, maxX = -Infinity;
+  const rows = L.map((t,i) => {
+    const w = g.measureText(t).width;
+    let x0 = xPx;
+    if (o.align === 'center') x0 = xPx - w/2;
+    if (o.align === 'right')  x0 = xPx - w;
+    if (t){ minX = Math.min(minX, x0); maxX = Math.max(maxX, x0 + w); }
+    return {t, w, x0, y: yPx + i*lh};
+  });
+
+  if (o.plate !== 'none'){
+    rows.forEach(r => {
+      if (!r.t) return;
+      const px = o.size*.20, py = o.size*.09;
+      g.fillStyle = o.plate === 'gold' ? '#e8b23a' : 'rgba(0,0,0,.82)';
+      g.fillRect(r.x0 - px, r.y - py, r.w + px*2, o.size*1.06 + py);
+    });
+  }
+
+  g.textAlign = 'left'; g.textBaseline = 'top';
+  g.lineJoin = 'round'; g.miterLimit = 2;
+  rows.forEach(r => {
+    if (!r.t) return;
+    if (o.shadow) shadowOn(.7, 20, 7);
+    if (o.sw > 0){ g.lineWidth = o.sw; g.strokeStyle = o.stroke; g.strokeText(r.t, r.x0, r.y); }
+    shadowOff();
+    if (o.grad){
+      const gr = g.createLinearGradient(0, r.y, 0, r.y + o.size);
+      gr.addColorStop(0,'#ffeeb8'); gr.addColorStop(.5,'#e8b23a'); gr.addColorStop(1,'#a2701a');
+      g.fillStyle = gr;
+    } else g.fillStyle = o.color;
+    g.fillText(r.t, r.x0, r.y);
+  });
+  track(0);
+  if (minX < Infinity) hits.push({id, x:minX, y:yPx, w:maxX - minX, h:(L.length - 1)*lh + o.size*1.02});
+}
+
+function drawLive(){
+  const o = S.live;
+  if (!o.on) return;
+  const h = 54 * o.size;
+  g.font = '700 ' + (h*.54) + 'px ' + FONTS.barlow;
+  track(h*.035);
+  const label = (o.label || 'LIVE').toUpperCase();
+  const tw = g.measureText(label).width;
+  const dot = h*.24, padX = h*.40, gap = h*.26;
+  const w = padX*2 + dot + gap + tw;
+  const x = o.x*W, y = o.y*H;
+  shadowOn(.5, 20, 6);
+  g.fillStyle = o.color; rrect(x, y, w, h, h*.16); g.fill();
+  shadowOff();
+  g.fillStyle = o.ink;
+  g.beginPath(); g.arc(x + padX + dot/2, y + h/2, dot/2, 0, Math.PI*2); g.fill();
+  g.textAlign = 'left'; g.textBaseline = 'middle';
+  g.fillText(label, x + padX + dot + gap, y + h*.53);
+  track(0);
+  hits.push({id:'live', x, y, w, h});
+}
+
+function drawGuides(){
+  if (!S.guides) return;
+  g.save();
+  g.strokeStyle = 'rgba(90,215,255,.45)'; g.lineWidth = 1.4; g.setLineDash([9,9]);
+  for (let i=1;i<3;i++){
+    g.beginPath(); g.moveTo(W/3*i,0); g.lineTo(W/3*i,H); g.stroke();
+    g.beginPath(); g.moveTo(0,H/3*i); g.lineTo(W,H/3*i); g.stroke();
+  }
+  g.setLineDash([]);
+  g.strokeStyle = 'rgba(90,215,255,.8)'; g.strokeRect(W*.05, H*.05, W*.9, H*.9);
+  const bw = 126, bh = 48, bx = W - 16 - bw, by = H - 16 - bh;
+  g.fillStyle = 'rgba(90,215,255,.16)'; g.fillRect(bx, by, bw, bh); g.strokeRect(bx, by, bw, bh);
+  g.font = '500 16px ' + UI_FONT; g.fillStyle = 'rgba(150,230,255,.95)';
+  g.textAlign = 'right'; g.textBaseline = 'bottom'; track(2);
+  g.fillText('YOUTUBE PUTS THE LENGTH HERE', bx - 8, by + bh - 4);
+  g.textAlign = 'left'; g.textBaseline = 'top';
+  g.fillText('SAFE AREA', W*.05 + 8, H*.05 + 6);
+  track(0); g.restore();
+}
+
+function drawSel(){
+  if (!sel || sel === 'bg') return;
+  const b = hits.find(h => h.id === sel);
+  if (!b) return;
+  g.save();
+  g.strokeStyle = '#e8b23a'; g.lineWidth = 1.6; g.setLineDash([7,6]);
+  g.strokeRect(b.x - 6, b.y - 6, b.w + 12, b.h + 12);
+  g.restore();
+}
+
+function paint(c, k){
+  g = c; K = k; hits = [];
+  c.save();
+  c.setTransform(k, 0, 0, k, 0, 0);
+  drawBG();
+  drawFX();
+  if (!S.cut.front) drawPic(S.cut, 'cut');
+  drawText(S.kick, 'kick');
+  drawText(S.head, 'head');
+  if (S.cut.front) drawPic(S.cut, 'cut');
+  drawPic(S.logo, 'logo');
+  drawLive();
+  if (!exporting){ drawGuides(); drawSel(); }
+  c.restore();
+  g = ctx; K = 1;
+}
+function render(){ paint(ctx, 1); }
+
+/* ---------- control binding ---------- */
+const fmt = v => Number.isInteger(v) ? v : (Math.abs(v) < 3 ? v.toFixed(2) : v.toFixed(1));
+
+document.querySelectorAll('[data-bind]').forEach(el => {
+  const p = el.dataset.bind;
+  el.addEventListener('input', () => {
+    let v;
+    if (el.type === 'checkbox') v = el.checked;
+    else if (el.type === 'range' || el.type === 'number') v = parseFloat(el.value);
+    else v = el.value;
+    set(p, v);
+    syncOut(p);
+    render();
+  });
+});
+
+function syncOut(p){
+  const o = document.querySelector('[data-out="'+p+'"]');
+  if (o) o.textContent = fmt(get(p));
+}
+function syncAll(){
+  document.querySelectorAll('[data-bind]').forEach(el => {
+    const v = get(el.dataset.bind);
+    if (el.type === 'checkbox') el.checked = !!v; else el.value = v;
+  });
+  document.querySelectorAll('[data-out]').forEach(o => o.textContent = fmt(get(o.dataset.out)));
+  document.getElementById('selname').textContent = sel ? NAMES[sel] : 'nothing';
+}
+
+/* ---------- images in ---------- */
+function loadInto(target, file){
+  if (!file || !file.type.startsWith('image/')) return;
+  const im = new Image();
+  im.onload = () => {
+    S[target].img = im;
+    if (target === 'bg'){ S.bg.zoom = 1; S.bg.x = .5; S.bg.y = .5; }
+    const fn = document.getElementById('fn-' + target);
+    if (fn) fn.textContent = file.name || 'pasted image';
+    syncAll(); render();
+  };
+  im.src = URL.createObjectURL(file);
+}
+document.querySelectorAll('[data-load]').forEach(inp => {
+  inp.addEventListener('change', e => loadInto(inp.dataset.load, e.target.files[0]));
+});
+['dragenter','dragover'].forEach(ev => cv.addEventListener(ev, e => { e.preventDefault(); }));
+cv.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f) loadInto(sel === 'logo' || sel === 'cut' ? sel : 'bg', f);
+});
+window.addEventListener('paste', e => {
+  const it = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+  if (it) loadInto(sel === 'logo' || sel === 'cut' ? sel : 'bg', it.getAsFile());
+});
+
+/* ---------- dragging ---------- */
+function pt(e){
+  const r = cv.getBoundingClientRect();
+  return { x:(e.clientX - r.left) * W / r.width, y:(e.clientY - r.top) * H / r.height };
+}
+cv.addEventListener('pointerdown', e => {
+  const p = pt(e);
+  const hit = [...hits].reverse().find(b => p.x >= b.x - 6 && p.x <= b.x + b.w + 6 && p.y >= b.y - 6 && p.y <= b.y + b.h + 6 && b.id !== 'bg');
+  sel = hit ? hit.id : (S.bg.img ? 'bg' : null);
+  if (sel) drag = { id:sel, sx:p.x, sy:p.y, ox:get(sel + '.x'), oy:get(sel + '.y') };
+  cv.setPointerCapture(e.pointerId);
+  cv.focus();
+  syncAll(); render();
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const p = pt(e), dx = p.x - drag.sx, dy = p.y - drag.sy;
+  if (drag.id === 'bg'){
+    const r = bgRect(), rx = r.dw - W, ry = r.dh - H;
+    if (rx > 1) S.bg.x = clamp(drag.ox - dx/rx, 0, 1);
+    if (ry > 1) S.bg.y = clamp(drag.oy - dy/ry, 0, 1);
+  } else {
+    set(drag.id + '.x', drag.ox + dx/W);
+    set(drag.id + '.y', drag.oy + dy/H);
+  }
+  render();
+});
+['pointerup','pointercancel'].forEach(ev => cv.addEventListener(ev, () => { drag = null; syncAll(); }));
+
+cv.addEventListener('keydown', e => {
+  if (!sel || !e.key.startsWith('Arrow')) return;
+  e.preventDefault();
+  const step = (e.shiftKey ? 10 : 1);
+  const dx = (e.key === 'ArrowRight' ? step : e.key === 'ArrowLeft' ? -step : 0);
+  const dy = (e.key === 'ArrowDown' ? step : e.key === 'ArrowUp' ? -step : 0);
+  if (sel === 'bg'){
+    const r = bgRect(), rx = r.dw - W, ry = r.dh - H;
+    if (rx > 1) S.bg.x = clamp(S.bg.x - dx/rx, 0, 1);
+    if (ry > 1) S.bg.y = clamp(S.bg.y - dy/ry, 0, 1);
+  } else {
+    set(sel + '.x', get(sel + '.x') + dx/W);
+    set(sel + '.y', get(sel + '.y') + dy/H);
+  }
+  render();
+});
+
+/* ---------- corner snapping ---------- */
+document.querySelectorAll('[data-snap]').forEach(grp => {
+  const id = grp.dataset.snap;
+  grp.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+    render();
+    const b = hits.find(h => h.id === id);
+    if (!b) return;
+    const m = 34, c = btn.dataset.c;
+    const tx = c === 'tl' || c === 'bl' ? m : W - m - b.w;
+    const ty = c === 'tl' || c === 'tr' ? m : H - m - b.h;
+    set(id + '.x', get(id + '.x') + (tx - b.x)/W);
+    set(id + '.y', get(id + '.y') + (ty - b.y)/H);
+    sel = id; syncAll(); render();
+  }));
+});
+
+/* ---------- looks ---------- */
+const LOOKS = {
+  endurance:{ fx:{dark:.12,bottom:.62,vig:.42},
+    head:{color:'#ffffff',stroke:'#000000',sw:13,plate:'none',shadow:true,grad:false},
+    kick:{color:'#e8b23a',plate:'none',sw:0,shadow:true} },
+  pitboard:{ fx:{dark:.04,bottom:.18,vig:.12},
+    head:{color:'#ffffff',stroke:'#000000',sw:0,plate:'black',shadow:false,grad:false},
+    kick:{color:'#12141a',plate:'gold',sw:0,shadow:false} },
+  gold:{ fx:{dark:.20,bottom:.5,vig:.36},
+    head:{grad:true,stroke:'#000000',sw:11,plate:'none',shadow:true},
+    kick:{color:'#ffffff',plate:'none',sw:0,shadow:true} }
+};
+document.querySelectorAll('[data-look]').forEach(b => b.addEventListener('click', () => {
+  const L = LOOKS[b.dataset.look];
+  Object.keys(L).forEach(k => Object.assign(S[k], L[k]));
+  syncAll(); render();
+}));
+
+/* ---------- export ---------- */
+const out = document.getElementById('out');
+function slug(){
+  const t = (S.head.text + ' ' + S.kick.text).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,44);
+  return 'sparkstheory-' + (t || 'thumbnail');
+}
+function build(cb){
+  const k = document.getElementById('exsize').value === '1080' ? 1.5 : 1;
+  const type = document.getElementById('exfmt').value === 'png' ? 'image/png' : 'image/jpeg';
+  const c = document.createElement('canvas');
+  c.width = Math.round(W*k); c.height = Math.round(H*k);
+  exporting = true; paint(c.getContext('2d'), k); exporting = false; render();
+  c.toBlob(b => cb(b, type, c.width, c.height), type, .93);
+}
+document.getElementById('dl').addEventListener('click', () => {
+  if (!S.bg.img){ out.className = 'readout warn'; out.textContent = 'No screenshot loaded yet. Drop one on the canvas first.'; return; }
+  build((b, type, w, h) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = slug() + (type === 'image/png' ? '.png' : '.jpg');
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const mb = b.size / 1048576;
+    const big = mb > 2;
+    out.className = 'readout' + (big ? ' warn' : '');
+    out.innerHTML = big
+      ? 'Saved at <b>' + w + ' x ' + h + '</b>, but it is <b>' + mb.toFixed(2) + ' MB</b>. YouTube caps uploads at 2 MB, so switch the file type to JPEG or drop to 1280 x 720.'
+      : 'Saved <b>' + slug() + '</b> at <b>' + w + ' x ' + h + '</b>, <b>' + mb.toFixed(2) + ' MB</b>. Good for YouTube.';
+  });
+});
+document.getElementById('cp').addEventListener('click', () => {
+  build(async b => {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ [b.type]: b })]);
+      out.className = 'readout'; out.textContent = 'Copied. Paste it straight into Photoshop, Canva or a Discord message.';
+    } catch (err) {
+      out.className = 'readout warn'; out.textContent = 'This browser blocked the clipboard. Use Download thumbnail instead.';
+    }
+  });
+});
+document.getElementById('rs').addEventListener('click', () => {
+  const keep = { bg:S.bg.img, logo:S.logo.img, cut:S.cut.img };
+  S = defaults();
+  S.bg.img = keep.bg; S.logo.img = keep.logo; S.cut.img = keep.cut;
+  sel = null; syncAll(); render();
+  out.className = 'readout'; out.textContent = 'Styling reset. Your images are still loaded.';
+});
+
+document.getElementById('exsize').addEventListener('change', e => {
+  document.getElementById('dimreadout').textContent = e.target.value === '1080' ? '1920 \u00d7 1080' : '1280 \u00d7 720';
+});
+
+/* ---------- go ---------- */
+syncAll(); render();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+</script>
+</body>
+</html>
