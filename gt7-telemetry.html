@@ -223,8 +223,8 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
         PREVIEW DASHBOARD
       </button>
     </div>
-    <div class="waiting">
-      <span>Waiting for connection</span>
+    <div class="waiting" style="flex-wrap:wrap;line-height:1.6;">
+      <span id="waitingTxt">Waiting for connection</span>
       <span class="waiting-dots"><span>.</span><span>.</span><span>.</span></span>
     </div>
   </div>
@@ -418,27 +418,52 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
 
 <script>
 // ── WEBSOCKET ──
-const WS_URL = 'ws://localhost:8765';
+// The connector binds on IPv4 (0.0.0.0). On Windows, "localhost" often
+// resolves to IPv6 (::1) first, so ws://localhost can fail to connect even
+// with the connector running and GT7 live. Try the IPv4 loopback first and
+// fall back to localhost for the odd machine that only has IPv6 loopback.
+const WS_CANDIDATES = ['ws://127.0.0.1:8765', 'ws://localhost:8765'];
+let wsIdx = 0;
 let ws = null, reconnectTimer = null;
 let hasLiveData = false, isPreview = false;
 
+function updateWaiting(txt){
+  const el = document.getElementById('waitingTxt');
+  if(el) el.textContent = txt;
+}
+
 function connect(){
-  if(ws && ws.readyState === WebSocket.OPEN) return;
+  if(isPreview) return;
+  if(ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+  const url = WS_CANDIDATES[wsIdx % WS_CANDIDATES.length];
   setStatus('connecting','CONNECTING');
+  updateWaiting('Connecting to the GT7 Live Connector…');
   try{
-    ws = new WebSocket(WS_URL);
-    ws.onopen = () => { setStatus('bridge','BRIDGE READY'); clearTimeout(reconnectTimer); };
+    ws = new WebSocket(url);
+    ws.onopen = () => {
+      setStatus('bridge','BRIDGE READY');
+      clearTimeout(reconnectTimer);
+      updateWaiting('Connector found. Waiting for GT7 — start a session in Gran Turismo 7. If nothing appears, check the connector shows your PS5/PS4 IP.');
+    };
     ws.onmessage = e => { try{ handleMsg(JSON.parse(e.data)); }catch(_){} };
-    ws.onclose = () => { if(isPreview) return; setStatus('','DISCONNECTED'); showSetup(); reconnectTimer = setTimeout(connect, 3000); };
-    ws.onerror = () => { if(isPreview) return; setStatus('','DISCONNECTED'); showSetup(); };
+    ws.onclose = () => { if(isPreview) return; setStatus('','DISCONNECTED'); showSetup(); wsIdx++; scheduleReconnect(); };
+    ws.onerror = () => { if(isPreview) return; try{ ws.close(); }catch(_){} };
   }catch(_){
-    setStatus('','DISCONNECTED');
-    reconnectTimer = setTimeout(connect, 3000);
+    wsIdx++; scheduleReconnect();
   }
 }
 
+function scheduleReconnect(){
+  clearTimeout(reconnectTimer);
+  const httpsHint = location.protocol === 'https:'
+    ? ' If it never connects, your browser may be blocking the local link — open this page over http:// instead, or keep the connector running and reload.'
+    : '';
+  updateWaiting('Waiting for the GT7 Live Connector. Make sure GT7-Live-Connector.exe is running in your system tray, then it will connect automatically.' + httpsHint);
+  reconnectTimer = setTimeout(connect, 2500);
+}
+
 function handleMsg(msg){
-  if(msg.type === 'connected'){ setStatus('bridge','BRIDGE READY'); return; }
+  if(msg.type === 'connected'){ setStatus('bridge','BRIDGE READY'); updateWaiting('Connector found. Waiting for GT7 — start a session in Gran Turismo 7.'); return; }
   if(msg.type === 'gt7_detected'){ setStatus('live','GT7 LIVE'); showDashboard(); return; }
   if(msg.type === 'telemetry'){
     setStatus('live','GT7 LIVE');
