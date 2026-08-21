@@ -49,7 +49,8 @@ GT7_PORT      = 33740
 SEND_PORT     = 33739
 WS_PORT       = 8765
 WS_HOST       = "0.0.0.0"
-HEARTBEAT_INT = 10
+HEARTBEAT_INT = 1.5    # GT7 stops streaming ~1-2s after the last heartbeat, so re-ping often
+HEARTBEAT_EVERY = 100  # also re-ping every N received packets to keep the stream alive
 
 # ═══════════════════════════════════════════════════════════════
 #  DECRYPTION
@@ -274,6 +275,10 @@ async def _receiver(ps5_ip, ip_ref):
         if not pkt.valid or pkt.packet_id == last_id:
             continue
         last_id = pkt.packet_id
+        # Keep the console streaming: GT7 sends ~100 packets per heartbeat, then
+        # stops. Re-ping every HEARTBEAT_EVERY packets so the feed never stalls.
+        if pkt.packet_id % HEARTBEAT_EVERY == 0:
+            _hb(ip_ref[0] or detected or '255.255.255.255')
         if _clients:
             await _broadcast(json.dumps(pkt.to_dict()))
 
