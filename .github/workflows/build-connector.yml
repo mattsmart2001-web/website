@@ -62,16 +62,21 @@ jobs:
           if-no-files-found: error
 
       - name: Publish release
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != ''
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' || github.event_name == 'push'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_VERSION: "v2.1"
         run: |
-          TAG="${{ github.event.inputs.version }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          else
+            TAG="$DEFAULT_VERSION"
+          fi
           NOTES="Automated build of the GT7 Live Connector. Heartbeat fix: the connector now pings the console every ~1.5s / 100 packets so GT7 telemetry no longer stalls after the first burst."
           echo "Publishing release $TAG"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/GT7-Live-Connector.exe --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$TAG" dist/GT7-Live-Connector.exe --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES"
+            gh release create "$TAG" dist/GT7-Live-Connector.exe --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest
           fi
