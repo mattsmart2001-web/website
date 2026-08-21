@@ -78,6 +78,8 @@ body.obs::after{display:none;}
 body.obs header{display:none;}
 body.obs #setupScreen{display:none!important;}
 body.obs #dashboard{padding:12px;}
+/* Track map floats as just the line in OBS (no box behind it). */
+body.obs .card-map{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
 
 /* A widget = its own self-contained, translucent, croppable entity.
    Each is resizable: drag the bottom-right corner, double-click to reset. */
@@ -1024,15 +1026,22 @@ function drawMap(){
   const bw = (b.maxX-b.minX)||1, bh = (b.maxZ-b.minZ)||1;
   const s = Math.min((w-2*pad)/bw, (h-2*pad)/bh);
   const ox = (w-bw*s)/2, oy = (h-bh*s)/2;
-  const T = (x,z) => [ ox+(x-b.minX)*s, oy+(b.maxZ-z)*s ];   // flip z so north is up
+  // Flip both axes: GT7 uses a left-handed coordinate system, so a plain
+  // top-down plot comes out mirrored; flipping X (and Z for north-up) matches
+  // the real track orientation.
+  const T = (x,z) => [ ox+(b.maxX-x)*s, oy+(b.maxZ-z)*s ];
   let spMin=Infinity, spMax=-Infinity;
   if(mapMetric === 'speed'){ for(const p of src){ if(p.spd<spMin)spMin=p.spd; if(p.spd>spMax)spMax=p.spd; } }
-  c.lineWidth = 3; c.lineCap = 'round'; c.lineJoin = 'round';
+  // Thicker, softly-glowing line in OBS so it reads over gameplay.
+  const obs = document.body.classList.contains('obs');
+  c.lineWidth = obs ? 6 : 3; c.lineCap = 'round'; c.lineJoin = 'round';
+  if(obs){ c.shadowColor = 'rgba(0,0,0,0.75)'; c.shadowBlur = 6; c.globalAlpha = 0.9; }
   for(let i=1;i<src.length;i++){
     const a = T(src[i-1].x, src[i-1].z), q = T(src[i].x, src[i].z);
     c.strokeStyle = mapMetric === 'speed' ? speedColor((src[i].spd-spMin)/((spMax-spMin)||1)) : segColor(src[i]);
     c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(q[0],q[1]); c.stroke();
   }
+  c.shadowBlur = 0; c.globalAlpha = 1;
   if(mapGhost){
     const g = T(mapGhost.x, mapGhost.z);
     c.beginPath(); c.arc(g[0], g[1], 5, 0, Math.PI*2);
@@ -1052,6 +1061,13 @@ document.querySelectorAll('.map-metric').forEach(btn => btn.addEventListener('cl
   drawMap();
 }));
 if(window.ResizeObserver){ new ResizeObserver(() => drawMap()).observe(mapCanvas); }
+// Redraw the map on a continuous animation loop rather than only when a packet
+// arrives. OBS keeps browser sources rendering, so this keeps the traced line
+// live and complete in OBS (where per-packet draws get throttled).
+(function mapLoop(){
+  if(mapCanvas.offsetParent !== null) drawMap();   // only when the map is actually visible
+  requestAnimationFrame(mapLoop);
+})();
 
 // ── SECTORS (three splits by distance, delta vs best lap) ──
 const secS = { boundaries:null, ref:null, idx:0, startMs:0, shown:[null,null,null], delta:[null,null,null] };
