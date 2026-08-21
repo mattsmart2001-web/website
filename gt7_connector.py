@@ -46,6 +46,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
+VERSION       = "2.2"   # shown in the tray so you can confirm which build is running
 GT7_PORT      = 33740
 SEND_PORT     = 33739
 WS_PORT       = 8765
@@ -437,7 +438,7 @@ def _tray_status(icon):
         else:
             state = "nothing from console — is GT7 on track?"
         try:
-            icon.title = f"GT7 Live Connector\nConsole: {ip}\nRaw: {raw}  Decoded: {p}\n{state}"
+            icon.title = f"GT7 Live Connector v{VERSION}\nConsole: {ip}\nRaw: {raw}  Decoded: {p}\n{state}"
         except Exception:
             pass
 
