@@ -10,6 +10,7 @@
   --bg:#07080d;--sur:#0d0f18;--pan:#0f1119;--bor:#1c1f2e;
   --red:#ff2d3b;--gold:#ffc31a;--grn:#00e5a0;--blu:#1ab4ff;
   --wht:#eef0f8;--mut:#525870;--dim:#2a2d3e;
+  --accent:#1ab4ff;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{height:100%;}
@@ -21,9 +22,9 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
 header{flex:0 0 auto;padding:.6rem 1.4rem .55rem;border-bottom:1px solid var(--bor);display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
 header::before{content:'';position:absolute;top:-60px;left:-60px;width:240px;height:240px;background:radial-gradient(circle,rgba(26,180,255,.07) 0%,transparent 70%);pointer-events:none;}
 .hdr-l{position:relative;}
-.eyebrow{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.35em;color:var(--blu);text-transform:uppercase;margin-bottom:.1rem;}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.35em;color:var(--accent);text-transform:uppercase;margin-bottom:.1rem;}
 h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.2rem,2.5vw,1.9rem);letter-spacing:.08em;line-height:1;}
-h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.45);}
+h1 em{font-style:normal;color:var(--accent);text-shadow:0 0 20px rgba(26,180,255,.45);}
 .hdr-sub{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.14em;color:var(--mut);margin-top:.08rem;}
 .hdr-r{display:flex;align-items:center;gap:1.2rem;}
 .status-pill{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;display:flex;align-items:center;gap:.4rem;padding:.28rem .65rem;border-radius:20px;border:1px solid var(--bor);background:rgba(13,15,24,.8);transition:border-color .3s,color .3s;}
@@ -91,21 +92,23 @@ body.obs #dashboard{padding:12px;}
 .card{position:relative;}
 .card-title{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.24em;color:var(--mut);
   text-transform:uppercase;margin-bottom:.7rem;display:flex;align-items:center;justify-content:space-between;}
-.card-title .accent{width:6px;height:6px;border-radius:50%;background:var(--blu);box-shadow:0 0 8px rgba(26,180,255,.6);}
+.card-title .accent{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(26,180,255,.6);}
 
 /* Composition: tidy rows on desktop; every card still crops on its own. */
-.card-hero  {grid-column:span 5;}
-.card-delta {grid-column:span 4;}
-.card-laps  {grid-column:span 3;}
-.card-inputs{grid-column:span 6;}
-.card-gforce{grid-column:span 3;}
-.card-fuel  {grid-column:span 3;}
-.card-tyres {grid-column:span 6;}
-.card-temps {grid-column:span 6;}
-.card-engine{grid-column:span 12;}
+.card-hero   {grid-column:span 5;}
+.card-delta  {grid-column:span 4;}
+.card-laps   {grid-column:span 3;}
+.card-sectors{grid-column:span 3;}
+.card-inputs {grid-column:span 6;}
+.card-gforce {grid-column:span 3;}
+.card-map    {grid-column:span 6;}
+.card-fuel   {grid-column:span 3;}
+.card-tyres  {grid-column:span 6;}
+.card-temps  {grid-column:span 6;}
+.card-engine {grid-column:span 12;}
 @media (max-width:1024px){
-  .card-hero,.card-inputs,.card-tyres,.card-temps,.card-engine{grid-column:span 12;}
-  .card-delta,.card-laps,.card-gforce,.card-fuel{grid-column:span 6;}
+  .card-hero,.card-inputs,.card-tyres,.card-temps,.card-engine,.card-map{grid-column:span 12;}
+  .card-delta,.card-laps,.card-gforce,.card-fuel,.card-sectors{grid-column:span 6;}
 }
 @media (max-width:560px){ #dashboard .card{grid-column:span 12;} }
 
@@ -226,6 +229,38 @@ body.editing #dashboard .card.dragging{cursor:grabbing;opacity:.9;outline-color:
 #dashboard.freelayout .card{position:absolute;align-self:auto;margin:0;}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:rgba(13,15,24,.96);border:1px solid var(--blu);color:var(--wht);font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.06em;padding:.6rem 1rem;border-radius:8px;z-index:3000;opacity:0;transition:opacity .3s;pointer-events:none;max-width:80vw;text-align:center;}
 .toast.show{opacity:1;}
+
+/* TRACK MAP */
+.map-inner{flex:1;display:flex;flex-direction:column;gap:.4rem;min-height:0;}
+.map-metrics{display:flex;gap:.35rem;flex-wrap:wrap;}
+.map-metric{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.1em;text-transform:uppercase;padding:.22rem .5rem;border-radius:4px;border:1px solid var(--bor);background:rgba(0,0,0,.25);color:var(--mut);cursor:pointer;}
+.map-metric.on{border-color:var(--accent);color:var(--accent);background:rgba(26,180,255,.1);}
+.map-canvas-wrap{position:relative;flex:1;min-height:180px;width:100%;}
+#mapCanvas{display:block;width:100%;height:100%;}
+.map-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mut);text-align:center;line-height:1.7;pointer-events:none;width:80%;}
+
+/* SECTORS */
+.sectors-inner{flex:1;display:flex;flex-direction:column;justify-content:center;gap:.2rem;}
+.sec-row{display:grid;grid-template-columns:auto 1fr auto;gap:.7rem;align-items:baseline;padding:.4rem 0;border-bottom:1px solid rgba(28,31,46,.8);}
+.sec-row:last-child{border-bottom:none;}
+.sec-row.active .sec-lbl{color:var(--accent);}
+.sec-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.14em;color:var(--mut);}
+.sec-time{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--wht);text-align:right;}
+.sec-delta{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;text-align:right;color:var(--mut);min-width:64px;}
+.sec-delta.up{color:var(--red);} .sec-delta.dn{color:var(--grn);}
+
+/* Edit: per-widget hide button, brand + hidden chips */
+.card-hide{display:none;position:absolute;top:5px;right:5px;z-index:6;width:20px;height:20px;border-radius:50%;border:1px solid var(--bor);background:rgba(0,0,0,.6);color:var(--mut);font-size:12px;line-height:1;cursor:pointer;align-items:center;justify-content:center;}
+body.editing .card-hide{display:flex;}
+.card-hide:hover{border-color:var(--red);color:var(--red);}
+.hidden-widgets{display:none;align-items:center;gap:.3rem;flex-wrap:wrap;}
+body.editing .hidden-widgets{display:flex;}
+.hw-chip{font-family:'JetBrains Mono',monospace;font-size:.42rem;letter-spacing:.1em;text-transform:uppercase;padding:.24rem .5rem;border-radius:4px;border:1px dashed var(--bor);background:transparent;color:var(--mut);cursor:pointer;}
+.hw-chip:hover{border-color:var(--grn);color:var(--grn);}
+.accent-swatches{display:none;align-items:center;gap:.35rem;}
+body.editing .accent-swatches{display:flex;}
+.accent-sw{width:15px;height:15px;border-radius:50%;border:1px solid rgba(255,255,255,.3);cursor:pointer;padding:0;}
+.accent-sw.on{outline:2px solid #fff;outline-offset:1px;}
 </style>
 </head>
 <body>
@@ -244,6 +279,8 @@ body.editing #dashboard .card.dragging{cursor:grabbing;opacity:.9;outline-color:
     </div>
     <button id="previewClose" onclick="stopPreview()" style="display:none;font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;padding:.28rem .65rem;border-radius:20px;border:1px solid rgba(255,195,26,.4);background:rgba(255,195,26,.08);color:var(--gold);cursor:pointer;">EXIT PREVIEW</button>
     <div class="editbar">
+      <span class="hidden-widgets" id="hiddenWidgets"></span>
+      <span class="accent-swatches" id="accentSwatches"></span>
       <button class="eb" id="editShare" onclick="shareLayout()">Copy Layout Link</button>
       <button class="eb" id="editReset" onclick="resetLayout()">Reset</button>
     </div>
@@ -373,6 +410,16 @@ body.editing #dashboard .card.dragging{cursor:grabbing;opacity:.9;outline-color:
     </div>
   </div>
 
+  <!-- SECTORS -->
+  <div class="card card-sectors" data-widget="sectors">
+    <div class="card-title">Sectors <span class="accent"></span></div>
+    <div class="sectors-inner">
+      <div class="sec-row" id="secRow1"><span class="sec-lbl">S1</span><span class="sec-time" id="secTime1">--.---</span><span class="sec-delta" id="secDelta1"></span></div>
+      <div class="sec-row" id="secRow2"><span class="sec-lbl">S2</span><span class="sec-time" id="secTime2">--.---</span><span class="sec-delta" id="secDelta2"></span></div>
+      <div class="sec-row" id="secRow3"><span class="sec-lbl">S3</span><span class="sec-time" id="secTime3">--.---</span><span class="sec-delta" id="secDelta3"></span></div>
+    </div>
+  </div>
+
   <!-- INPUTS (rolling line graph) -->
   <div class="card card-inputs" data-widget="inputs">
     <div class="card-title">Inputs <span class="accent"></span></div>
@@ -404,6 +451,23 @@ body.editing #dashboard .card.dragging{cursor:grabbing;opacity:.9;outline-color:
           <span class="lbl">LON</span>
           <span class="num" id="lonG" style="color:var(--gold)">0.00g</span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRACK MAP -->
+  <div class="card card-map" data-widget="map">
+    <div class="card-title">Track Map <span class="accent"></span></div>
+    <div class="map-inner">
+      <div class="map-metrics">
+        <button class="map-metric on" data-metric="line">Line</button>
+        <button class="map-metric" data-metric="inputs">Throttle/Brake</button>
+        <button class="map-metric" data-metric="speed">Speed</button>
+        <button class="map-metric" data-metric="tyres">Tyre Temp</button>
+      </div>
+      <div class="map-canvas-wrap">
+        <canvas id="mapCanvas" width="480" height="360"></canvas>
+        <div class="map-hint" id="mapHint">Drive a lap to trace the track.</div>
       </div>
     </div>
   </div>
@@ -733,14 +797,19 @@ function telemetryDerived(d){
 
   // lap transition
   if(d.lapCount != null && lap.lastCount != null && d.lapCount !== lap.lastCount){
+    if(secS.boundaries && secS.idx === 2) finalizeSector(2, lap.curMs - secS.startMs);  // close S3
     if(d.lastLap > 0 && lap.trace.length > 20 && d.bestLap > 0 && d.lastLap <= d.bestLap){
       lap.ref = lap.trace.slice(); lap.refLapMs = d.lastLap;   // store the best lap as reference
+      armSectors(lap.ref, lap.refLapMs);
     }
     if(fuelS.lapStartFuel != null && d.fuel != null){
       const used = fuelS.lapStartFuel - d.fuel;
       if(used > 0.02 && used < 60){ fuelS.burns.push(used); if(fuelS.burns.length > 5) fuelS.burns.shift(); }
     }
     fuelS.lapStartFuel = d.fuel;
+    if(mapCur.length > 30) mapRef = mapCur;    // lock the completed lap as the track shape
+    mapCur = []; mapSampleDist = -99;
+    secS.idx = 0; secS.startMs = 0;
     lap.lastCount = d.lapCount; lap.startPid = pid; lap.dist = 0; lap.trace = [];
   }
   if(lap.lastCount == null) lap.lastCount = d.lapCount;
@@ -770,6 +839,12 @@ function telemetryDerived(d){
 
   if(tempsAccum >= 0.5){ tempsAccum = 0; pushTemps(d.tyreTempFL, d.tyreTempFR, d.tyreTempRL, d.tyreTempRR); drawTemps(); }
   setTemp('thFL', d.tyreTempFL); setTemp('thFR', d.tyreTempFR); setTemp('thRL', d.tyreTempRL); setTemp('thRR', d.tyreTempRR);
+
+  // Track map + sectors
+  mapLive = { x: d.posX || 0, z: d.posZ || 0 };
+  if(lap.dist - mapSampleDist > 4){ mapSampleDist = lap.dist; pushMapPoint(d, lap.dist); }
+  drawMap();
+  updateSectors(lap.dist, lap.curMs);
 }
 
 function updateFuelStrategy(d){
@@ -815,6 +890,171 @@ function previewExtras(ts, cur){
   previewTempAcc += 0.016;
   if(previewTempAcc >= 0.4){ previewTempAcc = 0; pushTemps(cur.tFL, cur.tFR, cur.tRL, cur.tRR); drawTemps(); }
   setTemp('thFL', cur.tFL); setTemp('thFR', cur.tFR); setTemp('thRL', cur.tRL); setTemp('thRR', cur.tRR);
+  previewMapSectors(e);
+}
+
+// ── TRACK MAP (records the driven line, colours it by a chosen metric) ──
+const mapCanvas = document.getElementById('mapCanvas');
+const mCtx = mapCanvas.getContext('2d');
+let ACCENT = '#1ab4ff';
+let mapMetric = 'line';
+let mapCur = [];        // current-lap points {x,z,thr,brk,spd,tt}
+let mapRef = null;      // last completed lap (locked track shape)
+let mapLive = null;     // {x,z} current car position
+let mapSampleDist = -99;
+
+function pushMapPoint(d, dist){
+  const tt = ((d.tyreTempFL||0)+(d.tyreTempFR||0)+(d.tyreTempRL||0)+(d.tyreTempRR||0))/4;
+  mapCur.push({ x:d.posX||0, z:d.posZ||0, thr:d.throttle||0, brk:d.brake||0, spd:d.speed||0, tt });
+  if(mapCur.length > 4000) mapCur.shift();
+}
+function mapBounds(src){
+  let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+  for(const p of src){ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.z<minZ)minZ=p.z; if(p.z>maxZ)maxZ=p.z; }
+  return {minX,maxX,minZ,maxZ};
+}
+function speedColor(f){
+  f = Math.max(0, Math.min(1, f));
+  // blue -> green -> red
+  let r,g,b;
+  if(f < 0.5){ const t=f/0.5; r=Math.round(26+(0)*t); g=Math.round(180+(229-180)*t); b=Math.round(255+(160-255)*t); }
+  else { const t=(f-0.5)/0.5; r=Math.round(0+(255)*t); g=Math.round(229+(45-229)*t); b=Math.round(160+(59-160)*t); }
+  return 'rgb('+r+','+g+','+b+')';
+}
+function segColor(p){
+  if(mapMetric === 'inputs') return p.brk > 8 ? '#ff2d3b' : p.thr > 8 ? '#00e5a0' : 'rgba(150,160,175,.55)';
+  if(mapMetric === 'speed')  return null; // handled with range
+  if(mapMetric === 'tyres')  return tyreColor(p.tt || 0);
+  return ACCENT;
+}
+function drawMap(){
+  const c = mCtx, w = mapCanvas.width, h = mapCanvas.height, pad = 16;
+  c.clearRect(0,0,w,h);
+  const src = (mapRef && mapRef.length > 5) ? mapRef : mapCur;
+  const hint = document.getElementById('mapHint');
+  if(!src || src.length < 3){ if(hint) hint.style.display = ''; if(mapLive) {} return; }
+  if(hint) hint.style.display = 'none';
+  const b = mapBounds(src);
+  const bw = (b.maxX-b.minX)||1, bh = (b.maxZ-b.minZ)||1;
+  const s = Math.min((w-2*pad)/bw, (h-2*pad)/bh);
+  const ox = (w-bw*s)/2, oy = (h-bh*s)/2;
+  const T = (x,z) => [ ox+(x-b.minX)*s, oy+(b.maxZ-z)*s ];   // flip z so north is up
+  let spMin=Infinity, spMax=-Infinity;
+  if(mapMetric === 'speed'){ for(const p of src){ if(p.spd<spMin)spMin=p.spd; if(p.spd>spMax)spMax=p.spd; } }
+  c.lineWidth = 3; c.lineCap = 'round'; c.lineJoin = 'round';
+  for(let i=1;i<src.length;i++){
+    const a = T(src[i-1].x, src[i-1].z), q = T(src[i].x, src[i].z);
+    c.strokeStyle = mapMetric === 'speed' ? speedColor((src[i].spd-spMin)/((spMax-spMin)||1)) : segColor(src[i]);
+    c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(q[0],q[1]); c.stroke();
+  }
+  if(mapLive){
+    const d = T(mapLive.x, mapLive.z);
+    c.beginPath(); c.arc(d[0], d[1], 5, 0, Math.PI*2);
+    c.fillStyle = '#fff'; c.fill();
+    c.strokeStyle = ACCENT; c.lineWidth = 2; c.stroke();
+  }
+}
+document.querySelectorAll('.map-metric').forEach(btn => btn.addEventListener('click', () => {
+  mapMetric = btn.dataset.metric;
+  document.querySelectorAll('.map-metric').forEach(b => b.classList.toggle('on', b === btn));
+  drawMap();
+}));
+
+// ── SECTORS (three splits by distance, delta vs best lap) ──
+const secS = { boundaries:null, ref:null, idx:0, startMs:0, shown:[null,null,null], delta:[null,null,null] };
+function armSectors(ref, lapMs){
+  if(!ref || ref.length < 4 || !lapMs) return;
+  const total = ref[ref.length-1][0];
+  const b0 = total/3, b1 = 2*total/3;
+  secS.boundaries = [b0, b1, total];
+  const t0 = interpTime(ref, b0), t1 = interpTime(ref, b1);
+  secS.ref = [t0, t1-t0, lapMs-t1];
+}
+function fmtSec(ms){
+  if(ms == null || ms <= 0) return '--.---';
+  const s = ms/1000;
+  if(s < 60) return s.toFixed(3);
+  const m = Math.floor(s/60); return m + ':' + ((s-m*60)<10?'0':'') + (s-m*60).toFixed(3);
+}
+function finalizeSector(k, timeMs){
+  secS.shown[k] = timeMs;
+  secS.delta[k] = secS.ref ? (timeMs - secS.ref[k]) : null;
+}
+function updateSectors(dist, curMs){
+  if(secS.boundaries){
+    const b = secS.boundaries;
+    const idx = dist < b[0] ? 0 : dist < b[1] ? 1 : 2;
+    if(idx > secS.idx){
+      finalizeSector(secS.idx, curMs - secS.startMs);
+      secS.startMs = curMs; secS.idx = idx;
+    }
+  }
+  for(let k=0;k<3;k++){
+    const tEl = document.getElementById('secTime'+(k+1));
+    const dEl = document.getElementById('secDelta'+(k+1));
+    const rEl = document.getElementById('secRow'+(k+1));
+    if(k === secS.idx && secS.boundaries){
+      tEl.textContent = fmtSec(curMs - secS.startMs);
+      dEl.textContent = ''; dEl.className = 'sec-delta';
+      rEl.classList.add('active');
+    } else {
+      rEl.classList.remove('active');
+      tEl.textContent = fmtSec(secS.shown[k]);
+      if(secS.delta[k] != null){
+        const dv = secS.delta[k]/1000;
+        dEl.textContent = (dv>=0?'+':'') + dv.toFixed(2);
+        dEl.className = 'sec-delta ' + (dv>0.005?'up':dv<-0.005?'dn':'');
+      } else { dEl.textContent = ''; dEl.className = 'sec-delta'; }
+    }
+  }
+}
+
+// ── preview synthetic map + sectors ──
+let mapPreviewBuilt = false;
+function buildPreviewTrack(){
+  const pts = [], N = 240;
+  for(let i=0;i<N;i++){
+    const t = i/N * Math.PI*2;
+    // an oval with a chicane kink
+    const x = Math.cos(t)*260 + Math.sin(t*3)*22;
+    const z = Math.sin(t)*160 + Math.sin(t*2)*30;
+    const straight = Math.abs(Math.cos(t));          // ~1 on straights
+    const spd = 90 + straight*150;
+    const brk = straight < 0.35 ? 70 : 0;
+    const thr = straight < 0.35 ? 10 : 95;
+    const tt = 78 + (1-straight)*22;                 // tyres hotter in corners
+    pts.push({ x, z, thr, brk, spd, tt });
+  }
+  mapRef = pts; mapPreviewBuilt = true;
+}
+function previewMapSectors(e){
+  if(!mapPreviewBuilt) buildPreviewTrack();
+  const N = mapRef.length;
+  const frac = (e % 24) / 24;                          // ~24s lap loop
+  const idx = Math.floor(frac * N) % N;
+  mapLive = { x: mapRef[idx].x, z: mapRef[idx].z };
+  drawMap();
+  // synthetic sectors
+  const refS = [7.9, 8.4, 7.7], lapT = frac*24, names = [0,1,2];
+  let acc = 0;
+  names.forEach(k => {
+    const start = acc; acc += refS[k];
+    const tEl = document.getElementById('secTime'+(k+1)), dEl = document.getElementById('secDelta'+(k+1)), rEl = document.getElementById('secRow'+(k+1));
+    if(lapT >= acc){
+      const dv = 0.25*Math.sin(e*0.5 + k);
+      tEl.textContent = (refS[k]+dv).toFixed(3);
+      dEl.textContent = (dv>=0?'+':'') + dv.toFixed(2);
+      dEl.className = 'sec-delta ' + (dv>0.005?'up':dv<-0.005?'dn':'');
+      rEl.classList.remove('active');
+    } else if(lapT >= start){
+      tEl.textContent = (lapT-start).toFixed(3);
+      dEl.textContent = ''; dEl.className = 'sec-delta';
+      rEl.classList.add('active');
+    } else {
+      tEl.textContent = '--.---'; dEl.textContent = ''; dEl.className = 'sec-delta';
+      rEl.classList.remove('active');
+    }
+  });
 }
 
 let rpmMax = 9000;
@@ -918,6 +1158,9 @@ function stopPreview(){
   isPreview = false;
   cancelAnimationFrame(previewRAF);
   previewRAF = null; previewLast = 0; previewStart = 0; previewTempAcc = 0;
+  mapRef = null; mapCur = []; mapLive = null; mapPreviewBuilt = false;
+  secS.boundaries = null; secS.ref = null; secS.idx = 0; secS.startMs = 0;
+  secS.shown = [null,null,null]; secS.delta = [null,null,null];
   document.getElementById('previewClose').style.display = 'none';
   showSetup();
   setStatus('', 'DISCONNECTED');
@@ -1089,8 +1332,71 @@ function previewDashboard(){
 // (?layout=...) so the exact arrangement loads into an OBS Browser Source.
 const LAYOUT_KEY = 'gt7-layout';
 let editing = false, editAutoPreview = false;
+let brandAccent = null;
+const hiddenSet = new Set();
+const ACCENTS = [['#1ab4ff','Cyan'],['#ffc31a','GTEC Gold'],['#00e5a0','Green'],['#ff2d3b','Red'],['#a855f7','Purple'],['#eef0f8','White']];
 
 function _dash(){ return document.getElementById('dashboard'); }
+
+function applyAccent(color, save){
+  brandAccent = color || null;
+  const c = color || '#1ab4ff';
+  document.documentElement.style.setProperty('--accent', c);
+  ACCENT = c;
+  document.querySelectorAll('.accent-sw').forEach(sw => sw.classList.toggle('on', (sw.dataset.color||'').toLowerCase() === c.toLowerCase()));
+  if(save) saveLayout();
+  drawMap();
+}
+function refreshHiddenChips(){
+  const box = document.getElementById('hiddenWidgets');
+  if(box) box.innerHTML = [...hiddenSet].map(w => '<button class="hw-chip" onclick="showWidget(\''+w+'\')">+ '+w+'</button>').join('');
+}
+function applyHidden(list){
+  hiddenSet.clear();
+  (list||[]).forEach(w => hiddenSet.add(w));
+  document.querySelectorAll('#dashboard .card').forEach(c => {
+    const hid = hiddenSet.has(c.dataset.widget);
+    c.dataset.hidden = hid ? '1' : '';
+    if(hid) c.style.display = 'none'; else if(c.style.display === 'none') c.style.display = '';
+  });
+  refreshHiddenChips(); updateDashHeight();
+}
+function hideWidget(w){
+  hiddenSet.add(w);
+  const c = document.querySelector('#dashboard .card[data-widget="'+w+'"]');
+  if(c){ c.dataset.hidden = '1'; c.style.display = 'none'; }
+  refreshHiddenChips(); saveLayout(); updateDashHeight();
+}
+function showWidget(w){
+  hiddenSet.delete(w);
+  const c = document.querySelector('#dashboard .card[data-widget="'+w+'"]');
+  if(c){ c.dataset.hidden = ''; c.style.display = ''; }
+  refreshHiddenChips(); saveLayout(); updateDashHeight();
+}
+function buildEditControls(){
+  document.querySelectorAll('#dashboard .card').forEach(c => {
+    if(c.querySelector('.card-hide')) return;
+    const btn = document.createElement('button');
+    btn.className = 'card-hide'; btn.type = 'button'; btn.title = 'Hide widget'; btn.textContent = '✕';
+    btn.addEventListener('click', e => { e.stopPropagation(); hideWidget(c.dataset.widget); });
+    c.appendChild(btn);
+  });
+  const sw = document.getElementById('accentSwatches');
+  if(sw && !sw.children.length){
+    ACCENTS.forEach(([col,name]) => {
+      const b = document.createElement('button');
+      b.className = 'accent-sw'; b.type = 'button'; b.style.background = col; b.dataset.color = col; b.title = name;
+      b.addEventListener('click', () => applyAccent(col, true));
+      sw.appendChild(b);
+    });
+  }
+}
+function applyAll(obj){
+  if(!obj) return;
+  applyLayout(obj);
+  applyAccent(obj.accent, false);
+  applyHidden(obj.hidden || []);
+}
 
 function toast(msg){
   let el = document.getElementById('gt7toast');
@@ -1134,14 +1440,18 @@ function applyLayout(obj){
 
 function saveLayout(){
   const dash = _dash();
-  if(!dash.classList.contains('freelayout')) return;
-  const items = {};
-  dash.querySelectorAll('.card').forEach(c => {
-    if(c.style.display === 'none') return;
-    const r = c.getBoundingClientRect();
-    items[c.dataset.widget] = { x: Math.round(parseFloat(c.style.left)||0), y: Math.round(parseFloat(c.style.top)||0), w: Math.round(r.width), h: Math.round(r.height) };
-  });
-  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify({ mode:'free', items })); } catch(_){}
+  const obj = {};
+  if(dash.classList.contains('freelayout')){
+    obj.mode = 'free'; obj.items = {};
+    dash.querySelectorAll('.card').forEach(c => {
+      if(c.dataset.hidden === '1') return;
+      const r = c.getBoundingClientRect();
+      obj.items[c.dataset.widget] = { x: Math.round(parseFloat(c.style.left)||0), y: Math.round(parseFloat(c.style.top)||0), w: Math.round(r.width), h: Math.round(r.height) };
+    });
+  }
+  if(brandAccent) obj.accent = brandAccent;
+  if(hiddenSet.size) obj.hidden = [...hiddenSet];
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(obj)); } catch(_){}
 }
 
 function resetLayout(){
@@ -1149,6 +1459,8 @@ function resetLayout(){
   const dash = _dash();
   dash.classList.remove('freelayout'); dash.style.minHeight = '';
   dash.querySelectorAll('.card').forEach(c => { c.style.left = c.style.top = c.style.width = c.style.height = ''; });
+  applyHidden([]);            // show everything again
+  applyAccent(null, false);   // back to default accent
   toast('Layout reset to default');
 }
 
@@ -1180,6 +1492,7 @@ function toggleEdit(){
 function initDrag(card){
   card.addEventListener('pointerdown', e => {
     if(!editing) return;
+    if(e.target.closest('button, input, select, .map-metric')) return;  // let controls work in edit mode
     const r = card.getBoundingClientRect();
     if(e.clientX > r.right - 20 && e.clientY > r.bottom - 20) return;  // leave the resize corner alone
     snapshotToFree();
@@ -1210,7 +1523,8 @@ function initDrag(card){
   if(code){ try { obj = JSON.parse(decodeURIComponent(escape(atob(code)))); localStorage.setItem(LAYOUT_KEY, JSON.stringify(obj)); } catch(_){} }
   if(!obj){ try { obj = JSON.parse(localStorage.getItem(LAYOUT_KEY)); } catch(_){} }
   document.querySelectorAll('#dashboard .card').forEach(initDrag);
-  if(obj) applyLayout(obj);
+  buildEditControls();
+  if(obj) applyAll(obj);
   window.addEventListener('resize', () => { if(_dash().classList.contains('freelayout')) updateDashHeight(); });
 })();
 
