@@ -516,6 +516,8 @@ body.editing .accent-swatches{display:flex;}
         <span class="temps-chip"><span class="sw" style="background:#00e5a0"></span>FR<b id="thFR">--</b></span>
         <span class="temps-chip"><span class="sw" style="background:#ffc31a"></span>RL<b id="thRL">--</b></span>
         <span class="temps-chip"><span class="sw" style="background:#ff6ad5"></span>RR<b id="thRR">--</b></span>
+        <span class="temps-chip"><span class="sw" style="background:#7aa5ff;height:2px;border-top:1px dashed #7aa5ff"></span>WATER<b id="thWAT">--</b></span>
+        <span class="temps-chip"><span class="sw" style="background:#e0a63a;height:2px;border-top:1px dashed #e0a63a"></span>OIL<b id="thOIL">--</b></span>
       </div>
       <div class="temps-canvas-wrap"><canvas id="tempsCanvas" width="640" height="220"></canvas></div>
     </div>
@@ -735,34 +737,37 @@ drawInputs(); // initial render
 const tempsCanvas = document.getElementById('tempsCanvas');
 const tCtx = tempsCanvas.getContext('2d');
 const T_HIST = 300;                        // samples; sampled every ~0.5s => ~2.5 min
-const tHist = { FL: [], FR: [], RL: [], RR: [] };
-['FL','FR','RL','RR'].forEach(k => tHist[k] = new Array(T_HIST).fill(null));
-const T_COLS = { FL:'#1ab4ff', FR:'#00e5a0', RL:'#ffc31a', RR:'#ff6ad5' };
-function pushTemps(fl, fr, rl, rr){
-  tHist.FL.push(fl==null?null:fl); tHist.FL.shift();
-  tHist.FR.push(fr==null?null:fr); tHist.FR.shift();
-  tHist.RL.push(rl==null?null:rl); tHist.RL.shift();
-  tHist.RR.push(rr==null?null:rr); tHist.RR.shift();
+const T_KEYS = ['FL','FR','RL','RR','WAT','OIL'];
+const tHist = {};
+T_KEYS.forEach(k => tHist[k] = new Array(T_HIST).fill(null));
+const T_COLS = { FL:'#1ab4ff', FR:'#00e5a0', RL:'#ffc31a', RR:'#ff6ad5', WAT:'#7aa5ff', OIL:'#e0a63a' };
+function pushTemps(fl, fr, rl, rr, wat, oil){
+  const vals = { FL:fl, FR:fr, RL:rl, RR:rr, WAT:wat, OIL:oil };
+  T_KEYS.forEach(k => { tHist[k].push(vals[k]==null?null:vals[k]); tHist[k].shift(); });
 }
 function drawTemps(){
   const c = tCtx, w = tempsCanvas.width, h = tempsCanvas.height;
   c.clearRect(0,0,w,h);
   let lo = Infinity, hi = -Infinity;
-  ['FL','FR','RL','RR'].forEach(k => tHist[k].forEach(v => { if(v!=null){ if(v<lo)lo=v; if(v>hi)hi=v; } }));
-  if(lo === Infinity){ lo = 60; hi = 100; }
+  T_KEYS.forEach(k => tHist[k].forEach(v => { if(v!=null){ if(v<lo)lo=v; if(v>hi)hi=v; } }));
+  if(lo === Infinity){ lo = 60; hi = 110; }
   if(hi - lo < 16){ const m=(lo+hi)/2; lo=m-8; hi=m+8; }
   lo -= 4; hi += 4;
   c.strokeStyle = 'rgba(255,255,255,.055)'; c.lineWidth = 1;
   for(let i=0;i<=4;i++){ const y = Math.round(h*i/4)+.5; c.beginPath(); c.moveTo(0,y); c.lineTo(w,y); c.stroke(); }
-  ['FL','FR','RL','RR'].forEach(k => {
+  c.lineJoin = 'round';
+  T_KEYS.forEach(k => {
     const arr = tHist[k]; c.beginPath(); let started = false;
     for(let i=0;i<arr.length;i++){
       const v = arr[i]; if(v==null){ started = false; continue; }
       const x = (i/(arr.length-1))*w, y = h - ((v-lo)/(hi-lo))*h;
       started ? c.lineTo(x,y) : (c.moveTo(x,y), started = true);
     }
-    c.strokeStyle = T_COLS[k]; c.lineWidth = 2; c.lineJoin = 'round'; c.stroke();
+    const dashed = (k === 'WAT' || k === 'OIL');
+    c.setLineDash(dashed ? [5,4] : []);
+    c.strokeStyle = T_COLS[k]; c.lineWidth = dashed ? 1.6 : 2; c.stroke();
   });
+  c.setLineDash([]);
   c.fillStyle = 'rgba(134,141,152,.85)'; c.font = '9px "JetBrains Mono",monospace'; c.textAlign = 'left';
   c.fillText(Math.round(hi)+'°', 4, 11);
   c.fillText(Math.round(lo)+'°', 4, h-4);
@@ -801,13 +806,15 @@ function telemetryDerived(d){
     if(d.lastLap > 0 && lap.trace.length > 20 && d.bestLap > 0 && d.lastLap <= d.bestLap){
       lap.ref = lap.trace.slice(); lap.refLapMs = d.lastLap;   // store the best lap as reference
       armSectors(lap.ref, lap.refLapMs);
+      if(mapCur.length > 30) mapRef = mapCur; // lock the best lap's shape (aligned with the delta ref)
+    } else if(!mapRef && mapCur.length > 30){
+      mapRef = mapCur;                         // first lap: show the track even before a best is set
     }
     if(fuelS.lapStartFuel != null && d.fuel != null){
       const used = fuelS.lapStartFuel - d.fuel;
       if(used > 0.02 && used < 60){ fuelS.burns.push(used); if(fuelS.burns.length > 5) fuelS.burns.shift(); }
     }
     fuelS.lapStartFuel = d.fuel;
-    if(mapCur.length > 30) mapRef = mapCur;    // lock the completed lap as the track shape
     mapCur = []; mapSampleDist = -99;
     secS.idx = 0; secS.startMs = 0;
     lap.lastCount = d.lapCount; lap.startPid = pid; lap.dist = 0; lap.trace = [];
@@ -837,12 +844,15 @@ function telemetryDerived(d){
 
   updateFuelStrategy(d);
 
-  if(tempsAccum >= 0.5){ tempsAccum = 0; pushTemps(d.tyreTempFL, d.tyreTempFR, d.tyreTempRL, d.tyreTempRR); drawTemps(); }
+  if(tempsAccum >= 0.5){ tempsAccum = 0; pushTemps(d.tyreTempFL, d.tyreTempFR, d.tyreTempRL, d.tyreTempRR, d.waterTemp, d.oilTemp); drawTemps(); }
   setTemp('thFL', d.tyreTempFL); setTemp('thFR', d.tyreTempFR); setTemp('thRL', d.tyreTempRL); setTemp('thRR', d.tyreTempRR);
+  setTemp('thWAT', d.waterTemp); setTemp('thOIL', d.oilTemp);
 
   // Track map + sectors
   mapLive = { x: d.posX || 0, z: d.posZ || 0 };
   if(lap.dist - mapSampleDist > 4){ mapSampleDist = lap.dist; pushMapPoint(d, lap.dist); }
+  mapGhost = (lap.ref && lap.ref.length > 2 && mapRef && mapRef.length > 5)
+    ? mapPosAtDist(mapRef, interpDist(lap.ref, lap.curMs)) : null;
   drawMap();
   updateSectors(lap.dist, lap.curMs);
 }
@@ -887,9 +897,11 @@ function previewExtras(ts, cur){
   if(margin >= 1){ st.textContent = 'CAN FINISH'; st.className = 'fs-val ok'; }
   else if(margin >= 0){ st.textContent = 'TIGHT'; st.className = 'fs-val warn'; }
   else { const n = Math.ceil(-margin); st.textContent = 'SHORT ' + n + ' LAP' + (n>=2?'S':''); st.className = 'fs-val bad'; }
+  const watV = 82 + cur.speed*0.05, oilV = 94 + cur.speed*0.06;
   previewTempAcc += 0.016;
-  if(previewTempAcc >= 0.4){ previewTempAcc = 0; pushTemps(cur.tFL, cur.tFR, cur.tRL, cur.tRR); drawTemps(); }
+  if(previewTempAcc >= 0.4){ previewTempAcc = 0; pushTemps(cur.tFL, cur.tFR, cur.tRL, cur.tRR, watV, oilV); drawTemps(); }
   setTemp('thFL', cur.tFL); setTemp('thFR', cur.tFR); setTemp('thRL', cur.tRL); setTemp('thRR', cur.tRR);
+  setTemp('thWAT', watV); setTemp('thOIL', oilV);
   previewMapSectors(e);
 }
 
@@ -898,15 +910,37 @@ const mapCanvas = document.getElementById('mapCanvas');
 const mCtx = mapCanvas.getContext('2d');
 let ACCENT = '#1ab4ff';
 let mapMetric = 'line';
-let mapCur = [];        // current-lap points {x,z,thr,brk,spd,tt}
+let mapCur = [];        // current-lap points {x,z,thr,brk,spd,tt,dist}
 let mapRef = null;      // last completed lap (locked track shape)
 let mapLive = null;     // {x,z} current car position
+let mapGhost = null;    // {x,z} where the best-lap car would be right now
 let mapSampleDist = -99;
 
 function pushMapPoint(d, dist){
   const tt = ((d.tyreTempFL||0)+(d.tyreTempFR||0)+(d.tyreTempRL||0)+(d.tyreTempRR||0))/4;
-  mapCur.push({ x:d.posX||0, z:d.posZ||0, thr:d.throttle||0, brk:d.brake||0, spd:d.speed||0, tt });
+  mapCur.push({ x:d.posX||0, z:d.posZ||0, thr:d.throttle||0, brk:d.brake||0, spd:d.speed||0, tt, dist });
   if(mapCur.length > 4000) mapCur.shift();
+}
+// invert the reference trace: distance the best-lap car had covered at time `ms`
+function interpDist(ref, ms){
+  if(ms <= ref[0][1]) return ref[0][0];
+  const last = ref[ref.length-1];
+  if(ms >= last[1]) return last[0];
+  let lo = 0, hi = ref.length-1;
+  while(hi - lo > 1){ const mid = (lo+hi)>>1; ref[mid][1] < ms ? lo = mid : hi = mid; }
+  const a = ref[lo], b = ref[hi], f = (ms-a[1])/((b[1]-a[1])||1);
+  return a[0] + (b[0]-a[0])*f;
+}
+// position on the recorded track at a given lap distance
+function mapPosAtDist(src, dist){
+  if(!src || !src.length) return null;
+  if(dist <= src[0].dist) return { x:src[0].x, z:src[0].z };
+  const last = src[src.length-1];
+  if(dist >= last.dist) return { x:last.x, z:last.z };
+  let lo = 0, hi = src.length-1;
+  while(hi - lo > 1){ const mid = (lo+hi)>>1; src[mid].dist < dist ? lo = mid : hi = mid; }
+  const a = src[lo], b = src[hi], f = (dist-a.dist)/((b.dist-a.dist)||1);
+  return { x: a.x+(b.x-a.x)*f, z: a.z+(b.z-a.z)*f };
 }
 function mapBounds(src){
   let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
@@ -947,11 +981,17 @@ function drawMap(){
     c.strokeStyle = mapMetric === 'speed' ? speedColor((src[i].spd-spMin)/((spMax-spMin)||1)) : segColor(src[i]);
     c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(q[0],q[1]); c.stroke();
   }
+  if(mapGhost){
+    const g = T(mapGhost.x, mapGhost.z);
+    c.beginPath(); c.arc(g[0], g[1], 5, 0, Math.PI*2);
+    c.fillStyle = 'rgba(255,255,255,.18)'; c.fill();
+    c.setLineDash([3,3]); c.lineWidth = 1.5; c.strokeStyle = 'rgba(255,255,255,.75)'; c.stroke(); c.setLineDash([]);
+  }
   if(mapLive){
     const d = T(mapLive.x, mapLive.z);
-    c.beginPath(); c.arc(d[0], d[1], 5, 0, Math.PI*2);
+    c.beginPath(); c.arc(d[0], d[1], 5.5, 0, Math.PI*2);
     c.fillStyle = '#fff'; c.fill();
-    c.strokeStyle = ACCENT; c.lineWidth = 2; c.stroke();
+    c.strokeStyle = ACCENT; c.lineWidth = 2.5; c.stroke();
   }
 }
 document.querySelectorAll('.map-metric').forEach(btn => btn.addEventListener('click', () => {
@@ -1033,6 +1073,10 @@ function previewMapSectors(e){
   const frac = (e % 24) / 24;                          // ~24s lap loop
   const idx = Math.floor(frac * N) % N;
   mapLive = { x: mapRef[idx].x, z: mapRef[idx].z };
+  const delta = 0.5*Math.sin(e*0.55) - 0.05;           // matches the delta widget
+  let gf = ((frac + delta/24) % 1 + 1) % 1;             // best-lap car position at this time
+  const gidx = Math.floor(gf * N) % N;
+  mapGhost = { x: mapRef[gidx].x, z: mapRef[gidx].z };
   drawMap();
   // synthetic sectors
   const refS = [7.9, 8.4, 7.7], lapT = frac*24, names = [0,1,2];
@@ -1158,7 +1202,7 @@ function stopPreview(){
   isPreview = false;
   cancelAnimationFrame(previewRAF);
   previewRAF = null; previewLast = 0; previewStart = 0; previewTempAcc = 0;
-  mapRef = null; mapCur = []; mapLive = null; mapPreviewBuilt = false;
+  mapRef = null; mapCur = []; mapLive = null; mapGhost = null; mapPreviewBuilt = false;
   secS.boundaries = null; secS.ref = null; secS.idx = 0; secS.startMs = 0;
   secS.shown = [null,null,null]; secS.delta = [null,null,null];
   document.getElementById('previewClose').style.display = 'none';
