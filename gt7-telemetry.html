@@ -660,6 +660,7 @@ const WS_CANDIDATES = ['ws://127.0.0.1:8765', 'ws://localhost:8765'];
 let wsIdx = 0;
 let ws = null, reconnectTimer = null;
 let hasLiveData = false, isPreview = false;
+let lastMsgTs = Date.now();   // watchdog: any message (telemetry or 2s status) resets this
 
 function updateWaiting(txt){
   const el = document.getElementById('waitingTxt');
@@ -679,13 +680,25 @@ function connect(){
       clearTimeout(reconnectTimer);
       updateWaiting('Connector found. Waiting for GT7. Start a session in Gran Turismo 7. If nothing appears, check the connector shows your PS5/PS4 IP.');
     };
-    ws.onmessage = e => { try{ handleMsg(JSON.parse(e.data)); }catch(_){} };
+    ws.onmessage = e => { lastMsgTs = Date.now(); try{ handleMsg(JSON.parse(e.data)); }catch(_){} };
     ws.onclose = () => { if(isPreview) return; setStatus('','DISCONNECTED'); showSetup(); wsIdx++; scheduleReconnect(); };
     ws.onerror = () => { if(isPreview) return; try{ ws.close(); }catch(_){} };
   }catch(_){
     wsIdx++; scheduleReconnect();
   }
 }
+
+// Watchdog: the connector emits a status message every 2s, so a healthy link
+// always has traffic within a couple of seconds. If nothing arrives for 6s
+// while the socket still looks open, the feed has stalled (e.g. a throttled
+// tab), so force a reconnect and the data starts flowing again on its own.
+setInterval(function(){
+  if(isPreview || !ws || ws.readyState !== WebSocket.OPEN) return;
+  if(Date.now() - lastMsgTs > 6000){
+    lastMsgTs = Date.now();
+    try{ ws.close(); }catch(_){}   // onclose schedules the reconnect
+  }
+}, 2000);
 
 function scheduleReconnect(){
   clearTimeout(reconnectTimer);

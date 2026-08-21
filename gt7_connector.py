@@ -46,7 +46,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "2.2"   # shown in the tray so you can confirm which build is running
+VERSION       = "2.3"   # shown in the tray so you can confirm which build is running
 GT7_PORT      = 33740
 SEND_PORT     = 33739
 WS_PORT       = 8765
@@ -243,13 +243,18 @@ async def _ws_handler(ws):
         _clients.discard(ws)
 
 async def _broadcast(msg: str):
-    dead = set()
-    for ws in _clients:
+    # Send to every client concurrently with a per-client timeout. A slow or
+    # throttled client (e.g. a backgrounded OBS Browser Source) must not be
+    # able to stall the whole feed via backpressure, which would freeze every
+    # viewer. Any client that can't keep up is dropped and will reconnect.
+    if not _clients:
+        return
+    async def _send(ws):
         try:
-            await ws.send(msg)
+            await asyncio.wait_for(ws.send(msg), timeout=1.0)
         except Exception:
-            dead.add(ws)
-    _clients.difference_update(dead)
+            _clients.discard(ws)
+    await asyncio.gather(*(_send(ws) for ws in list(_clients)), return_exceptions=True)
 
 # ═══════════════════════════════════════════════════════════════
 #  UDP RECEIVER + HEARTBEAT
