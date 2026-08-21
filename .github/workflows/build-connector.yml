@@ -45,10 +45,13 @@ jobs:
           pip install -r requirements.txt pyinstaller
 
       - name: Build EXE
+        # --noupx: UPX-packed binaries trip Defender's heuristics; skip it.
+        # --version-file: embeds real version metadata (further reduces false positives).
         run: >
-          pyinstaller --onefile --noconsole
+          pyinstaller --onefile --noconsole --noupx
           --name "GT7-Live-Connector"
           --icon NONE
+          --version-file connector_version.txt
           --collect-all Crypto
           --hidden-import=Crypto.Cipher.Salsa20
           --hidden-import=Crypto.Cipher._Salsa20
