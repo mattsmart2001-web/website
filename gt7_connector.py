@@ -429,7 +429,8 @@ def _tray_status(icon):
         if p > 0:
             state = "receiving"
         elif raw > 0:
-            state = "arriving but not decoding"
+            d = _stats.get("debug") or {}
+            state = f"undecoded len={d.get('len')} dec={d.get('dec')}"
         else:
             state = "nothing from console — is GT7 on track?"
         try:
