@@ -961,7 +961,14 @@ function segColor(p){
   if(mapMetric === 'tyres')  return tyreColor(p.tt || 0);
   return ACCENT;
 }
+function syncMapCanvas(){
+  // Match the backing store to the displayed size so the track keeps its real
+  // aspect ratio (letterboxed) instead of stretching when the widget resizes.
+  const w = Math.round(mapCanvas.clientWidth), h = Math.round(mapCanvas.clientHeight);
+  if(w > 0 && h > 0 && (mapCanvas.width !== w || mapCanvas.height !== h)){ mapCanvas.width = w; mapCanvas.height = h; }
+}
 function drawMap(){
+  syncMapCanvas();
   const c = mCtx, w = mapCanvas.width, h = mapCanvas.height, pad = 16;
   c.clearRect(0,0,w,h);
   const src = (mapRef && mapRef.length > 5) ? mapRef : mapCur;
@@ -999,6 +1006,7 @@ document.querySelectorAll('.map-metric').forEach(btn => btn.addEventListener('cl
   document.querySelectorAll('.map-metric').forEach(b => b.classList.toggle('on', b === btn));
   drawMap();
 }));
+if(window.ResizeObserver){ new ResizeObserver(() => drawMap()).observe(mapCanvas); }
 
 // ── SECTORS (three splits by distance, delta vs best lap) ──
 const secS = { boundaries:null, ref:null, idx:0, startMs:0, shown:[null,null,null], delta:[null,null,null] };
