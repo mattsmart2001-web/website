@@ -246,11 +246,37 @@ def _hb(ip):
     except Exception:
         pass
 
+def _local_subnet_bcast():
+    """Best-effort subnet broadcast address (e.g. 192.168.1.255) for the
+    interface that reaches the internet. Directed broadcast reaches consoles
+    that the limited 255.255.255.255 broadcast misses on many home networks."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))          # no packet sent; just picks the interface
+        ip = s.getsockname()[0]
+        s.close()
+        parts = ip.split('.')
+        if len(parts) == 4:
+            parts[3] = '255'
+            return '.'.join(parts)
+    except Exception:
+        pass
+    return None
+
 async def _heartbeat(ip_ref):
-    _hb('255.255.255.255')
+    sub = _local_subnet_bcast()
+    def ping():
+        tgt = ip_ref[0]
+        if tgt:
+            _hb(tgt)                         # known/configured console: unicast straight to it
+        else:
+            _hb('255.255.255.255')           # limited broadcast
+            if sub:
+                _hb(sub)                     # subnet-directed broadcast (reaches more networks)
+    ping()
     while True:
         await asyncio.sleep(HEARTBEAT_INT)
-        _hb(ip_ref[0] or '255.255.255.255')
+        ping()
 
 async def _status_loop():
     # Push a heartbeat of our own state to any connected page every 2s, so the
