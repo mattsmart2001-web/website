@@ -70,7 +70,10 @@ def decrypt_packet(data: bytes) -> Optional[bytes]:
     if HAS_SALSA:
         try:
             dec = _S20.new(key=_KEY, nonce=nonce).decrypt(data)
-            if dec[0:4] == b'G7S0':
+            # Magic 'G7S0' is stored little-endian, so the decoded bytes are
+            # 30 53 37 47 -> int 0x47375330. (Comparing to b'G7S0' directly
+            # checks the reverse byte order and wrongly rejects valid packets.)
+            if int.from_bytes(dec[0:4], 'little') == 0x47375330:
                 return dec
         except Exception:
             pass
