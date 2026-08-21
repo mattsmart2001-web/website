@@ -203,12 +203,13 @@ class GT7Packet:
 _clients = set()
 # Live status so the web page (and tray tooltip) can tell whether the console
 # is actually sending telemetry, not just whether the bridge is up.
-_stats = {"packets": 0, "ps5": None, "last": 0.0}
+_stats = {"packets": 0, "raw": 0, "ps5": None, "last": 0.0}
 
 def _status_msg():
     return json.dumps({
         "type": "status",
-        "packets": _stats["packets"],
+        "packets": _stats["packets"],   # valid, decoded telemetry packets
+        "raw": _stats["raw"],           # raw UDP datagrams received (before decode)
         "ps5": _stats["ps5"],
         "listening": True,
     })
@@ -309,6 +310,8 @@ async def _receiver(ps5_ip, ip_ref):
             await asyncio.sleep(0.01)
             continue
 
+        _stats["raw"] += 1                # a datagram arrived (before any decode)
+
         if detected is None:
             detected = addr[0]
             ip_ref[0] = detected
@@ -408,9 +411,15 @@ def _tray_status(icon):
         time.sleep(2)
         ip = _stats["ps5"] or "searching…"
         p = _stats["packets"]
-        state = "receiving" if p > 0 else "no telemetry yet — is GT7 on track?"
+        raw = _stats["raw"]
+        if p > 0:
+            state = "receiving"
+        elif raw > 0:
+            state = "arriving but not decoding"
+        else:
+            state = "nothing from console — is GT7 on track?"
         try:
-            icon.title = f"GT7 Live Connector\nConsole: {ip}\nPackets: {p} ({state})"
+            icon.title = f"GT7 Live Connector\nConsole: {ip}\nRaw: {raw}  Decoded: {p}\n{state}"
         except Exception:
             pass
 
