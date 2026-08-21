@@ -12,8 +12,9 @@
   --wht:#eef0f8;--mut:#525870;--dim:#2a2d3e;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;background:var(--bg);color:var(--wht);font-family:'Rajdhani',sans-serif;overflow:hidden;}
-body{display:flex;flex-direction:column;}
+html{height:100%;}
+html,body{width:100%;background:var(--bg);color:var(--wht);font-family:'Rajdhani',sans-serif;}
+body{display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden;}
 body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:.018;pointer-events:none;z-index:9999;}
 
 /* ── HEADER ── */
@@ -77,10 +78,17 @@ body.obs header{display:none;}
 body.obs #setupScreen{display:none!important;}
 body.obs #dashboard{padding:12px;}
 
-/* A widget = its own self-contained, translucent, croppable entity. */
+/* A widget = its own self-contained, translucent, croppable entity.
+   Each is resizable: drag the bottom-right corner, double-click to reset. */
 .card{background:rgba(10,12,19,.72);border:1px solid rgba(255,255,255,.08);border-radius:13px;
   padding:.85rem 1rem;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  box-shadow:0 6px 22px rgba(0,0,0,.4);display:flex;flex-direction:column;min-width:0;min-height:0;}
+  box-shadow:0 6px 22px rgba(0,0,0,.4);display:flex;flex-direction:column;
+  align-self:start;min-width:190px;min-height:110px;resize:both;overflow:auto;}
+.card::-webkit-resizer{background:transparent;}
+/* subtle grip in the corner so it reads as resizable */
+.card::after{content:'';position:absolute;right:3px;bottom:3px;width:9px;height:9px;pointer-events:none;
+  background:linear-gradient(135deg,transparent 46%,rgba(255,255,255,.28) 46%,rgba(255,255,255,.28) 54%,transparent 54%,transparent 70%,rgba(255,255,255,.28) 70%,rgba(255,255,255,.28) 78%,transparent 78%);}
+.card{position:relative;}
 .card-title{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.24em;color:var(--mut);
   text-transform:uppercase;margin-bottom:.7rem;display:flex;align-items:center;justify-content:space-between;}
 .card-title .accent{width:6px;height:6px;border-radius:50%;background:var(--blu);box-shadow:0 0 8px rgba(26,180,255,.6);}
@@ -245,7 +253,7 @@ body.obs #dashboard{padding:12px;}
     </div>
     <div style="margin-top:1.5rem;padding-top:1.3rem;border-top:1px solid var(--bor);font-family:'JetBrains Mono',monospace;font-size:.46rem;line-height:1.8;color:var(--mut);">
       <span style="color:var(--blu);letter-spacing:.24em;">OBS OVERLAY</span><br>
-      Add this page as a Browser Source, then add <b style="color:var(--gold);font-weight:400;">?obs</b> to the URL for a transparent background. Alt-drag any widget to crop it, or load just one with <b style="color:var(--gold);font-weight:400;">?only=tyres</b>. Widget names: speed, inputs, gforce, laps, fuel, engine.
+      Add this page as a Browser Source, then add <b style="color:var(--gold);font-weight:400;">?obs</b> to the URL for a transparent background. Drag a widget's bottom-right corner to resize it, double-click to reset. Alt-drag to crop in OBS, or load just one widget with <b style="color:var(--gold);font-weight:400;">?only=tyres</b>. Widget names: speed, inputs, gforce, laps, fuel, engine.
     </div>
     <div class="waiting" style="flex-wrap:wrap;line-height:1.6;">
       <span id="waitingTxt">Waiting for connection</span>
@@ -673,11 +681,13 @@ function update(d){
 }
 
 // ── PREVIEW MODE ──
-let previewInterval = null;
+// Runs on requestAnimationFrame (display-refresh smooth, 60fps+) with
+// time-based smoothing so the motion is identical on any refresh rate.
+let previewRAF = null, previewLast = 0, phaseElapsed = 0;
 function stopPreview(){
   isPreview = false;
-  clearInterval(previewInterval);
-  previewInterval = null;
+  cancelAnimationFrame(previewRAF);
+  previewRAF = null; previewLast = 0;
   document.getElementById('previewClose').style.display = 'none';
   showSetup();
   setStatus('', 'DISCONNECTED');
@@ -689,9 +699,8 @@ function previewDashboard(){
   setStatus('live', 'PREVIEW MODE');
   document.getElementById('previewClose').style.display = 'block';
 
-  // Smooth lerp helper
-  function lerp(a, b, t){ return a + (b - a) * t; }
-  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+  const lerp  = (a, b, t) => a + (b - a) * t;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
   // Current smoothed state
   let cur = {
@@ -702,9 +711,6 @@ function previewDashboard(){
     fuel: 42.0
   };
 
-  // Target state (updated every few seconds to simulate driving phases)
-  let tgt = {...cur};
-  let phaseTimer = 0;
   const phases = [
     // accelerating on straight
     { speed:240, gear:5, throttle:95, brake:0, steer:2, latG:0.1, longG:0.8 },
@@ -720,34 +726,36 @@ function previewDashboard(){
     { speed:205, gear:5, throttle:98, brake:0, steer:6, latG:0.5, longG:0.9 },
   ];
   let phaseIdx = 0;
+  let tgt = {...phases[0]};
+  function nextPhase(){ phaseIdx = (phaseIdx + 1) % phases.length; tgt = {...phases[phaseIdx]}; }
 
-  function nextPhase(){
-    phaseIdx = (phaseIdx + 1) % phases.length;
-    tgt = {...phases[phaseIdx]};
-    phaseTimer = 0;
-  }
-  tgt = {...phases[0]};
+  phaseElapsed = 0; previewLast = 0;
 
-  function tick(){
-    phaseTimer++;
-    if(phaseTimer > 28) nextPhase();
+  function loop(ts){
+    if(!isPreview) return;
+    const dt = previewLast ? Math.min(0.05, (ts - previewLast) / 1000) : 0.016;
+    previewLast = ts;
 
-    const s = 0.06; // smoothing factor
-    cur.speed    = lerp(cur.speed,    tgt.speed,    s);
-    cur.throttle = lerp(cur.throttle, tgt.throttle, s);
-    cur.brake    = lerp(cur.brake,    tgt.brake,    s);
-    cur.steer    = lerp(cur.steer,    tgt.steer,    s);
-    cur.latG     = lerp(cur.latG,     tgt.latG,     s);
-    cur.longG    = lerp(cur.longG,    tgt.longG,    s);
+    phaseElapsed += dt;
+    if(phaseElapsed > 3.0){ nextPhase(); phaseElapsed = 0; }
+
+    // time-based smoothing: reach ~halfway to target every 0.32s regardless of fps
+    const k  = 1 - Math.pow(0.5, dt / 0.32);
+    const kt = 1 - Math.pow(0.5, dt / 1.4);   // slower drift for tyre temps
+    cur.speed    = lerp(cur.speed,    tgt.speed,    k);
+    cur.throttle = lerp(cur.throttle, tgt.throttle, k);
+    cur.brake    = lerp(cur.brake,    tgt.brake,    k);
+    cur.steer    = lerp(cur.steer,    tgt.steer,    k);
+    cur.latG     = lerp(cur.latG,     tgt.latG,     k);
+    cur.longG    = lerp(cur.longG,    tgt.longG,    k);
     cur.gear     = tgt.gear;
     cur.rpm      = clamp(cur.speed * 38 + 800, 1200, 8800);
-    cur.fuel    -= 0.003;
+    cur.fuel     = Math.max(0, cur.fuel - 0.02 * dt);
 
-    // Tyre temps drift slowly
-    cur.tFL = lerp(cur.tFL, 84 + cur.latG * 3, 0.02);
-    cur.tFR = lerp(cur.tFR, 86 + cur.latG * 3, 0.02);
-    cur.tRL = lerp(cur.tRL, 90 + cur.latG * 2, 0.02);
-    cur.tRR = lerp(cur.tRR, 88 + cur.latG * 2, 0.02);
+    cur.tFL = lerp(cur.tFL, 84 + cur.latG * 3, kt);
+    cur.tFR = lerp(cur.tFR, 86 + cur.latG * 3, kt);
+    cur.tRL = lerp(cur.tRL, 90 + cur.latG * 2, kt);
+    cur.tRR = lerp(cur.tRR, 88 + cur.latG * 2, kt);
 
     const rps = cur.speed * 0.24;
     update({
@@ -778,9 +786,10 @@ function previewDashboard(){
       waterTemp:  88,
       oilTemp:    102,
     });
+
+    previewRAF = requestAnimationFrame(loop);
   }
-  tick();
-  previewInterval = setInterval(tick, 120);
+  previewRAF = requestAnimationFrame(loop);
 }
 
 // ── OBS OVERLAY MODE ──
@@ -801,6 +810,45 @@ function previewDashboard(){
   // In overlay mode, show the widgets straight away (and keep them up) so the
   // Browser Source is croppable even before telemetry starts flowing.
   if(document.body.classList.contains('obs')) showDashboard();
+})();
+
+// ── RESIZABLE WIDGETS ──
+// Drag a widget's bottom-right corner to resize it; double-click to reset.
+// Sizes persist per browser (so an OBS Browser Source keeps your layout).
+(function initResize(){
+  const SIZE_KEY = 'gt7-widget-sizes';
+  const cards = [...document.querySelectorAll('#dashboard .card')];
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(SIZE_KEY)) || {}; } catch(_){}
+
+  cards.forEach(c => {
+    const s = saved[c.dataset.widget];
+    if(s){ if(s.w) c.style.width = s.w + 'px'; if(s.h) c.style.height = s.h + 'px'; }
+    // double-click anywhere on the widget clears its custom size
+    c.addEventListener('dblclick', () => {
+      if(!c.style.width && !c.style.height) return;
+      c.style.width = ''; c.style.height = '';
+      save();
+    });
+  });
+
+  function save(){
+    const out = {};
+    cards.forEach(c => {
+      if(c.style.width || c.style.height){
+        const r = c.getBoundingClientRect();
+        out[c.dataset.widget] = { w: Math.round(r.width), h: Math.round(r.height) };
+      }
+    });
+    try { localStorage.setItem(SIZE_KEY, JSON.stringify(out)); } catch(_){}
+  }
+
+  // Persist shortly after a resize settles.
+  let t = null;
+  if(window.ResizeObserver){
+    const ro = new ResizeObserver(() => { clearTimeout(t); t = setTimeout(save, 350); });
+    cards.forEach(c => ro.observe(c));
+  }
 })();
 
 // Boot
