@@ -1,5 +1,5 @@
 /* ============================================================
- * SparksTheory — "live on YouTube" badge
+ * SparksTheory "live on YouTube" badge
  *
  * Drop <script defer src="/live-banner.js"></script> on any page.
  * It polls the youtube-live Netlify function and, when the channel
@@ -74,7 +74,7 @@
   }
 
   function show(info) {
-    // Respect a dismissal, but only for that exact stream — a new
+    // Respect a dismissal, but only for that exact stream. A new
     // broadcast (new videoId) brings the banner back.
     try { if (localStorage.getItem(DISMISS_KEY) === info.videoId) return; } catch (e) {}
     if (el) return;                        // already showing
