@@ -44,11 +44,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
 
-      - name: Build EXE
+      - name: Build (one-folder)
+        # --onedir + zip: a one-folder build zipped up is flagged by Defender
+        # far less than a single onefile .exe.
         # --noupx: UPX-packed binaries trip Defender's heuristics; skip it.
         # --version-file: embeds real version metadata (further reduces false positives).
         run: >
-          pyinstaller --onefile --noconsole --noupx
+          pyinstaller --onedir --noconsole --noupx
           --name "GT7-Live-Connector"
           --icon NONE
           --version-file connector_version.txt
@@ -57,11 +59,15 @@ jobs:
           --hidden-import=Crypto.Cipher._Salsa20
           gt7_connector.py
 
+      - name: Zip the connector folder
+        shell: pwsh
+        run: Compress-Archive -Path dist/GT7-Live-Connector -DestinationPath dist/GT7-Live-Connector.zip -Force
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: GT7-Live-Connector
-          path: dist/GT7-Live-Connector.exe
+          path: dist/GT7-Live-Connector.zip
           if-no-files-found: error
 
       - name: Publish release
@@ -76,10 +82,10 @@ jobs:
           else
             TAG="$DEFAULT_VERSION"
           fi
-          NOTES="Automated build of the GT7 Live Connector. Heartbeat fix: the connector now pings the console every ~1.5s / 100 packets so GT7 telemetry no longer stalls after the first burst."
+          NOTES="Automated build of the GT7 Live Connector (one-folder zip; extract and run GT7-Live-Connector.exe inside). Includes the telemetry decryption fix and a self-diagnosing status readout."
           echo "Publishing release $TAG"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/GT7-Live-Connector.exe --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$TAG" dist/GT7-Live-Connector.zip --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$TAG" dist/GT7-Live-Connector.exe --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest
+            gh release create "$TAG" dist/GT7-Live-Connector.zip --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest
           fi
