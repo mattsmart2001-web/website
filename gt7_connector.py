@@ -199,7 +199,22 @@ class GT7Packet:
 _clients = set()
 # Live status so the web page (and tray tooltip) can tell whether the console
 # is actually sending telemetry, not just whether the bridge is up.
-_stats = {"packets": 0, "raw": 0, "ps5": None, "last": 0.0}
+_stats = {"packets": 0, "raw": 0, "ps5": None, "last": 0.0, "debug": None}
+
+def _capture_debug(raw):
+    """One-shot capture of the first datagram so undecodable formats can be
+    diagnosed: length, header bytes, and what the standard decrypt yields."""
+    info = {"len": len(raw), "head": raw[:min(len(raw), 0x48)].hex()}
+    try:
+        if HAS_SALSA and len(raw) >= 0x44:
+            seed = int.from_bytes(raw[0x40:0x44], 'little')
+            nonce = (seed ^ 0xDEADBEAF).to_bytes(4, 'little') + seed.to_bytes(4, 'little')
+            info["dec"] = _S20.new(key=_KEY, nonce=nonce).decrypt(raw)[:8].hex()
+        else:
+            info["dec"] = "n/a"
+    except Exception:
+        info["dec"] = "err"
+    _stats["debug"] = info
 
 def _status_msg():
     return json.dumps({
@@ -207,6 +222,7 @@ def _status_msg():
         "packets": _stats["packets"],   # valid, decoded telemetry packets
         "raw": _stats["raw"],           # raw UDP datagrams received (before decode)
         "ps5": _stats["ps5"],
+        "debug": _stats["debug"],
         "listening": True,
     })
 
@@ -307,6 +323,8 @@ async def _receiver(ps5_ip, ip_ref):
             continue
 
         _stats["raw"] += 1                # a datagram arrived (before any decode)
+        if _stats["raw"] == 1:
+            _capture_debug(raw)           # snapshot the first packet for diagnosis
 
         if detected is None:
             detected = addr[0]

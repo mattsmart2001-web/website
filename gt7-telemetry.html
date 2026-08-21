@@ -625,7 +625,8 @@ function handleMsg(msg){
       if((msg.packets || 0) > 0){
         updateWaiting('Receiving telemetry from ' + (msg.ps5 || 'your console') + '. Get on track in GT7.');
       } else if((msg.raw || 0) > 0){
-        updateWaiting('Data IS arriving from your console (' + (msg.raw) + ' packets) but the connector could not decode it. This usually means a GT7 update changed the format. Let me know and I will update the decoder.');
+        var dbg = msg.debug ? (' [diag len=' + msg.debug.len + ' dec=' + msg.debug.dec + ' head=' + (msg.debug.head||'').slice(0,24) + ']') : '';
+        updateWaiting('Data IS arriving from your console (' + (msg.raw) + ' packets) but the connector could not decode it yet. Screenshot this line for support:' + dbg);
       } else {
         updateWaiting('Connector is running but no data is arriving from your console. 1) Be on track in GT7 (not a menu). 2) Allow GT7-Live-Connector through Windows Firewall (inbound UDP). 3) Set your console IP in a gt7-console-ip.txt file next to the connector.');
       }
