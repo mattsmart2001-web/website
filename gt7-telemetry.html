@@ -261,6 +261,26 @@ body.editing .hidden-widgets{display:flex;}
 body.editing .accent-swatches{display:flex;}
 .accent-sw{width:15px;height:15px;border-radius:50%;border:1px solid rgba(255,255,255,.3);cursor:pointer;padding:0;}
 .accent-sw.on{outline:2px solid #fff;outline-offset:1px;}
+
+/* OBS LINKS panel */
+#obsBtn{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;padding:.28rem .65rem;border-radius:20px;border:1px solid rgba(0,229,160,.4);background:rgba(0,229,160,.08);color:var(--grn);cursor:pointer;text-transform:uppercase;}
+#obsBtn:hover{background:rgba(0,229,160,.16);}
+.obs-modal{display:none;position:fixed;inset:0;z-index:4000;background:rgba(3,4,7,.78);align-items:center;justify-content:center;padding:1.5rem;}
+.obs-modal.show{display:flex;}
+.obs-card{background:var(--sur);border:1px solid var(--bor);border-radius:14px;max-width:660px;width:100%;max-height:86vh;overflow:auto;padding:1.5rem 1.6rem 1.7rem;position:relative;}
+.obs-card h3{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.05em;color:var(--wht);}
+.obs-card h3 em{font-style:normal;color:var(--grn);}
+.obs-card p{font-family:'JetBrains Mono',monospace;font-size:.5rem;line-height:1.7;color:var(--mut);margin:.4rem 0 1rem;}
+.obs-close{position:absolute;top:12px;right:14px;background:transparent;border:0;color:var(--mut);font-size:22px;line-height:1;cursor:pointer;}
+.obs-close:hover{color:var(--wht);}
+.obs-list{display:flex;flex-direction:column;gap:.45rem;}
+.obs-row{display:grid;grid-template-columns:1fr auto auto auto;gap:.6rem;align-items:center;padding:.5rem .65rem;border:1px solid var(--bor);border-radius:9px;background:var(--pan);}
+.obs-row.full{border-color:rgba(0,229,160,.35);background:rgba(0,229,160,.05);}
+.obs-row .nm{font-family:'Barlow',sans-serif;font-size:.9rem;color:var(--wht);font-weight:600;}
+.obs-row .sz{font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mut);letter-spacing:.06em;}
+.obs-act{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.1em;text-transform:uppercase;padding:.32rem .6rem;border-radius:6px;border:1px solid var(--line2);background:#20252c;color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;}
+.obs-act:hover{border-color:var(--grn);color:var(--grn);}
+.obs-act.copied{border-color:var(--grn);color:var(--grn);}
 </style>
 </head>
 <body>
@@ -284,6 +304,7 @@ body.editing .accent-swatches{display:flex;}
       <button class="eb" id="editShare" onclick="shareLayout()">Copy Layout Link</button>
       <button class="eb" id="editReset" onclick="resetLayout()">Reset</button>
     </div>
+    <button id="obsBtn" onclick="openObs()">OBS Links</button>
     <button id="editToggle" onclick="toggleEdit()">Edit Layout</button>
     <a href="index.html" class="back-link">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -569,6 +590,16 @@ body.editing .accent-swatches{display:flex;}
     </div>
   </div>
 
+</div>
+
+<!-- OBS LINKS panel -->
+<div class="obs-modal" id="obsModal">
+  <div class="obs-card">
+    <button class="obs-close" onclick="closeObs()" aria-label="Close">&times;</button>
+    <h3>OBS <em>Browser Sources</em></h3>
+    <p>In OBS: add a <b>Browser Source</b>, tick "Local file" off, paste a link below, and set the width/height. Each link is a single transparent widget you can place anywhere. Use the full overlay to crop with Alt-drag instead.</p>
+    <div class="obs-list" id="obsList"></div>
+  </div>
 </div>
 
 <script>
@@ -1593,6 +1624,49 @@ function initDrag(card){
   if(obj) applyAll(obj);
   window.addEventListener('resize', () => { if(_dash().classList.contains('freelayout')) updateDashHeight(); });
 })();
+
+// ── OBS LINKS ──
+// A copy-ready transparent Browser Source URL for the full overlay and each
+// individual widget, so building an OBS scene is point-and-paste.
+const OBS_WIDGETS = [
+  ['',        'Full overlay (all widgets)', '1920 x 1080'],
+  ['speed',   'Speed / Gear / RPM',         '520 x 170'],
+  ['delta',   'Lap Delta',                  '440 x 230'],
+  ['sectors', 'Sectors',                    '380 x 230'],
+  ['laps',    'Lap Times',                  '380 x 260'],
+  ['inputs',  'Inputs trace',               '640 x 320'],
+  ['gforce',  'G-Force',                    '320 x 320'],
+  ['map',     'Track Map',                  '520 x 460'],
+  ['tyres',   'Tyre Temps',                 '560 x 380'],
+  ['temps',   'Temp History',               '560 x 320'],
+  ['fuel',    'Fuel & Strategy',            '360 x 320'],
+  ['engine',  'Engine',                     '900 x 200'],
+];
+function obsUrl(key){
+  const base = location.origin + location.pathname;
+  return base + (key ? ('?obs&only=' + key) : '?obs');
+}
+function buildObsList(){
+  document.getElementById('obsList').innerHTML = OBS_WIDGETS.map(function(w){
+    var key = w[0];
+    return '<div class="obs-row' + (key ? '' : ' full') + '">' +
+      '<span class="nm">' + w[1] + '</span>' +
+      '<span class="sz">' + w[2] + '</span>' +
+      '<button class="obs-act" onclick="copyObs(\'' + key + '\', this)">Copy link</button>' +
+      '<a class="obs-act" href="' + obsUrl(key) + '" target="_blank" rel="noopener">Open</a>' +
+    '</div>';
+  }).join('');
+}
+function openObs(){ buildObsList(); document.getElementById('obsModal').classList.add('show'); }
+function closeObs(){ document.getElementById('obsModal').classList.remove('show'); }
+function copyObs(key, btn){
+  var url = obsUrl(key);
+  function done(){ btn.textContent = 'Copied'; btn.classList.add('copied'); setTimeout(function(){ btn.textContent = 'Copy link'; btn.classList.remove('copied'); }, 1500); }
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function(){ prompt('Copy this link:', url); });
+  else prompt('Copy this link:', url);
+}
+document.getElementById('obsModal').addEventListener('click', function(e){ if(e.target.id === 'obsModal') closeObs(); });
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeObs(); });
 
 // Boot
 setTimeout(connect, 400);
