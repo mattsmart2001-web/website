@@ -67,7 +67,7 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
 
 /* ── DASHBOARD (modular, OBS-ready widgets) ── */
 #dashboard{flex:1;display:none;min-height:0;padding:14px;gap:12px;
-  grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:min-content;align-content:start;}
+  grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:min-content;align-content:start;grid-auto-flow:row dense;}
 #dashboard.vis{display:grid;}
 
 /* Transparent OBS mode: ?obs drops the page background + chrome so only the
@@ -93,17 +93,19 @@ body.obs #dashboard{padding:12px;}
   text-transform:uppercase;margin-bottom:.7rem;display:flex;align-items:center;justify-content:space-between;}
 .card-title .accent{width:6px;height:6px;border-radius:50%;background:var(--blu);box-shadow:0 0 8px rgba(26,180,255,.6);}
 
-/* Composition: three tidy rows on desktop; every card still crops on its own. */
-.card-hero  {grid-column:span 8;}
-.card-laps  {grid-column:span 4;}
-.card-inputs{grid-column:span 8;}
-.card-gforce{grid-column:span 4;}
-.card-tyres {grid-column:span 6;}
+/* Composition: tidy rows on desktop; every card still crops on its own. */
+.card-hero  {grid-column:span 5;}
+.card-delta {grid-column:span 4;}
+.card-laps  {grid-column:span 3;}
+.card-inputs{grid-column:span 6;}
+.card-gforce{grid-column:span 3;}
 .card-fuel  {grid-column:span 3;}
-.card-engine{grid-column:span 3;}
+.card-tyres {grid-column:span 6;}
+.card-temps {grid-column:span 6;}
+.card-engine{grid-column:span 12;}
 @media (max-width:1024px){
-  .card-hero,.card-inputs,.card-tyres{grid-column:span 12;}
-  .card-laps,.card-gforce,.card-fuel,.card-engine{grid-column:span 6;}
+  .card-hero,.card-inputs,.card-tyres,.card-temps,.card-engine{grid-column:span 12;}
+  .card-delta,.card-laps,.card-gforce,.card-fuel{grid-column:span 6;}
 }
 @media (max-width:560px){ #dashboard .card{grid-column:span 12;} }
 
@@ -174,14 +176,56 @@ body.obs #dashboard{padding:12px;}
 .fuel-bar-wrap{height:11px;background:var(--dim);border-radius:6px;overflow:hidden;margin:.35rem 0;}
 .fuel-bar{height:100%;border-radius:6px;background:var(--grn);transition:width .3s,background .3s;}
 
-/* ENGINE */
-.engine-inner{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:.5rem;}
-.eng-row{display:flex;flex-direction:column;gap:.28rem;}
+/* ENGINE (horizontal strip) */
+.engine-inner{flex:1;display:flex;flex-direction:row;gap:1.6rem;align-items:stretch;flex-wrap:wrap;}
+.eng-row{flex:1;min-width:120px;display:flex;flex-direction:column;gap:.28rem;justify-content:center;}
 .eng-lbl{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:.2em;color:var(--mut);}
 .eng-val{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1;color:var(--wht);transition:color .3s;}
 .eng-bar-wrap{height:6px;background:var(--dim);border-radius:3px;overflow:hidden;}
 .eng-bar{height:100%;border-radius:3px;background:var(--blu);transition:width .3s,background .3s;}
-.eng-divider{height:1px;background:var(--bor);}
+.eng-divider{width:1px;align-self:stretch;background:var(--bor);}
+
+/* LAP DELTA (predictive) */
+.delta-inner{flex:1;display:flex;flex-direction:column;justify-content:center;gap:.5rem;}
+.delta-big{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.6rem,5vw,4rem);line-height:.9;letter-spacing:.02em;color:var(--mut);transition:color .2s;}
+.delta-big.up{color:var(--red);} .delta-big.dn{color:var(--grn);}
+.delta-sub{display:flex;justify-content:space-between;gap:1rem;}
+.delta-cell .l{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.16em;color:var(--mut);}
+.delta-cell .v{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;color:var(--wht);}
+.delta-note{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.06em;color:var(--mut);}
+
+/* TEMP HISTORY graph */
+.temps-inner{flex:1;display:flex;flex-direction:column;gap:.4rem;min-height:0;}
+.temps-legend{display:flex;flex-wrap:wrap;gap:.4rem .9rem;}
+.temps-chip{display:flex;align-items:center;gap:.35rem;font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.1em;color:var(--mut);}
+.temps-chip .sw{width:13px;height:3px;border-radius:2px;}
+.temps-chip b{font-family:'Bebas Neue',sans-serif;font-size:.95rem;margin-left:.2rem;letter-spacing:.02em;}
+.temps-canvas-wrap{position:relative;width:100%;height:150px;flex:1;min-height:110px;}
+#tempsCanvas{display:block;width:100%;height:100%;}
+
+/* FUEL strategy rows */
+.fuel-strat{border-top:1px solid var(--bor);margin-top:.4rem;padding-top:.45rem;display:flex;flex-direction:column;gap:.4rem;}
+.fs-row{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;}
+.fs-lbl{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.14em;color:var(--mut);}
+.fs-val{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--wht);}
+.fs-val.ok{color:var(--grn);} .fs-val.warn{color:var(--gold);} .fs-val.bad{color:var(--red);}
+
+/* ── LAYOUT EDITOR ── */
+.editbar{display:none;align-items:center;gap:.5rem;}
+body.editing .editbar{display:flex;}
+.editbar .eb{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.14em;padding:.28rem .6rem;border-radius:5px;border:1px solid var(--bor);background:rgba(13,15,24,.8);color:var(--mut);cursor:pointer;text-transform:uppercase;}
+.editbar .eb:hover{border-color:var(--blu);color:var(--blu);}
+#editToggle{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;padding:.28rem .65rem;border-radius:20px;border:1px solid var(--bor);background:rgba(13,15,24,.8);color:var(--mut);cursor:pointer;text-transform:uppercase;}
+#editToggle:hover{border-color:var(--blu);color:var(--blu);}
+body.editing #editToggle{border-color:var(--blu);color:var(--blu);background:rgba(26,180,255,.1);}
+body.editing #dashboard .card{cursor:grab;outline:1px dashed rgba(26,180,255,.35);outline-offset:2px;}
+body.editing #dashboard .card:hover{outline-color:rgba(26,180,255,.7);}
+body.editing #dashboard .card.dragging{cursor:grabbing;opacity:.9;outline-color:var(--blu);z-index:100;box-shadow:0 12px 34px rgba(0,0,0,.6);}
+/* free (custom) layout: widgets become absolutely positioned */
+#dashboard.freelayout{display:block;position:relative;}
+#dashboard.freelayout .card{position:absolute;align-self:auto;margin:0;}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:rgba(13,15,24,.96);border:1px solid var(--blu);color:var(--wht);font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.06em;padding:.6rem 1rem;border-radius:8px;z-index:3000;opacity:0;transition:opacity .3s;pointer-events:none;max-width:80vw;text-align:center;}
+.toast.show{opacity:1;}
 </style>
 </head>
 <body>
@@ -199,6 +243,11 @@ body.obs #dashboard{padding:12px;}
       <span id="statusTxt">DISCONNECTED</span>
     </div>
     <button id="previewClose" onclick="stopPreview()" style="display:none;font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;padding:.28rem .65rem;border-radius:20px;border:1px solid rgba(255,195,26,.4);background:rgba(255,195,26,.08);color:var(--gold);cursor:pointer;">EXIT PREVIEW</button>
+    <div class="editbar">
+      <button class="eb" id="editShare" onclick="shareLayout()">Copy Layout Link</button>
+      <button class="eb" id="editReset" onclick="resetLayout()">Reset</button>
+    </div>
+    <button id="editToggle" onclick="toggleEdit()">Edit Layout</button>
     <a href="index.html" class="back-link">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <polyline points="15 18 9 12 15 6"></polyline>
@@ -311,6 +360,19 @@ body.obs #dashboard{padding:12px;}
     </div>
   </div>
 
+  <!-- LAP DELTA (predictive vs best) -->
+  <div class="card card-delta" data-widget="delta">
+    <div class="card-title">Lap Delta <span class="accent"></span></div>
+    <div class="delta-inner">
+      <div class="delta-big" id="deltaBig">+0.00</div>
+      <div class="delta-sub">
+        <div class="delta-cell"><div class="l">PREDICTED</div><div class="v" id="deltaPred">--:--.---</div></div>
+        <div class="delta-cell"><div class="l">CURRENT</div><div class="v" id="deltaCur">--:--.---</div></div>
+      </div>
+      <div class="delta-note" id="deltaNote">Set a clean lap to arm the delta.</div>
+    </div>
+  </div>
+
   <!-- INPUTS (rolling line graph) -->
   <div class="card card-inputs" data-widget="inputs">
     <div class="card-title">Inputs <span class="accent"></span></div>
@@ -381,9 +443,23 @@ body.obs #dashboard{padding:12px;}
     </div>
   </div>
 
-  <!-- FUEL -->
+  <!-- TYRE / ENGINE TEMP HISTORY -->
+  <div class="card card-temps" data-widget="temps">
+    <div class="card-title">Temp History <span class="accent"></span></div>
+    <div class="temps-inner">
+      <div class="temps-legend">
+        <span class="temps-chip"><span class="sw" style="background:#1ab4ff"></span>FL<b id="thFL">--</b></span>
+        <span class="temps-chip"><span class="sw" style="background:#00e5a0"></span>FR<b id="thFR">--</b></span>
+        <span class="temps-chip"><span class="sw" style="background:#ffc31a"></span>RL<b id="thRL">--</b></span>
+        <span class="temps-chip"><span class="sw" style="background:#ff6ad5"></span>RR<b id="thRR">--</b></span>
+      </div>
+      <div class="temps-canvas-wrap"><canvas id="tempsCanvas" width="640" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <!-- FUEL + PIT STRATEGY -->
   <div class="card card-fuel" data-widget="fuel">
-    <div class="card-title">Fuel <span class="accent"></span></div>
+    <div class="card-title">Fuel &amp; Strategy <span class="accent"></span></div>
     <div class="fuel-inner">
       <div>
         <div class="fuel-main">
@@ -395,9 +471,11 @@ body.obs #dashboard{padding:12px;}
         </div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mut);margin-top:.3rem;" id="fuelPct">--%</div>
       </div>
-      <div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.2em;color:var(--mut);margin-bottom:.25rem;">BOOST</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--wht);" id="boostVal">--</div>
+      <div class="fuel-strat">
+        <div class="fs-row"><span class="fs-lbl">PER LAP</span><span class="fs-val" id="fuelPerLap">-- L</span></div>
+        <div class="fs-row"><span class="fs-lbl">FUEL LAPS LEFT</span><span class="fs-val" id="fuelLapsLeft">--</span></div>
+        <div class="fs-row"><span class="fs-lbl">RACE LAPS LEFT</span><span class="fs-val" id="raceLapsLeft">--</span></div>
+        <div class="fs-row"><span class="fs-lbl">STATUS</span><span class="fs-val" id="fuelStatus">--</span></div>
       </div>
     </div>
   </div>
@@ -589,6 +667,156 @@ function drawInputs(){
 }
 drawInputs(); // initial render
 
+// ── TEMP HISTORY (tyre surface temps over time) ──
+const tempsCanvas = document.getElementById('tempsCanvas');
+const tCtx = tempsCanvas.getContext('2d');
+const T_HIST = 300;                        // samples; sampled every ~0.5s => ~2.5 min
+const tHist = { FL: [], FR: [], RL: [], RR: [] };
+['FL','FR','RL','RR'].forEach(k => tHist[k] = new Array(T_HIST).fill(null));
+const T_COLS = { FL:'#1ab4ff', FR:'#00e5a0', RL:'#ffc31a', RR:'#ff6ad5' };
+function pushTemps(fl, fr, rl, rr){
+  tHist.FL.push(fl==null?null:fl); tHist.FL.shift();
+  tHist.FR.push(fr==null?null:fr); tHist.FR.shift();
+  tHist.RL.push(rl==null?null:rl); tHist.RL.shift();
+  tHist.RR.push(rr==null?null:rr); tHist.RR.shift();
+}
+function drawTemps(){
+  const c = tCtx, w = tempsCanvas.width, h = tempsCanvas.height;
+  c.clearRect(0,0,w,h);
+  let lo = Infinity, hi = -Infinity;
+  ['FL','FR','RL','RR'].forEach(k => tHist[k].forEach(v => { if(v!=null){ if(v<lo)lo=v; if(v>hi)hi=v; } }));
+  if(lo === Infinity){ lo = 60; hi = 100; }
+  if(hi - lo < 16){ const m=(lo+hi)/2; lo=m-8; hi=m+8; }
+  lo -= 4; hi += 4;
+  c.strokeStyle = 'rgba(255,255,255,.055)'; c.lineWidth = 1;
+  for(let i=0;i<=4;i++){ const y = Math.round(h*i/4)+.5; c.beginPath(); c.moveTo(0,y); c.lineTo(w,y); c.stroke(); }
+  ['FL','FR','RL','RR'].forEach(k => {
+    const arr = tHist[k]; c.beginPath(); let started = false;
+    for(let i=0;i<arr.length;i++){
+      const v = arr[i]; if(v==null){ started = false; continue; }
+      const x = (i/(arr.length-1))*w, y = h - ((v-lo)/(hi-lo))*h;
+      started ? c.lineTo(x,y) : (c.moveTo(x,y), started = true);
+    }
+    c.strokeStyle = T_COLS[k]; c.lineWidth = 2; c.lineJoin = 'round'; c.stroke();
+  });
+  c.fillStyle = 'rgba(134,141,152,.85)'; c.font = '9px "JetBrains Mono",monospace'; c.textAlign = 'left';
+  c.fillText(Math.round(hi)+'°', 4, 11);
+  c.fillText(Math.round(lo)+'°', 4, h-4);
+}
+drawTemps();
+
+// ── DERIVED: predictive lap delta + fuel strategy (live only) ──
+const lap = { lastCount:null, startPid:null, lastPid:null, dist:0, trace:[], ref:null, refLapMs:0, curMs:0 };
+const fuelS = { lapStartFuel:null, burns:[] };
+let tempsAccum = 0;
+
+function interpTime(trace, dist){
+  if(dist <= trace[0][0]) return trace[0][1];
+  const last = trace[trace.length-1];
+  if(dist >= last[0]) return last[1];
+  let lo = 0, hi = trace.length-1;
+  while(hi - lo > 1){ const mid = (lo+hi)>>1; trace[mid][0] < dist ? lo = mid : hi = mid; }
+  const a = trace[lo], b = trace[hi], f = (dist-a[0])/((b[0]-a[0])||1);
+  return a[1] + (b[1]-a[1])*f;
+}
+function setTemp(id, v){ const e = document.getElementById(id); if(e) e.textContent = v!=null ? Math.round(v)+'°' : '--'; }
+
+function telemetryDerived(d){
+  const pid = d.packetId;
+  if(pid == null) return;                  // live data only; preview drives its own widgets
+  if(lap.lastPid == null){ lap.lastPid = pid; lap.startPid = pid; lap.lastCount = d.lapCount; fuelS.lapStartFuel = d.fuel; }
+  let dpid = pid - lap.lastPid; lap.lastPid = pid;
+  if(dpid < 0 || dpid > 30) dpid = 0;      // ignore resets / menu jumps
+  const dt = dpid/60;
+  tempsAccum += dt;
+  lap.dist += ((d.speed||0)/3.6) * dt;
+
+  // lap transition
+  if(d.lapCount != null && lap.lastCount != null && d.lapCount !== lap.lastCount){
+    if(d.lastLap > 0 && lap.trace.length > 20 && d.bestLap > 0 && d.lastLap <= d.bestLap){
+      lap.ref = lap.trace.slice(); lap.refLapMs = d.lastLap;   // store the best lap as reference
+    }
+    if(fuelS.lapStartFuel != null && d.fuel != null){
+      const used = fuelS.lapStartFuel - d.fuel;
+      if(used > 0.02 && used < 60){ fuelS.burns.push(used); if(fuelS.burns.length > 5) fuelS.burns.shift(); }
+    }
+    fuelS.lapStartFuel = d.fuel;
+    lap.lastCount = d.lapCount; lap.startPid = pid; lap.dist = 0; lap.trace = [];
+  }
+  if(lap.lastCount == null) lap.lastCount = d.lapCount;
+  if(fuelS.lapStartFuel == null) fuelS.lapStartFuel = d.fuel;
+  lap.curMs = (pid - lap.startPid) * 1000/60;
+
+  const tr = lap.trace;
+  if(tr.length === 0 || lap.dist - tr[tr.length-1][0] > 4) tr.push([lap.dist, lap.curMs]);
+
+  const lc = document.getElementById('lapCurrent'); if(lc) lc.textContent = fmtLap(lap.curMs);
+  document.getElementById('deltaCur').textContent = fmtLap(lap.curMs);
+
+  const big = document.getElementById('deltaBig');
+  if(lap.ref && lap.ref.length > 2){
+    const delta = (lap.curMs - interpTime(lap.ref, lap.dist)) / 1000;
+    big.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(2);
+    big.className = 'delta-big ' + (delta > 0.02 ? 'up' : delta < -0.02 ? 'dn' : '');
+    document.getElementById('deltaPred').textContent = fmtLap(Math.max(0, (lap.refLapMs || d.bestLap) + delta*1000));
+    document.getElementById('deltaNote').textContent = 'vs your best lap';
+  } else {
+    big.textContent = '+0.00'; big.className = 'delta-big';
+    document.getElementById('deltaPred').textContent = d.bestLap > 0 ? fmtLap(d.bestLap) : '--:--.---';
+    document.getElementById('deltaNote').textContent = 'Complete a best lap to arm the delta.';
+  }
+
+  updateFuelStrategy(d);
+
+  if(tempsAccum >= 0.5){ tempsAccum = 0; pushTemps(d.tyreTempFL, d.tyreTempFR, d.tyreTempRL, d.tyreTempRR); drawTemps(); }
+  setTemp('thFL', d.tyreTempFL); setTemp('thFR', d.tyreTempFR); setTemp('thRL', d.tyreTempRL); setTemp('thRR', d.tyreTempRR);
+}
+
+function updateFuelStrategy(d){
+  const burn = fuelS.burns.length ? fuelS.burns.reduce((a,b)=>a+b,0)/fuelS.burns.length : null;
+  document.getElementById('fuelPerLap').textContent = burn != null ? burn.toFixed(2)+' L' : '-- L';
+  const fuelLaps = (burn && burn > 0 && d.fuel != null) ? d.fuel/burn : null;
+  document.getElementById('fuelLapsLeft').textContent = fuelLaps != null ? fuelLaps.toFixed(1) : '--';
+  const raceLeft = (d.lapsInRace > 0 && d.lapCount != null) ? Math.max(0, d.lapsInRace - d.lapCount) : null;
+  document.getElementById('raceLapsLeft').textContent = raceLeft != null ? raceLeft : '--';
+  const st = document.getElementById('fuelStatus');
+  if(fuelLaps == null){ st.textContent = '...'; st.className = 'fs-val'; return; }
+  if(raceLeft == null){ st.textContent = fuelLaps >= 99 ? 'PLENTY' : fuelLaps.toFixed(1)+' laps'; st.className = 'fs-val'; return; }
+  const margin = fuelLaps - raceLeft;
+  if(margin >= 1){ st.textContent = 'CAN FINISH'; st.className = 'fs-val ok'; }
+  else if(margin >= 0){ st.textContent = 'TIGHT'; st.className = 'fs-val warn'; }
+  else { const n = Math.ceil(-margin); st.textContent = 'SHORT ' + n + ' LAP' + (n>=2?'S':''); st.className = 'fs-val bad'; }
+}
+
+// preview-only synthetic feed for the derived widgets
+let previewStart = 0, previewTempAcc = 0;
+function previewExtras(ts, cur){
+  if(!previewStart) previewStart = ts;
+  const e = (ts - previewStart) / 1000;
+  const curMs = (e % 92) * 1000;
+  document.getElementById('lapCurrent').textContent = fmtLap(curMs);
+  document.getElementById('deltaCur').textContent = fmtLap(curMs);
+  const delta = 0.5*Math.sin(e*0.55) - 0.05;
+  const big = document.getElementById('deltaBig');
+  big.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(2);
+  big.className = 'delta-big ' + (delta > 0.02 ? 'up' : delta < -0.02 ? 'dn' : '');
+  document.getElementById('deltaPred').textContent = fmtLap(81234 + delta*1000);
+  document.getElementById('deltaNote').textContent = 'vs your best lap';
+  const burn = 2.35;
+  document.getElementById('fuelPerLap').textContent = burn.toFixed(2)+' L';
+  const fuelLaps = cur.fuel/burn;
+  document.getElementById('fuelLapsLeft').textContent = fuelLaps.toFixed(1);
+  const raceLeft = Math.max(0, Math.round(18 - e/5));
+  document.getElementById('raceLapsLeft').textContent = raceLeft;
+  const st = document.getElementById('fuelStatus'), margin = fuelLaps - raceLeft;
+  if(margin >= 1){ st.textContent = 'CAN FINISH'; st.className = 'fs-val ok'; }
+  else if(margin >= 0){ st.textContent = 'TIGHT'; st.className = 'fs-val warn'; }
+  else { const n = Math.ceil(-margin); st.textContent = 'SHORT ' + n + ' LAP' + (n>=2?'S':''); st.className = 'fs-val bad'; }
+  previewTempAcc += 0.016;
+  if(previewTempAcc >= 0.4){ previewTempAcc = 0; pushTemps(cur.tFL, cur.tFR, cur.tRL, cur.tRR); drawTemps(); }
+  setTemp('thFL', cur.tFL); setTemp('thFR', cur.tFR); setTemp('thRL', cur.tRL); setTemp('thRR', cur.tRR);
+}
+
 let rpmMax = 9000;
 
 function update(d){
@@ -661,7 +889,6 @@ function update(d){
   const fb = document.getElementById('fuelBar');
   fb.style.width = fpct+'%';
   fb.style.background = fpct < 20 ? 'var(--red)' : fpct < 40 ? 'var(--gold)' : 'var(--grn)';
-  document.getElementById('boostVal').textContent = d.boost != null ? d.boost.toFixed(3)+' bar' : '--';
 
   // Engine
   const wt = d.waterTemp||0, ot = d.oilTemp||0;
@@ -678,6 +905,9 @@ function update(d){
   document.getElementById('oilBar').style.background = engineColor(ot,110,130);
 
   document.getElementById('oilPress').textContent = d.oilPress != null ? (d.oilPress*1000).toFixed(0)+' kPa' : '-- kPa';
+
+  // Derived: predictive lap delta, fuel strategy, temp history (live packets only)
+  telemetryDerived(d);
 }
 
 // ── PREVIEW MODE ──
@@ -687,7 +917,7 @@ let previewRAF = null, previewLast = 0, phaseElapsed = 0;
 function stopPreview(){
   isPreview = false;
   cancelAnimationFrame(previewRAF);
-  previewRAF = null; previewLast = 0;
+  previewRAF = null; previewLast = 0; previewStart = 0; previewTempAcc = 0;
   document.getElementById('previewClose').style.display = 'none';
   showSetup();
   setStatus('', 'DISCONNECTED');
@@ -786,6 +1016,7 @@ function previewDashboard(){
       waterTemp:  88,
       oilTemp:    102,
     });
+    previewExtras(ts, cur);
 
     previewRAF = requestAnimationFrame(loop);
   }
@@ -824,8 +1055,9 @@ function previewDashboard(){
   cards.forEach(c => {
     const s = saved[c.dataset.widget];
     if(s){ if(s.w) c.style.width = s.w + 'px'; if(s.h) c.style.height = s.h + 'px'; }
-    // double-click anywhere on the widget clears its custom size
+    // double-click clears a widget's custom size (not while free-dragging layout)
     c.addEventListener('dblclick', () => {
+      if(document.getElementById('dashboard').classList.contains('freelayout')) return;
       if(!c.style.width && !c.style.height) return;
       c.style.width = ''; c.style.height = '';
       save();
@@ -849,6 +1081,137 @@ function previewDashboard(){
     const ro = new ResizeObserver(() => { clearTimeout(t); t = setTimeout(save, 350); });
     cards.forEach(c => ro.observe(c));
   }
+})();
+
+// ── LAYOUT EDITOR ──
+// Edit mode lets you drag widgets anywhere and resize them into a custom
+// layout. Free layouts persist per browser and can be shared as a link
+// (?layout=...) so the exact arrangement loads into an OBS Browser Source.
+const LAYOUT_KEY = 'gt7-layout';
+let editing = false, editAutoPreview = false;
+
+function _dash(){ return document.getElementById('dashboard'); }
+
+function toast(msg){
+  let el = document.getElementById('gt7toast');
+  if(!el){ el = document.createElement('div'); el.id = 'gt7toast'; el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+function updateDashHeight(){
+  const dash = _dash();
+  if(!dash.classList.contains('freelayout')){ dash.style.minHeight = ''; return; }
+  let max = 0;
+  dash.querySelectorAll('.card').forEach(c => { if(c.style.display !== 'none') max = Math.max(max, c.offsetTop + c.offsetHeight); });
+  dash.style.minHeight = (max + 16) + 'px';
+}
+
+function snapshotToFree(){
+  const dash = _dash();
+  if(dash.classList.contains('freelayout')) return;
+  const dRect = dash.getBoundingClientRect();
+  const cards = [...dash.querySelectorAll('.card')].filter(c => c.style.display !== 'none');
+  const coords = cards.map(c => { const r = c.getBoundingClientRect(); return { c, x: r.left - dRect.left, y: r.top - dRect.top, w: r.width, h: r.height }; });
+  dash.classList.add('freelayout');
+  coords.forEach(o => { o.c.style.left = Math.round(o.x)+'px'; o.c.style.top = Math.round(o.y)+'px'; o.c.style.width = Math.round(o.w)+'px'; o.c.style.height = Math.round(o.h)+'px'; });
+  updateDashHeight();
+}
+
+function applyLayout(obj){
+  if(!obj || obj.mode !== 'free' || !obj.items) return false;
+  const dash = _dash();
+  dash.classList.add('freelayout');
+  Object.entries(obj.items).forEach(([w, it]) => {
+    const c = dash.querySelector('.card[data-widget="'+w+'"]');
+    if(!c || c.style.display === 'none') return;
+    c.style.left = it.x+'px'; c.style.top = it.y+'px';
+    if(it.w) c.style.width = it.w+'px'; if(it.h) c.style.height = it.h+'px';
+  });
+  updateDashHeight();
+  return true;
+}
+
+function saveLayout(){
+  const dash = _dash();
+  if(!dash.classList.contains('freelayout')) return;
+  const items = {};
+  dash.querySelectorAll('.card').forEach(c => {
+    if(c.style.display === 'none') return;
+    const r = c.getBoundingClientRect();
+    items[c.dataset.widget] = { x: Math.round(parseFloat(c.style.left)||0), y: Math.round(parseFloat(c.style.top)||0), w: Math.round(r.width), h: Math.round(r.height) };
+  });
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify({ mode:'free', items })); } catch(_){}
+}
+
+function resetLayout(){
+  try { localStorage.removeItem(LAYOUT_KEY); localStorage.removeItem('gt7-widget-sizes'); } catch(_){}
+  const dash = _dash();
+  dash.classList.remove('freelayout'); dash.style.minHeight = '';
+  dash.querySelectorAll('.card').forEach(c => { c.style.left = c.style.top = c.style.width = c.style.height = ''; });
+  toast('Layout reset to default');
+}
+
+function shareLayout(){
+  saveLayout();
+  let raw = null; try { raw = localStorage.getItem(LAYOUT_KEY); } catch(_){}
+  if(!raw){ toast('Arrange a widget first, then share'); return; }
+  const code = btoa(unescape(encodeURIComponent(raw)));
+  const url = location.origin + location.pathname + '?layout=' + code;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(() => toast('Layout link copied to clipboard'), () => prompt('Copy this layout link:', url));
+  } else { prompt('Copy this layout link:', url); }
+}
+
+function toggleEdit(){
+  editing = !editing;
+  document.body.classList.toggle('editing', editing);
+  document.getElementById('editToggle').textContent = editing ? 'Done' : 'Edit Layout';
+  if(editing){
+    if(!_dash().classList.contains('vis')){ editAutoPreview = true; previewDashboard(); }
+    snapshotToFree();
+    toast('Drag widgets to move. Drag a corner to resize. Double-click grip resets size.');
+  } else {
+    saveLayout();
+    if(editAutoPreview){ editAutoPreview = false; stopPreview(); }
+  }
+}
+
+function initDrag(card){
+  card.addEventListener('pointerdown', e => {
+    if(!editing) return;
+    const r = card.getBoundingClientRect();
+    if(e.clientX > r.right - 20 && e.clientY > r.bottom - 20) return;  // leave the resize corner alone
+    snapshotToFree();
+    e.preventDefault();
+    card.classList.add('dragging');
+    const startX = e.clientX, startY = e.clientY;
+    const ox = parseFloat(card.style.left) || 0, oy = parseFloat(card.style.top) || 0;
+    function mv(ev){
+      card.style.left = Math.max(0, ox + (ev.clientX - startX)) + 'px';
+      card.style.top  = Math.max(0, oy + (ev.clientY - startY)) + 'px';
+      updateDashHeight();
+    }
+    function up(){
+      card.classList.remove('dragging');
+      document.removeEventListener('pointermove', mv);
+      document.removeEventListener('pointerup', up);
+      saveLayout();
+    }
+    document.addEventListener('pointermove', mv);
+    document.addEventListener('pointerup', up);
+  });
+}
+
+(function initLayout(){
+  const params = new URLSearchParams(location.search);
+  let obj = null;
+  const code = params.get('layout');
+  if(code){ try { obj = JSON.parse(decodeURIComponent(escape(atob(code)))); localStorage.setItem(LAYOUT_KEY, JSON.stringify(obj)); } catch(_){} }
+  if(!obj){ try { obj = JSON.parse(localStorage.getItem(LAYOUT_KEY)); } catch(_){} }
+  document.querySelectorAll('#dashboard .card').forEach(initDrag);
+  if(obj) applyLayout(obj);
+  window.addEventListener('resize', () => { if(_dash().classList.contains('freelayout')) updateDashHeight(); });
 })();
 
 // Boot
