@@ -11,6 +11,7 @@ Right-click the tray icon to quit.
 
 import asyncio
 import json
+import os
 import socket
 import struct
 import sys
@@ -200,11 +201,23 @@ class GT7Packet:
 #  WEBSOCKET SERVER
 # ═══════════════════════════════════════════════════════════════
 _clients = set()
+# Live status so the web page (and tray tooltip) can tell whether the console
+# is actually sending telemetry, not just whether the bridge is up.
+_stats = {"packets": 0, "ps5": None, "last": 0.0}
+
+def _status_msg():
+    return json.dumps({
+        "type": "status",
+        "packets": _stats["packets"],
+        "ps5": _stats["ps5"],
+        "listening": True,
+    })
 
 async def _ws_handler(ws):
     _clients.add(ws)
     try:
         await ws.send(json.dumps({"type":"connected","message":"GT7 Live Connector ready"}))
+        await ws.send(_status_msg())          # tell a fresh page what we're seeing right away
         async for _ in ws:
             pass
     except websockets.exceptions.ConnectionClosed:
@@ -239,6 +252,14 @@ async def _heartbeat(ip_ref):
         await asyncio.sleep(HEARTBEAT_INT)
         _hb(ip_ref[0] or '255.255.255.255')
 
+async def _status_loop():
+    # Push a heartbeat of our own state to any connected page every 2s, so the
+    # dashboard can show "listening, no telemetry yet" vs "receiving".
+    while True:
+        await asyncio.sleep(2)
+        if _clients:
+            await _broadcast(_status_msg())
+
 async def _receiver(ps5_ip, ip_ref):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -265,6 +286,7 @@ async def _receiver(ps5_ip, ip_ref):
         if detected is None:
             detected = addr[0]
             ip_ref[0] = detected
+            _stats["ps5"] = detected
             _hb(detected)
             await _broadcast(json.dumps({"type":"gt7_detected","ip":detected}))
 
@@ -275,6 +297,8 @@ async def _receiver(ps5_ip, ip_ref):
         if not pkt.valid or pkt.packet_id == last_id:
             continue
         last_id = pkt.packet_id
+        _stats["packets"] += 1
+        _stats["last"] = time.time()
         # Keep the console streaming: GT7 sends ~100 packets per heartbeat, then
         # stops. Re-ping every HEARTBEAT_EVERY packets so the feed never stalls.
         if pkt.packet_id % HEARTBEAT_EVERY == 0:
@@ -291,10 +315,13 @@ _loop = None
 async def _async_main(ps5_ip):
     ip_ref = [ps5_ip]
     server = await websockets.serve(_ws_handler, WS_HOST, WS_PORT)
+    if ps5_ip:
+        _stats["ps5"] = ps5_ip
     await asyncio.gather(
         server.wait_closed(),
         _receiver(ps5_ip, ip_ref),
         _heartbeat(ip_ref),
+        _status_loop(),
     )
 
 def _run_bridge(ps5_ip):
@@ -327,8 +354,42 @@ def _quit(icon, _item):
     sys.exit(0)
 
 
+def _resolve_ps5_ip():
+    """Where to send the heartbeat. Broadcast is tried by default, but on
+    networks that block broadcast (or a console on another subnet) you can
+    point the connector straight at the console: pass the IP as an argument,
+    set the GT7_PS5_IP environment variable, or drop a `gt7-console-ip.txt`
+    file (one line, the console's IP) next to the .exe."""
+    if len(sys.argv) > 1 and sys.argv[1].strip():
+        return sys.argv[1].strip()
+    env = os.environ.get("GT7_PS5_IP", "").strip()
+    if env:
+        return env
+    try:
+        base = os.path.dirname(sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__))
+        cfg = os.path.join(base, "gt7-console-ip.txt")
+        if os.path.exists(cfg):
+            with open(cfg, "r", encoding="utf-8") as fh:
+                ip = fh.readline().strip()
+                if ip:
+                    return ip
+    except Exception:
+        pass
+    return None
+
+def _tray_status(icon):
+    while True:
+        time.sleep(2)
+        ip = _stats["ps5"] or "searching…"
+        p = _stats["packets"]
+        state = "receiving" if p > 0 else "no telemetry yet — is GT7 on track?"
+        try:
+            icon.title = f"GT7 Live Connector\nConsole: {ip}\nPackets: {p} ({state})"
+        except Exception:
+            pass
+
 def main():
-    ps5_ip = sys.argv[1] if len(sys.argv) > 1 else None
+    ps5_ip = _resolve_ps5_ip()
 
     # Start bridge in background thread
     t = threading.Thread(target=_run_bridge, args=(ps5_ip,), daemon=True)
@@ -346,6 +407,7 @@ def main():
                 pystray.MenuItem("Quit", _quit),
             )
         )
+        threading.Thread(target=_tray_status, args=(icon,), daemon=True).start()
         icon.run()
     else:
         # Fallback: no tray, just keep main thread alive
