@@ -66,6 +66,20 @@ h1 em{font-style:normal;color:var(--accent);text-shadow:0 0 20px rgba(26,180,255
 .waiting-dots span:nth-child(3){animation-delay:.4s;}
 @keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
 
+/* ── HELP (collapsible) ── */
+.help-wrap{margin-top:1.5rem;padding-top:1.3rem;border-top:1px solid var(--bor);}
+.help summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:.5rem;font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--blu);}
+.help summary::-webkit-details-marker{display:none;}
+.help summary::before{content:'+';font-size:.85rem;line-height:0;}
+.help[open] summary::before{content:'\2212';}
+.help-body{margin-top:1rem;font-family:'JetBrains Mono',monospace;font-size:.5rem;line-height:1.8;color:var(--mut);}
+.help-body h4{color:var(--wht);font-size:.5rem;letter-spacing:.16em;text-transform:uppercase;margin:1.1rem 0 .4rem;}
+.help-body h4:first-child{margin-top:0;}
+.help-body ol,.help-body ul{margin:0 0 .3rem 1.1rem;padding:0;}
+.help-body li{margin-bottom:.3rem;}
+.help-body b{color:var(--gold);font-weight:400;}
+.help-body code{background:var(--dim);border:1px solid var(--bor);border-radius:3px;padding:.02rem .3rem;color:var(--gold);font-size:.46rem;}
+
 /* ── DASHBOARD (modular, OBS-ready widgets) ── */
 #dashboard{flex:1;display:none;min-height:0;padding:14px;gap:12px;
   grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:min-content;align-content:start;grid-auto-flow:row dense;}
@@ -360,9 +374,41 @@ body.editing .accent-swatches{display:flex;}
         PREVIEW DASHBOARD
       </button>
     </div>
-    <div style="margin-top:1.5rem;padding-top:1.3rem;border-top:1px solid var(--bor);font-family:'JetBrains Mono',monospace;font-size:.46rem;line-height:1.8;color:var(--mut);">
-      <span style="color:var(--blu);letter-spacing:.24em;">OBS OVERLAY</span><br>
-      Add this page as a Browser Source, then add <b style="color:var(--gold);font-weight:400;">?obs</b> to the URL for a transparent background. Drag a widget's bottom-right corner to resize it, double-click to reset. Alt-drag to crop in OBS, or load just one widget with <b style="color:var(--gold);font-weight:400;">?only=tyres</b>. Widget names: speed, inputs, gforce, laps, fuel, engine.
+    <div class="help-wrap">
+      <details class="help">
+        <summary>How to use this dashboard</summary>
+        <div class="help-body">
+          <h4>Quick start</h4>
+          <ol>
+            <li>Download the connector, unzip it, and run <code>GT7-Live-Connector.exe</code> from inside the folder. It lives in your system tray.</li>
+            <li>Start a session in Gran Turismo 7 and get out on track.</li>
+            <li>Telemetry appears here automatically. No in-game settings to change.</li>
+          </ol>
+
+          <h4>Use it in OBS</h4>
+          <ul>
+            <li>Click <b>OBS Links</b> in the top bar for a copy-ready link to the full overlay or any single widget.</li>
+            <li>In OBS: add a <b>Browser Source</b>, paste the link, and set the width and height. The background is transparent, so it floats over your gameplay.</li>
+            <li>Prefer one big overlay? Use the full-overlay link and <b>Alt-drag</b> the source in OBS to crop to the widgets you want.</li>
+          </ul>
+
+          <h4>Make it yours</h4>
+          <ul>
+            <li><b>Edit Layout</b> lets you drag widgets anywhere and resize them (drag a corner). Double-click a widget to reset its size.</li>
+            <li>Pick a brand accent colour and hide any widgets you do not need.</li>
+            <li><b>Copy Layout Link</b> saves your exact arrangement as a URL you can load into OBS or share with others.</li>
+            <li>Switch the Track Map overlay between plain, throttle and brake, speed, or tyre temperature with the buttons on the map.</li>
+          </ul>
+
+          <h4>Not seeing data?</h4>
+          <ul>
+            <li>Make sure you are <b>on track</b> in GT7, not in a menu or lobby.</li>
+            <li>Hover the tray icon: it shows your console IP and a packet count. <b>Decoded</b> should climb while you are driving.</li>
+            <li>If Windows flags the download, it is a false positive on the packaged app. Allow it in Windows Security, then run it.</li>
+            <li>Still nothing? Put your console's IP in a <code>gt7-console-ip.txt</code> file next to the connector (find the IP in the console's Network settings).</li>
+          </ul>
+        </div>
+      </details>
     </div>
     <div class="waiting" style="flex-wrap:wrap;line-height:1.6;">
       <span id="waitingTxt">Waiting for connection</span>
