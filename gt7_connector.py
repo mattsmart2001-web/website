@@ -56,28 +56,24 @@ HEARTBEAT_EVERY = 100  # also re-ping every N received packets to keep the strea
 # ═══════════════════════════════════════════════════════════════
 #  DECRYPTION
 # ═══════════════════════════════════════════════════════════════
-_KEY = (b'\x52\xC3\x33\x99\x65\x92\x87\xA4\x3C\xBF\xFE\x22\x51\x31\x22\x10'
-        b'\x5A\x0A\x53\xE7\xFB\x80\x81\x70\xFA\x3B\x3B\x6D\x12\xFD\x11\xAA')
+# GT7 telemetry is Salsa20-encrypted. The key is the ASCII marker string
+# (first 32 bytes). The 8-byte nonce is built from a 32-bit seed stored at
+# offset 0x40: nonce = (seed ^ 0xDEADBEAF) little-endian, then seed
+# little-endian. Decrypted packets begin with the magic b'G7S0'.
+_KEY = b'Simulator Interface Packet GT7 ver 0.0'[:32]
 
 def decrypt_packet(data: bytes) -> Optional[bytes]:
     if len(data) < 0x128:
         return None
-    iv = data[0x40:0x48]
+    seed = int.from_bytes(data[0x40:0x44], 'little')
+    nonce = (seed ^ 0xDEADBEAF).to_bytes(4, 'little') + seed.to_bytes(4, 'little')
     if HAS_SALSA:
         try:
-            dec = _S20.new(key=_KEY, nonce=iv).decrypt(data)
+            dec = _S20.new(key=_KEY, nonce=nonce).decrypt(data)
             if dec[0:4] == b'G7S0':
                 return dec
         except Exception:
             pass
-    try:
-        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
-        enc = Cipher(algorithms.ChaCha20(_KEY, bytes(4) + iv), mode=None).encryptor()
-        dec = enc.update(data)
-        if dec[0:4] == b'G7S0':
-            return dec
-    except Exception:
-        pass
     return None  # decryption failed — drop packet rather than send garbage
 
 # ═══════════════════════════════════════════════════════════════
