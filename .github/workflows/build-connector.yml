@@ -44,13 +44,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
 
-      - name: Build (one-folder)
-        # --onedir + zip: a one-folder build zipped up is flagged by Defender
-        # far less than a single onefile .exe.
+      - name: Build one-folder (zip)
+        # --onedir zipped up is flagged by Defender far less than a onefile .exe.
         # --noupx: UPX-packed binaries trip Defender's heuristics; skip it.
         # --version-file: embeds real version metadata (further reduces false positives).
         run: >
-          pyinstaller --onedir --noconsole --noupx
+          pyinstaller --onedir --noconsole --noupx --distpath dist_dir
           --name "GT7-Live-Connector"
           --icon NONE
           --version-file connector_version.txt
@@ -59,15 +58,48 @@ jobs:
           --hidden-import=Crypto.Cipher._Salsa20
           gt7_connector.py
 
-      - name: Zip the connector folder
+      - name: Add README and zip the folder
         shell: pwsh
-        run: Compress-Archive -Path dist/GT7-Live-Connector -DestinationPath dist/GT7-Live-Connector.zip -Force
+        run: |
+          $readme = @"
+          GT7 LIVE CONNECTOR - READ THIS FIRST
 
-      - name: Upload build artifact
+          1) Right-click this zip in Windows and choose "Extract All".
+          2) Open the extracted GT7-Live-Connector folder.
+          3) Run GT7-Live-Connector.exe from INSIDE that folder.
+
+          Do NOT run the .exe straight from inside the zip - Windows does not
+          unpack the support files, and you will get "Failed to load Python DLL".
+          Keep GT7-Live-Connector.exe together with the _internal folder; if you
+          move the .exe on its own it will not start.
+
+          If Windows flags it as a virus, that is a false positive on the packaged
+          Python app. Allow it in Windows Security, then run it.
+          "@
+          Set-Content -Path dist_dir/GT7-Live-Connector/README.txt -Value $readme -Encoding utf8
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path dist_dir/GT7-Live-Connector -DestinationPath dist/GT7-Live-Connector.zip -Force
+
+      - name: Build single-file (exe fallback)
+        # A onefile .exe that "just runs" (no extraction). Handy for anyone who
+        # hits the DLL error from not extracting the zip. May draw an AV prompt.
+        run: >
+          pyinstaller --onefile --noconsole --noupx --distpath dist
+          --name "GT7-Live-Connector"
+          --icon NONE
+          --version-file connector_version.txt
+          --collect-all Crypto
+          --hidden-import=Crypto.Cipher.Salsa20
+          --hidden-import=Crypto.Cipher._Salsa20
+          gt7_connector.py
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: GT7-Live-Connector
-          path: dist/GT7-Live-Connector.zip
+          path: |
+            dist/GT7-Live-Connector.zip
+            dist/GT7-Live-Connector.exe
           if-no-files-found: error
 
       - name: Publish release
@@ -82,10 +114,10 @@ jobs:
           else
             TAG="$DEFAULT_VERSION"
           fi
-          NOTES="Automated build of the GT7 Live Connector (one-folder zip; extract and run GT7-Live-Connector.exe inside). Includes the telemetry decryption fix and a self-diagnosing status readout."
+          NOTES="Automated build of the GT7 Live Connector. Two downloads: the .zip (extract the whole folder, then run GT7-Live-Connector.exe inside - fewer antivirus warnings) or the single-file .exe (just run it; may show an antivirus prompt). Includes the telemetry decryption fix, freeze fix, and self-diagnosing status."
           echo "Publishing release $TAG"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/GT7-Live-Connector.zip --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$TAG" dist/GT7-Live-Connector.zip dist/GT7-Live-Connector.exe --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$TAG" dist/GT7-Live-Connector.zip --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest
+            gh release create "$TAG" dist/GT7-Live-Connector.zip dist/GT7-Live-Connector.exe --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest
           fi
