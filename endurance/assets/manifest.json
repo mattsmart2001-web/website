@@ -1,5 +1,5 @@
 {
-    "name": "GTEC — Gran Turismo 7 Endurance Championship",
+    "name": "GTEC · Gran Turismo 7 Endurance Championship",
     "short_name": "GTEC",
     "description": "A Gran Turismo 7 endurance championship. Run by SparksTheory.",
     "start_url": "/endurance/",
@@ -24,6 +24,18 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any"
+        },
+        {
+            "src": "/endurance/assets/icon-192-maskable.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/endurance/assets/icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         },
         {
             "src": "/endurance/assets/gtec-icon.svg",
