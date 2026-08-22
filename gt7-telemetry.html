@@ -754,8 +754,11 @@ function handleMsg(msg){
   if(msg.type === 'telemetry'){
     setStatus('live','GT7 LIVE');
     if(!hasLiveData){ hasLiveData = true; showDashboard(); }
-    // Don't render here: just keep the newest frame. renderLoop draws it on the
-    // next animation frame, so bursts coalesce and rendering can never back up.
+    // Advance the integrated state on EVERY packet (cheap, never rAF-gated) so
+    // distance/lap/delta/sectors stay accurate even when OBS throttles rendering.
+    advanceState(msg);
+    // Keep the newest frame for renderLoop to draw on the next animation frame,
+    // so the expensive DOM/canvas work is throttled and can never back up.
     latestTelemetry = msg;
   }
 }
@@ -911,6 +914,7 @@ drawTemps();
 const lap = { lastCount:null, startPid:null, lastPid:null, dist:0, trace:[], ref:null, refLapMs:0, curMs:0 };
 const fuelS = { lapStartFuel:null, burns:[] };
 let tempsAccum = 0;
+let tempsDirty = false;   // set by advanceState when a temp-history point is added; drawn on the next render
 
 function interpTime(trace, dist){
   if(dist <= trace[0][0]) return trace[0][1];
@@ -923,12 +927,18 @@ function interpTime(trace, dist){
 }
 function setTemp(id, v){ const e = document.getElementById(id); if(e) e.textContent = v!=null ? Math.round(v)+'°' : '--'; }
 
-function telemetryDerived(d){
+// STATE (runs on EVERY packet, driven by the WebSocket message, never gated by
+// requestAnimationFrame). OBS throttles rAF, so anything time/distance-integrated
+// must live here or it drifts. This is cheap (arithmetic + a couple array pushes),
+// so the message handler stays fast and the connector never has to drop packets.
+function advanceState(d){
   const pid = d.packetId;
   if(pid == null) return;                  // live data only; preview drives its own widgets
   if(lap.lastPid == null){ lap.lastPid = pid; lap.startPid = pid; lap.lastCount = d.lapCount; fuelS.lapStartFuel = d.fuel; }
   let dpid = pid - lap.lastPid; lap.lastPid = pid;
-  if(dpid < 0 || dpid > 30) dpid = 0;      // ignore resets / menu jumps
+  // Only treat a genuinely huge gap (5s+) as a reset/menu jump. Smaller gaps
+  // (a brief hitch, or coalesced frames) still advance time correctly via dt.
+  if(dpid < 0 || dpid > 300) dpid = 0;
   const dt = dpid/60;
   tempsAccum += dt;
   lap.dist += ((d.speed||0)/3.6) * dt;
@@ -959,6 +969,18 @@ function telemetryDerived(d){
   const tr = lap.trace;
   if(tr.length === 0 || lap.dist - tr[tr.length-1][0] > 4) tr.push([lap.dist, lap.curMs]);
 
+  if(tempsAccum >= 0.5){ tempsAccum = 0; pushTemps(d.tyreTempFL, d.tyreTempFR, d.tyreTempRL, d.tyreTempRR, d.waterTemp, d.oilTemp); tempsDirty = true; }
+
+  // Track map sampling + sector state (drawing happens in renderDerived)
+  mapLive = { x: d.posX || 0, z: d.posZ || 0 };
+  if(lap.dist - mapSampleDist > 4){ mapSampleDist = lap.dist; pushMapPoint(d, lap.dist); }
+  mapGhost = (lap.ref && lap.ref.length > 2 && mapRef && mapRef.length > 5)
+    ? mapPosAtDist(mapRef, interpDist(lap.ref, lap.curMs)) : null;
+  advanceSectors(lap.dist, lap.curMs);
+}
+
+// RENDER (throttled to the animation frame; reads the state advanceState built).
+function renderDerived(d){
   const lc = document.getElementById('lapCurrent'); if(lc) lc.textContent = fmtLap(lap.curMs);
   document.getElementById('deltaCur').textContent = fmtLap(lap.curMs);
 
@@ -977,17 +999,12 @@ function telemetryDerived(d){
 
   updateFuelStrategy(d);
 
-  if(tempsAccum >= 0.5){ tempsAccum = 0; pushTemps(d.tyreTempFL, d.tyreTempFR, d.tyreTempRL, d.tyreTempRR, d.waterTemp, d.oilTemp); drawTemps(); }
+  if(tempsDirty){ tempsDirty = false; drawTemps(); }
   setTemp('thFL', d.tyreTempFL); setTemp('thFR', d.tyreTempFR); setTemp('thRL', d.tyreTempRL); setTemp('thRR', d.tyreTempRR);
   setTemp('thWAT', d.waterTemp); setTemp('thOIL', d.oilTemp);
 
-  // Track map + sectors
-  mapLive = { x: d.posX || 0, z: d.posZ || 0 };
-  if(lap.dist - mapSampleDist > 4){ mapSampleDist = lap.dist; pushMapPoint(d, lap.dist); }
-  mapGhost = (lap.ref && lap.ref.length > 2 && mapRef && mapRef.length > 5)
-    ? mapPosAtDist(mapRef, interpDist(lap.ref, lap.curMs)) : null;
   drawMap();
-  updateSectors(lap.dist, lap.curMs);
+  renderSectors(lap.curMs);
 }
 
 function updateFuelStrategy(d){
@@ -1181,7 +1198,9 @@ function finalizeSector(k, timeMs){
   secS.shown[k] = timeMs;
   secS.delta[k] = secS.ref ? (timeMs - secS.ref[k]) : null;
 }
-function updateSectors(dist, curMs){
+// State: advance the sector index and finalize a split when a boundary is
+// crossed. Runs every packet (in advanceState) so splits land at the right spot.
+function advanceSectors(dist, curMs){
   if(secS.boundaries){
     const b = secS.boundaries;
     const idx = dist < b[0] ? 0 : dist < b[1] ? 1 : 2;
@@ -1190,6 +1209,10 @@ function updateSectors(dist, curMs){
       secS.startMs = curMs; secS.idx = idx;
     }
   }
+}
+// Render: draw the three sector rows from the current state. Runs on the render
+// frame only.
+function renderSectors(curMs){
   for(let k=0;k<3;k++){
     const tEl = document.getElementById('secTime'+(k+1));
     const dEl = document.getElementById('secDelta'+(k+1));
@@ -1369,8 +1392,10 @@ function update(d){
 
   document.getElementById('oilPress').textContent = d.oilPress != null ? (d.oilPress*1000).toFixed(0)+' kPa' : '-- kPa';
 
-  // Derived: predictive lap delta, fuel strategy, temp history (live packets only)
-  telemetryDerived(d);
+  // Derived readouts (predictive delta, fuel, temp graph, map, sectors) are
+  // render-only here; the state behind them is advanced per-packet in
+  // advanceState. Preview (no packetId) drives those widgets via previewExtras.
+  if(d.packetId != null) renderDerived(d);
 }
 
 // ── PREVIEW MODE ──
