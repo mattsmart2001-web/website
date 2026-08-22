@@ -101,9 +101,12 @@ body.bare .card-title,body.bare .card *:not(canvas){text-shadow:0 1px 4px rgba(0
 
 /* A widget = its own self-contained, translucent, croppable entity.
    Each is resizable: drag the bottom-right corner, double-click to reset. */
+/* Coloured accent bar down the left edge (FLUX89 style). An inset box-shadow
+   is used so it hugs the rounded corners and never scrolls with content; it
+   drops out cleanly in obs/bare mode where the box-shadow is stripped. */
 .card{background:rgba(10,12,19,.72);border:1px solid rgba(255,255,255,.08);border-radius:13px;
-  padding:.85rem 1rem;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  box-shadow:0 6px 22px rgba(0,0,0,.4);display:flex;flex-direction:column;
+  padding:.85rem 1rem .85rem 1.2rem;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  box-shadow:0 6px 22px rgba(0,0,0,.4),inset 4px 0 0 var(--accent);display:flex;flex-direction:column;
   align-self:start;min-width:190px;min-height:110px;resize:both;overflow:auto;}
 .card::-webkit-resizer{background:transparent;}
 /* subtle grip in the corner so it reads as resizable */
@@ -156,7 +159,7 @@ body.bare .card-title,body.bare .card *:not(canvas){text-shadow:0 1px 4px rgba(0
 .inp-legend{display:flex;gap:1.4rem;margin-bottom:.5rem;}
 .inp-chip{display:flex;align-items:center;gap:.45rem;font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.14em;color:var(--mut);}
 .inp-chip .sw{width:15px;height:3px;border-radius:2px;}
-.inp-chip b{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.02em;margin-left:.2rem;}
+.inp-chip b{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.02em;margin-left:.2rem;}
 .inp-canvas-wrap{position:relative;width:100%;height:150px;flex:1;min-height:120px;}
 #inputCanvas{display:block;width:100%;height:100%;}
 .steer-block{margin-top:.65rem;}
@@ -171,18 +174,18 @@ body.bare .card-title,body.bare .card *:not(canvas){text-shadow:0 1px 4px rgba(0
 .gforce-vals{display:flex;gap:1.8rem;margin-top:.45rem;}
 .gval{display:flex;flex-direction:column;align-items:center;}
 .gval .lbl{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.18em;color:var(--mut);}
-.gval .num{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;line-height:1.1;}
+.gval .num{font-family:'Bebas Neue',sans-serif;font-size:1.85rem;line-height:1.1;}
 
 /* LAPS */
 .lap-row{display:flex;justify-content:space-between;align-items:baseline;padding:.5rem 0;border-bottom:1px solid rgba(28,31,46,.8);}
 .lap-row:last-of-type{border-bottom:none;}
 .lap-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.16em;color:var(--mut);}
-.lap-time{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.04em;color:var(--wht);}
+.lap-time{font-family:'Bebas Neue',sans-serif;font-size:2.15rem;letter-spacing:.04em;color:var(--wht);}
 .lap-time.best{color:var(--grn);}
 .lap-time.current{color:var(--gold);}
 .lap-count-row{display:flex;justify-content:space-between;align-items:center;margin-top:.55rem;padding-top:.5rem;border-top:1px solid var(--bor);}
 .lc-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.16em;color:var(--mut);}
-.lc-val{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--wht);}
+.lc-val{font-family:'Bebas Neue',sans-serif;font-size:1.85rem;color:var(--wht);}
 
 /* TYRES: big, OBS-legible */
 .tyre-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:.65rem;}
@@ -207,7 +210,7 @@ body.bare .card-title,body.bare .card *:not(canvas){text-shadow:0 1px 4px rgba(0
 .engine-inner{flex:1;display:flex;flex-direction:row;gap:1.6rem;align-items:stretch;flex-wrap:wrap;}
 .eng-row{flex:1;min-width:120px;display:flex;flex-direction:column;gap:.28rem;justify-content:center;}
 .eng-lbl{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:.2em;color:var(--mut);}
-.eng-val{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1;color:var(--wht);transition:color .3s;}
+.eng-val{font-family:'Bebas Neue',sans-serif;font-size:2.15rem;line-height:1;color:var(--wht);transition:color .3s;}
 .eng-bar-wrap{height:6px;background:var(--dim);border-radius:3px;overflow:hidden;}
 .eng-bar{height:100%;border-radius:3px;background:var(--blu);transition:width .3s,background .3s;}
 .eng-divider{width:1px;align-self:stretch;background:var(--bor);}
@@ -218,7 +221,7 @@ body.bare .card-title,body.bare .card *:not(canvas){text-shadow:0 1px 4px rgba(0
 .delta-big.up{color:var(--red);} .delta-big.dn{color:var(--grn);}
 .delta-sub{display:flex;justify-content:space-between;gap:1rem;}
 .delta-cell .l{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.16em;color:var(--mut);}
-.delta-cell .v{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;color:var(--wht);}
+.delta-cell .v{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--wht);}
 .delta-note{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.06em;color:var(--mut);}
 
 /* TEMP HISTORY graph */
@@ -234,7 +237,7 @@ body.bare .card-title,body.bare .card *:not(canvas){text-shadow:0 1px 4px rgba(0
 .fuel-strat{border-top:1px solid var(--bor);margin-top:.4rem;padding-top:.45rem;display:flex;flex-direction:column;gap:.4rem;}
 .fs-row{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;}
 .fs-lbl{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.14em;color:var(--mut);}
-.fs-val{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--wht);}
+.fs-val{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--wht);}
 .fs-val.ok{color:var(--grn);} .fs-val.warn{color:var(--gold);} .fs-val.bad{color:var(--red);}
 
 /* ── LAYOUT EDITOR ── */
@@ -269,8 +272,8 @@ body.editing #dashboard .card.dragging{cursor:grabbing;opacity:.9;outline-color:
 .sec-row:last-child{border-bottom:none;}
 .sec-row.active .sec-lbl{color:var(--accent);}
 .sec-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.14em;color:var(--mut);}
-.sec-time{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--wht);text-align:right;}
-.sec-delta{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;text-align:right;color:var(--mut);min-width:64px;}
+.sec-time{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;color:var(--wht);text-align:right;}
+.sec-delta{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;text-align:right;color:var(--mut);min-width:64px;}
 .sec-delta.up{color:var(--red);} .sec-delta.dn{color:var(--grn);}
 
 /* Edit: per-widget hide button, brand + hidden chips */
@@ -642,7 +645,7 @@ body.editing .accent-swatches{display:flex;}
       <div class="eng-divider"></div>
       <div class="eng-row">
         <span class="eng-lbl">OIL PRESSURE</span>
-        <span class="eng-val" id="oilPress" style="font-size:1.2rem;">-- kPa</span>
+        <span class="eng-val" id="oilPress" style="font-size:1.55rem;">-- kPa</span>
       </div>
     </div>
   </div>
