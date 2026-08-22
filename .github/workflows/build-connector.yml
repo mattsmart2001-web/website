@@ -147,9 +147,15 @@ jobs:
   # Single publisher: waits for all OS builds, gathers their artifacts, and
   # uploads them to the release in one go. Publishing from one job (instead of
   # each OS job in parallel) avoids the asset-upload race that 404s.
+  # Publish from ONE branch only. Both deploy branches get the same commit, so
+  # publishing from each would fire two simultaneous `gh release upload` runs
+  # against the same tag and race, which can drop assets. The other branch still
+  # builds (and tests) its artifacts above; it just skips the publish.
   release:
     needs: [windows, macos]
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' || github.event_name == 'push'
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/claude/add-signup-page-pBzI2')
     runs-on: ubuntu-latest
     steps:
       - name: Download all build artifacts
