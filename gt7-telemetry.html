@@ -97,6 +97,9 @@ body.obs .card-map{background:transparent;border-color:transparent;box-shadow:no
 /* Bare mode: drop every widget's box so only the data floats. Text gets a
    shadow so it stays readable over bright gameplay. */
 body.bare .card{background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+/* Also strip the inner boxes (tyre corners, hero gear, map buttons) so bare
+   really is data-only. Data-viz fills (bars, LED strip, gauges) are left alone. */
+body.bare .tyre-corner,body.bare .hero-gear,body.bare .map-metric{background:transparent!important;border-color:transparent!important;}
 body.bare .card-title,body.bare .card *:not(canvas){text-shadow:0 1px 4px rgba(0,0,0,.92),0 0 2px rgba(0,0,0,.75);}
 
 /* A widget = its own self-contained, translucent, croppable entity.
