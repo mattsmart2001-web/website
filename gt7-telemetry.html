@@ -94,6 +94,10 @@ body.obs #setupScreen{display:none!important;}
 body.obs #dashboard{padding:12px;}
 /* Track map floats as just the line in OBS (no box behind it). */
 body.obs .card-map{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
+/* backdrop blur is very expensive in OBS's embedded browser (CEF) over live
+   video and is a major cause of the overlay stuttering. Drop it in OBS; the
+   panels keep their translucent background, just without the blur. */
+body.obs .card{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
 /* Bare mode: drop every widget's box so only the data floats. Text gets a
    shadow so it stays readable over bright gameplay. */
 body.bare .card{background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
@@ -678,6 +682,10 @@ let wsIdx = 0;
 let ws = null, reconnectTimer = null;
 let hasLiveData = false, isPreview = false;
 let lastMsgTs = Date.now();   // watchdog: any message (telemetry or 2s status) resets this
+// Latest live packet, rendered once per animation frame (see renderLoop). This
+// decouples rendering from the packet rate so a slow browser (OBS's embedded
+// CEF) coalesces a burst down to the newest frame instead of falling behind.
+let latestTelemetry = null;
 
 function updateWaiting(txt){
   const el = document.getElementById('waitingTxt');
@@ -746,7 +754,9 @@ function handleMsg(msg){
   if(msg.type === 'telemetry'){
     setStatus('live','GT7 LIVE');
     if(!hasLiveData){ hasLiveData = true; showDashboard(); }
-    update(msg);
+    // Don't render here: just keep the newest frame. renderLoop draws it on the
+    // next animation frame, so bursts coalesce and rendering can never back up.
+    latestTelemetry = msg;
   }
 }
 
@@ -1137,12 +1147,18 @@ document.querySelectorAll('.map-metric').forEach(btn => btn.addEventListener('cl
   drawMap();
 }));
 if(window.ResizeObserver){ new ResizeObserver(() => drawMap()).observe(mapCanvas); }
-// Redraw the map on a continuous animation loop rather than only when a packet
-// arrives. OBS keeps browser sources rendering, so this keeps the traced line
-// live and complete in OBS (where per-packet draws get throttled).
-(function mapLoop(){
-  if(mapCanvas.offsetParent !== null) drawMap();   // only when the map is actually visible
-  requestAnimationFrame(mapLoop);
+// Single render loop for live data. It renders at most one frame per display
+// refresh from the newest packet, so a burst of packets (or a browser that has
+// fallen behind, like OBS's CEF under load) collapses to just the latest frame
+// instead of queuing work and stuttering. update() redraws every widget,
+// including the track map, so no separate per-frame map loop is needed; resize
+// is covered by the ResizeObserver above.
+(function renderLoop(){
+  if(!isPreview && latestTelemetry){
+    update(latestTelemetry);
+    latestTelemetry = null;
+  }
+  requestAnimationFrame(renderLoop);
 })();
 
 // ── SECTORS (three splits by distance, delta vs best lap) ──
