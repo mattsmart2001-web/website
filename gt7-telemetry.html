@@ -971,9 +971,16 @@ function advanceState(d){
 
   if(tempsAccum >= 0.5){ tempsAccum = 0; pushTemps(d.tyreTempFL, d.tyreTempFR, d.tyreTempRL, d.tyreTempRR, d.waterTemp, d.oilTemp); tempsDirty = true; }
 
-  // Track map sampling + sector state (drawing happens in renderDerived)
-  if(d.posX || d.posZ) mapLive = { x: d.posX, z: d.posZ };
-  if(lap.dist - mapSampleDist > 4){ mapSampleDist = lap.dist; pushMapPoint(d, lap.dist); }
+  // Track map sampling + sector state (drawing happens on the map's own timer).
+  // Sample by REAL world-space movement, not integrated lap distance: the line
+  // then grows whenever the car actually moves, even if distance integration
+  // hitches (which it can on OBS's gappier packet delivery, freezing the line
+  // while the position dot kept moving).
+  if(d.posX || d.posZ){
+    mapLive = { x: d.posX, z: d.posZ };
+    const lastP = mapCur[mapCur.length - 1];
+    if(!lastP || Math.hypot(d.posX - lastP.x, d.posZ - lastP.z) > 4){ pushMapPoint(d, lap.dist); }
+  }
   mapGhost = (lap.ref && lap.ref.length > 2 && mapRef && mapRef.length > 5)
     ? mapPosAtDist(mapRef, interpDist(lap.ref, lap.curMs)) : null;
   advanceSectors(lap.dist, lap.curMs);
@@ -1135,7 +1142,10 @@ function drawMap(){
   syncMapCanvas();
   const c = mCtx, w = mapCanvas.width, h = mapCanvas.height, pad = 16;
   c.clearRect(0,0,w,h);
-  const src = (mapRef && mapRef.length > 5) ? mapRef : mapCur;
+  // Show whichever trace is more complete. Once a full lap is locked into mapRef
+  // it stays the stable base, but if we joined mid-session (so mapRef is a short
+  // partial lap) the growing current lap wins and the track keeps filling in.
+  const src = (mapRef && mapRef.length > mapCur.length) ? mapRef : mapCur;
   const hint = document.getElementById('mapHint');
   if(!src || src.length < 3){ if(hint) hint.style.display = ''; if(mapLive) {} return; }
   if(hint) hint.style.display = 'none';
