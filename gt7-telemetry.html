@@ -972,7 +972,7 @@ function advanceState(d){
   if(tempsAccum >= 0.5){ tempsAccum = 0; pushTemps(d.tyreTempFL, d.tyreTempFR, d.tyreTempRL, d.tyreTempRR, d.waterTemp, d.oilTemp); tempsDirty = true; }
 
   // Track map sampling + sector state (drawing happens in renderDerived)
-  mapLive = { x: d.posX || 0, z: d.posZ || 0 };
+  if(d.posX || d.posZ) mapLive = { x: d.posX, z: d.posZ };
   if(lap.dist - mapSampleDist > 4){ mapSampleDist = lap.dist; pushMapPoint(d, lap.dist); }
   mapGhost = (lap.ref && lap.ref.length > 2 && mapRef && mapRef.length > 5)
     ? mapPosAtDist(mapRef, interpDist(lap.ref, lap.curMs)) : null;
@@ -1067,8 +1067,12 @@ let mapGhost = null;    // {x,z} where the best-lap car would be right now
 let mapSampleDist = -99;
 
 function pushMapPoint(d, dist){
+  // Skip packets with no position (posX/posZ arrive as 0 during pauses/pits/menu
+  // frames). Plotting a 0,0 point draws a stray line to the origin and skews the
+  // map's bounds, which is the little gap/spike the track sometimes showed.
+  if(!d.posX && !d.posZ) return;
   const tt = ((d.tyreTempFL||0)+(d.tyreTempFR||0)+(d.tyreTempRL||0)+(d.tyreTempRR||0))/4;
-  mapCur.push({ x:d.posX||0, z:d.posZ||0, thr:d.throttle||0, brk:d.brake||0, spd:d.speed||0, tt, dist });
+  mapCur.push({ x:d.posX, z:d.posZ, thr:d.throttle||0, brk:d.brake||0, spd:d.speed||0, tt, dist });
   if(mapCur.length > 4000) mapCur.shift();
 }
 // invert the reference trace: distance the best-lap car had covered at time `ms`
@@ -1139,11 +1143,23 @@ function drawMap(){
   const obs = document.body.classList.contains('obs');
   c.lineWidth = obs ? 6 : 3; c.lineCap = 'round'; c.lineJoin = 'round';
   if(obs){ c.shadowColor = 'rgba(0,0,0,0.75)'; c.shadowBlur = 6; c.globalAlpha = 0.9; }
+  // Batch consecutive same-colour segments into a single path. In LINE mode the
+  // whole track is one colour, so this is ONE stroke instead of thousands, which
+  // is what let the map choke OBS's browser (CEF) to a standstill.
+  let curColor = null;
   for(let i=1;i<src.length;i++){
-    const a = T(src[i-1].x, src[i-1].z), q = T(src[i].x, src[i].z);
-    c.strokeStyle = mapMetric === 'speed' ? speedColor((src[i].spd-spMin)/((spMax-spMin)||1)) : segColor(src[i]);
-    c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(q[0],q[1]); c.stroke();
+    const col = mapMetric === 'speed' ? speedColor((src[i].spd-spMin)/((spMax-spMin)||1)) : segColor(src[i]);
+    if(col !== curColor){
+      if(curColor !== null) c.stroke();          // flush the run built so far
+      c.strokeStyle = col; curColor = col;
+      c.beginPath();
+      const a = T(src[i-1].x, src[i-1].z);
+      c.moveTo(a[0], a[1]);
+    }
+    const q = T(src[i].x, src[i].z);
+    c.lineTo(q[0], q[1]);
   }
+  if(curColor !== null) c.stroke();
   c.shadowBlur = 0; c.globalAlpha = 1;
   if(mapGhost){
     const g = T(mapGhost.x, mapGhost.z);
@@ -1171,10 +1187,12 @@ if(window.ResizeObserver){ new ResizeObserver(() => drawMap()).observe(mapCanvas
 // including the track map, so no separate per-frame map loop is needed; resize
 // is covered by the ResizeObserver above.
 (function renderLoop(){
-  if(!isPreview && latestTelemetry){
-    update(latestTelemetry);
-    latestTelemetry = null;
-  }
+  try {
+    if(!isPreview && latestTelemetry){
+      update(latestTelemetry);
+      latestTelemetry = null;
+    }
+  } catch(_){ /* never let one bad frame kill the loop and freeze the overlay */ }
   requestAnimationFrame(renderLoop);
 })();
 
