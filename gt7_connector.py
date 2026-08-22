@@ -411,22 +411,32 @@ def _resolve_ps5_ip():
     networks that block broadcast (or a console on another subnet) you can
     point the connector straight at the console: pass the IP as an argument,
     set the GT7_PS5_IP environment variable, or drop a `gt7-console-ip.txt`
-    file (one line, the console's IP) next to the .exe."""
+    file (one line, the console's IP) next to the app or in your home folder."""
     if len(sys.argv) > 1 and sys.argv[1].strip():
         return sys.argv[1].strip()
     env = os.environ.get("GT7_PS5_IP", "").strip()
     if env:
         return env
+    # Look for gt7-console-ip.txt in several sensible places: next to the
+    # executable, the current directory, and the user's home folder (the home
+    # folder matters on macOS, where the .app bundle hides the "next to it" spot).
+    candidates = []
     try:
-        base = os.path.dirname(sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__))
-        cfg = os.path.join(base, "gt7-console-ip.txt")
-        if os.path.exists(cfg):
-            with open(cfg, "r", encoding="utf-8") as fh:
-                ip = fh.readline().strip()
-                if ip:
-                    return ip
+        candidates.append(os.path.dirname(sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__)))
     except Exception:
         pass
+    candidates.append(os.getcwd())
+    candidates.append(os.path.expanduser("~"))
+    for base in candidates:
+        try:
+            cfg = os.path.join(base, "gt7-console-ip.txt")
+            if os.path.exists(cfg):
+                with open(cfg, "r", encoding="utf-8") as fh:
+                    ip = fh.readline().strip()
+                    if ip:
+                        return ip
+        except Exception:
+            pass
     return None
 
 def _tray_status(icon):
