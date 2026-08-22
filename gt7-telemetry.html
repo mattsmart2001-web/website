@@ -1003,7 +1003,9 @@ function renderDerived(d){
   setTemp('thFL', d.tyreTempFL); setTemp('thFR', d.tyreTempFR); setTemp('thRL', d.tyreTempRL); setTemp('thRR', d.tyreTempRR);
   setTemp('thWAT', d.waterTemp); setTemp('thOIL', d.oilTemp);
 
-  drawMap();
+  // The track map draws on its own setInterval timer (see below), not here, so
+  // it stays alive in OBS even if the animation frame is throttled or another
+  // widget's render throws.
   renderSectors(lap.curMs);
 }
 
@@ -1118,7 +1120,15 @@ function segColor(p){
 function syncMapCanvas(){
   // Match the backing store to the displayed size so the track keeps its real
   // aspect ratio (letterboxed) instead of stretching when the widget resizes.
-  const w = Math.round(mapCanvas.clientWidth), h = Math.round(mapCanvas.clientHeight);
+  let w = Math.round(mapCanvas.clientWidth), h = Math.round(mapCanvas.clientHeight);
+  if(w <= 0 || h <= 0){
+    // OBS's offscreen browser can report a 0 client size before layout settles;
+    // fall back to the wrapper size, then a sane default, so we never draw into
+    // a 0x0 canvas (which looks like the map "not working").
+    const wrap = mapCanvas.parentElement;
+    w = Math.round((wrap && wrap.clientWidth) || 480);
+    h = Math.round((wrap && wrap.clientHeight) || 360);
+  }
   if(w > 0 && h > 0 && (mapCanvas.width !== w || mapCanvas.height !== h)){ mapCanvas.width = w; mapCanvas.height = h; }
 }
 function drawMap(){
@@ -1180,6 +1190,17 @@ document.querySelectorAll('.map-metric').forEach(btn => btn.addEventListener('cl
   drawMap();
 }));
 if(window.ResizeObserver){ new ResizeObserver(() => drawMap()).observe(mapCanvas); }
+// Draw the track map on its own interval timer instead of the animation frame.
+// OBS's embedded browser throttles requestAnimationFrame (which is what kept
+// freezing the map), but interval timers keep firing, so this keeps the track
+// live in OBS. The map's data (points, car position, ghost) is updated on every
+// packet in advanceState; this loop only paints it. Preview drives its own map,
+// so skip while previewing to avoid the two fighting over the canvas.
+setInterval(function(){
+  if(isPreview) return;
+  if(!document.getElementById('dashboard').classList.contains('vis')) return;
+  try { drawMap(); } catch(_){}
+}, 50);
 // Single render loop for live data. It renders at most one frame per display
 // refresh from the newest packet, so a burst of packets (or a browser that has
 // fallen behind, like OBS's CEF under load) collapses to just the latest frame
