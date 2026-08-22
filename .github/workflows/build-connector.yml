@@ -102,27 +102,9 @@ jobs:
             dist/GT7-Live-Connector.exe
           if-no-files-found: error
 
-      - name: Publish release
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' || github.event_name == 'push'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_VERSION: "v2.3"
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.version }}"
-          else
-            TAG="$DEFAULT_VERSION"
-          fi
-          NOTES="Automated build of the GT7 Live Connector for Windows and macOS. Windows: the .zip (extract the whole folder, then run GT7-Live-Connector.exe inside) or the single-file .exe. macOS: the Apple Silicon or Intel .zip (unzip, then right-click the app and Open the first time). Includes the telemetry decryption fix, freeze fix, and self-diagnosing status."
-          # Race-safe across the parallel OS jobs: create the release only if it
-          # is missing, then upload/clobber this job's own assets.
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest || true
-          gh release upload "$TAG" dist/GT7-Live-Connector.zip dist/GT7-Live-Connector.exe --repo "$GITHUB_REPOSITORY" --clobber
-
   macos:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-14
@@ -167,8 +149,22 @@ jobs:
           path: dist/GT7-Live-Connector-macOS-${{ matrix.arch }}.zip
           if-no-files-found: error
 
+  # Single publisher: waits for all OS builds, gathers their artifacts, and
+  # uploads them to the release in one go. Publishing from one job (instead of
+  # each OS job in parallel) avoids the asset-upload race that 404s.
+  release:
+    needs: [windows, macos]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: GT7-Live-Connector-*
+          merge-multiple: true
+          path: assets
+
       - name: Publish release
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != '' || github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_VERSION: "v2.3"
@@ -178,7 +174,8 @@ jobs:
           else
             TAG="$DEFAULT_VERSION"
           fi
-          NOTES="Automated build of the GT7 Live Connector for Windows and macOS."
+          NOTES="Automated build of the GT7 Live Connector for Windows and macOS. Windows: the .zip (extract the whole folder, then run GT7-Live-Connector.exe inside) or the single-file .exe. macOS: the Apple Silicon or Intel .zip (unzip, then right-click the app and Open the first time). Includes the telemetry decryption fix, freeze fix, and self-diagnosing status."
+          echo "Publishing $TAG with:"; ls -1 assets
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest || true
-          gh release upload "$TAG" "dist/GT7-Live-Connector-macOS-${{ matrix.arch }}.zip" --repo "$GITHUB_REPOSITORY" --clobber
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest
+          gh release upload "$TAG" assets/* --repo "$GITHUB_REPOSITORY" --clobber
