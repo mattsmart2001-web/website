@@ -102,16 +102,11 @@ jobs:
             dist/GT7-Live-Connector.exe
           if-no-files-found: error
 
+  # Apple Silicon only. GitHub is retiring the Intel (macos-13) hosted runners,
+  # so those jobs get starved in the queue and cancelled, blocking the release.
+  # Every Mac sold since late 2020 is Apple Silicon, so this covers current Macs.
   macos:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-14
-            arch: AppleSilicon
-          - os: macos-13
-            arch: Intel
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
@@ -140,13 +135,13 @@ jobs:
         run: |
           ditto -c -k --sequesterRsrc --keepParent \
             "dist/GT7-Live-Connector.app" \
-            "dist/GT7-Live-Connector-macOS-${{ matrix.arch }}.zip"
+            "dist/GT7-Live-Connector-macOS-AppleSilicon.zip"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GT7-Live-Connector-macos-${{ matrix.arch }}
-          path: dist/GT7-Live-Connector-macOS-${{ matrix.arch }}.zip
+          name: GT7-Live-Connector-macos-AppleSilicon
+          path: dist/GT7-Live-Connector-macOS-AppleSilicon.zip
           if-no-files-found: error
 
   # Single publisher: waits for all OS builds, gathers their artifacts, and
@@ -174,7 +169,7 @@ jobs:
           else
             TAG="$DEFAULT_VERSION"
           fi
-          NOTES="Automated build of the GT7 Live Connector for Windows and macOS. Windows: the .zip (extract the whole folder, then run GT7-Live-Connector.exe inside) or the single-file .exe. macOS: the Apple Silicon or Intel .zip (unzip, then right-click the app and Open the first time). Includes the telemetry decryption fix, freeze fix, and self-diagnosing status."
+          NOTES="Automated build of the GT7 Live Connector for Windows and macOS. Windows: the .zip (extract the whole folder, then run GT7-Live-Connector.exe inside) or the single-file .exe. macOS (Apple Silicon): the .zip (unzip, then right-click the app and Open the first time). Includes the telemetry decryption fix, freeze fix, and self-diagnosing status."
           echo "Publishing $TAG with:"; ls -1 assets
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
             gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest
