@@ -46,7 +46,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "2.3"   # shown in the tray so you can confirm which build is running
+VERSION       = "2.4"   # shown in the tray so you can confirm which build is running
 GT7_PORT      = 33740
 SEND_PORT     = 33739
 WS_PORT       = 8765
@@ -78,7 +78,7 @@ def decrypt_packet(data: bytes) -> Optional[bytes]:
                 return dec
         except Exception:
             pass
-    return None  # decryption failed — drop packet rather than send garbage
+    return None  # decryption failed, drop packet rather than send garbage
 
 # ═══════════════════════════════════════════════════════════════
 #  PACKET PARSER
@@ -200,7 +200,7 @@ class GT7Packet:
 # ═══════════════════════════════════════════════════════════════
 #  WEBSOCKET SERVER
 # ═══════════════════════════════════════════════════════════════
-_clients = set()
+_clients = {}   # ws -> asyncio.Queue(maxsize=1): holds only the newest unsent frame
 # Live status so the web page (and tray tooltip) can tell whether the console
 # is actually sending telemetry, not just whether the bridge is up.
 _stats = {"packets": 0, "raw": 0, "ps5": None, "last": 0.0, "debug": None}
@@ -230,31 +230,54 @@ def _status_msg():
         "listening": True,
     })
 
+async def _client_sender(ws, q):
+    # One task per client, the ONLY place that awaits ws.send. If the client is
+    # slow (OBS's embedded browser rendering at high load), this task blocks here
+    # while _broadcast keeps overwriting the single queued frame, so the client
+    # simply skips stale frames and gets the freshest one once it catches up.
+    # The receive loop is never blocked by it. websockets' own keepalive closes
+    # a truly dead connection, which ends this task and cleans the client up.
+    try:
+        while True:
+            msg = await q.get()
+            await ws.send(msg)
+    except Exception:
+        pass
+    finally:
+        _clients.pop(ws, None)
+
 async def _ws_handler(ws):
-    _clients.add(ws)
+    # Handshake messages go out directly and in order, before the frame queue
+    # (which coalesces to a single latest frame) is wired up.
     try:
         await ws.send(json.dumps({"type":"connected","message":"GT7 Live Connector ready"}))
         await ws.send(_status_msg())          # tell a fresh page what we're seeing right away
+    except Exception:
+        return
+    q = asyncio.Queue(maxsize=1)
+    _clients[ws] = q
+    sender = asyncio.create_task(_client_sender(ws, q))
+    try:
         async for _ in ws:
             pass
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
-        _clients.discard(ws)
+        _clients.pop(ws, None)
+        sender.cancel()
 
-async def _broadcast(msg: str):
-    # Send to every client concurrently with a per-client timeout. A slow or
-    # throttled client (e.g. a backgrounded OBS Browser Source) must not be
-    # able to stall the whole feed via backpressure, which would freeze every
-    # viewer. Any client that can't keep up is dropped and will reconnect.
-    if not _clients:
-        return
-    async def _send(ws):
+def _broadcast(msg: str):
+    # Non-blocking fan-out: drop any older unsent frame and enqueue the newest
+    # for each client. Runs to completion without awaiting, so a slow client can
+    # never stall the receive loop with backpressure; it just loses intermediate
+    # frames. Kept synchronous on purpose so callers cannot accidentally block.
+    for ws, q in list(_clients.items()):
         try:
-            await asyncio.wait_for(ws.send(msg), timeout=1.0)
+            if q.full():
+                q.get_nowait()      # discard the stale frame the client hasn't sent yet
+            q.put_nowait(msg)
         except Exception:
-            _clients.discard(ws)
-    await asyncio.gather(*(_send(ws) for ws in list(_clients)), return_exceptions=True)
+            pass
 
 # ═══════════════════════════════════════════════════════════════
 #  UDP RECEIVER + HEARTBEAT
@@ -306,7 +329,7 @@ async def _status_loop():
     while True:
         await asyncio.sleep(2)
         if _clients:
-            await _broadcast(_status_msg())
+            _broadcast(_status_msg())
 
 async def _receiver(ps5_ip, ip_ref):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -340,7 +363,7 @@ async def _receiver(ps5_ip, ip_ref):
             ip_ref[0] = detected
             _stats["ps5"] = detected
             _hb(detected)
-            await _broadcast(json.dumps({"type":"gt7_detected","ip":detected}))
+            _broadcast(json.dumps({"type":"gt7_detected","ip":detected}))
 
         dec = decrypt_packet(raw)
         if dec is None:
@@ -356,7 +379,7 @@ async def _receiver(ps5_ip, ip_ref):
         if pkt.packet_id % HEARTBEAT_EVERY == 0:
             _hb(ip_ref[0] or detected or '255.255.255.255')
         if _clients:
-            await _broadcast(json.dumps(pkt.to_dict()))
+            _broadcast(json.dumps(pkt.to_dict()))
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -451,7 +474,7 @@ def _tray_status(icon):
             d = _stats.get("debug") or {}
             state = f"undecoded len={d.get('len')} dec={d.get('dec')}"
         else:
-            state = "nothing from console — is GT7 on track?"
+            state = "nothing from console, is GT7 on track?"
         try:
             icon.title = f"GT7 Live Connector v{VERSION}\nConsole: {ip}\nRaw: {raw}  Decoded: {p}\n{state}"
         except Exception:
@@ -468,9 +491,9 @@ def main():
         icon = pystray.Icon(
             name="GT7 Live Connector",
             icon=_make_icon(),
-            title="GT7 Live Connector — Running\nws://localhost:8765",
+            title="GT7 Live Connector: Running\nws://localhost:8765",
             menu=pystray.Menu(
-                pystray.MenuItem("GT7 Live Connector — Running", None, enabled=False),
+                pystray.MenuItem("GT7 Live Connector: Running", None, enabled=False),
                 pystray.MenuItem("Port: 8765", None, enabled=False),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Quit", _quit),
