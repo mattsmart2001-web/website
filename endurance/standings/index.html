@@ -140,8 +140,19 @@
             margin: 0 auto;
             padding: 0 2rem;
             border-bottom: 1px solid var(--border);
+            /* Too many tabs to fit on a phone: keep them on one line and let the
+               bar scroll sideways instead of overflowing and clipping the last
+               tabs. Scrollbar hidden for a clean look. */
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
+        .tab-bar::-webkit-scrollbar { display: none; }
         .tab {
+            flex: 0 0 auto;
+            white-space: nowrap;
             padding: 0.9rem 1.5rem;
             background: transparent;
             border: none;
@@ -537,6 +548,7 @@
             .nav { padding: 1rem; }
             .hero { padding: 2rem 1rem 1rem; }
             .tab-bar { padding: 0 1rem; }
+            .tab { padding: 0.8rem 0.9rem; letter-spacing: 0.1em; }
             .content { padding: 1rem 0.5rem 3rem; }
             .standings { border-radius: 8px; border-left: none; border-right: none; }
             thead th, tbody td { padding: 0.7rem 0.6rem; }
