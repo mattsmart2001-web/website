@@ -4,7 +4,7 @@
 
 [build.environment]
   # gtec-config.js intentionally contains the public Supabase anon key and URL.
-  # These are client-side credentials by design — not secrets.
+  # These are client-side credentials by design - not secrets.
   SECRETS_SCAN_OMIT_PATHS = "endurance/assets/gtec-config.js"
 
 # Legacy Shopify URLs. The site previously ran a store under these paths
@@ -53,7 +53,7 @@
   status = 410
   force = true
 
-# Clean URL for the season calendar ICS feed — calendar apps subscribe to
+# Clean URL for the season calendar ICS feed - calendar apps subscribe to
 # this directly, so it needs a stable path rather than the raw function URL.
 [[redirects]]
   from = "/endurance/calendar.ics"
