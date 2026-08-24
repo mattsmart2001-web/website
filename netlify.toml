@@ -66,7 +66,17 @@
   to = "/index.html"
   status = 200
 
-# Security headers — scoped to /endurance/* only so the main SparksTheory
+# Serve the TWA Digital Asset Links file as JSON. Google's verification service
+# is lenient about content type, but on-device Chrome/Android TWA verification
+# can reject the file unless it is served as application/json, which leaves the
+# address bar showing even though the file is correct.
+[[headers]]
+  for = "/.well-known/assetlinks.json"
+  [headers.values]
+    Content-Type = "application/json"
+    Access-Control-Allow-Origin = "*"
+
+# Security headers scoped to /endurance/* only so the main SparksTheory
 # site isn't affected. 'unsafe-inline' on script/style is required because
 # the pages use inline onclick handlers and <style> blocks throughout.
 # The meaningful protection here is locking down connect-src, frame-src,
