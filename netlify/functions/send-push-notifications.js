@@ -1,9 +1,13 @@
 // ============================================================
 // send-push-notifications
-// POST { event_id, title, body, url }               — every driver with
+// POST { event_id, title, body, url, tag? }          - every driver with
 //                                                       a split assigned
 //                                                       for that event
-// POST { driver_id, title, body, url }               — one specific driver
+// POST { driver_id, title, body, url, tag? }          - one specific driver
+//
+// tag is optional: pushes sharing a tag replace each other on the device
+// instead of stacking. Defaults to gtec-event-<event_id> for event pushes,
+// or a stable app-wide tag for single-driver pushes.
 // Auth: Bearer <supabase admin token>
 //
 // Exactly one of event_id / driver_id is required. Best-effort per
@@ -15,7 +19,7 @@
 //   GTEC_SUPABASE_ANON_KEY  (falls back to SUPABASE_ANON_KEY if unset)
 //   VAPID_PUBLIC_KEY
 //   VAPID_PRIVATE_KEY
-//   VAPID_SUBJECT            (optional — mailto: or https: contact URL)
+//   VAPID_SUBJECT            (optional - mailto: or https: contact URL)
 // ============================================================
 
 const fetch = require('node-fetch');
@@ -61,7 +65,7 @@ exports.handler = async (event) => {
     try { body = JSON.parse(event.body || '{}'); }
     catch { return { statusCode: 400, body: 'Invalid JSON' }; }
 
-    const { event_id, driver_id, title, body: msgBody, url } = body;
+    const { event_id, driver_id, title, body: msgBody, url, tag } = body;
     if (!event_id && !driver_id) return { statusCode: 400, body: 'event_id or driver_id required' };
     if (!title || !msgBody) return { statusCode: 400, body: 'title and body required' };
 
@@ -92,7 +96,20 @@ exports.handler = async (event) => {
     const subs = await subsRes.json();
     if (!Array.isArray(subs) || subs.length === 0) return { statusCode: 200, body: JSON.stringify({ ok: true, sent: 0 }) };
 
-    const payload = JSON.stringify({ title, body: msgBody, url: url || '/endurance/profile/' });
+    // A tag groups related pushes so a newer one replaces the older instead
+    // of stacking into a pile (a pile of identical notifications is itself a
+    // spam signal). All reminders about one event share a tag so a later one
+    // supersedes the earlier. Single-driver pushes are left untagged by
+    // default so different message types (hosting duty, a new message) don't
+    // clobber each other; a caller can still pass an explicit tag to group.
+    const pushTag = tag || (event_id ? `gtec-event-${event_id}` : null);
+    const payload = JSON.stringify({
+        title,
+        body: msgBody,
+        url: url || '/endurance/profile/',
+        ...(pushTag ? { tag: pushTag } : {}),
+        timestamp: Date.now(),
+    });
 
     let sent = 0;
     const stale = [];

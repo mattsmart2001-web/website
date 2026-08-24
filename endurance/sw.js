@@ -3,7 +3,7 @@
 'use strict';
 
 // Bump this string to force every client to refetch their shell.
-const CACHE_NAME = 'gtec-shell-v31';
+const CACHE_NAME = 'gtec-shell-v32';
 
 // Assets to pre-cache on install. Keep this short - fonts and Supabase
 // data are intentionally omitted so they always come fresh. The list is
@@ -147,8 +147,17 @@ self.addEventListener('push', (event) => {
         // it as a pure alpha silhouette, so it MUST be white-on-transparent.
         // Pointing it at the opaque full-colour icon made it a white square.
         badge: '/endurance/assets/icon-badge.png',
+        // Show the real send time rather than "now" whenever the sender
+        // stamps one.
+        timestamp: data.timestamp || Date.now(),
         data: { url: data.url || '/endurance/profile/' },
     };
+    // A tag lets a newer push replace an older one of the same kind instead
+    // of piling up. renotify makes that replacement still alert the user.
+    if (data.tag) {
+        options.tag = data.tag;
+        options.renotify = true;
+    }
     event.waitUntil(self.registration.showNotification(title, options));
 });
 
