@@ -1,11 +1,11 @@
-/* GTEC service worker — PWA shell + offline cache.
+/* GTEC service worker - PWA shell + offline cache.
    Lives at /endurance/sw.js so its scope is exactly /endurance/*. */
 'use strict';
 
 // Bump this string to force every client to refetch their shell.
-const CACHE_NAME = 'gtec-shell-v29';
+const CACHE_NAME = 'gtec-shell-v30';
 
-// Assets to pre-cache on install. Keep this short — fonts and Supabase
+// Assets to pre-cache on install. Keep this short - fonts and Supabase
 // data are intentionally omitted so they always come fresh. The list is
 // "what we need to render an offline-friendly shell."
 const PRECACHE = [
@@ -35,6 +35,7 @@ const PRECACHE = [
     '/endurance/assets/gtec-icon-maskable.svg',
     '/endurance/assets/icon-192.png',
     '/endurance/assets/icon-512.png',
+    '/endurance/assets/icon-badge.png',
     '/endurance/assets/apple-touch-icon.png',
     '/endurance/assets/og-card.png',
     '/sparks_logo.jpg',
@@ -76,7 +77,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Supabase / 3rd party data must always go to the network — caching
+    // Supabase / 3rd party data must always go to the network - caching
     // would break realtime + auth tokens.
     if (url.hostname.includes('supabase.co') || url.hostname.includes('supabase.in')) return;
     if (url.hostname.endsWith('jsdelivr.net'))   return; // supabase-js cdn
@@ -129,7 +130,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 /* ---------------------------------------------------------------
-   Web push — split assignments, etc. Payload is JSON:
+   Web push - split assignments, etc. Payload is JSON:
    { title, body, url }. Falls back gracefully if a push ever
    arrives without a JSON body.
 ------------------------------------------------------------------ */
@@ -142,7 +143,10 @@ self.addEventListener('push', (event) => {
     const options = {
         body: data.body || '',
         icon: '/endurance/assets/icon-192.png',
-        badge: '/endurance/assets/icon-192.png',
+        // The badge is the small monochrome status-bar mark. Android renders
+        // it as a pure alpha silhouette, so it MUST be white-on-transparent.
+        // Pointing it at the opaque full-colour icon made it a white square.
+        badge: '/endurance/assets/icon-badge.png',
         data: { url: data.url || '/endurance/profile/' },
     };
     event.waitUntil(self.registration.showNotification(title, options));
