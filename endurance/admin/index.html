@@ -909,6 +909,7 @@ let _teams         = [];
 let _pointsSystems = [];
 let _drivers       = [];
 let _hcTimer       = null;
+let _splitsExport  = null;   // flat snapshot of the current split allocation, for CSV export
 
 
 // ============================================================
@@ -1284,6 +1285,16 @@ async function renderDashboard() {
                 <div style="display:flex;gap:0.5rem;align-items:center">
                     <input type="text" id="obs-driver-slug" placeholder="driver-slug" style="width:140px;padding:0.45rem 0.65rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.82rem">
                     <button class="btn-icon" onclick="copyObsDriverLink()">Copy Link</button>
+                </div>
+            </div>
+        </div>
+        <div class="table-wrap" style="padding:1.5rem;margin-top:1rem">
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Data Exports</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+                <div style="font-size:0.85rem;color:var(--muted)">Championship standings for the active season${activeSeason ? ` (${esc(activeSeason.name)})` : ''}, as CSV.</div>
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+                    ${exportBtn("exportStandingsCsv('driver')", 'Driver Standings')}
+                    ${exportBtn("exportStandingsCsv('team')", 'Team Standings')}
                 </div>
             </div>
         </div>
@@ -3493,6 +3504,38 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
 
     const totalDrivers = driverRows.length;
 
+    // Capture a flat, export-friendly snapshot of the allocation so the
+    // "Export CSV" button can download exactly what is shown here. Rows are
+    // ordered split by split, strongest driver first, matching the cards.
+    _splitsExport = {
+        eventName,
+        rows: lobbyNumbers.flatMap(n => groups[n].slice()
+            .sort((a, b) => b.skill - a.skill)
+            .map(({ entry: en, driver: d }) => {
+                const rated = !!(d && ratedSet.has(d.id));
+                let movement = '';
+                if (n !== 0 && d && d.id != null) {
+                    if (!prevLobbyByDriver.has(d.id)) movement = 'New';
+                    else {
+                        const prev = prevLobbyByDriver.get(d.id);
+                        movement = prev > n ? `Promoted from S${prev}`
+                            : prev < n ? `Relegated from S${prev}` : 'Unchanged';
+                    }
+                }
+                return {
+                    split: n === 0 ? 'Unassigned' : `Split ${n}`,
+                    car: (d?.career_number ?? en.car_number) ?? '',
+                    driver: d ? d.display_name : '',
+                    team: en.teams?.name || (d ? 'Solo' : ''),
+                    host: (en.host_driver_id && d && d.id === en.host_driver_id) ? 'Yes' : '',
+                    skill: !d ? '' : (rated ? (ratingMap.get(d.id) ?? '')
+                        : `${d.gt7_dr_rating || ''}/${d.gt7_sr_rating || ''}`),
+                    skillType: !d ? '' : (rated ? 'Elo' : 'DR/SR'),
+                    movement,
+                };
+            })),
+    };
+
     // Render a tiny movement pill that compares a driver's previous split
     // against their current one. Promotion / relegation / unchanged / new.
     const movePill = (driverId, currentLobby) => {
@@ -3589,6 +3632,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn btn-primary" onclick="autoAllocateLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Auto-allocate</button>
                 <button class="btn btn-ghost" onclick="clearAllLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Clear All</button>
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
+                <button class="btn btn-ghost" onclick="exportSplitsCsv()">Export CSV</button>
                 <button class="btn-icon danger" title="Remove this event's split-assignment and hosting messages from every driver's inbox — use once the event is over" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
                 <button class="btn-icon danger" onclick="deleteLobbyRoomCodes('${eventId}','${esc(eventName)}')">Delete Room Codes</button>
                 <button class="btn-icon danger" onclick="deleteEventScreenshots('${eventId}','${esc(eventName)}','${seasonId}')">Delete Screenshots</button>
@@ -9145,10 +9189,10 @@ function exportTableCsv(tableId, base) {
 }
 
 // A little download-arrow button for a table toolbar or a panel header.
-function exportBtn(onclick) {
+function exportBtn(onclick, label = 'Export CSV') {
     return `<button class="btn-export" onclick="${onclick}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export CSV</button>`;
+        ${label}</button>`;
 }
 
 // Results grid export. Cells are selects / inputs, so read their live
@@ -9179,6 +9223,54 @@ function exportResultsCsv(eventName) {
     });
     const base = 'results-' + (eventName ? slugify(eventName) : 'event');
     downloadCsv(base, headers, rows);
+}
+
+// Championship standings export. Queries the same views the public
+// standings page reads and applies the same finishing order (points,
+// then wins, then podiums), so the CSV matches the live table. kind is
+// 'driver' or 'team'.
+async function exportStandingsCsv(kind) {
+    const { data: season } = await sb.from('seasons').select('id, name').eq('is_active', true).maybeSingle();
+    if (!season) { toast('No active season is set.', 'error'); return; }
+
+    if (kind === 'team') {
+        const { data, error } = await sb.from('team_standings').select('*').eq('season_id', season.id);
+        if (error) { toast(error.message, 'error'); return; }
+        const sorted = (data || []).slice().sort((a, b) =>
+            (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums)
+            || (a.team_name || '').localeCompare(b.team_name || ''));
+        const headers = ['Pos', 'Team', 'Manufacturer', 'Points', 'Races', 'Wins', 'Podiums', 'Poles', 'Fastest Laps'];
+        const rows = sorted.map((t, i) => [i + 1, t.team_name, t.manufacturer_name, t.points ?? 0,
+            t.races ?? 0, t.wins ?? 0, t.podiums ?? 0, t.poles ?? 0, t.fastest_laps ?? 0]);
+        downloadCsv('team-standings-' + slugify(season.name || 'season'), headers, rows);
+        return;
+    }
+
+    const { data, error } = await sb.from('driver_standings').select('*').eq('season_id', season.id);
+    if (error) { toast(error.message, 'error'); return; }
+    const sorted = (data || []).slice().sort((a, b) =>
+        (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums)
+        || (a.driver_name || '').localeCompare(b.driver_name || ''));
+    const headers = ['Pos', 'Driver', 'Car #', 'Team', 'Manufacturer', 'Nationality',
+        'Points', 'Races', 'Wins', 'Podiums', 'Poles', 'Fastest Laps'];
+    const rows = sorted.map((d, i) => [i + 1, d.driver_name, d.career_number ?? '', d.team_name,
+        d.manufacturer_name, d.nationality, d.points ?? 0, d.races ?? 0, d.wins ?? 0,
+        d.podiums ?? 0, d.poles ?? 0, d.fastest_laps ?? 0]);
+    downloadCsv('driver-standings-' + slugify(season.name || 'season'), headers, rows);
+}
+
+// Split-allocation export. viewEventLobbies stashes a flat snapshot of
+// the current allocation in _splitsExport whenever the Splits view is
+// rendered; this just turns it into a CSV.
+function exportSplitsCsv() {
+    if (!_splitsExport || !_splitsExport.rows.length) {
+        toast('Generate splits first, then export.', 'error');
+        return;
+    }
+    const headers = ['Split', 'Car', 'Driver', 'Team', 'Host', 'Skill', 'Skill Type', 'Movement'];
+    const rows = _splitsExport.rows.map(r =>
+        [r.split, r.car, r.driver, r.team, r.host, r.skill, r.skillType, r.movement]);
+    downloadCsv('splits-' + slugify(_splitsExport.eventName || 'event'), headers, rows);
 }
 
 const _thSortState = {};
