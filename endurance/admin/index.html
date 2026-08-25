@@ -402,6 +402,24 @@
         }
         .btn-icon:hover { color: var(--text); border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.05); }
         .btn-icon.danger:hover { color: #fca5a5; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.06); }
+        /* Export-to-CSV button sits at the right of a table toolbar. */
+        .btn-export {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex: 0 0 auto;
+            white-space: nowrap;
+            padding: 0.5rem 0.85rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s, background 0.15s;
+        }
+        .btn-export:hover { color: var(--gold); border-color: rgba(255,209,102,0.4); background: rgba(255,209,102,0.06); }
+        .btn-export svg { width: 13px; height: 13px; }
 
         /* Split-movement pill shown next to each driver in the lobby view. */
         .move-pill {
@@ -1314,6 +1332,7 @@ async function renderManufacturers() {
         <div class="table-wrap">
             <div class="table-toolbar">
                 <input class="table-search" type="search" placeholder="Search manufacturers…" oninput="filterTable(this,'mfr-table')">
+                ${exportBtn("exportTableCsv('mfr-table','manufacturers')")}
             </div>
             <table id="mfr-table"><thead><tr>
                 <th style="width:60px">Logo</th><th>Name</th><th>Car</th><th>Slug</th><th>Country</th><th>Brand Colour</th><th></th>
@@ -1455,6 +1474,7 @@ async function renderSeasons() {
         <div class="table-wrap">
             <div class="table-toolbar">
                 <input class="table-search" type="search" placeholder="Search seasons…" oninput="filterTable(this,'seasons-table')">
+                ${exportBtn("exportTableCsv('seasons-table','seasons')")}
             </div>
             <table id="seasons-table"><thead><tr>
                 <th>Name</th><th>Year</th><th>Dates</th><th>Points System</th><th>Status</th><th></th>
@@ -1735,6 +1755,7 @@ async function renderTeams() {
         <div class="table-wrap">
             <div class="table-toolbar">
                 <input class="table-search" type="search" placeholder="Search teams…" oninput="filterTable(this,'teams-table')">
+                ${exportBtn("exportTableCsv('teams-table','teams')")}
             </div>
             <table id="teams-table"><thead><tr>
                 <th class="th-sort" onclick="thSort(this,'teams-table')">Name</th>
@@ -1904,6 +1925,7 @@ async function renderDrivers() {
         <div class="table-wrap">
             <div class="table-toolbar">
                 <input class="table-search" type="search" placeholder="Search drivers…" oninput="filterTable(this,'drivers-table')">
+                ${exportBtn("exportTableCsv('drivers-table','drivers')")}
             </div>
             <table id="drivers-table"><thead><tr>
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">Name</th>
@@ -2389,6 +2411,7 @@ async function renderEvents() {
         <div class="table-wrap">
             <div class="table-toolbar">
                 <input class="table-search" type="search" placeholder="Search events…" oninput="filterTable(this,'events-table')">
+                ${exportBtn("exportTableCsv('events-table','events')")}
             </div>
             <table id="events-table"><thead><tr>
                 <th>Round</th><th>Name</th><th>Circuit</th><th>Date</th><th>Duration</th><th>Status</th><th></th>
@@ -4423,6 +4446,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
                 <span class="section-card-title">Results — ${esc(eventName)}</span>
                 <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
                     ${filterSelect}
+                    ${exportBtn(`exportResultsCsv('${esc(eventName)}')`)}
                     <button class="btn-icon" onclick="recomputePoints('${eventId}','${esc(eventName)}')">Recompute Points</button>
                     <button class="btn-icon" onclick="computeElo('${eventId}')">Compute Elo</button>
                     <button class="btn-add" onclick="saveResults('${eventId}','${esc(eventName)}')">Save All</button>
@@ -7017,6 +7041,7 @@ async function renderApplications() {
         <div class="table-wrap">
             <div class="table-toolbar">
                 <input class="table-search" type="search" placeholder="Search applications…" oninput="filterTable(this,'apps-table')">
+                ${exportBtn("exportTableCsv('apps-table','applications')")}
             </div>
             <table id="apps-table"><thead><tr>
                 <th>Name / PSN</th><th>Type</th><th>Nationality</th><th>Timezone</th><th>Preferred Mfr</th><th>Status</th><th>Roster</th><th></th>
@@ -8616,6 +8641,7 @@ async function renderNews() {
         <div class="table-wrap">
             <div class="table-toolbar">
                 <input class="table-search" type="search" placeholder="Search articles…" oninput="filterTable(this,'news-table')">
+                ${exportBtn("exportTableCsv('news-table','news')")}
             </div>
             <table id="news-table"><thead><tr>
                 <th>Title / Slug</th><th>Author</th><th>Status</th><th>Published</th><th></th>
@@ -9059,6 +9085,100 @@ function filterTable(input, tableId) {
     document.querySelectorAll(`#${tableId} tbody tr`).forEach(row => {
         row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
     });
+}
+
+/* ---------------------------------------------------------------
+   CSV export. One generic exporter reads any of the list tables
+   straight from the DOM, so it always matches what is on screen -
+   the current sort order and the current search filter. A second,
+   data-aware exporter handles the results grid, whose cells are
+   form controls rather than text.
+------------------------------------------------------------------ */
+
+// Quote a value only when it needs it; a lone dash placeholder means
+// "no value" in the UI, so export it blank rather than as a stray dash.
+function csvCell(v) {
+    const s = (v == null ? '' : String(v)).replace(/\s+/g, ' ').trim();
+    if (s === '\u2014' || s === '\u2013' || s === '-') return '';
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function csvFilename(base) {
+    const d = new Date();
+    const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return `gtec-${base}-${stamp}.csv`;
+}
+
+// Build the file and hand it to the browser. A UTF-8 BOM keeps Excel
+// happy with accented driver names.
+function downloadCsv(base, headers, rows) {
+    if (!rows.length) { toast('Nothing to export.', 'error'); return; }
+    const lines = [headers.map(csvCell).join(','), ...rows.map(r => r.map(csvCell).join(','))];
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = csvFilename(base);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(`Exported ${rows.length} row${rows.length === 1 ? '' : 's'}.`, 'success');
+}
+
+// Generic list-table export. Columns whose header is blank are action
+// columns and are dropped. Only rows currently visible (i.e. matching
+// the search box) are included, and the empty-state placeholder row is
+// skipped.
+function exportTableCsv(tableId, base) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const headEls = Array.from(table.querySelectorAll('thead th'));
+    const cols = headEls
+        .map((th, i) => ({ i, label: th.textContent.trim() }))
+        .filter(c => c.label);
+    const headers = cols.map(c => c.label);
+    const rows = Array.from(table.querySelectorAll('tbody tr'))
+        .filter(tr => tr.style.display !== 'none' && tr.children.length === headEls.length)
+        .map(tr => cols.map(c => tr.children[c.i] ? tr.children[c.i].textContent : ''));
+    downloadCsv(base, headers, rows);
+}
+
+// A little download-arrow button for a table toolbar or a panel header.
+function exportBtn(onclick) {
+    return `<button class="btn-export" onclick="${onclick}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV</button>`;
+}
+
+// Results grid export. Cells are selects / inputs, so read their live
+// values. Respects the split filter, since it only walks the rows that
+// are currently rendered.
+function exportResultsCsv(eventName) {
+    const table = document.getElementById('results-table');
+    if (!table) return;
+    const headers = ['Driver', 'Car', 'Team', 'Split', 'Position', 'Laps', 'Status', 'Pole', 'Fastest Lap', 'Points'];
+    const rows = [];
+    table.querySelectorAll('tbody tr').forEach(tr => {
+        if (tr.children.length < 7) return;               // empty-state row
+        const nameEl = tr.querySelector('td:first-child strong');
+        if (!nameEl) return;                               // "No drivers" row
+        const meta = tr.querySelector('td:first-child span');
+        let car = '', team = '', split = '';
+        if (meta) {
+            const m = meta.textContent.trim().match(/^(#\d+|\u2014)\s*(.*?)(?:\s*·\s*S(\d+))?$/);
+            if (m) { car = m[1] === '\u2014' ? '' : m[1]; team = m[2]; split = m[3] ? 'S' + m[3] : ''; }
+        }
+        const val = sel => { const el = tr.querySelector(`[data-field="${sel}"]`); return el ? el.value : ''; };
+        const poleCell = tr.children[4];
+        const pole = poleCell && poleCell.textContent.includes('★') ? 'Yes' : '';
+        const pts = tr.children[6] ? tr.children[6].textContent.trim() : '';
+        rows.push([nameEl.textContent.trim(), car, team, split,
+            val('finish_position'), val('laps_driven'), val('status'),
+            pole, val('fastest_lap_time'), pts]);
+    });
+    const base = 'results-' + (eventName ? slugify(eventName) : 'event');
+    downloadCsv(base, headers, rows);
 }
 
 const _thSortState = {};
