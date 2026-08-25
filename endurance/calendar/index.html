@@ -376,7 +376,10 @@
             .hero { padding: 2rem 1rem 1.5rem; }
             .content { padding: 1rem 1rem 3rem; }
             .event-body { flex-wrap: wrap; gap: 0.75rem; }
-            .event-actions { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+            /* Full-width so the action buttons wrap within the card instead
+               of overflowing off the right edge (the base rule pins
+               flex-shrink:0, which would otherwise let them spill over). */
+            .event-actions { width: 100%; align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
             .event-round { width: 64px; }
         }
     </style>
