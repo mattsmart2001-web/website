@@ -391,58 +391,73 @@
             justify-content: flex-end;
         }
         .btn-icon {
-            padding: 0.42rem 0.8rem;
-            border-radius: 7px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
-            color: #cbd5e1;
+            padding: 0.44rem 0.85rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.09);
+            background: linear-gradient(180deg, #1c2432, #131922);
+            color: #d7dde5;
             font-size: 0.75rem;
             font-weight: 600;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.015em;
             cursor: pointer;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 2px rgba(0,0,0,0.25);
-            transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.1s, box-shadow 0.15s;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 1px rgba(0,0,0,0.25);
+            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .btn-icon:hover {
             color: #fff;
-            border-color: rgba(255,255,255,0.24);
-            background: linear-gradient(180deg, #1c2431, var(--bg-3));
+            border-color: rgba(255,255,255,0.3);
+            background: linear-gradient(180deg, #232c3b, #171e28);
             transform: translateY(-1px);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 3px 8px rgba(0,0,0,0.35);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 6px 16px -4px rgba(0,0,0,0.55);
         }
         .btn-icon:active { transform: translateY(0); box-shadow: inset 0 1px 2px rgba(0,0,0,0.3); }
-        .btn-icon.danger { color: #eaa0a0; }
+        .btn-icon:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,209,102,0.55); }
+        .btn-icon.danger { color: #e79a9a; }
         .btn-icon.danger:hover {
-            color: #fca5a5;
-            border-color: rgba(239,68,68,0.5);
-            background: linear-gradient(180deg, rgba(239,68,68,0.16), rgba(239,68,68,0.06));
+            color: #fecaca;
+            border-color: rgba(239,68,68,0.55);
+            background: linear-gradient(180deg, rgba(239,68,68,0.22), rgba(239,68,68,0.08));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px -4px rgba(239,68,68,0.35);
+        }
+        /* Gold-tinted variant for a stand-out action (e.g. Race Report). */
+        .btn-icon.gold {
+            color: var(--gold);
+            border-color: rgba(255,209,102,0.4);
+            background: linear-gradient(180deg, rgba(255,209,102,0.1), rgba(255,209,102,0.02));
+        }
+        .btn-icon.gold:hover {
+            color: #ffe0a0;
+            border-color: rgba(255,209,102,0.65);
+            background: linear-gradient(180deg, rgba(255,209,102,0.2), rgba(255,209,102,0.05));
+            box-shadow: 0 6px 16px -4px rgba(255,209,102,0.35);
         }
         /* Export-to-CSV button sits at the right of a table toolbar. */
         .btn-export {
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.45rem;
             flex: 0 0 auto;
             white-space: nowrap;
-            padding: 0.5rem 0.9rem;
-            border-radius: 7px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
-            color: #cbd5e1;
+            padding: 0.52rem 0.95rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.09);
+            background: linear-gradient(180deg, #1c2432, #131922);
+            color: #d7dde5;
             font-size: 0.78rem;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 2px rgba(0,0,0,0.25);
-            transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.1s, box-shadow 0.15s;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 1px rgba(0,0,0,0.25);
+            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .btn-export:hover {
             color: var(--gold);
-            border-color: rgba(255,209,102,0.45);
-            background: linear-gradient(180deg, rgba(255,209,102,0.1), rgba(255,209,102,0.03));
+            border-color: rgba(255,209,102,0.5);
+            background: linear-gradient(180deg, rgba(255,209,102,0.12), rgba(255,209,102,0.03));
             transform: translateY(-1px);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 3px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 6px 16px -4px rgba(255,209,102,0.3);
         }
         .btn-export:active { transform: translateY(0); }
+        .btn-export:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,209,102,0.55); }
         .btn-export svg { width: 13px; height: 13px; }
 
         /* Split-movement pill shown next to each driver in the lobby view. */
@@ -636,51 +651,54 @@
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            padding: 0.6rem 1.2rem;
-            border-radius: 7px;
+            padding: 0.62rem 1.25rem;
+            border-radius: 8px;
             font-size: 0.8rem;
             font-weight: 600;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.04em;
             cursor: pointer;
-            transition: filter 0.15s, background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
             border: none;
         }
         .btn:active { transform: translateY(0); }
+        .btn:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(255,209,102,0.55); }
         .btn-primary {
-            background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+            background: linear-gradient(180deg, #ffdd80, #d9a642);
             color: #1a1300;
-            box-shadow: 0 2px 8px rgba(255,209,102,0.16);
+            font-weight: 700;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 8px -2px rgba(255,209,102,0.4);
         }
         .btn-primary:hover {
-            filter: brightness(1.08);
+            filter: brightness(1.05);
             transform: translateY(-1px);
-            box-shadow: 0 4px 14px rgba(255,209,102,0.3);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 7px 18px -4px rgba(255,209,102,0.55);
         }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; filter: none; }
         .btn-ghost {
-            background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
-            color: #cbd5e1;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 2px rgba(0,0,0,0.25);
+            background: linear-gradient(180deg, #1c2432, #131922);
+            color: #d7dde5;
+            border: 1px solid rgba(255,255,255,0.09);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 1px rgba(0,0,0,0.25);
         }
         .btn-ghost:hover {
             color: #fff;
-            border-color: rgba(255,255,255,0.24);
-            background: linear-gradient(180deg, #1c2431, var(--bg-3));
+            border-color: rgba(255,255,255,0.3);
+            background: linear-gradient(180deg, #232c3b, #171e28);
             transform: translateY(-1px);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 3px 8px rgba(0,0,0,0.35);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 6px 16px -4px rgba(0,0,0,0.55);
         }
         .btn-danger {
-            background: linear-gradient(180deg, rgba(239,68,68,0.16), rgba(239,68,68,0.08));
+            background: linear-gradient(180deg, rgba(239,68,68,0.18), rgba(239,68,68,0.08));
             color: #fca5a5;
             border: 1px solid rgba(239,68,68,0.32);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 1px rgba(0,0,0,0.25);
         }
         .btn-danger:hover {
-            background: linear-gradient(180deg, rgba(239,68,68,0.26), rgba(239,68,68,0.14));
-            border-color: rgba(239,68,68,0.5);
+            color: #fecaca;
+            background: linear-gradient(180deg, rgba(239,68,68,0.28), rgba(239,68,68,0.14));
+            border-color: rgba(239,68,68,0.55);
             transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 6px 16px -4px rgba(239,68,68,0.35);
         }
 
         /* ===== SEASON TEAMS sub-section ===== */
@@ -2453,7 +2471,7 @@ async function renderEvents() {
                     <button class="btn-icon" onclick="viewEventResults('${e.id}','${esc(e.name)}')">Results</button>
                     <button class="btn-icon" onclick="viewEventPenalties('${e.id}','${esc(e.name)}')">Penalties</button>
                     <button class="btn-icon" onclick="viewEventSteward('${e.id}','${esc(e.name)}')">Steward</button>
-                    <button class="btn-icon" style="border-color:rgba(255,209,102,0.45);color:var(--gold)" onclick="generateRaceReport('${e.id}','${esc(e.name)}','${e.season_id}')">Race Report</button>
+                    <button class="btn-icon gold" onclick="generateRaceReport('${e.id}','${esc(e.name)}','${e.season_id}')">Race Report</button>
                     ${lockBtn}
                     <button class="btn-icon" onclick="editEvent('${e.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="resetEventStats('${e.id}','${esc(e.name)}')">Reset Stats</button>
