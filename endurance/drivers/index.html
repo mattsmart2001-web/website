@@ -721,6 +721,51 @@
         .split-stop-move.move-same { color: var(--muted); background: rgba(255,255,255,0.04); }
         .split-stop-move.move-new  { color: var(--gold);  background: rgba(255,209,102,0.08); }
 
+        /* Animated split-trajectory chart: split number over rounds, best
+           split at the top so a rising line means climbing the grid. */
+        .sj-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .sj-chip {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: var(--bg-2); border: 1px solid var(--border);
+            border-radius: 999px; padding: 0.32rem 0.85rem;
+            opacity: 0; animation: sjFade 0.5s ease 0.3s forwards;
+        }
+        .sj-chip-k { color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.6rem; font-weight: 700; }
+        .sj-chip-v { color: var(--text); font-weight: 700; font-size: 0.78rem; }
+        .sj-chip-up   .sj-chip-v { color: #4ade80; }
+        .sj-chip-down .sj-chip-v { color: #f87171; }
+        .sj-chip-same .sj-chip-v { color: var(--muted); }
+        .sj-chart-wrap { overflow-x: auto; padding-bottom: 0.5rem; }
+        .sj-svg { display: block; }
+        .sj-grid { stroke: rgba(255,255,255,0.06); stroke-width: 1; }
+        .sj-ylabel, .sj-xlabel { fill: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; }
+        .sj-xlabel { opacity: 0; animation: sjFade 0.5s ease forwards; }
+        .sj-area { fill: url(#sjArea); opacity: 0; animation: sjFade 0.8s ease 0.9s forwards; }
+        .sj-line {
+            fill: none; stroke: url(#sjLine); stroke-width: 2.5;
+            stroke-linecap: round; stroke-linejoin: round;
+            stroke-dasharray: 4000; stroke-dashoffset: 4000;
+            animation: sjDraw 1.3s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+            filter: drop-shadow(0 0 5px rgba(255,209,102,0.35));
+        }
+        .sj-dot {
+            stroke: #0b0e14; stroke-width: 2;
+            opacity: 0; transform: scale(0);
+            transform-box: fill-box; transform-origin: center;
+            animation: sjPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .sj-dot-up    { fill: #4ade80; }
+        .sj-dot-down  { fill: #f87171; }
+        .sj-dot-same  { fill: #94a3b8; }
+        .sj-dot-start { fill: #ffd166; }
+        .sj-dot-peak  { filter: drop-shadow(0 0 5px rgba(255,209,102,0.75)); }
+        @keyframes sjDraw { to { stroke-dashoffset: 0; } }
+        @keyframes sjPop  { to { opacity: 1; transform: scale(1); } }
+        @keyframes sjFade { to { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) {
+            .sj-line, .sj-dot, .sj-area, .sj-xlabel, .sj-chip { animation: none; opacity: 1; transform: none; stroke-dashoffset: 0; }
+        }
+
         /* Discipline */
         .discipline-list { display: flex; flex-direction: column; gap: 0.65rem; }
         .disc-row {
@@ -1792,9 +1837,73 @@ async function showProfile() {
             split:   r.results.entries.lobby_number,
         }));
 
+    // Draw the journey as an animated trajectory: split number over rounds,
+    // best split (lowest number) at the top, so climbing the grid literally
+    // reads as a line rising. The path draws itself in and the nodes pop in
+    // sequence; a summary chip row calls out peak, current split and trend.
+    function buildSplitTrajectory(journey) {
+        const n = journey.length;
+        const splits = journey.map(s => s.split);
+        const minS = Math.min(...splits), maxS = Math.max(...splits);
+        const range = maxS - minS;
+        const padL = 46, padR = 30, padT = 30, padB = 40, stepX = 72, plotH = 140;
+        const W = padL + (n - 1) * stepX + padR;
+        const H = padT + plotH + padB;
+        const baseY = padT + plotH;
+        const xFor = i => padL + i * stepX;
+        const yFor = s => range === 0 ? padT + plotH / 2 : padT + ((s - minS) / range) * plotH;
+
+        let grid = '';
+        for (let s = minS; s <= maxS; s++) {
+            const y = yFor(s);
+            grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${y.toFixed(1)}" class="sj-grid"/>`;
+            grid += `<text x="${padL - 10}" y="${(y + 3).toFixed(1)}" class="sj-ylabel" text-anchor="end">S${s}</text>`;
+        }
+
+        const pts = journey.map((s, i) => ({ x: xFor(i), y: yFor(s.split), round: s.round, circuit: s.circuit, split: s.split }));
+        const linePath = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+        const areaPath = `M${pts[0].x.toFixed(1)},${baseY} ` + pts.map(p => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ` L${pts[n - 1].x.toFixed(1)},${baseY} Z`;
+
+        const nodes = pts.map((p, i) => {
+            const prev = i > 0 ? journey[i - 1].split : null;
+            let cls = 'sj-dot-start';
+            if (prev != null) cls = p.split < prev ? 'sj-dot-up' : p.split > prev ? 'sj-dot-down' : 'sj-dot-same';
+            if (p.split === minS) cls += ' sj-dot-peak';
+            const delay = (0.5 + i * 0.09).toFixed(2);
+            return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="7" class="sj-dot ${cls}" style="animation-delay:${delay}s"><title>R${p.round} ${esc(p.circuit)} · Split ${p.split}</title></circle>
+                <text x="${p.x.toFixed(1)}" y="${(baseY + 20).toFixed(1)}" class="sj-xlabel" text-anchor="middle" style="animation-delay:${delay}s">R${p.round}</text>`;
+        }).join('');
+
+        const first = journey[0].split, last = journey[n - 1].split;
+        const trend = last < first ? { t: 'Climbing', c: 'up', a: '↑' }
+            : last > first ? { t: 'Sliding', c: 'down', a: '↓' }
+            : { t: 'Holding', c: 'same', a: '→' };
+        const chips = `<div class="sj-chips">
+            <span class="sj-chip"><span class="sj-chip-k">Peak</span><span class="sj-chip-v">Split ${minS}</span></span>
+            <span class="sj-chip"><span class="sj-chip-k">Now</span><span class="sj-chip-v">Split ${last}</span></span>
+            <span class="sj-chip sj-chip-${trend.c}"><span class="sj-chip-k">Trend</span><span class="sj-chip-v">${trend.a} ${trend.t}</span></span>
+        </div>`;
+
+        return `${chips}<div class="sj-chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="sj-svg" role="img" aria-label="Split number by round">
+            <defs>
+                <linearGradient id="sjLine" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#ffd166"/><stop offset="100%" stop-color="#f59e0b"/>
+                </linearGradient>
+                <linearGradient id="sjArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffd166" stop-opacity="0.22"/><stop offset="100%" stop-color="#ffd166" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            ${grid}
+            <path d="${areaPath}" class="sj-area"/>
+            <path d="${linePath}" class="sj-line"/>
+            ${nodes}
+        </svg></div>`;
+    }
+
     const splitJourneyHTML = splitJourney.length >= 2 ? `
         <div class="section">
             <div class="section-title">Split Journey</div>
+            ${buildSplitTrajectory(splitJourney)}
             <div class="split-timeline">
                 ${splitJourney.map((stop, i) => {
                     const prev = i > 0 ? splitJourney[i - 1].split : null;
