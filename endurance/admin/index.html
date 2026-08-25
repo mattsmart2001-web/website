@@ -953,6 +953,7 @@ let _pointsSystems = [];
 let _drivers       = [];
 let _hcTimer       = null;
 let _splitsExport  = null;   // flat snapshot of the current split allocation, for CSV export
+let _healthExport  = null;   // flat list of everything the health check flagged, for CSV export
 
 
 // ============================================================
@@ -9316,6 +9317,19 @@ function exportSplitsCsv() {
     downloadCsv('splits-' + slugify(_splitsExport.eventName || 'event'), headers, rows);
 }
 
+// Health-check export. renderHealthCheck stashes a flat list of every
+// flagged item (each tagged with its category) in _healthExport; this
+// turns the whole "needs attention" board into one actionable sheet.
+function exportHealthCsv() {
+    if (!_healthExport || !_healthExport.rows.length) {
+        toast('Nothing flagged, the health check is all clear.', 'success');
+        return;
+    }
+    const headers = ['Category', 'Name', 'Team / Manufacturer', 'PSN ID', 'Detail'];
+    const rows = _healthExport.rows.map(r => [r.category, r.name, r.team, r.psn, r.detail]);
+    downloadCsv('health-check', headers, rows);
+}
+
 const _thSortState = {};
 function thSort(th, tableId) {
     const ths = Array.from(th.closest('thead').querySelectorAll('th'));
@@ -9584,6 +9598,7 @@ async function renderHealthCheck() {
     const { data: activeSeason } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
     let absentPanelRows = '';
     let absentTotalCount = 0;
+    let absentFlat = [];   // flattened {name, team, psn, detail} for CSV export
     if (activeSeason) {
         const { data: upcomingEvs } = await sb.from('events')
             .select('id, name, round, starts_at')
@@ -9602,6 +9617,17 @@ async function renderHealthCheck() {
                 byEvent.set(r.event_id, list);
             });
             absentTotalCount = (absRows || []).length;
+            upcomingEvs.forEach(ev => {
+                (byEvent.get(ev.id) || []).forEach(r => {
+                    const d = r.drivers;
+                    absentFlat.push({
+                        name: d?.display_name || '',
+                        team: d?.teams?.name || 'No team',
+                        psn: d?.psn_id || '',
+                        detail: `R${ev.round} ${ev.name}`,
+                    });
+                });
+            });
             const eventSections = upcomingEvs.map(ev => {
                 const drivers = byEvent.get(ev.id) || [];
                 if (!drivers.length) return '';
@@ -9796,6 +9822,55 @@ async function renderHealthCheck() {
         </div>`;
     };
 
+    // Flatten every flagged item into one "attention list" for CSV export.
+    // Each row carries the category so the whole health check comes out as a
+    // single actionable sheet, ordered the same way the panels are shown.
+    _healthExport = { rows: [
+        ...(soloDrivers || []).map(d => ({
+            category: 'Solo Driver', name: d.display_name, team: '', psn: d.psn_id || '',
+            detail: (pendingTeamNamesForDriver.get(d.id) || []).map(n => 'Applied to ' + n).join('; '),
+        })),
+        ...openTeams.map(t => {
+            const filled = driverCountByTeam.get(t.id) || 0;
+            const max = t.max_drivers || 2;
+            const inbound = pendingDriversForTeam.get(t.id)?.size || 0;
+            return {
+                category: 'Team with Open Seats', name: t.name, team: t.manufacturers?.name || '', psn: '',
+                detail: `${filled}/${max} filled, ${max - filled} open${inbound ? `, ${inbound} pending` : ''}`,
+            };
+        }),
+        ...(unclaimedDrivers || []).map(d => {
+            const token = _hcActiveToken(d.driver_claim_tokens);
+            const active = token && new Date(token.expires_at).getTime() > Date.now();
+            const link = active ? `link expires ${_hcFmtDate(token.expires_at)}` : (token ? 'link expired' : 'no active link');
+            return {
+                category: 'Unclaimed Profile', name: d.display_name, team: d.teams?.name || 'No team', psn: d.psn_id || '',
+                detail: [d.discord_username ? 'Discord ' + d.discord_username : '', link].filter(Boolean).join('; '),
+            };
+        }),
+        ...leaderlessTeams.map(t => ({
+            category: 'Team Without Leader', name: t.name, team: t.manufacturers?.name || '', psn: '',
+            detail: `${driverCountByTeam.get(t.id) || 0} drivers, no leader`,
+        })),
+        ...(noShows || []).map(d => ({
+            category: 'No-Show Watch', name: d.display_name, team: d.team_name || 'No team', psn: d.psn_id || '',
+            detail: `${d.no_shows} missed / ${d.events_entered} entered`,
+        })),
+        ...absentFlat.map(a => ({ category: 'Unable to Attend', name: a.name, team: a.team, psn: a.psn, detail: a.detail })),
+        ...(noMfrDrivers || []).map(d => ({
+            category: 'No Manufacturer', name: d.display_name, team: d.teams?.name || 'Solo', psn: d.psn_id || '',
+            detail: 'No manufacturer assigned',
+        })),
+        ...neverMissing.map(d => ({
+            category: 'Never Raced', name: d.display_name, team: d.team_name || 'No team', psn: '',
+            detail: `${d.is_claimed ? 'Claimed' : 'Unclaimed'}${d.total_entered > 0 ? '; on grid, did not start' : '; never entered'}`,
+        })),
+        ...neverExcused.map(d => ({
+            category: 'Never Raced (Excused)', name: d.display_name, team: d.team_name || 'No team', psn: '',
+            detail: 'Excused ' + (excusedByDriver.get(d.driver_id) || []).join(', '),
+        })),
+    ] };
+
     const pillsInline = mfrList.length > 1 ? `
         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.5rem">
             <button class="btn btn-ghost hc-pill active" style="padding:0.2rem 0.6rem;font-size:0.72rem" data-mfr="" onclick="hcFilter('')">All</button>
@@ -9841,6 +9916,7 @@ async function renderHealthCheck() {
             </div>
 
             <div class="hc-toolbar">
+                <button class="btn btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.72rem" onclick="exportHealthCsv()">Export CSV</button>
                 <button class="btn btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.72rem" onclick="hcToggleAll(false)">Expand all</button>
                 <button class="btn btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.72rem" onclick="hcToggleAll(true)">Collapse all</button>
             </div>
