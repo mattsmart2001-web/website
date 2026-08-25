@@ -883,8 +883,14 @@
             .content { padding: 1rem 1rem 3rem; }
             .stat-bar { flex-wrap: wrap; }
             .stat-item { min-width: 33%; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-            .profile-header { gap: 1.25rem; }
-            .profile-avatar { width: 100px; height: 100px; }
+            /* Stack the header into a single centred column: avatar on top,
+               then name, tags, badges and the share button all centred, so
+               nothing is left orphaned to one side. */
+            .profile-header { gap: 1rem; flex-direction: column; align-items: center; text-align: center; }
+            .profile-avatar { width: 104px; height: 104px; }
+            .profile-name-block { width: 100%; }
+            .profile-tags { justify-content: center; }
+            .gtec-badge-strip { justify-content: center; }
             .hide-mob { display: none; }
         }
     </style>
