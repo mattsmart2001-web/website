@@ -3004,7 +3004,7 @@ async function viewEventEntries(eventId, eventName, seasonId) {
     // Teams that have drivers but aren't yet in team_seasons for this season.
     // Pull them in too so admin doesn't have to detour into the Seasons section.
     const { data: anyDrivers } = await sb.from('drivers')
-        .select('current_team_id, teams!current_team_id(id, name, manufacturer_id, manufacturers(name))')
+        .select('id, current_team_id, teams!current_team_id(id, name, manufacturer_id, manufacturers(name))')
         .not('current_team_id', 'is', null);
     const orphanTeams = [];
     const seenOrphan = new Set();
@@ -3040,13 +3040,25 @@ async function viewEventEntries(eventId, eventName, seasonId) {
     const absentDriverIds = new Set((absenceRows || []).map(r => r.driver_id));
     const unregisteredFreeAgents = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id) && !absentDriverIds.has(d.id));
 
+    // Count non-absent drivers per team so the register button only promises
+    // teams that will actually get an entry. A team whose whole roster is
+    // unavailable this round is skipped by registerAllSeasonTeams (it would
+    // otherwise be an empty entry), so it must not inflate the button count.
+    const availableByTeam = new Map();
+    (anyDrivers || []).forEach(d => {
+        if (!d.teams?.id || absentDriverIds.has(d.id)) return;
+        availableByTeam.set(d.teams.id, (availableByTeam.get(d.teams.id) || 0) + 1);
+    });
+    const teamHasAvailable = id => (availableByTeam.get(id) || 0) > 0;
+
     // Existing team entries with zero drivers — left from earlier bulk
     // registers when auto-link didn't run yet.
     const emptyTeamEntries = (data || []).filter(en =>
         en.team_id && (en.entry_drivers || []).length === 0
     );
 
-    const totalNewTeams = unregisteredTeams.length + orphanTeams.length;
+    const totalNewTeams = unregisteredTeams.filter(r => teamHasAvailable(r.team_id)).length
+        + orphanTeams.filter(t => teamHasAvailable(t.team_id)).length;
     const teamsLabel    = totalNewTeams > 0 ? `${totalNewTeams} Team${totalNewTeams === 1 ? '' : 's'}` : '';
     const backfillLabel = emptyTeamEntries.length > 0 ? `Backfill ${emptyTeamEntries.length} Empty Entr${emptyTeamEntries.length === 1 ? 'y' : 'ies'}` : '';
     const soloLabel     = unregisteredFreeAgents.length > 0 ? `${unregisteredFreeAgents.length} Solo Driver${unregisteredFreeAgents.length === 1 ? '' : 's'}` : '';
@@ -3143,18 +3155,38 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
         en.team_id && (driversPerEntry.get(en.id) || 0) === 0
     );
 
-    const teamsToInsert = (ts || []).filter(r => !existingTeamIds.has(r.team_id)).map(r => ({
-        event_id:        eventId,
-        team_id:         r.team_id,
-        manufacturer_id: r.manufacturer_id,
-        car_model:       r.manufacturers?.car_name || r.manufacturers?.name || 'TBC',
-        status:          'confirmed',
-    }));
+    // Only enter teams that have at least one available driver this round.
+    // A team whose entire roster has flagged an absence (or that has no
+    // drivers at all) would otherwise be inserted as an empty entry.
+    const candidateTeams = (ts || []).filter(r => !existingTeamIds.has(r.team_id));
+    const availableByTeam = new Map();
+    if (candidateTeams.length) {
+        const { data: candDrivers } = await sb.from('drivers')
+            .select('id, current_team_id')
+            .in('current_team_id', candidateTeams.map(r => r.team_id));
+        (candDrivers || []).forEach(d => {
+            if (absentDriverIds.has(d.id)) return;
+            availableByTeam.set(d.current_team_id, (availableByTeam.get(d.current_team_id) || 0) + 1);
+        });
+    }
+    const skippedTeams = candidateTeams.filter(r => !(availableByTeam.get(r.team_id) > 0));
+    const teamsToInsert = candidateTeams
+        .filter(r => availableByTeam.get(r.team_id) > 0)
+        .map(r => ({
+            event_id:        eventId,
+            team_id:         r.team_id,
+            manufacturer_id: r.manufacturer_id,
+            car_model:       r.manufacturers?.car_name || r.manufacturers?.name || 'TBC',
+            status:          'confirmed',
+        }));
 
     const soloToInsert = (freeAgents || []).filter(d => !enteredDriverIds.has(d.id) && !absentDriverIds.has(d.id));
 
     if (!teamsToInsert.length && !soloToInsert.length && !emptyTeamEntries.length) {
-        toast('All teams and free-agent drivers already registered.', 'success');
+        toast(skippedTeams.length
+            ? `Nothing to register. ${skippedTeams.length} team${skippedTeams.length === 1 ? '' : 's'} skipped: every driver is unavailable this round.`
+            : 'All teams and free-agent drivers already registered.',
+            skippedTeams.length ? 'info' : 'success');
         return;
     }
 
@@ -3267,7 +3299,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
         backfilledDrivers ? `${backfilledDrivers} backfilled driver${backfilledDrivers === 1 ? '' : 's'}` : '',
         soloToInsert.length  ? `${soloToInsert.length} solo` : '',
     ].filter(Boolean).join(' + ');
-    toast(`Registered ${summary}.`, 'success');
+    toast(`Registered ${summary}.${skippedTeams.length ? ` ${skippedTeams.length} team${skippedTeams.length === 1 ? '' : 's'} skipped (all drivers unavailable).` : ''}`, 'success');
     await viewEventEntries(eventId, eventName, seasonId);
 }
 
