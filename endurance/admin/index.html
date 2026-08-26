@@ -1951,11 +1951,12 @@ function fmtLastSeen(iso) {
 }
 
 async function renderDrivers() {
-    const [{ data, error }, { data: signIns }] = await Promise.all([
+    const [{ data, error }, { data: signIns }, { data: resultRows }] = await Promise.all([
         sb.from('drivers')
             .select('*, teams!current_team_id(name), manufacturers(name)')
             .order('display_name'),
         sb.rpc('driver_last_sign_in'),
+        sb.from('result_drivers').select('driver_id'),
     ]);
     if (error) { toast(error.message, 'error'); return; }
 
@@ -1963,16 +1964,24 @@ async function renderDrivers() {
     const lastSeen = {};
     (signIns || []).forEach(r => { lastSeen[r.driver_id] = r.last_sign_in_at; });
 
+    // Drivers with any race history are clearly active, so never flag them
+    // as inactive however long since they last opened the portal.
+    const racedIds = new Set((resultRows || []).map(r => r.driver_id));
+
     const lastSeenCell = d => {
         if (!d.user_id) return '<td class="td-muted" data-sort="">—</td>';       // unclaimed
         // Prefer the true last-visit stamp; fall back to last fresh sign-in
         // until the driver next opens their portal.
         const iso = d.last_seen_at || lastSeen[d.id];
         const label = fmtLastSeen(iso);
-        // Claimed but never seen: treat as inactive and flag it red too.
-        if (!label) return `<td data-sort="0" style="color:#f87171;font-weight:600" title="Claimed but never signed in">Never</td>`;
+        const raced = racedIds.has(d.id);   // any race history: never flag as inactive
+        // Claimed but never seen: treat as inactive and flag it red too,
+        // unless they have raced (results prove they are active).
+        if (!label) return raced
+            ? '<td class="td-muted" data-sort="0">Never</td>'
+            : `<td data-sort="0" style="color:#f87171;font-weight:600" title="Claimed but never signed in">Never</td>`;
         const days = (Date.now() - new Date(iso).getTime()) / 86400000;
-        const inactive = days >= INACTIVE_DAYS;   // red once past the chase threshold
+        const inactive = !raced && days >= INACTIVE_DAYS;   // red once past the chase threshold
         const via = d.last_seen_at ? 'Last portal visit' : 'Last sign-in (no visit recorded yet)';
         const when = new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
         return `<td data-sort="${esc(iso)}" title="${esc(when)} · ${esc(via)}" style="${inactive ? 'color:#f87171;font-weight:600' : 'color:var(--muted)'}">${label}</td>`;
@@ -2920,15 +2929,19 @@ async function viewEventEntries(eventId, eventName, seasonId) {
     const enteredIds = Array.from(new Set((data || []).flatMap(en =>
         (en.entry_drivers || []).map(ed => ed.drivers?.id).filter(Boolean))));
     const seenMap = {};
+    const racedIds = new Set();
     if (enteredIds.length) {
-        const [{ data: signIns }, { data: seenRows }] = await Promise.all([
+        const [{ data: signIns }, { data: seenRows }, { data: resultRows }] = await Promise.all([
             sb.rpc('driver_last_sign_in'),
             sb.from('drivers').select('id, user_id, last_seen_at').in('id', enteredIds),
+            sb.from('result_drivers').select('driver_id').in('driver_id', enteredIds),
         ]);
         (seenRows || []).forEach(r => { seenMap[r.id] = { claimed: !!r.user_id, iso: r.last_seen_at || null }; });
         (signIns || []).forEach(r => { const e = seenMap[r.driver_id]; if (e && !e.iso) e.iso = r.last_sign_in_at; });
+        (resultRows || []).forEach(r => racedIds.add(r.driver_id));
     }
     const inactivityFor = id => {
+        if (racedIds.has(id)) return null;   // has race history: clearly active, never flag
         const e = seenMap[id];
         if (!e || !e.claimed) return null;
         if (!e.iso) return { days: Infinity, label: 'NEVER', full: 'never signed in' };
