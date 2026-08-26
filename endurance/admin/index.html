@@ -2910,6 +2910,30 @@ async function viewEventEntries(eventId, eventName, seasonId) {
 
     if (error) { panel.innerHTML = `<div class="loading-state">${esc(error.message)}</div>`; return; }
 
+    // Flag entered drivers who have gone quiet so they can be chased or
+    // dropped before splits are built. Same last-seen sources as the Drivers
+    // table: the true portal-visit stamp, falling back to the last fresh
+    // sign-in. Unclaimed profiles never log in, so they are not the target.
+    const INACTIVE_DAYS = 24;
+    const enteredIds = Array.from(new Set((data || []).flatMap(en =>
+        (en.entry_drivers || []).map(ed => ed.drivers?.id).filter(Boolean))));
+    const seenMap = {};
+    if (enteredIds.length) {
+        const [{ data: signIns }, { data: seenRows }] = await Promise.all([
+            sb.rpc('driver_last_sign_in'),
+            sb.from('drivers').select('id, user_id, last_seen_at').in('id', enteredIds),
+        ]);
+        (seenRows || []).forEach(r => { seenMap[r.id] = { claimed: !!r.user_id, iso: r.last_seen_at || null }; });
+        (signIns || []).forEach(r => { const e = seenMap[r.driver_id]; if (e && !e.iso) e.iso = r.last_sign_in_at; });
+    }
+    const inactivityFor = id => {
+        const e = seenMap[id];
+        if (!e || !e.claimed) return null;
+        if (!e.iso) return { days: Infinity, label: 'NEVER', full: 'never signed in' };
+        const days = Math.floor((Date.now() - new Date(e.iso).getTime()) / 86400000);
+        return days >= INACTIVE_DAYS ? { days, label: `${days}d`, full: `${days} days ago` } : null;
+    };
+
     const entrStatusBadge = s => {
         const map = { confirmed: 'badge-green', withdrawn: 'badge-muted', dnq: 'badge-muted' };
         return `<span class="badge ${map[s] || 'badge-muted'}">${s}</span>`;
@@ -2917,12 +2941,18 @@ async function viewEventEntries(eventId, eventName, seasonId) {
 
     const rows = data.length === 0 ? `<tr><td colspan="7"><div class="empty-state">No entries yet — add one.</div></td></tr>` :
         data.map(en => {
-            const driverTags = (en.entry_drivers || []).map(ed =>
-                `<span style="display:inline-flex;align-items:center;gap:0.2rem;background:rgba(255,255,255,0.06);border-radius:4px;padding:0.1rem 0.4rem;font-size:0.75rem;margin:0.1rem">
-                    ${esc(ed.drivers?.display_name)}
+            const driverTags = (en.entry_drivers || []).map(ed => {
+                const inf = inactivityFor(ed.drivers?.id);
+                const flag = inf
+                    ? ` <span title="Last seen ${inf.full}, chase or remove before splits" style="background:rgba(251,146,60,0.22);color:#fdba74;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;padding:0.02rem 0.35rem;border-radius:4px">${inf.label}</span>`
+                    : '';
+                const tagBg = inf ? 'rgba(251,146,60,0.12)' : 'rgba(255,255,255,0.06)';
+                return `<span style="display:inline-flex;align-items:center;gap:0.25rem;background:${tagBg};border-radius:4px;padding:0.1rem 0.4rem;font-size:0.75rem;margin:0.1rem">
+                    ${esc(ed.drivers?.display_name)}${flag}
                     <button onclick="removeEntryDriver('${ed.id}','${eventId}','${esc(eventName)}','${seasonId}')"
                         style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;line-height:1;padding:0 0.1rem">×</button>
-                 </span>`).join('');
+                 </span>`;
+            }).join('');
             return `<tr>
                 <td><strong>${en.car_number != null ? '#' + en.car_number : '<span class="td-muted">—</span>'}</strong></td>
                 <td>${esc(en.teams?.name) || '—'}</td>
@@ -2939,6 +2969,27 @@ async function viewEventEntries(eventId, eventName, seasonId) {
                 </div></td>
             </tr>`;
         }).join('');
+
+    // Roll the flagged drivers up into a banner so the admin sees the whole
+    // list at a glance and can message each one before building splits.
+    const inactiveEntered = [];
+    (data || []).forEach(en => (en.entry_drivers || []).forEach(ed => {
+        const inf = inactivityFor(ed.drivers?.id);
+        if (inf) inactiveEntered.push({ id: ed.drivers.id, name: ed.drivers.display_name, label: inf.label, days: inf.days });
+    }));
+    inactiveEntered.sort((a, b) => b.days - a.days);
+    const inactiveBanner = inactiveEntered.length ? `
+        <div style="margin:0.9rem 1.25rem 0;padding:0.85rem 1rem;background:linear-gradient(180deg,rgba(251,146,60,0.12),rgba(251,146,60,0.05));border:1px solid rgba(251,146,60,0.35);border-radius:8px">
+            <div style="font-weight:700;color:#fdba74;font-size:0.85rem;margin-bottom:0.2rem">${inactiveEntered.length} entered driver${inactiveEntered.length === 1 ? '' : 's'} inactive ${INACTIVE_DAYS}+ days</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.65rem">Not seen in the portal recently. Chase them or drop them from the round before you generate splits.</div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.4rem">
+                ${inactiveEntered.map(d => `<span style="display:inline-flex;align-items:center;gap:0.45rem;background:var(--bg-2);border:1px solid var(--border);border-radius:999px;padding:0.2rem 0.35rem 0.2rem 0.7rem;font-size:0.78rem">
+                    <strong>${esc(d.name)}</strong>
+                    <span style="color:#fdba74;font-size:0.66rem;font-weight:700;letter-spacing:0.04em">${d.label}</span>
+                    <button class="btn-icon" style="padding:0.12rem 0.5rem;font-size:0.68rem" onclick="openDirectMessageModal('${d.id}','${esc(d.name)}')">Message</button>
+                </span>`).join('')}
+            </div>
+        </div>` : '';
 
     // Compute how many season-registered teams still need an entry on this event
     const { data: ts } = await sb.from('team_seasons')
@@ -3022,6 +3073,7 @@ async function viewEventEntries(eventId, eventName, seasonId) {
                     ${headerBtn}
                 </div>
             </div>
+            ${inactiveBanner}
             <table><thead><tr>
                 <th>#</th><th>Team</th><th>Manufacturer</th><th>Car Model</th><th>Drivers</th><th>Status</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
