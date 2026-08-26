@@ -3914,7 +3914,9 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     // allow-list was too restrictive in practice — willing hosts outside
     // it left some splits with no eligible host at all. Back to a
     // deny-list of specific known-bad cases.
-    const HOST_EXCLUDED_NATIONALITIES = ['ZA'];
+    // ZA (South Africa) and AU (Australia): too much ping to host a
+    // Europe-centred grid reliably.
+    const HOST_EXCLUDED_NATIONALITIES = ['ZA', 'AU'];
     const lobbyMap = new Map();
     entries.forEach(en => {
         const ln = en._lobby;
