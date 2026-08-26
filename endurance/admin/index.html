@@ -973,6 +973,9 @@ let _hcTimer       = null;
 let _splitsExport  = null;   // flat snapshot of the current split allocation, for CSV export
 let _healthExport  = null;   // flat list of everything the health check flagged, for CSV export
 const INACTIVE_DAYS = 24;    // portal-inactivity threshold used by the Drivers list and entries view
+// Result statuses that mean the driver never actually took part, so they
+// don't count as a race result when deciding whether to skip the flag.
+const NO_SHOW_STATUSES = new Set(['dns', 'withdrawn']);
 
 
 // ============================================================
@@ -1956,7 +1959,7 @@ async function renderDrivers() {
             .select('*, teams!current_team_id(name), manufacturers(name)')
             .order('display_name'),
         sb.rpc('driver_last_sign_in'),
-        sb.from('result_drivers').select('driver_id'),
+        sb.from('result_drivers').select('driver_id, status'),
     ]);
     if (error) { toast(error.message, 'error'); return; }
 
@@ -1964,9 +1967,10 @@ async function renderDrivers() {
     const lastSeen = {};
     (signIns || []).forEach(r => { lastSeen[r.driver_id] = r.last_sign_in_at; });
 
-    // Drivers with any race history are clearly active, so never flag them
-    // as inactive however long since they last opened the portal.
-    const racedIds = new Set((resultRows || []).map(r => r.driver_id));
+    // Drivers who have actually raced (a result that isn't a DNS/withdrawal)
+    // are clearly active, so never flag them however long since they last
+    // opened the portal. A DNS is a no-show, so it does not count.
+    const racedIds = new Set((resultRows || []).filter(r => !NO_SHOW_STATUSES.has(r.status)).map(r => r.driver_id));
 
     const lastSeenCell = d => {
         if (!d.user_id) return '<td class="td-muted" data-sort="">—</td>';       // unclaimed
@@ -2934,11 +2938,11 @@ async function viewEventEntries(eventId, eventName, seasonId) {
         const [{ data: signIns }, { data: seenRows }, { data: resultRows }] = await Promise.all([
             sb.rpc('driver_last_sign_in'),
             sb.from('drivers').select('id, user_id, last_seen_at').in('id', enteredIds),
-            sb.from('result_drivers').select('driver_id').in('driver_id', enteredIds),
+            sb.from('result_drivers').select('driver_id, status').in('driver_id', enteredIds),
         ]);
         (seenRows || []).forEach(r => { seenMap[r.id] = { claimed: !!r.user_id, iso: r.last_seen_at || null }; });
         (signIns || []).forEach(r => { const e = seenMap[r.driver_id]; if (e && !e.iso) e.iso = r.last_sign_in_at; });
-        (resultRows || []).forEach(r => racedIds.add(r.driver_id));
+        (resultRows || []).forEach(r => { if (!NO_SHOW_STATUSES.has(r.status)) racedIds.add(r.driver_id); });
     }
     const inactivityFor = id => {
         if (racedIds.has(id)) return null;   // has race history: clearly active, never flag
