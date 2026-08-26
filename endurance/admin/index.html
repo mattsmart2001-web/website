@@ -3905,6 +3905,10 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     // Host selection — pick the highest-rated willing driver per lobby.
     // These drivers are always host if present in their lobby, regardless of willing_host flag.
     const DEFAULT_HOSTS = ['SparksTheory', 'l888-1', 'RufffWizard'];
+    // The primary host outranks every other default host: whenever they are
+    // in a split, they take hosting duty even if another default host is
+    // present too (default hosts otherwise tie and the first one seen wins).
+    const PRIMARY_HOST = 'SparksTheory';
     // Excluded from hosting entirely (connection quality) regardless of
     // willing_host or DEFAULT_HOSTS status. The broader Europe-only
     // allow-list was too restrictive in practice — willing hosts outside
@@ -3917,9 +3921,14 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
         if (!ln) return;
         (en.entry_drivers || []).forEach(ed => {
             if (HOST_EXCLUDED_NATIONALITIES.includes(ed.drivers?.nationality)) return;
-            const isDefaultHost = DEFAULT_HOSTS.includes(ed.drivers?.display_name);
-            if (!ed.drivers?.willing_host && !isDefaultHost) return;
-            const skill = isDefaultHost ? Infinity : skillFor(ed);
+            const name = ed.drivers?.display_name;
+            const isPrimaryHost = name === PRIMARY_HOST;
+            const isDefaultHost = DEFAULT_HOSTS.includes(name);
+            if (!ed.drivers?.willing_host && !isDefaultHost && !isPrimaryHost) return;
+            // Priority: primary host > other default hosts > willing hosts (by skill).
+            const skill = isPrimaryHost ? Infinity
+                : isDefaultHost ? Number.MAX_SAFE_INTEGER
+                : skillFor(ed);
             const cur = lobbyMap.get(ln);
             if (!cur || skill > cur.skill) lobbyMap.set(ln, { entryId: en.id, driverId: ed.driver_id, skill });
         });
