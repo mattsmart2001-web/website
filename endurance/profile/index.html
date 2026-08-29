@@ -1588,14 +1588,16 @@ async function loadIncidents(driverId) {
         if (!evMap.has(en.event_id)) evMap.set(en.event_id, { id: en.event_id, name: ev.name, round: ev.round, starts_at: ev.starts_at, ends_at: ev.ends_at, status: ev.status });
     });
 
-    // Reporting is only open for 48 hours after a round has been completed.
-    // A round counts once it's marked completed and its scheduled end was
-    // within the last 48h; after that the whole section disappears.
+    // Reporting opens the moment a round has ENDED (its scheduled end time
+    // passes) and stays open for 48h, regardless of whether it's been marked
+    // completed or has results up yet, so drivers report while the incident
+    // is fresh and stewards can judge it before results are finalised.
+    // Cancelled rounds never open; after 48h the whole section disappears.
     const WINDOW_MS = 48 * 60 * 60 * 1000;
     const now = Date.now();
     const events = [...evMap.values()]
         .filter(e => {
-            if (e.status !== 'completed' || !e.ends_at) return false;
+            if (e.status === 'cancelled' || !e.ends_at) return false;
             const ended = new Date(e.ends_at).getTime();
             return ended <= now && (now - ended) < WINDOW_MS;
         })
