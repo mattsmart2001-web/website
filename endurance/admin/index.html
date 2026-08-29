@@ -3934,6 +3934,9 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     // ZA (South Africa) and AU (Australia): too much ping to host a
     // Europe-centred grid reliably.
     const HOST_EXCLUDED_NATIONALITIES = ['ZA', 'AU'];
+    // Specific drivers barred from hosting regardless of willing_host or
+    // default-host status. Compared case-insensitively on display name.
+    const HOST_EXCLUDED_NAMES = ['wayne mason'];
     const lobbyMap = new Map();
     entries.forEach(en => {
         const ln = en._lobby;
@@ -3941,6 +3944,7 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
         (en.entry_drivers || []).forEach(ed => {
             if (HOST_EXCLUDED_NATIONALITIES.includes(ed.drivers?.nationality)) return;
             const name = ed.drivers?.display_name;
+            if (HOST_EXCLUDED_NAMES.includes((name || '').trim().toLowerCase())) return;
             const isPrimaryHost = name === PRIMARY_HOST;
             const isDefaultHost = DEFAULT_HOSTS.includes(name);
             if (!ed.drivers?.willing_host && !isDefaultHost && !isPrimaryHost) return;
