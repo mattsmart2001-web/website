@@ -3936,7 +3936,8 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const HOST_EXCLUDED_NATIONALITIES = ['ZA', 'AU'];
     // Specific drivers barred from hosting regardless of willing_host or
     // default-host status. Compared case-insensitively on display name.
-    const HOST_EXCLUDED_NAMES = ['wayne mason'];
+    // x_macthree_x = Wayne Mason.
+    const HOST_EXCLUDED_NAMES = ['x_macthree_x'];
     const lobbyMap = new Map();
     entries.forEach(en => {
         const ln = en._lobby;
