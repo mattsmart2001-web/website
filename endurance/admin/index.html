@@ -971,6 +971,7 @@ let _pointsSystems = [];
 let _drivers       = [];
 let _hcTimer       = null;
 let _splitsExport  = null;   // flat snapshot of the current split allocation, for CSV export
+let _penaltiesExport = null; // snapshot of the current event's penalties, for CSV export
 let _healthExport  = null;   // flat list of everything the health check flagged, for CSV export
 const INACTIVE_DAYS = 24;    // portal-inactivity threshold used by the Drivers list and entries view
 // Result statuses that mean the driver never actually took part, so they
@@ -4869,6 +4870,21 @@ async function viewEventPenalties(eventId, eventName) {
         .order('created_at');
     if (error) { panel.innerHTML = `<div class="loading-state">${esc(error.message)}</div>`; return; }
 
+    // Snapshot for CSV export.
+    _penaltiesExport = {
+        eventName,
+        rows: (data || []).map(p => ({
+            car:    p.entries?.car_number != null ? '#' + p.entries.car_number : '',
+            team:   p.entries?.teams?.name || '',
+            driver: p.drivers?.display_name || '',
+            type:   (p.penalty_type || '').replace('_', ' '),
+            value:  p.penalty_value || '',
+            points: p.points_amount != null ? p.points_amount : '',
+            reason: p.reason || '',
+            date:   p.created_at ? new Date(p.created_at).toLocaleString('en-GB') : '',
+        })),
+    };
+
     const rows = (data || []).length === 0
         ? `<tr><td colspan="6"><div class="empty-state">No penalties recorded for this event.</div></td></tr>`
         : data.map(p => `<tr>
@@ -4887,10 +4903,13 @@ async function viewEventPenalties(eventId, eventName) {
         <div class="section-card">
             <div class="section-card-header">
                 <span class="section-card-title">Penalties & Adjustments — ${esc(eventName)}</span>
-                <button class="btn-add" onclick="openAddPenaltyModal('${eventId}','${esc(eventName)}')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Add Penalty / Bonus
-                </button>
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+                    ${exportBtn("exportPenaltiesCsv()")}
+                    <button class="btn-add" onclick="openAddPenaltyModal('${eventId}','${esc(eventName)}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Penalty / Bonus
+                    </button>
+                </div>
             </div>
             <table><thead><tr>
                 <th>Entry</th><th>Driver</th><th>Type</th><th>Value</th><th>Reason</th><th></th>
@@ -9452,6 +9471,19 @@ function exportSplitsCsv() {
     const rows = _splitsExport.rows.map(r =>
         [r.split, r.car, r.driver, r.team, r.host, r.skill, r.skillType, r.movement]);
     downloadCsv('splits-' + slugify(_splitsExport.eventName || 'event'), headers, rows);
+}
+
+// Penalties export. viewEventPenalties stashes the event's penalties in
+// _penaltiesExport; this turns them into a CSV.
+function exportPenaltiesCsv() {
+    if (!_penaltiesExport || !_penaltiesExport.rows.length) {
+        toast('No penalties to export for this event.', 'error');
+        return;
+    }
+    const headers = ['Car', 'Team', 'Driver', 'Type', 'Value', 'Points Amount', 'Reason', 'Date'];
+    const rows = _penaltiesExport.rows.map(r =>
+        [r.car, r.team, r.driver, r.type, r.value, r.points, r.reason, r.date]);
+    downloadCsv('penalties-' + slugify(_penaltiesExport.eventName || 'event'), headers, rows);
 }
 
 // Health-check export. renderHealthCheck stashes a flat list of every
