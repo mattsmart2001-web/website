@@ -972,6 +972,7 @@ let _drivers       = [];
 let _hcTimer       = null;
 let _splitsExport  = null;   // flat snapshot of the current split allocation, for CSV export
 let _penaltiesExport = null; // snapshot of the current event's penalties, for CSV export
+let _qualifyingExport = null; // snapshot of the current event's qualifying (all splits), for CSV export
 let _healthExport  = null;   // flat list of everything the health check flagged, for CSV export
 const INACTIVE_DAYS = 24;    // portal-inactivity threshold used by the Drivers list and entries view
 // Result statuses that mean the driver never actually took part, so they
@@ -4470,6 +4471,28 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
         return;
     }
 
+    // Snapshot of saved qualifying across ALL splits for CSV export (not
+    // just the split currently on screen).
+    _qualifyingExport = {
+        eventName,
+        rows: allEntries.flatMap(en =>
+            (en.entry_drivers || []).map(ed => ed.drivers).filter(Boolean).map(d => {
+                const q = qMap[qKey(en.id, d.id)] || {};
+                return {
+                    split:    en.lobby_number != null ? en.lobby_number : '',
+                    car:      en.car_number != null ? '#' + en.car_number : '',
+                    driver:   d.display_name || '',
+                    team:     en.teams?.name || 'Solo',
+                    position: q.position || '',
+                    bestLap:  q.best_lap_ms ? fmtLapTime(q.best_lap_ms) : '',
+                    notes:    q.notes || '',
+                };
+            })
+        ).sort((a, b) =>
+            (Number(a.split) || 0) - (Number(b.split) || 0)
+            || (Number(a.position) || 999) - (Number(b.position) || 999)),
+    };
+
     const currentLobby = lobbyFilter || defaultLobbyFilter(allEntries);
     const entries = filterEntriesByLobby(allEntries, currentLobby);
 
@@ -4505,8 +4528,9 @@ async function viewEventQualifying(eventId, eventName, lobbyFilter) {
         <div class="section-card">
             <div class="section-card-header">
                 <span class="section-card-title">Qualifying — ${esc(eventName)}</span>
-                <div style="display:flex;gap:0.5rem;align-items:center">
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
                     ${filterSelect}
+                    ${exportBtn("exportQualifyingCsv()")}
                     <button class="btn-add" onclick="saveQualifying('${eventId}','${esc(eventName)}')">Save All</button>
                 </div>
             </div>
@@ -9484,6 +9508,20 @@ function exportPenaltiesCsv() {
     const rows = _penaltiesExport.rows.map(r =>
         [r.car, r.team, r.driver, r.type, r.value, r.points, r.reason, r.date]);
     downloadCsv('penalties-' + slugify(_penaltiesExport.eventName || 'event'), headers, rows);
+}
+
+// Qualifying export. viewEventQualifying stashes saved qualifying across all
+// splits in _qualifyingExport; this turns it into a CSV. Reflects what is
+// saved, so hit Save All first if you have unsaved edits on screen.
+function exportQualifyingCsv() {
+    if (!_qualifyingExport || !_qualifyingExport.rows.length) {
+        toast('No qualifying data to export for this event.', 'error');
+        return;
+    }
+    const headers = ['Split', 'Car', 'Driver', 'Team', 'Position', 'Best Lap', 'Notes'];
+    const rows = _qualifyingExport.rows.map(r =>
+        [r.split, r.car, r.driver, r.team, r.position, r.bestLap, r.notes]);
+    downloadCsv('qualifying-' + slugify(_qualifyingExport.eventName || 'event'), headers, rows);
 }
 
 // Health-check export. renderHealthCheck stashes a flat list of every
