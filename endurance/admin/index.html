@@ -2231,7 +2231,12 @@ async function openAvailabilityModal(driverId, driverName) {
             <div class="form-group">
                 <label>Reason</label>
                 <input type="text" id="avail-reason" value="${esc(existingReason)}" placeholder="e.g. Banned, injury, no-show">
+                <div class="form-hint">Kept internal - not shown to the driver.</div>
             </div>
+            <label class="form-check" style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem">
+                <input type="checkbox" id="avail-notify" checked>
+                <span>Notify the driver of newly added rounds (portal message + push)</span>
+            </label>
             <div style="max-height:320px;overflow-y:auto;margin-top:0.5rem">${rowsHtml}</div>
         </form>`,
         `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -2269,8 +2274,39 @@ async function saveDriverAvailability(driverId, driverName) {
         if (error) { toast(error.message, 'error'); return; }
     }
 
+    // Notify the driver of newly added rounds only (not re-saves or lifts).
+    // Neutral wording on purpose: it says which rounds and invites a reply,
+    // and never exposes the internal reason (often a ban), so the hard
+    // conversation stays a human one.
+    let notified = false;
+    const notify = document.getElementById('avail-notify')?.checked;
+    if (notify && toAdd.length) {
+        const { data: addedEvents } = await sb.from('events')
+            .select('round, name').in('id', toAdd);
+        const evs = (addedEvents || []).slice().sort((a, b) => (a.round ?? 0) - (b.round ?? 0));
+        const many = evs.length > 1;
+        const list = evs.map(e => `Round ${e.round ?? '?'} (${e.name})`);
+        const listStr = many ? list.slice(0, -1).join(', ') + ' and ' + list.slice(-1) : list[0];
+        const nums = evs.map(e => e.round ?? '?').join(', ');
+        const subject = `Availability update - Round${many ? 's' : ''} ${nums}`;
+        const message = `Hi ${driverName}, you have been marked as unavailable for ${listStr}, `
+            + `so you will not be entered ${many ? 'for these rounds' : 'for this round'}. `
+            + `If you think this is a mistake or want to discuss it, just reply here and the team will get back to you.`;
+        const { data, error } = await sb.rpc('message_driver', {
+            p_driver_id: driverId, p_subject: subject, p_message: message,
+        });
+        if (error || !data?.ok) {
+            toast(`Availability saved, but the message failed: ${error?.message || data?.error || 'unknown'}`, 'error');
+        } else {
+            notified = true;
+            notifyDriverOfReply(driverId, message, subject);
+        }
+    }
+
     closeModal();
-    toast(`Availability updated for ${driverName}.`, 'success');
+    toast(`Availability updated for ${driverName}.${notified ? ' Driver notified.' : ''}`, 'success');
+    if (currentSection === 'messages') await renderMessages();
+    await refreshMsgsBadge();
 }
 
 function nextAvailableCareerNumber(ignoreDriverId) {
