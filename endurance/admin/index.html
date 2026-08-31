@@ -2007,6 +2007,7 @@ async function renderDrivers() {
                 <td><div class="row-actions">
                     ${!d.user_id ? `<button class="btn-icon" onclick="generateClaimLink('${d.id}','${esc(d.display_name)}')">Claim Link</button>` : `<button class="btn-icon" onclick="unlinkDriver('${d.id}','${esc(d.display_name)}')">Unlink</button>`}
                     <button class="btn-icon" onclick="openDirectMessageModal('${d.id}','${esc(d.display_name)}')">Message</button>
+                    <button class="btn-icon" onclick="openAvailabilityModal('${d.id}','${esc(d.display_name)}')">Availability</button>
                     <button class="btn-icon" onclick="editDriver('${d.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteDriver('${d.id}','${esc(d.display_name)}')">Delete</button>
                 </div></td>
@@ -2192,6 +2193,84 @@ function openDriverModal(d = {}) {
 async function editDriver(id) {
     const { data } = await sb.from('drivers').select('*').eq('id', id).single();
     openDriverModal(data);
+}
+
+// Mark a driver unavailable for specific rounds (e.g. a ban). Writes to the
+// same driver_event_absences table drivers self-flag into, so these flow
+// through to the auto-register (skipped) and the Health Check "Unable to
+// Attend" panel. Admin-added rows carry a reason; self-flags do not.
+async function openAvailabilityModal(driverId, driverName) {
+    const { data: season } = await sb.from('seasons').select('id, name').eq('is_active', true).maybeSingle();
+    if (!season) { toast('No active season is set.', 'error'); return; }
+
+    const [{ data: events }, { data: absences }] = await Promise.all([
+        sb.from('events').select('id, round, name, starts_at, status')
+            .eq('season_id', season.id).order('round'),
+        sb.from('driver_event_absences').select('event_id, reason').eq('driver_id', driverId),
+    ]);
+    if (!events || !events.length) { toast('No events in the active season yet.', 'error'); return; }
+
+    const absentMap = new Map((absences || []).map(a => [a.event_id, a.reason || '']));
+    const existingReason = (absences || []).map(a => a.reason).find(Boolean) || 'Banned';
+
+    const rowsHtml = events.map(e => {
+        const checked = absentMap.has(e.id);
+        const when = e.starts_at ? new Date(e.starts_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+        return `<label class="form-check" style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;border-bottom:1px solid var(--border)">
+            <input type="checkbox" class="avail-ev" value="${esc(e.id)}" ${checked ? 'checked' : ''}>
+            <span style="flex:1">R${e.round ?? '?'} · ${esc(e.name)} <span class="td-muted" style="font-size:0.75rem">${esc(when)}${e.status && e.status !== 'scheduled' ? ' · ' + esc(e.status) : ''}</span></span>
+        </label>`;
+    }).join('');
+
+    openModal(`Availability - ${esc(driverName)}`,
+        `<form id="entity-form" onsubmit="return false">
+            <p style="color:var(--muted);font-size:0.85rem;line-height:1.5;margin-bottom:0.85rem">
+                Tick the rounds ${esc(driverName)} is <strong style="color:var(--text)">unavailable</strong> for.
+                They are skipped when registering entries and appear in the Health Check "Unable to Attend" panel.
+            </p>
+            <div class="form-group">
+                <label>Reason</label>
+                <input type="text" id="avail-reason" value="${esc(existingReason)}" placeholder="e.g. Banned, injury, no-show">
+            </div>
+            <div style="max-height:320px;overflow-y:auto;margin-top:0.5rem">${rowsHtml}</div>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="saveDriverAvailability('${driverId}','${esc(driverName)}')">Save</button>`
+    );
+}
+
+async function saveDriverAvailability(driverId, driverName) {
+    const reason = (document.getElementById('avail-reason')?.value || '').trim() || null;
+    const checkedIds = Array.from(document.querySelectorAll('.avail-ev:checked')).map(el => el.value);
+    const shownIds = Array.from(document.querySelectorAll('.avail-ev')).map(el => el.value);
+
+    // What's currently stored for this driver, limited to the events shown.
+    const { data: current } = await sb.from('driver_event_absences')
+        .select('event_id').eq('driver_id', driverId).in('event_id', shownIds.length ? shownIds : ['00000000-0000-0000-0000-000000000000']);
+    const currentIds = new Set((current || []).map(r => r.event_id));
+
+    const toAdd = checkedIds.filter(id => !currentIds.has(id));
+    const toRemove = shownIds.filter(id => currentIds.has(id) && !checkedIds.includes(id));
+
+    if (toAdd.length) {
+        const rows = toAdd.map(event_id => ({ driver_id: driverId, event_id, reason }));
+        const { error } = await sb.from('driver_event_absences').upsert(rows, { onConflict: 'driver_id,event_id' });
+        if (error) { toast(error.message, 'error'); return; }
+    }
+    // Refresh the reason on rows that stay checked, so editing it sticks.
+    const keepChecked = checkedIds.filter(id => currentIds.has(id));
+    if (keepChecked.length) {
+        await sb.from('driver_event_absences').update({ reason })
+            .eq('driver_id', driverId).in('event_id', keepChecked);
+    }
+    if (toRemove.length) {
+        const { error } = await sb.from('driver_event_absences').delete()
+            .eq('driver_id', driverId).in('event_id', toRemove);
+        if (error) { toast(error.message, 'error'); return; }
+    }
+
+    closeModal();
+    toast(`Availability updated for ${driverName}.`, 'success');
 }
 
 function nextAvailableCareerNumber(ignoreDriverId) {
@@ -9815,7 +9894,7 @@ async function renderHealthCheck() {
             .order('starts_at');
         if (upcomingEvs?.length) {
             const { data: absRows } = await sb.from('driver_event_absences')
-                .select('driver_id, event_id, drivers(display_name, psn_id, current_team_id, teams!current_team_id(name))')
+                .select('driver_id, event_id, reason, drivers(display_name, psn_id, current_team_id, teams!current_team_id(name))')
                 .in('event_id', upcomingEvs.map(e => e.id));
             const byEvent = new Map();
             (absRows || []).forEach(r => {
@@ -9831,7 +9910,7 @@ async function renderHealthCheck() {
                         name: d?.display_name || '',
                         team: d?.teams?.name || 'No team',
                         psn: d?.psn_id || '',
-                        detail: `R${ev.round} ${ev.name}`,
+                        detail: `R${ev.round} ${ev.name}${r.reason ? ' (' + r.reason + ')' : ''}`,
                     });
                 });
             });
@@ -9840,13 +9919,21 @@ async function renderHealthCheck() {
                 if (!drivers.length) return '';
                 const driverCards = drivers.map(r => {
                     const d = r.drivers;
+                    // A reason is only set on admin-added absences (a ban etc.);
+                    // driver self-flags have none.
+                    const reasonBadge = r.reason
+                        ? `<span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)">${esc(r.reason)}</span>`
+                        : '';
                     return `<div class="hc-driver-card" style="border-color:rgba(239,68,68,0.3)">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
                             <div>
                                 <div style="font-weight:600">${esc(d?.display_name || '—')}</div>
                                 <div style="font-size:0.8rem;color:var(--muted)">${esc(d?.teams?.name || 'No team')} &middot; ${esc(d?.psn_id || '—')}</div>
                             </div>
-                            <button class="btn-icon" onclick="openDirectMessageModal('${r.driver_id}','${esc(d?.display_name || '')}')">Message</button>
+                            <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
+                                ${reasonBadge}
+                                <button class="btn-icon" onclick="openDirectMessageModal('${r.driver_id}','${esc(d?.display_name || '')}')">Message</button>
+                            </div>
                         </div>
                     </div>`;
                 }).join('');
