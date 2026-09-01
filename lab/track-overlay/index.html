@@ -122,6 +122,13 @@
     </div>
 
     <div class="sec">
+      <h4>4 · Fun props</h4>
+      <button class="btn gold" id="btn-prop">Drop random object</button>
+      <button class="btn red" id="btn-clear-props">Clear objects</button>
+      <div class="hint" style="margin-top:0.4rem">Drops a random 3D object on the track ahead. They stick to the world like the zones and show in OBS mode too.</div>
+    </div>
+
+    <div class="sec">
       <h4>Debug</h4>
       <div class="hint" id="dbg" style="font-family:monospace;font-size:0.7rem;white-space:pre-line;line-height:1.5"></div>
       <button class="btn gold" id="btn-copy-tel">Copy telemetry sample</button>
@@ -163,6 +170,8 @@ const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true })
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, 16/9, 0.1, 5000);
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.85); sun.position.set(1, 2, 1); scene.add(sun);
 
 // Synthetic ground + grid, shown only in demo mode as a stand-in "road".
 const demoGroup = new THREE.Group();
@@ -197,6 +206,34 @@ const calGrid = new THREE.Mesh(
     depthTest:false, side:THREE.DoubleSide }));
 calGrid.rotation.x = -Math.PI/2; calGrid.renderOrder = 5; calGrid.visible = false;
 scene.add(calGrid);
+
+// Fun props: random 3D objects dropped on the track. Same world-space
+// projection as the zones, so they stick to the road once calibrated.
+let props = [];                 // {type, color, x, y, z, size, rotY, spin}
+const propGroup = new THREE.Group();
+scene.add(propGroup);
+const PROP_TYPES = ['cone','sphere','box','torus','cyl','ico'];
+const PROP_COLORS = ['#ff5252','#ffd166','#22d3ee','#a3e635','#f472b6','#c084fc','#fb923c','#ffffff'];
+function makePropMesh(p) {
+  const sz = p.size;
+  let geo, yOff = sz*0.5, rotX = 0;
+  if (p.type === 'cone')   geo = new THREE.ConeGeometry(sz*0.5, sz, 22);
+  else if (p.type === 'sphere') geo = new THREE.SphereGeometry(sz*0.5, 22, 16);
+  else if (p.type === 'box') geo = new THREE.BoxGeometry(sz, sz, sz);
+  else if (p.type === 'torus') { geo = new THREE.TorusGeometry(sz*0.5, sz*0.2, 16, 32); rotX = Math.PI/2; yOff = sz*0.2; }
+  else if (p.type === 'cyl') geo = new THREE.CylinderGeometry(sz*0.4, sz*0.4, sz, 22);
+  else geo = new THREE.IcosahedronGeometry(sz*0.6, 0);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color:p.color, roughness:0.45, metalness:0.15 }));
+  mesh.position.set(p.x, p.y + yOff, p.z);
+  mesh.rotation.set(rotX, p.rotY || 0, 0);
+  mesh.userData.spin = p.spin || 0;
+  return mesh;
+}
+function rebuildProps() {
+  while (propGroup.children.length) { const c = propGroup.children.pop(); c.geometry.dispose(); }
+  props.forEach(p => propGroup.add(makePropMesh(p)));
+  try { localStorage.setItem('to_props', JSON.stringify(props)); } catch {}
+}
 
 // Zones (world-space polygons painted red).
 let zones = [];                 // array of arrays of {x,y,z}
@@ -421,6 +458,8 @@ function tick() {
     const sp = 5;
     calGrid.position.set(Math.round(s.posX/sp)*sp, s.posY + groundOffset, Math.round(s.posZ/sp)*sp);
   }
+  // Gently spin any props that have spin, for fun.
+  propGroup.children.forEach(m => { if (m.userData.spin) m.rotation.y += m.userData.spin; });
   // Keep edit handles a roughly constant on-screen size so they stay grabbable.
   if (editMode) handleGroup.children.forEach(h => {
     h.scale.setScalar(Math.max(0.3, camera.position.distanceTo(h.position) * 0.02));
@@ -616,6 +655,21 @@ document.getElementById('cal-smooth').addEventListener('input', e => {
   document.getElementById('v-smooth').textContent = motionSmooth.toFixed(2);
 });
 document.getElementById('cal-grid').addEventListener('change', e => { calGrid.visible = e.target.checked; });
+// Fun props.
+const rnd = arr => arr[Math.floor(Math.random()*arr.length)];
+document.getElementById('btn-prop').addEventListener('click', () => {
+  const s = currentSample(); if (!s) return;
+  const yaw = headYP.yaw, fx = Math.sin(yaw), fz = Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+  const dist = 10 + Math.random()*18, lat = (Math.random()-0.5)*8;
+  props.push({
+    type: rnd(PROP_TYPES), color: rnd(PROP_COLORS),
+    x: s.posX + fx*dist + rx*lat, y: s.posY + groundOffset, z: s.posZ + fz*dist + rz*lat,
+    size: 1 + Math.random()*1.6, rotY: Math.random()*6.28, spin: (Math.random()-0.5)*0.03,
+  });
+  rebuildProps();
+});
+document.getElementById('btn-clear-props').addEventListener('click', () => { props = []; rebuildProps(); });
+
 document.getElementById('btn-copy-tel').addEventListener('click', () => {
   const sample = rawDebug.slice(-12);
   const text = JSON.stringify(sample, null, 2);
@@ -642,6 +696,9 @@ function loadCalib() {
 }
 function loadZones() {
   try { const z = JSON.parse(localStorage.getItem('to_zones') || 'null'); if (z && z.length) { zones = z; rebuildZones(); } } catch {}
+}
+function loadProps() {
+  try { const p = JSON.parse(localStorage.getItem('to_props') || 'null'); if (p && p.length) { props = p; rebuildProps(); } } catch {}
 }
 
 // ---- Live: telemetry + video ----------------------------------------------
@@ -682,6 +739,7 @@ document.getElementById('obs-toggle').addEventListener('change', e => setObs(e.t
 buildSynthetic();
 loadCalib();
 loadZones();
+loadProps();
 const params = new URLSearchParams(location.search);
 if (params.get('obs') === '1') {
   setObs(true);
