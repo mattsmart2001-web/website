@@ -109,6 +109,7 @@
     <div class="sec">
       <h4>3 · Author a no-go zone</h4>
       <div class="hint" style="margin-bottom:0.6rem">Scrub so the car sits at a corner of the penalty patch, then drop a point. 3+ points make a zone.</div>
+      <button class="btn gold" id="btn-box">Drop a box ahead</button>
       <button class="btn" id="btn-corner">Drop corner at car</button>
       <button class="btn" id="btn-newzone">New zone</button>
       <button class="btn red" id="btn-undo">Undo point</button>
@@ -179,10 +180,22 @@ scene.add(demoGroup);
 // and flow smoothly; if not, they slide or tilt. Far easier to judge than one
 // box.
 let groundOffset = -0.3;
-const calGrid = new THREE.GridHelper(200, 40, 0x22d3ee, 0x0e7490);
-calGrid.material.transparent = true; calGrid.material.opacity = 0.55;
-calGrid.material.depthTest = false; calGrid.renderOrder = 5;
-calGrid.visible = false;
+function makeChecker() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.clearRect(0,0,64,64);
+  g.fillStyle = 'rgba(34,211,238,0.95)';
+  g.fillRect(0,0,32,32); g.fillRect(32,32,32,32);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(40, 40);   // 200m / 5m cells
+  return tex;
+}
+const calGrid = new THREE.Mesh(
+  new THREE.PlaneGeometry(200, 200),
+  new THREE.MeshBasicMaterial({ map:makeChecker(), transparent:true, opacity:0.4,
+    depthTest:false, side:THREE.DoubleSide }));
+calGrid.rotation.x = -Math.PI/2; calGrid.renderOrder = 5; calGrid.visible = false;
 scene.add(calGrid);
 
 // Zones (world-space polygons painted red).
@@ -502,11 +515,26 @@ CALIB_DEFS.forEach(d => {
 });
 
 // ---- Zone authoring -------------------------------------------------------
-function carPoint() { const s = sampleAt(currentTime()); return s ? { x:s.posX, y:s.posY, z:s.posZ } : null; }
+// Use the live feed when live, the timeline otherwise (the old version always
+// read the empty file array, so corners never landed in live mode).
+function carPoint() { const s = currentSample(); return s ? { x:s.posX, y:s.posY, z:s.posZ } : null; }
 document.getElementById('btn-corner').addEventListener('click', () => {
   const p = carPoint(); if (!p) return;
   if (!zones.length) zones.push([]);
   zones[zones.length-1].push(p); rebuildZones();
+});
+// One click drops a ready-made box on the road ahead, oriented to travel, so
+// you always get a visible zone you can then drag into shape.
+document.getElementById('btn-box').addEventListener('click', () => {
+  const s = currentSample(); if (!s) return;
+  const yaw = headYP.yaw;
+  const fx = Math.sin(yaw), fz = Math.cos(yaw);   // forward on the ground
+  const rx = Math.cos(yaw), rz = -Math.sin(yaw);  // right
+  const cx = s.posX + fx*15, cz = s.posZ + fz*15, cy = s.posY + groundOffset;
+  const hw = 4, hl = 4;
+  const corner = (a, b) => ({ x: cx + rx*a + fx*b, y: cy, z: cz + rz*a + fz*b });
+  zones.push([corner(-hw,-hl), corner(hw,-hl), corner(hw,hl), corner(-hw,hl)]);
+  rebuildZones();
 });
 document.getElementById('btn-newzone').addEventListener('click', () => { zones.push([]); rebuildZones(); });
 document.getElementById('btn-undo').addEventListener('click', () => {
