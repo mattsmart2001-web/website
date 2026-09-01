@@ -46,7 +46,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "2.4"   # shown in the tray so you can confirm which build is running
+VERSION       = "2.5"   # shown in the tray so you can confirm which build is running
 GT7_PORT      = 33740
 SEND_PORT     = 33739
 WS_PORT       = 8765
@@ -142,6 +142,11 @@ class GT7Packet:
         self.angvel_x    = self._f(0x28)
         self.angvel_z    = self._f(0x30)
         self.rot_yaw     = self._f(0x20)
+        # Pitch (0x1C) and roll (0x24) sit either side of yaw; sent so the
+        # track-overlay lab can sit graphics flat on slopes and banking.
+        # VERIFY these two offsets against a real capture.
+        self.rot_pitch   = self._f(0x1C)
+        self.rot_roll    = self._f(0x24)
         self.pos_x       = self._f(0x04)
         self.pos_y       = self._f(0x08)
         self.pos_z       = self._f(0x0C)
@@ -194,6 +199,8 @@ class GT7Packet:
             "posY":       round(self.pos_y, 2),
             "posZ":       round(self.pos_z, 2),
             "rotYaw":     round(self.rot_yaw, 4),
+            "rotPitch":   round(self.rot_pitch, 4),
+            "rotRoll":    round(self.rot_roll, 4),
         }
 
 

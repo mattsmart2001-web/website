@@ -36,6 +36,11 @@
   .transport .btn { margin:0; }
   code { background:rgba(255,255,255,0.06); padding:0.05rem 0.3rem; border-radius:3px; font-size:0.9em; }
   .pill { display:inline-block; font-size:0.66rem; color:var(--muted); background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:999px; padding:0.1rem 0.5rem; margin-left:0.4rem; }
+  /* OBS browser-source mode: transparent, chrome hidden, just the overlay. */
+  body.obs { background:transparent; }
+  body.obs header, body.obs .panel, body.obs .transport, body.obs #video { display:none; }
+  body.obs .stage { background:transparent; }
+  body.obs .layout { min-height:100vh; }
 </style>
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
@@ -68,6 +73,21 @@
       <label class="file">Zones (.json, optional)
         <input type="file" id="f-zones" accept=".json"></label>
       <button class="btn" id="btn-synth">Reset to synthetic demo</button>
+    </div>
+
+    <div class="sec">
+      <h4>1b · Live (instead of a file)</h4>
+      <div class="hint" style="margin-bottom:0.55rem">Drive the overlay from the running replay in real time. Telemetry from the connector; video from a capture card / screen, or leave it off and use this page as a transparent OBS browser source over your game capture.</div>
+      <div class="field">
+        <input type="text" id="ws-url" value="ws://localhost:8765" style="width:100%;padding:0.4rem 0.5rem;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.75rem">
+      </div>
+      <button class="btn gold" id="btn-ws">Connect telemetry</button>
+      <button class="btn" id="btn-cam">Use capture device</button>
+      <button class="btn" id="btn-screen">Share screen</button>
+      <div class="hint" id="live-status" style="margin-top:0.4rem"></div>
+      <label class="row" style="margin-top:0.5rem"><span>OBS mode (transparent, hide UI)</span>
+        <input type="checkbox" id="obs-toggle"></label>
+      <div class="hint">Or open <code>?obs=1</code> directly as the browser-source URL. It reuses the calibration and zones saved in this browser.</div>
     </div>
 
     <div class="sec">
@@ -171,12 +191,44 @@ function rebuildZones() {
   });
   document.getElementById('zone-status').textContent =
     `${zones.length} zone(s), ${zones.reduce((n,z)=>n+z.length,0)} points`;
+  saveZones();
 }
 
 // ---- Telemetry ------------------------------------------------------------
 let tel = [];                    // sorted samples {t, posX, posY, posZ, rotYaw, rotPitch, rotRoll}
-let usingVideo = false;
+let usingVideo = false;          // a video element (file or stream) is the backdrop
+let telSource = 'synthetic';     // synthetic | file | live
 let synthClock = 0, playing = false, lastT = performance.now();
+
+// Live telemetry ring buffer: each entry stamped with arrival time so the
+// timeOffset slider can delay it to match capture-card / OBS video latency.
+let liveBuffer = [];
+let ws = null;
+function pickLive() {
+  if (!liveBuffer.length) return null;
+  const want = performance.now()/1000 - Math.max(0, calib.timeOff);
+  let chosen = liveBuffer[0];
+  for (let i = 0; i < liveBuffer.length; i++) {
+    if (liveBuffer[i].arr <= want) chosen = liveBuffer[i]; else break;
+  }
+  return chosen.s;
+}
+function connectWS(url) {
+  try { if (ws) ws.close(); } catch {}
+  ws = new WebSocket(url);
+  ws.onopen = () => { telSource = 'live'; setStatus('telemetry connected'); refreshPill(); };
+  ws.onclose = () => { if (telSource === 'live') setStatus('telemetry disconnected'); };
+  ws.onerror = () => setStatus('telemetry connection failed');
+  ws.onmessage = (ev) => {
+    let d; try { d = JSON.parse(ev.data); } catch { return; }
+    if (d.type && d.type !== 'telemetry') return;      // ignore status frames
+    if (d.posX == null) return;
+    liveBuffer.push({ arr: performance.now()/1000, s: {
+      posX:d.posX, posY:d.posY, posZ:d.posZ,
+      rotYaw:d.rotYaw ?? 0, rotPitch:d.rotPitch ?? 0, rotRoll:d.rotRoll ?? 0 } });
+    if (liveBuffer.length > 400) liveBuffer.splice(0, liveBuffer.length - 400);
+  };
+}
 
 function sampleAt(t) {
   if (!tel.length) return null;
@@ -213,6 +265,14 @@ function updateCamera(s) {
 function currentTime() {
   return (usingVideo ? video.currentTime : synthClock) + calib.timeOff;
 }
+function currentSample() {
+  return telSource === 'live' ? pickLive() : sampleAt(currentTime());
+}
+function setStatus(t) { const el = document.getElementById('live-status'); if (el) el.textContent = t; }
+function refreshPill() {
+  document.getElementById('mode-pill').textContent =
+    (telSource === 'live' ? 'live' : usingVideo ? 'video' : 'synthetic');
+}
 
 // ---- Render loop ----------------------------------------------------------
 function resize() {
@@ -227,19 +287,23 @@ function tick() {
   requestAnimationFrame(tick);
   const now = performance.now();
   const dt = (now - lastT)/1000; lastT = now;
-  if (!usingVideo && playing) {
+  if (!usingVideo && telSource !== 'live' && playing) {
     synthClock += dt;
     if (tel.length && synthClock > tel[tel.length-1].t) synthClock = 0;
   }
-  demoGroup.visible = !usingVideo;
-  const t = currentTime();
-  const s = sampleAt(t);
+  // Show the synthetic grid only in the pure demo state.
+  demoGroup.visible = !usingVideo && telSource === 'synthetic';
+  const s = currentSample();
   if (s) updateCamera(s);
-  // Scrub + clock UI.
-  const dur = usingVideo ? (video.duration||0) : (tel.length ? tel[tel.length-1].t : 0);
-  const cur = usingVideo ? video.currentTime : synthClock;
-  if (dur) document.getElementById('scrub').value = String(Math.round(cur/dur*1000));
-  document.getElementById('clock').textContent = cur.toFixed(2)+'s';
+  // Scrub + clock UI (only meaningful for file / synthetic timelines).
+  if (telSource !== 'live') {
+    const dur = usingVideo ? (video.duration||0) : (tel.length ? tel[tel.length-1].t : 0);
+    const cur = usingVideo ? video.currentTime : synthClock;
+    if (dur) document.getElementById('scrub').value = String(Math.round(cur/dur*1000));
+    document.getElementById('clock').textContent = cur.toFixed(2)+'s';
+  } else {
+    document.getElementById('clock').textContent = 'live';
+  }
   renderer.render(scene, camera);
 }
 resize(); tick();
@@ -266,9 +330,9 @@ function buildSynthetic() {
     { x:cx+3, y:0, z:cz+4 }, { x:cx-3, y:0, z:cz+4 },
   ]];
   rebuildZones();
-  usingVideo = false; synthClock = 0; playing = true;
+  usingVideo = false; telSource = 'synthetic'; synthClock = 0; playing = true;
   video.removeAttribute('src'); video.load(); video.style.display='none';
-  document.getElementById('mode-pill').textContent = 'synthetic';
+  refreshPill();
   resize();
 }
 
@@ -289,7 +353,7 @@ document.getElementById('f-tel').addEventListener('change', async e => {
     t: r.t ?? 0, posX:r.posX ?? 0, posY:r.posY ?? 0, posZ:r.posZ ?? 0,
     rotYaw:r.rotYaw ?? 0, rotPitch:r.rotPitch ?? 0, rotRoll:r.rotRoll ?? 0,
   })).sort((a,b)=>a.t-b.t);
-  synthClock = 0;
+  synthClock = 0; telSource = 'file'; refreshPill();
 });
 document.getElementById('f-zones').addEventListener('change', async e => {
   const file = e.target.files[0]; if (!file) return;
@@ -306,7 +370,8 @@ CALIB_DEFS.forEach(d => {
   const inp = document.createElement('input');
   inp.type='range'; inp.min=d.min; inp.max=d.max; inp.step=d.step; inp.value=d.val;
   inp.addEventListener('input', () => { calib[d.key]=parseFloat(inp.value);
-    document.getElementById('v-'+d.key).textContent = inp.value; });
+    document.getElementById('v-'+d.key).textContent = inp.value; saveCalib(); });
+  inp.dataset.key = d.key;
   wrap.appendChild(inp); slidersEl.appendChild(wrap);
 });
 
@@ -332,6 +397,67 @@ function download(name, obj) {
 document.getElementById('btn-export-calib').addEventListener('click', () => download('camera-calibration.json', calib));
 document.getElementById('btn-export-zones').addEventListener('click', () => download('zones.json', zones));
 
+// ---- Persistence (so calibration + zones survive reloads and OBS mode) -----
+function saveCalib() { try { localStorage.setItem('to_calib', JSON.stringify(calib)); } catch {} }
+function saveZones() { try { localStorage.setItem('to_zones', JSON.stringify(zones)); } catch {} }
+function loadCalib() {
+  try {
+    const s = JSON.parse(localStorage.getItem('to_calib') || 'null'); if (!s) return;
+    Object.keys(s).forEach(k => { if (k in calib) calib[k] = s[k]; });
+    document.querySelectorAll('#sliders input[type=range]').forEach(inp => {
+      const k = inp.dataset.key; if (k in calib) { inp.value = calib[k]; document.getElementById('v-'+k).textContent = calib[k]; }
+    });
+  } catch {}
+}
+function loadZones() {
+  try { const z = JSON.parse(localStorage.getItem('to_zones') || 'null'); if (z && z.length) { zones = z; rebuildZones(); } } catch {}
+}
+
+// ---- Live: telemetry + video ----------------------------------------------
+document.getElementById('btn-ws').addEventListener('click', () =>
+  connectWS(document.getElementById('ws-url').value.trim() || 'ws://localhost:8765'));
+
+async function useStream(getStream, label) {
+  try {
+    const stream = await getStream();
+    video.srcObject = stream; video.style.display = 'block';
+    await video.play().catch(()=>{});
+    usingVideo = true; refreshPill(); resize(); setStatus(label + ' connected');
+  } catch (e) { setStatus(label + ' failed: ' + e.message); }
+}
+document.getElementById('btn-cam').addEventListener('click', async () => {
+  // Grant + label devices, then let the user pick (capture card is often not
+  // the default camera).
+  try {
+    await navigator.mediaDevices.getUserMedia({ video: true });
+    const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    let deviceId = cams[0]?.deviceId;
+    if (cams.length > 1) {
+      const pick = prompt('Pick video device:\n' + cams.map((c,i)=>`${i}: ${c.label||'device '+i}`).join('\n'), '0');
+      const idx = Math.max(0, Math.min(cams.length-1, parseInt(pick)||0));
+      deviceId = cams[idx].deviceId;
+    }
+    useStream(() => navigator.mediaDevices.getUserMedia({ video: { deviceId: deviceId ? { exact: deviceId } : undefined } }), 'capture device');
+  } catch (e) { setStatus('capture failed: ' + e.message); }
+});
+document.getElementById('btn-screen').addEventListener('click', () =>
+  useStream(() => navigator.mediaDevices.getDisplayMedia({ video: true }), 'screen share'));
+
+// ---- OBS transparent mode -------------------------------------------------
+function setObs(on) { document.body.classList.toggle('obs', on); resize(); }
+document.getElementById('obs-toggle').addEventListener('change', e => setObs(e.target.checked));
+
+// ---- Init -----------------------------------------------------------------
+buildSynthetic();
+loadCalib();
+loadZones();
+const params = new URLSearchParams(location.search);
+if (params.get('obs') === '1') {
+  setObs(true);
+  document.getElementById('obs-toggle').checked = true;
+  connectWS(params.get('ws') || 'ws://localhost:8765');
+}
+
 // ---- Transport ------------------------------------------------------------
 document.getElementById('play').addEventListener('click', () => {
   if (usingVideo) { video.paused ? video.play() : video.pause(); }
@@ -343,8 +469,6 @@ document.getElementById('scrub').addEventListener('input', e => {
   if (usingVideo && video.duration) video.currentTime = f*video.duration;
   else if (tel.length) synthClock = f*tel[tel.length-1].t;
 });
-
-buildSynthetic();
 </script>
 </body>
 </html>
