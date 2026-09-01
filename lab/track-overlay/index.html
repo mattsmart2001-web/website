@@ -103,6 +103,10 @@
       <button class="btn" id="btn-corner">Drop corner at car</button>
       <button class="btn" id="btn-newzone">New zone</button>
       <button class="btn red" id="btn-undo">Undo point</button>
+      <div style="border-top:1px solid var(--border);margin:0.65rem 0 0.55rem"></div>
+      <button class="btn" id="btn-edit">Edit vertices</button>
+      <button class="btn red" id="btn-del-vert">Delete selected</button>
+      <div class="hint" style="margin:0.45rem 0">In edit mode: drag a gold handle to move a corner, the blue handle to move the whole box. Click a corner to select it, then arrow keys nudge it (Shift = bigger steps).</div>
       <div class="hint" id="zone-status" style="margin:0.5rem 0"></div>
       <button class="btn gold" id="btn-export-zones">Export zones</button>
     </div>
@@ -160,6 +164,37 @@ let zoneMeshes = [];
 const zoneGroup = new THREE.Group();
 scene.add(zoneGroup);
 
+// Vertex editing: draggable handles on top of the zones.
+let editMode = false, dragging = null, selected = null;   // selected = {zi, vi}
+const handleGroup = new THREE.Group();
+scene.add(handleGroup);
+const raycaster = new THREE.Raycaster();
+const centroid = poly => {
+  const c = poly.reduce((a,p)=>({x:a.x+p.x,y:a.y+p.y,z:a.z+p.z}),{x:0,y:0,z:0});
+  const n = poly.length || 1; return { x:c.x/n, y:c.y/n, z:c.z/n };
+};
+function buildHandles() {
+  while (handleGroup.children.length) { const c = handleGroup.children.pop(); c.geometry.dispose(); }
+  handleGroup.visible = editMode;
+  if (!editMode) return;
+  zones.forEach((poly, zi) => {
+    if (poly.length >= 3) {
+      const c = centroid(poly);
+      const ch = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 10),
+        new THREE.MeshBasicMaterial({ color:0x38bdf8, depthTest:false }));
+      ch.position.set(c.x, c.y + 0.05, c.z); ch.renderOrder = 20; ch.userData = { zi, type:'center' };
+      handleGroup.add(ch);
+    }
+    poly.forEach((p, vi) => {
+      const sel = selected && selected.zi === zi && selected.vi === vi;
+      const h = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 10),
+        new THREE.MeshBasicMaterial({ color: sel ? 0xffffff : 0xffd166, depthTest:false }));
+      h.position.set(p.x, p.y + 0.05, p.z); h.renderOrder = 21; h.userData = { zi, vi, type:'vertex' };
+      handleGroup.add(h);
+    });
+  });
+}
+
 function rebuildZones() {
   zoneMeshes.forEach(m => { zoneGroup.remove(m); m.geometry.dispose(); });
   zoneMeshes = [];
@@ -191,6 +226,7 @@ function rebuildZones() {
   });
   document.getElementById('zone-status').textContent =
     `${zones.length} zone(s), ${zones.reduce((n,z)=>n+z.length,0)} points`;
+  buildHandles();
   saveZones();
 }
 
@@ -295,6 +331,10 @@ function tick() {
   demoGroup.visible = !usingVideo && telSource === 'synthetic';
   const s = currentSample();
   if (s) updateCamera(s);
+  // Keep edit handles a roughly constant on-screen size so they stay grabbable.
+  if (editMode) handleGroup.children.forEach(h => {
+    h.scale.setScalar(Math.max(0.3, camera.position.distanceTo(h.position) * 0.02));
+  });
   // Scrub + clock UI (only meaningful for file / synthetic timelines).
   if (telSource !== 'live') {
     const dur = usingVideo ? (video.duration||0) : (tel.length ? tel[tel.length-1].t : 0);
@@ -386,6 +426,62 @@ document.getElementById('btn-newzone').addEventListener('click', () => { zones.p
 document.getElementById('btn-undo').addEventListener('click', () => {
   for (let i=zones.length-1;i>=0;i--) { if (zones[i].length) { zones[i].pop(); if (!zones[i].length) zones.splice(i,1); break; } }
   rebuildZones();
+});
+
+// ---- Vertex editing (drag / select / nudge / delete) ----------------------
+function ndc(e) {
+  const r = canvas.getBoundingClientRect();
+  return new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+}
+canvas.addEventListener('pointerdown', e => {
+  if (!editMode) return;
+  raycaster.setFromCamera(ndc(e), camera);
+  const hit = raycaster.intersectObjects(handleGroup.children, false)[0];
+  if (!hit) { selected = null; buildHandles(); return; }
+  const ud = hit.object.userData;
+  if (ud.type === 'vertex') selected = { zi:ud.zi, vi:ud.vi };
+  const planeY = ud.type === 'vertex' ? zones[ud.zi][ud.vi].y : centroid(zones[ud.zi]).y;
+  const plane = new THREE.Plane(new THREE.Vector3(0,1,0), -planeY);
+  const p0 = new THREE.Vector3(); raycaster.ray.intersectPlane(plane, p0);
+  dragging = { ud, plane, start:p0, orig: zones[ud.zi].map(q => ({ ...q })) };
+  buildHandles(); e.preventDefault();
+});
+canvas.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  raycaster.setFromCamera(ndc(e), camera);
+  const p = new THREE.Vector3();
+  if (!raycaster.ray.intersectPlane(dragging.plane, p)) return;
+  const ud = dragging.ud;
+  if (ud.type === 'vertex') { const v = zones[ud.zi][ud.vi]; v.x = p.x; v.z = p.z; }
+  else { const dx = p.x-dragging.start.x, dz = p.z-dragging.start.z;
+    zones[ud.zi] = dragging.orig.map(q => ({ x:q.x+dx, y:q.y, z:q.z+dz })); }
+  rebuildZones();
+});
+window.addEventListener('pointerup', () => { dragging = null; });
+window.addEventListener('keydown', e => {
+  if (!editMode || !selected) return;
+  const v = zones[selected.zi]?.[selected.vi]; if (!v) return;
+  const step = e.shiftKey ? 1 : 0.2;
+  if (e.key === 'ArrowUp') v.z += step; else if (e.key === 'ArrowDown') v.z -= step;
+  else if (e.key === 'ArrowLeft') v.x -= step; else if (e.key === 'ArrowRight') v.x += step;
+  else return;
+  e.preventDefault(); rebuildZones();
+});
+document.getElementById('btn-edit').addEventListener('click', () => {
+  editMode = !editMode;
+  canvas.style.pointerEvents = editMode ? 'auto' : 'none';
+  const b = document.getElementById('btn-edit');
+  b.classList.toggle('gold', editMode);
+  b.textContent = editMode ? 'Editing (on)' : 'Edit vertices';
+  if (!editMode) { selected = null; dragging = null; }
+  buildHandles();
+});
+document.getElementById('btn-del-vert').addEventListener('click', () => {
+  if (!selected) return;
+  const z = zones[selected.zi]; if (!z) return;
+  z.splice(selected.vi, 1);
+  if (!z.length) zones.splice(selected.zi, 1);
+  selected = null; rebuildZones();
 });
 
 // ---- Export ---------------------------------------------------------------
