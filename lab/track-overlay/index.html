@@ -94,7 +94,9 @@
       <h4>2 · Camera calibration</h4>
       <div class="hint" style="margin-bottom:0.6rem">Dial these until a red zone sits flat on the tarmac and stays put as you drive past it.</div>
       <div id="sliders"></div>
-      <label class="row" style="margin-top:0.3rem"><span>Calibration grid</span><input type="checkbox" id="cal-grid"></label>
+      <label class="row" style="margin-top:0.3rem"><span>Heading from motion (recommended)</span><input type="checkbox" id="cal-motion" checked></label>
+      <div class="hint" style="margin:0 0 0.5rem">Points the camera along the direction of travel instead of the raw yaw field. Fixes the overlay sliding sideways as you drive. Turn off only if you want to test the raw telemetry orientation.</div>
+      <label class="row"><span>Calibration grid</span><input type="checkbox" id="cal-grid"></label>
       <label class="row"><span>Ground height (m)</span><span class="v" id="v-groundy">-0.30</span></label>
       <input type="range" id="cal-groundy" min="-3" max="1" step="0.05" value="-0.3">
       <div class="hint" style="margin:0.35rem 0 0.5rem">Turn the grid on and calibrate until its lines lie flat on the road and stay put as you drive. A whole grid is far easier to line up than one box.</div>
@@ -294,9 +296,28 @@ function sampleAt(t) {
 }
 
 const D2R = Math.PI/180;
+// Derive heading + pitch from the direction of travel, which is self
+// consistent with the car's motion (no sideways slide) and does not rely on
+// GT7's unverified rotation-field convention. Updates only after the car has
+// moved a short baseline, to keep it stable at low speed.
+let useMotion = true;
+let headRef = null, headYP = { yaw: 0, pitch: 0 };
+function motionYP(s) {
+  if (!headRef) { headRef = { x:s.posX, y:s.posY, z:s.posZ }; return headYP; }
+  const dx = s.posX-headRef.x, dy = s.posY-headRef.y, dz = s.posZ-headRef.z;
+  const horiz = Math.hypot(dx, dz);
+  if (horiz > 1.5) {
+    headYP = { yaw: Math.atan2(dx, dz), pitch: Math.atan2(dy, horiz) };
+    headRef = { x:s.posX, y:s.posY, z:s.posZ };
+  }
+  return headYP;
+}
 function updateCamera(s) {
-  const yaw   = (s.rotYaw||0)   + calib.yawTrim*D2R;
-  const pitch = (s.rotPitch||0) + calib.pitchTrim*D2R;
+  let by, bp;
+  if (useMotion) { const yp = motionYP(s); by = yp.yaw; bp = yp.pitch; }
+  else { by = s.rotYaw||0; bp = s.rotPitch||0; }
+  const yaw   = by + calib.yawTrim*D2R;
+  const pitch = bp + calib.pitchTrim*D2R;
   const roll  = (s.rotRoll||0)  + calib.rollTrim*D2R;
   const cp = Math.cos(pitch);
   const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(pitch), Math.cos(yaw)*cp).normalize();
@@ -514,7 +535,8 @@ function download(name, obj) {
 document.getElementById('btn-export-calib').addEventListener('click', () => download('camera-calibration.json', calib));
 document.getElementById('btn-export-zones').addEventListener('click', () => download('zones.json', zones));
 
-// Calibration grid controls.
+// Calibration grid + heading controls.
+document.getElementById('cal-motion').addEventListener('change', e => { useMotion = e.target.checked; headRef = null; });
 document.getElementById('cal-grid').addEventListener('change', e => { calGrid.visible = e.target.checked; });
 document.getElementById('cal-groundy').addEventListener('input', e => {
   groundOffset = parseFloat(e.target.value);
