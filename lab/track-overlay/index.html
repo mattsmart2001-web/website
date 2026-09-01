@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Track Overlay Lab</title>
+<style>
+  :root { --bg:#07090d; --panel:#0d1219; --card:#141b25; --border:rgba(255,255,255,0.1); --text:#f1f5f9; --muted:#94a3b8; --gold:#ffd166; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:Inter,system-ui,sans-serif; }
+  header { padding:0.7rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+  header .t { font-family:'Anton',Impact,sans-serif; letter-spacing:0.03em; font-size:1.1rem; }
+  header .k { font:700 0.55rem/1 'Orbitron',monospace; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); }
+  header a { color:var(--muted); text-decoration:none; font-size:0.8rem; margin-left:auto; }
+  .layout { display:flex; min-height:calc(100vh - 49px); }
+  .stage { flex:1; position:relative; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  #video { max-width:100%; max-height:100%; display:block; }
+  #overlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .panel { width:320px; flex-shrink:0; background:var(--panel); border-left:1px solid var(--border); padding:1rem; overflow-y:auto; max-height:calc(100vh - 49px); }
+  .sec { margin-bottom:1.3rem; }
+  .sec h4 { font:700 0.6rem/1 'Orbitron',monospace; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin:0 0 0.6rem; }
+  label.row { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; font-size:0.78rem; margin-bottom:0.5rem; color:var(--text); }
+  label.row .v { color:var(--gold); font-family:'Orbitron',monospace; font-size:0.72rem; min-width:52px; text-align:right; }
+  input[type=range] { width:100%; accent-color:var(--gold); }
+  .field { margin-bottom:0.6rem; }
+  .btn { display:inline-flex; align-items:center; gap:0.35rem; padding:0.45rem 0.7rem; border-radius:7px; border:1px solid var(--border); background:linear-gradient(180deg,#1c2432,#131922); color:#d7dde5; font-size:0.75rem; font-weight:600; cursor:pointer; margin:0.15rem 0.15rem 0.15rem 0; }
+  .btn:hover { border-color:rgba(255,255,255,0.25); color:#fff; }
+  .btn.gold { color:var(--gold); border-color:rgba(255,209,102,0.4); }
+  .btn.red { color:#fca5a5; border-color:rgba(239,68,68,0.4); }
+  .file { display:block; font-size:0.72rem; color:var(--muted); margin-bottom:0.55rem; }
+  .file input { display:block; margin-top:0.2rem; font-size:0.72rem; max-width:100%; }
+  .hint { font-size:0.72rem; color:var(--muted); line-height:1.5; }
+  .transport { position:absolute; left:0; right:0; bottom:0; padding:0.6rem 0.8rem; background:linear-gradient(0deg,rgba(0,0,0,0.8),transparent); display:flex; align-items:center; gap:0.7rem; }
+  .transport input[type=range] { flex:1; }
+  .transport .btn { margin:0; }
+  code { background:rgba(255,255,255,0.06); padding:0.05rem 0.3rem; border-radius:3px; font-size:0.9em; }
+  .pill { display:inline-block; font-size:0.66rem; color:var(--muted); background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:999px; padding:0.1rem 0.5rem; margin-left:0.4rem; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<header>
+  <div><span class="k">SparksTheory Lab</span><div class="t">Track Overlay <span class="pill" id="mode-pill">synthetic</span></div></div>
+  <a href="/lab/">&larr; Lab</a>
+</header>
+
+<div class="layout">
+  <div class="stage" id="stage">
+    <video id="video" playsinline muted></video>
+    <canvas id="overlay"></canvas>
+    <div class="transport">
+      <button class="btn" id="play">Play</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0">
+      <span id="clock" style="font:0.72rem 'Orbitron',monospace;color:var(--muted);min-width:74px;text-align:right">0.00s</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="sec">
+      <h4>1 · Load</h4>
+      <label class="file">Replay video (bumper cam)
+        <input type="file" id="f-video" accept="video/*"></label>
+      <label class="file">Telemetry log (.jsonl from recorder.py)
+        <input type="file" id="f-tel" accept=".jsonl,.json,.txt"></label>
+      <label class="file">Zones (.json, optional)
+        <input type="file" id="f-zones" accept=".json"></label>
+      <button class="btn" id="btn-synth">Reset to synthetic demo</button>
+    </div>
+
+    <div class="sec">
+      <h4>2 · Camera calibration</h4>
+      <div class="hint" style="margin-bottom:0.6rem">Dial these until a red zone sits flat on the tarmac and stays put as you drive past it.</div>
+      <div id="sliders"></div>
+      <button class="btn gold" id="btn-export-calib">Export calibration</button>
+    </div>
+
+    <div class="sec">
+      <h4>3 · Author a no-go zone</h4>
+      <div class="hint" style="margin-bottom:0.6rem">Scrub so the car sits at a corner of the penalty patch, then drop a point. 3+ points make a zone.</div>
+      <button class="btn" id="btn-corner">Drop corner at car</button>
+      <button class="btn" id="btn-newzone">New zone</button>
+      <button class="btn red" id="btn-undo">Undo point</button>
+      <div class="hint" id="zone-status" style="margin:0.5rem 0"></div>
+      <button class="btn gold" id="btn-export-zones">Export zones</button>
+    </div>
+
+    <div class="sec">
+      <h4>Notes</h4>
+      <div class="hint">
+        Deterministic replay + a rigid bumper cam is what makes this work: calibrate once, and the zones stay glued to the track.
+        This is a fit test, not the finished overlay. Orientation offsets in the telemetry are unverified - if the world tilts, that is the pitch/roll field to confirm.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ---- Calibration state (all adjustable live) ------------------------------
+const CALIB_DEFS = [
+  { key:'offFwd',   label:'Cam forward (m)', min:-2,  max:6,   step:0.05, val:1.8 },
+  { key:'offUp',    label:'Cam up (m)',      min:-1,  max:3,   step:0.05, val:0.6 },
+  { key:'offRight', label:'Cam right (m)',   min:-2,  max:2,   step:0.05, val:0.0 },
+  { key:'fov',      label:'FOV (deg)',       min:40,  max:120, step:1,    val:75  },
+  { key:'yawTrim',  label:'Yaw trim (deg)',  min:-180,max:180, step:0.5,  val:0   },
+  { key:'pitchTrim',label:'Pitch trim (deg)',min:-30, max:30,  step:0.5,  val:0   },
+  { key:'rollTrim', label:'Roll trim (deg)', min:-30, max:30,  step:0.5,  val:0   },
+  { key:'timeOff',  label:'Time offset (s)', min:-5,  max:5,   step:0.02, val:0   },
+];
+const calib = {};
+CALIB_DEFS.forEach(d => calib[d.key] = d.val);
+
+// ---- three.js ------------------------------------------------------------
+const stage = document.getElementById('stage');
+const video = document.getElementById('video');
+const canvas = document.getElementById('overlay');
+const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, 16/9, 0.1, 5000);
+
+// Synthetic ground + grid, shown only in demo mode as a stand-in "road".
+const demoGroup = new THREE.Group();
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(4000, 4000),
+  new THREE.MeshBasicMaterial({ color:0x0b0f14 }));
+ground.rotation.x = -Math.PI/2;
+demoGroup.add(ground);
+const grid = new THREE.GridHelper(4000, 400, 0x223047, 0x162131);
+demoGroup.add(grid);
+scene.add(demoGroup);
+
+// Zones (world-space polygons painted red).
+let zones = [];                 // array of arrays of {x,y,z}
+let zoneMeshes = [];
+const zoneGroup = new THREE.Group();
+scene.add(zoneGroup);
+
+function rebuildZones() {
+  zoneMeshes.forEach(m => { zoneGroup.remove(m); m.geometry.dispose(); });
+  zoneMeshes = [];
+  zones.forEach(poly => {
+    if (poly.length < 3) {
+      // Show in-progress points as small markers so authoring is visible.
+      poly.forEach(p => {
+        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8),
+          new THREE.MeshBasicMaterial({ color:0xffd166 }));
+        dot.position.set(p.x, p.y + 0.1, p.z);
+        zoneGroup.add(dot); zoneMeshes.push(dot);
+      });
+      return;
+    }
+    // Fan-triangulate from the centroid: fine for the soft blobs we need.
+    const c = poly.reduce((a,p)=>({x:a.x+p.x,y:a.y+p.y,z:a.z+p.z}),{x:0,y:0,z:0});
+    c.x/=poly.length; c.y/=poly.length; c.z/=poly.length;
+    const verts = [c.x, c.y, c.z];
+    poly.forEach(p => verts.push(p.x, p.y, p.z));
+    const idx = [];
+    for (let i=1;i<=poly.length;i++) idx.push(0, i, (i % poly.length) + 1);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    g.setIndex(idx);
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({
+      color:0xff2b2b, transparent:true, opacity:0.5, side:THREE.DoubleSide,
+      depthTest:false, depthWrite:false }));
+    zoneGroup.add(m); zoneMeshes.push(m);
+  });
+  document.getElementById('zone-status').textContent =
+    `${zones.length} zone(s), ${zones.reduce((n,z)=>n+z.length,0)} points`;
+}
+
+// ---- Telemetry ------------------------------------------------------------
+let tel = [];                    // sorted samples {t, posX, posY, posZ, rotYaw, rotPitch, rotRoll}
+let usingVideo = false;
+let synthClock = 0, playing = false, lastT = performance.now();
+
+function sampleAt(t) {
+  if (!tel.length) return null;
+  if (t <= tel[0].t) return tel[0];
+  if (t >= tel[tel.length-1].t) return tel[tel.length-1];
+  let lo=0, hi=tel.length-1;
+  while (hi - lo > 1) { const mid=(lo+hi)>>1; if (tel[mid].t < t) lo=mid; else hi=mid; }
+  const a=tel[lo], b=tel[hi], f=(t-a.t)/((b.t-a.t)||1);
+  const lerp=(k)=>a[k] + (b[k]-a[k])*f;
+  return { t, posX:lerp('posX'), posY:lerp('posY'), posZ:lerp('posZ'),
+           rotYaw:lerp('rotYaw'), rotPitch:lerp('rotPitch'), rotRoll:lerp('rotRoll') };
+}
+
+const D2R = Math.PI/180;
+function updateCamera(s) {
+  const yaw   = (s.rotYaw||0)   + calib.yawTrim*D2R;
+  const pitch = (s.rotPitch||0) + calib.pitchTrim*D2R;
+  const roll  = (s.rotRoll||0)  + calib.rollTrim*D2R;
+  const cp = Math.cos(pitch);
+  const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(pitch), Math.cos(yaw)*cp).normalize();
+  const up  = new THREE.Vector3(0,1,0);
+  const right = new THREE.Vector3().crossVectors(fwd, up).normalize();
+  const pos = new THREE.Vector3(s.posX, s.posY, s.posZ)
+    .addScaledVector(fwd, calib.offFwd)
+    .addScaledVector(up, calib.offUp)
+    .addScaledVector(right, calib.offRight);
+  camera.fov = calib.fov; camera.updateProjectionMatrix();
+  camera.position.copy(pos);
+  camera.up.set(0,1,0);
+  camera.lookAt(pos.clone().add(fwd));
+  camera.rotateOnAxis(new THREE.Vector3(0,0,-1), roll);
+}
+
+function currentTime() {
+  return (usingVideo ? video.currentTime : synthClock) + calib.timeOff;
+}
+
+// ---- Render loop ----------------------------------------------------------
+function resize() {
+  // Match the overlay to the visible video (or the whole stage in demo mode).
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+function tick() {
+  requestAnimationFrame(tick);
+  const now = performance.now();
+  const dt = (now - lastT)/1000; lastT = now;
+  if (!usingVideo && playing) {
+    synthClock += dt;
+    if (tel.length && synthClock > tel[tel.length-1].t) synthClock = 0;
+  }
+  demoGroup.visible = !usingVideo;
+  const t = currentTime();
+  const s = sampleAt(t);
+  if (s) updateCamera(s);
+  // Scrub + clock UI.
+  const dur = usingVideo ? (video.duration||0) : (tel.length ? tel[tel.length-1].t : 0);
+  const cur = usingVideo ? video.currentTime : synthClock;
+  if (dur) document.getElementById('scrub').value = String(Math.round(cur/dur*1000));
+  document.getElementById('clock').textContent = cur.toFixed(2)+'s';
+  renderer.render(scene, camera);
+}
+resize(); tick();
+
+// ---- Synthetic demo data --------------------------------------------------
+function buildSynthetic() {
+  // A gently curving flat "lap" driven forward, plus one red patch off to the
+  // left so you can see it hold position as the camera approaches and passes.
+  tel = [];
+  const HZ = 30, SECS = 24, SPEED = 40; // m/s
+  let x=0, z=0;
+  for (let i=0;i<HZ*SECS;i++){
+    const t = i/HZ;
+    const yaw = 0.15*Math.sin(t*0.25);        // slow S
+    x += Math.sin(yaw)*SPEED/HZ;
+    z += Math.cos(yaw)*SPEED/HZ;
+    tel.push({ t, posX:x, posY:0, posZ:z, rotYaw:yaw, rotPitch:0, rotRoll:0 });
+  }
+  // Zone: a 6x8m patch ~150m ahead, a couple of metres left of the line.
+  const anchor = tel.find(s => s.posZ > 150) || tel[tel.length-1];
+  const cx = anchor.posX - 4, cz = anchor.posZ;
+  zones = [[
+    { x:cx-3, y:0, z:cz-4 }, { x:cx+3, y:0, z:cz-4 },
+    { x:cx+3, y:0, z:cz+4 }, { x:cx-3, y:0, z:cz+4 },
+  ]];
+  rebuildZones();
+  usingVideo = false; synthClock = 0; playing = true;
+  video.removeAttribute('src'); video.load(); video.style.display='none';
+  document.getElementById('mode-pill').textContent = 'synthetic';
+  resize();
+}
+
+// ---- File loading ---------------------------------------------------------
+document.getElementById('f-video').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  video.src = URL.createObjectURL(file);
+  video.style.display = 'block';
+  video.onloadedmetadata = () => { usingVideo = true; playing=false; resize();
+    document.getElementById('mode-pill').textContent = 'video'; };
+});
+document.getElementById('f-tel').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const text = await file.text();
+  const rows = text.split('\n').filter(l => l.trim()).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  // Accept recorder.py output; default missing orientation to 0.
+  tel = rows.map(r => ({
+    t: r.t ?? 0, posX:r.posX ?? 0, posY:r.posY ?? 0, posZ:r.posZ ?? 0,
+    rotYaw:r.rotYaw ?? 0, rotPitch:r.rotPitch ?? 0, rotRoll:r.rotRoll ?? 0,
+  })).sort((a,b)=>a.t-b.t);
+  synthClock = 0;
+});
+document.getElementById('f-zones').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try { zones = JSON.parse(await file.text()); rebuildZones(); }
+  catch { alert('Could not parse zones JSON.'); }
+});
+document.getElementById('btn-synth').addEventListener('click', buildSynthetic);
+
+// ---- Calibration sliders --------------------------------------------------
+const slidersEl = document.getElementById('sliders');
+CALIB_DEFS.forEach(d => {
+  const wrap = document.createElement('div'); wrap.className='field';
+  wrap.innerHTML = `<label class="row"><span>${d.label}</span><span class="v" id="v-${d.key}">${d.val}</span></label>`;
+  const inp = document.createElement('input');
+  inp.type='range'; inp.min=d.min; inp.max=d.max; inp.step=d.step; inp.value=d.val;
+  inp.addEventListener('input', () => { calib[d.key]=parseFloat(inp.value);
+    document.getElementById('v-'+d.key).textContent = inp.value; });
+  wrap.appendChild(inp); slidersEl.appendChild(wrap);
+});
+
+// ---- Zone authoring -------------------------------------------------------
+function carPoint() { const s = sampleAt(currentTime()); return s ? { x:s.posX, y:s.posY, z:s.posZ } : null; }
+document.getElementById('btn-corner').addEventListener('click', () => {
+  const p = carPoint(); if (!p) return;
+  if (!zones.length) zones.push([]);
+  zones[zones.length-1].push(p); rebuildZones();
+});
+document.getElementById('btn-newzone').addEventListener('click', () => { zones.push([]); rebuildZones(); });
+document.getElementById('btn-undo').addEventListener('click', () => {
+  for (let i=zones.length-1;i>=0;i--) { if (zones[i].length) { zones[i].pop(); if (!zones[i].length) zones.splice(i,1); break; } }
+  rebuildZones();
+});
+
+// ---- Export ---------------------------------------------------------------
+function download(name, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type:'application/json' });
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+document.getElementById('btn-export-calib').addEventListener('click', () => download('camera-calibration.json', calib));
+document.getElementById('btn-export-zones').addEventListener('click', () => download('zones.json', zones));
+
+// ---- Transport ------------------------------------------------------------
+document.getElementById('play').addEventListener('click', () => {
+  if (usingVideo) { video.paused ? video.play() : video.pause(); }
+  else { playing = !playing; }
+  document.getElementById('play').textContent = (usingVideo ? !video.paused : playing) ? 'Pause' : 'Play';
+});
+document.getElementById('scrub').addEventListener('input', e => {
+  const f = e.target.value/1000;
+  if (usingVideo && video.duration) video.currentTime = f*video.duration;
+  else if (tel.length) synthClock = f*tel[tel.length-1].t;
+});
+
+buildSynthetic();
+</script>
+</body>
+</html>

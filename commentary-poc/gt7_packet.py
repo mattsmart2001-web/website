@@ -91,6 +91,13 @@ class GT7Packet:
         self.pos_x        = self._f(0x04)
         self.pos_y        = self._f(0x08)
         self.pos_z        = self._f(0x0C)
+        # Car orientation. Yaw at 0x20 is verbatim from the trusted connector;
+        # pitch (0x1C) and roll (0x24) are the neighbouring rotation floats and
+        # are needed so an on-track overlay sits flat on slopes and banking.
+        # VERIFY pitch/roll on a real capture (same note as the position field).
+        self.rot_pitch    = self._f(0x1C)
+        self.rot_yaw      = self._f(0x20)
+        self.rot_roll     = self._f(0x24)
         self.vehicle_id   = self._i(0xF4)
         speed = max(self._f(0x4C), 0.1)
         self.lat_g  = self.angvel_y * speed / 9.81
@@ -119,4 +126,7 @@ class GT7Packet:
             "posX":       round(self.pos_x, 2),
             "posY":       round(self.pos_y, 2),
             "posZ":       round(self.pos_z, 2),
+            "rotPitch":   round(self.rot_pitch, 4),
+            "rotYaw":     round(self.rot_yaw, 4),
+            "rotRoll":    round(self.rot_roll, 4),
         }
