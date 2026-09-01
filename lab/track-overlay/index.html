@@ -94,6 +94,10 @@
       <h4>2 · Camera calibration</h4>
       <div class="hint" style="margin-bottom:0.6rem">Dial these until a red zone sits flat on the tarmac and stays put as you drive past it.</div>
       <div id="sliders"></div>
+      <label class="row" style="margin-top:0.3rem"><span>Calibration grid</span><input type="checkbox" id="cal-grid"></label>
+      <label class="row"><span>Ground height (m)</span><span class="v" id="v-groundy">-0.30</span></label>
+      <input type="range" id="cal-groundy" min="-3" max="1" step="0.05" value="-0.3">
+      <div class="hint" style="margin:0.35rem 0 0.5rem">Turn the grid on and calibrate until its lines lie flat on the road and stay put as you drive. A whole grid is far easier to line up than one box.</div>
       <button class="btn gold" id="btn-export-calib">Export calibration</button>
     </div>
 
@@ -157,6 +161,17 @@ demoGroup.add(ground);
 const grid = new THREE.GridHelper(4000, 400, 0x223047, 0x162131);
 demoGroup.add(grid);
 scene.add(demoGroup);
+
+// Calibration grid: a world-aligned ground grid that recenters under the car
+// at road height. If the camera is calibrated, its lines lie flat on the road
+// and flow smoothly; if not, they slide or tilt. Far easier to judge than one
+// box.
+let groundOffset = -0.3;
+const calGrid = new THREE.GridHelper(200, 40, 0x22d3ee, 0x0e7490);
+calGrid.material.transparent = true; calGrid.material.opacity = 0.55;
+calGrid.material.depthTest = false; calGrid.renderOrder = 5;
+calGrid.visible = false;
+scene.add(calGrid);
 
 // Zones (world-space polygons painted red).
 let zones = [];                 // array of arrays of {x,y,z}
@@ -331,6 +346,12 @@ function tick() {
   demoGroup.visible = !usingVideo && telSource === 'synthetic';
   const s = currentSample();
   if (s) updateCamera(s);
+  // Keep the calibration grid centred under the car (snapped so its lines stay
+  // world-aligned) at road height.
+  if (calGrid.visible && s) {
+    const sp = 5;
+    calGrid.position.set(Math.round(s.posX/sp)*sp, s.posY + groundOffset, Math.round(s.posZ/sp)*sp);
+  }
   // Keep edit handles a roughly constant on-screen size so they stay grabbable.
   if (editMode) handleGroup.children.forEach(h => {
     h.scale.setScalar(Math.max(0.3, camera.position.distanceTo(h.position) * 0.02));
@@ -492,6 +513,13 @@ function download(name, obj) {
 }
 document.getElementById('btn-export-calib').addEventListener('click', () => download('camera-calibration.json', calib));
 document.getElementById('btn-export-zones').addEventListener('click', () => download('zones.json', zones));
+
+// Calibration grid controls.
+document.getElementById('cal-grid').addEventListener('change', e => { calGrid.visible = e.target.checked; });
+document.getElementById('cal-groundy').addEventListener('input', e => {
+  groundOffset = parseFloat(e.target.value);
+  document.getElementById('v-groundy').textContent = groundOffset.toFixed(2);
+});
 
 // ---- Persistence (so calibration + zones survive reloads and OBS mode) -----
 function saveCalib() { try { localStorage.setItem('to_calib', JSON.stringify(calib)); } catch {} }
