@@ -121,6 +121,13 @@
     </div>
 
     <div class="sec">
+      <h4>Debug</h4>
+      <div class="hint" id="dbg" style="font-family:monospace;font-size:0.7rem;white-space:pre-line;line-height:1.5"></div>
+      <button class="btn gold" id="btn-copy-tel">Copy telemetry sample</button>
+      <div class="hint" style="margin-top:0.35rem">Play the replay for a few seconds, then click this and paste it to Claude so we can see what the numbers are doing.</div>
+    </div>
+
+    <div class="sec">
       <h4>Notes</h4>
       <div class="hint">
         Deterministic replay + a rigid bumper cam is what makes this work: calibrate once, and the zones stay glued to the track.
@@ -259,6 +266,7 @@ let synthClock = 0, playing = false, lastT = performance.now();
 // Live telemetry ring buffer: each entry stamped with arrival time so the
 // timeOffset slider can delay it to match capture-card / OBS video latency.
 let liveBuffer = [];
+let rawDebug = [];
 let ws = null;
 function pickLive() {
   if (!liveBuffer.length) return null;
@@ -283,6 +291,8 @@ function connectWS(url) {
       posX:d.posX, posY:d.posY, posZ:d.posZ,
       rotYaw:d.rotYaw ?? 0, rotPitch:d.rotPitch ?? 0, rotRoll:d.rotRoll ?? 0 } });
     if (liveBuffer.length > 400) liveBuffer.splice(0, liveBuffer.length - 400);
+    rawDebug.push(d);                                   // full frames for diagnosis
+    if (rawDebug.length > 60) rawDebug.shift();
   };
 }
 
@@ -397,6 +407,15 @@ function tick() {
     document.getElementById('clock').textContent = cur.toFixed(2)+'s';
   } else {
     document.getElementById('clock').textContent = 'live';
+  }
+  const dbg = document.getElementById('dbg');
+  if (dbg) {
+    dbg.textContent =
+      `source: ${telSource}   frames: ${liveBuffer.length}\n` +
+      (s ? `pos  x ${s.posX.toFixed(1)}  y ${s.posY.toFixed(1)}  z ${s.posZ.toFixed(1)}\n` +
+           `rot  yaw ${(s.rotYaw||0).toFixed(3)}  pitch ${(s.rotPitch||0).toFixed(3)}  roll ${(s.rotRoll||0).toFixed(3)}\n` +
+           `travel heading ${(headYP.yaw*180/Math.PI).toFixed(0)}deg  pitch ${(headYP.pitch*180/Math.PI).toFixed(1)}deg`
+         : 'no sample yet');
   }
   renderer.render(scene, camera);
 }
@@ -556,6 +575,13 @@ document.getElementById('cal-smooth').addEventListener('input', e => {
   document.getElementById('v-smooth').textContent = motionSmooth.toFixed(2);
 });
 document.getElementById('cal-grid').addEventListener('change', e => { calGrid.visible = e.target.checked; });
+document.getElementById('btn-copy-tel').addEventListener('click', () => {
+  const sample = rawDebug.slice(-12);
+  const text = JSON.stringify(sample, null, 2);
+  navigator.clipboard.writeText(text).then(
+    () => setStatus(`copied ${sample.length} telemetry frames to clipboard`),
+    () => { setStatus('clipboard blocked; sample logged to console'); console.log(text); });
+});
 document.getElementById('cal-groundy').addEventListener('input', e => {
   groundOffset = parseFloat(e.target.value);
   document.getElementById('v-groundy').textContent = groundOffset.toFixed(2);
