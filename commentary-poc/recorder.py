@@ -65,6 +65,8 @@ def main():
     ap.add_argument('--out', required=True, help='output JSONL path')
     ap.add_argument('--ip', default=None, help='PS5 IP (omit to broadcast)')
     ap.add_argument('--seconds', type=float, default=0, help='auto-stop after N seconds (0 = until Ctrl+C)')
+    ap.add_argument('--replay', action='store_true',
+                    help='start on the first packet, not the first in-race one (replays may not set the in-race flag)')
     args = ap.parse_args()
 
     if not HAS_SALSA:
@@ -107,7 +109,9 @@ def main():
                 # Anchor t=0 to the first in-race packet so pass-2 sync is
                 # measured from the green flag, not from when we hit record.
                 if started is None:
-                    if not d['inRace']:
+                    # Replays may not raise the in-race flag, so --replay starts
+                    # on the first packet we decode instead of waiting for it.
+                    if not args.replay and not d['inRace']:
                         continue
                     started = now
                 d['t'] = round(now - started, 3)
