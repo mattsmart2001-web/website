@@ -125,7 +125,7 @@
       <h4>4 · Fun props</h4>
       <button class="btn gold" id="btn-prop">Drop random object</button>
       <button class="btn red" id="btn-clear-props">Clear objects</button>
-      <div class="hint" style="margin-top:0.4rem">Drops a random 3D object on the track ahead. They stick to the world like the zones and show in OBS mode too.</div>
+      <div class="hint" style="margin-top:0.4rem">Drops a random 3D object on the track ahead, with a soft contact shadow so it sits on the road. They stick to the world like the zones, fade out past 400m so far-off parts of the track don't show through, and show in OBS mode too.</div>
     </div>
 
     <div class="sec">
@@ -209,11 +209,31 @@ scene.add(calGrid);
 
 // Fun props: random 3D objects dropped on the track. Same world-space
 // projection as the zones, so they stick to the road once calibrated.
+// Each carries a soft contact-shadow disc so it reads as sitting on the
+// road, and fades out past PROP_MAX_DIST so props on a far-off part of
+// the track don't show through when the camera happens to face them.
 let props = [];                 // {type, color, x, y, z, size, rotY, spin}
 const propGroup = new THREE.Group();
 scene.add(propGroup);
 const PROP_TYPES = ['cone','sphere','box','torus','cyl','ico'];
 const PROP_COLORS = ['#ff5252','#ffd166','#22d3ee','#a3e635','#f472b6','#c084fc','#fb923c','#ffffff'];
+const PROP_MAX_DIST = 400; // metres from the camera before a prop is hidden
+
+function makeShadowTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0,   'rgba(0,0,0,0.55)');
+  grad.addColorStop(0.7, 'rgba(0,0,0,0.25)');
+  grad.addColorStop(1,   'rgba(0,0,0,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+// Shared between every prop (cheap: same geometry/material, per-instance scale only).
+const propShadowGeo = new THREE.CircleGeometry(0.5, 24);
+const propShadowMat = new THREE.MeshBasicMaterial({
+  map: makeShadowTexture(), transparent: true, depthWrite: false, side: THREE.DoubleSide });
+
 function makePropMesh(p) {
   const sz = p.size;
   let geo, yOff = sz*0.5, rotX = 0;
@@ -224,13 +244,27 @@ function makePropMesh(p) {
   else if (p.type === 'cyl') geo = new THREE.CylinderGeometry(sz*0.4, sz*0.4, sz, 22);
   else geo = new THREE.IcosahedronGeometry(sz*0.6, 0);
   const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color:p.color, roughness:0.45, metalness:0.15 }));
-  mesh.position.set(p.x, p.y + yOff, p.z);
+  mesh.position.y = yOff;
   mesh.rotation.set(rotX, p.rotY || 0, 0);
-  mesh.userData.spin = p.spin || 0;
-  return mesh;
+
+  const shadow = new THREE.Mesh(propShadowGeo, propShadowMat);
+  shadow.rotation.x = -Math.PI/2;
+  shadow.scale.setScalar(sz * 1.15);
+  shadow.position.y = 0.015;
+  shadow.renderOrder = 4;
+
+  const group = new THREE.Group();
+  group.position.set(p.x, p.y, p.z);
+  group.add(shadow, mesh);
+  group.userData.mesh = mesh;
+  group.userData.spin = p.spin || 0;
+  return group;
 }
 function rebuildProps() {
-  while (propGroup.children.length) { const c = propGroup.children.pop(); c.geometry.dispose(); }
+  while (propGroup.children.length) {
+    const g = propGroup.children.pop();
+    g.traverse(o => { if (o.isMesh && o.geometry !== propShadowGeo) o.geometry.dispose(); });
+  }
   props.forEach(p => propGroup.add(makePropMesh(p)));
   try { localStorage.setItem('to_props', JSON.stringify(props)); } catch {}
 }
@@ -458,8 +492,13 @@ function tick() {
     const sp = 5;
     calGrid.position.set(Math.round(s.posX/sp)*sp, s.posY + groundOffset, Math.round(s.posZ/sp)*sp);
   }
-  // Gently spin any props that have spin, for fun.
-  propGroup.children.forEach(m => { if (m.userData.spin) m.rotation.y += m.userData.spin; });
+  // Gently spin any props that have spin, and hide ones too far from the
+  // camera so props on a distant, unrelated part of the track don't peek
+  // through when the camera happens to point at them.
+  propGroup.children.forEach(g => {
+    if (g.userData.spin) g.userData.mesh.rotation.y += g.userData.spin;
+    g.visible = camera.position.distanceTo(g.position) <= PROP_MAX_DIST;
+  });
   // Keep edit handles a roughly constant on-screen size so they stay grabbable.
   if (editMode) handleGroup.children.forEach(h => {
     h.scale.setScalar(Math.max(0.3, camera.position.distanceTo(h.position) * 0.02));
