@@ -45,6 +45,16 @@
   body.obs header, body.obs #video { display:none; }
   body.obs .stage { background:transparent; }
   body.obs .layout { min-height:100vh; }
+  /* Boost: radial speed-lines that fade in automatically on hard acceleration
+     (driven by accelEMA, not a button). mix-blend-mode:screen so it only
+     brightens - safe over the transparent OBS background or the real video. */
+  #fx-boost {
+    position:absolute; inset:0; pointer-events:none; opacity:0;
+    mix-blend-mode:screen;
+    background: repeating-conic-gradient(rgba(255,255,255,0.85) 0deg 1deg, transparent 1deg 7deg);
+    -webkit-mask-image: radial-gradient(circle at center, transparent 18%, black 65%);
+    mask-image: radial-gradient(circle at center, transparent 18%, black 65%);
+  }
 </style>
 <script type="importmap">
 { "imports": { "three": "./lib/three.module.js" } }
@@ -60,6 +70,7 @@
   <div class="stage" id="stage">
     <video id="video" playsinline muted></video>
     <canvas id="overlay"></canvas>
+    <div id="fx-boost"></div>
     <div class="transport">
       <button class="btn" id="play">Play</button>
       <input type="range" id="scrub" min="0" max="1000" value="0">
@@ -178,6 +189,7 @@ CALIB_DEFS.forEach(d => calib[d.key] = d.val);
 const stage = document.getElementById('stage');
 const video = document.getElementById('video');
 const canvas = document.getElementById('overlay');
+const fxBoost = document.getElementById('fx-boost');
 const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
@@ -398,6 +410,66 @@ function handleObstacleEvent(kind) {
   if (kind === 'wall') spawnWall(currentSample());
 }
 
+// Drift smoke: automatic, not a button - billows from the outside of a
+// corner once lateralEMA (see trackLateral, above) crosses a "that's a real
+// corner" threshold. Sprites always face the camera, so no billboard math.
+function makeSmokeTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0,   'rgba(215,215,220,0.55)');
+  grad.addColorStop(0.5, 'rgba(200,200,205,0.28)');
+  grad.addColorStop(1,   'rgba(200,200,205,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+const smokeTex = makeSmokeTexture();
+const smokeGroup = new THREE.Group();
+scene.add(smokeGroup);
+let smokePuffs = [];
+let smokeCooldown = 0;
+const DRIFT_LAT_THRESHOLD = 3.2;   // m/s^2 (~0.33g) sustained turning before smoke kicks in
+
+function updateDriftSmoke(s, dt) {
+  smokeCooldown -= dt;
+  const latAbs = Math.abs(lateralEMA);
+  if (s && latAbs > DRIFT_LAT_THRESHOLD && speedEMA > 3 && smokeCooldown <= 0) {
+    smokeCooldown = 0.07;
+    const worldUp = new THREE.Vector3(0, 1, 0);
+    const fwd = new THREE.Vector3(Math.sin(roadYaw)*Math.cos(roadPitch), Math.sin(roadPitch), Math.cos(roadYaw)*Math.cos(roadPitch)).normalize();
+    const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+    const side = lateralEMA > 0 ? 1 : -1;   // billows from the outside of the turn
+    const groundY = s.posY + groundOffset;
+    for (let i = 0; i < 2; i++) {
+      const mat = new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false });
+      const spr = new THREE.Sprite(mat);
+      spr.position.set(s.posX, groundY + 0.3, s.posZ)
+        .addScaledVector(right, side * (0.8 + Math.random()*0.8))
+        .addScaledVector(worldUp, Math.random()*0.4);
+      const startScale = 0.8 + Math.random()*0.5;
+      spr.scale.setScalar(startScale);
+      smokeGroup.add(spr);
+      smokePuffs.push({
+        spr, startScale, age: 0, life: 1.3 + Math.random()*0.6,
+        vel: new THREE.Vector3(right.x*side*(0.4+Math.random()*0.6), 0.6+Math.random()*0.5, right.z*side*(0.4+Math.random()*0.6)),
+      });
+    }
+  }
+  smokePuffs = smokePuffs.filter(p => {
+    p.age += dt;
+    p.spr.position.addScaledVector(p.vel, dt);
+    p.vel.multiplyScalar(0.98);   // drag - drifts, then hangs
+    p.spr.scale.setScalar(p.startScale * (1 + p.age*0.6));   // expands as it disperses
+    p.spr.material.opacity = Math.max(0, 1 - p.age/p.life) * 0.6;
+    if (p.age >= p.life) {
+      smokeGroup.remove(p.spr);
+      p.spr.material.dispose();
+      return false;
+    }
+    return true;
+  });
+}
+
 // Zones (world-space polygons painted red).
 let zones = [];                 // array of arrays of {x,y,z}
 let zoneMeshes = [];
@@ -567,6 +639,19 @@ function trackAccel(s, dt) {
   prevAccelPos = { x: s.posX, z: s.posZ };
   prevAccelT = now;
 }
+// Lateral G for the drift-smoke effect: v * yaw-rate, the standard
+// centripetal-acceleration relation, using the already-smoothed
+// motion-derived heading so it doesn't need its own noisy differentiation.
+let prevLatYaw = null, lateralEMA = 0;
+function trackLateral(dt) {
+  if (prevLatYaw !== null && dt > 0.001) {
+    let dYaw = headYP.yaw - prevLatYaw;
+    if (dYaw > Math.PI) dYaw -= Math.PI*2; else if (dYaw < -Math.PI) dYaw += Math.PI*2;
+    const lat = speedEMA * (dYaw / dt);   // m/s^2, signed with the turn direction
+    lateralEMA += (lat - lateralEMA) * 0.25;
+  }
+  prevLatYaw = headYP.yaw;
+}
 // Exposed for the calibration grid: the road's own yaw/pitch, corrected for
 // mounting bias same as the camera, but WITHOUT brake dive - that's a
 // cosmetic camera wobble, not a real change in the road's slope, so the
@@ -577,6 +662,7 @@ function updateCamera(s, dt) {
   let by, bp;
   if (useMotion) { const yp = motionYP(s); by = yp.yaw; bp = yp.pitch; }
   else { by = s.rotYaw||0; bp = s.rotPitch||0; }
+  trackLateral(dt);   // needs headYP, which motionYP just updated above
   // Negative accelEMA (braking) pitches the camera down, so the horizon
   // rises to match the game's own cosmetic brake-dive.
   const brakeDive = (accelEMA / 9.81) * calib.brakeDive * D2R;
@@ -674,6 +760,13 @@ function tick() {
     g.visible = camera.position.distanceTo(g.position) <= PROP_MAX_DIST;
   });
   updateWalls(s, dt);
+  updateDriftSmoke(s, dt);
+  // Boost: fades the speed-lines in on real hard acceleration (accelEMA,
+  // already tracked for brake dive), no button - it reacts to actual driving.
+  if (fxBoost) {
+    const boostT = Math.max(0, Math.min(1, (accelEMA - 3) / 5));
+    fxBoost.style.opacity = boostT * 0.7;
+  }
   // Keep edit handles a roughly constant on-screen size so they stay grabbable.
   if (editMode) handleGroup.children.forEach(h => {
     h.scale.setScalar(Math.max(0.3, camera.position.distanceTo(h.position) * 0.02));
