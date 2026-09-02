@@ -289,7 +289,8 @@ let walls = [];   // {group, bricks:[{mesh,vel}], planePos:Vector3, planeFwd:Vec
 const wallGroup = new THREE.Group();
 scene.add(wallGroup);
 const brickGeo = new THREE.BoxGeometry(0.95, 0.45, 0.32);
-const WALL_COLS = 8, WALL_ROWS = 3, WALL_AHEAD = 40, WALL_GRAVITY = 14;
+const WALL_COLS = 16, WALL_ROWS = 3, WALL_AHEAD = 80, WALL_GRAVITY = 14;
+const WALL_BREAK_LEAD = 5.5;   // metres before the plane it starts shattering (was 1.5)
 
 function spawnWall(s) {
   if (!s) return;
@@ -335,7 +336,7 @@ function updateWalls(s, dt) {
     if (!w.smashed) {
       if (carPos) {
         const signed = carPos.clone().sub(w.planePos).dot(w.planeFwd);
-        if (signed >= -1.5) smashWall(w);   // car has reached the wall's plane
+        if (signed >= -WALL_BREAK_LEAD) smashWall(w);   // breaking early so the shatter reads clearly
       }
       return true;
     }
