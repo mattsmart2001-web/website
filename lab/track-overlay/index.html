@@ -45,16 +45,6 @@
   body.obs header, body.obs #video { display:none; }
   body.obs .stage { background:transparent; }
   body.obs .layout { min-height:100vh; }
-  /* Boost: radial speed-lines that fade in automatically on hard acceleration
-     (driven by accelEMA, not a button). mix-blend-mode:screen so it only
-     brightens - safe over the transparent OBS background or the real video. */
-  #fx-boost {
-    position:absolute; inset:0; pointer-events:none; opacity:0;
-    mix-blend-mode:screen;
-    background: repeating-conic-gradient(rgba(255,255,255,0.85) 0deg 1deg, transparent 1deg 7deg);
-    -webkit-mask-image: radial-gradient(circle at center, transparent 18%, black 65%);
-    mask-image: radial-gradient(circle at center, transparent 18%, black 65%);
-  }
 </style>
 <script type="importmap">
 { "imports": { "three": "./lib/three.module.js" } }
@@ -70,7 +60,6 @@
   <div class="stage" id="stage">
     <video id="video" playsinline muted></video>
     <canvas id="overlay"></canvas>
-    <div id="fx-boost"></div>
     <div class="transport">
       <button class="btn" id="play">Play</button>
       <input type="range" id="scrub" min="0" max="1000" value="0">
@@ -151,7 +140,9 @@
       <div class="hint" style="margin-top:0.4rem">A 10-pin rack close ahead. Tips over and scatters the moment the car reaches it.</div>
       <button class="btn gold" id="btn-wreckingball" style="margin-top:0.5rem">Drop wrecking ball (test)</button>
       <div class="hint" style="margin-top:0.4rem">A ball on a chain, swinging across the track ahead - persists and keeps swinging, no smash trigger. Time your pass and dodge it.</div>
-      <div class="hint" style="margin-top:0.5rem">For a Stream Deck: add a <strong>Website</strong> action set to GET a trigger URL on the machine running the connector - <code id="wall-trigger-url">http://localhost:8767/trigger?type=wall</code> for the wall, <code>...?type=pins</code> for the pins, <code>...?type=wreckingball</code> for the wrecking ball. Only reaches this page while connected to live telemetry (Connect telemetry, above); the test buttons here always work.</div>
+      <button class="btn gold" id="btn-fireworks" style="margin-top:0.5rem">Fireworks (test)</button>
+      <div class="hint" style="margin-top:0.4rem">A staggered burst of colourful fireworks far down the track, high enough to stay visible from a distance - a celebration trigger, not an obstacle.</div>
+      <div class="hint" style="margin-top:0.5rem">For a Stream Deck: add a <strong>Website</strong> action set to GET a trigger URL on the machine running the connector - <code id="wall-trigger-url">http://localhost:8767/trigger?type=wall</code> for the wall, <code>...?type=pins</code> for the pins, <code>...?type=wreckingball</code> for the wrecking ball, <code>...?type=fireworks</code> for fireworks. Only reaches this page while connected to live telemetry (Connect telemetry, above); the test buttons here always work.</div>
     </div>
 
     <div class="sec">
@@ -193,7 +184,6 @@ CALIB_DEFS.forEach(d => calib[d.key] = d.val);
 const stage = document.getElementById('stage');
 const video = document.getElementById('video');
 const canvas = document.getElementById('overlay');
-const fxBoost = document.getElementById('fx-boost');
 const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
@@ -583,12 +573,89 @@ function updateWreckingBalls(dt) {
   });
 }
 
+// Fireworks: a celebration burst, deliberately placed far down/up the track
+// and NOT distance-culled like the other obstacles - the whole point is to
+// be visible from far away. Several staggered bursts per trigger for a
+// "show" feel, using THREE.Points (one draw call per burst) rather than
+// individual meshes since there can be ~90 particles per burst.
+let fireworks = [];
+const fireworksGroup = new THREE.Group();
+scene.add(fireworksGroup);
+const FIREWORK_COLORS = [0xff5252, 0xffd166, 0x22d3ee, 0xa3e635, 0xf472b6, 0xc084fc, 0xfb923c, 0xffffff];
+const FIREWORK_GRAVITY = 9;
+
+function spawnFireworkBurst(origin, color) {
+  const count = 90;
+  const positions = new Float32Array(count * 3);
+  const velocities = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2*Math.random() - 1);   // uniform point on a sphere
+    const speed = 9 + Math.random() * 11;
+    velocities[i*3]   = Math.sin(phi)*Math.cos(theta) * speed;
+    velocities[i*3+1] = Math.cos(phi) * speed;
+    velocities[i*3+2] = Math.sin(phi)*Math.sin(theta) * speed;
+    positions[i*3] = origin.x; positions[i*3+1] = origin.y; positions[i*3+2] = origin.z;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({
+    color, size: 3, sizeAttenuation: true, transparent: true, opacity: 1,
+    depthWrite: false, blending: THREE.AdditiveBlending });
+  const points = new THREE.Points(geo, mat);
+  fireworksGroup.add(points);
+  fireworks.push({ points, velocities, age: 0, life: 1.8 + Math.random()*0.4 });
+}
+
+function spawnFireworks(s) {
+  if (!s) return;
+  const yaw = roadYaw, cp = Math.cos(roadPitch);
+  const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(roadPitch), Math.cos(yaw)*cp).normalize();
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  const base = new THREE.Vector3(s.posX, s.posY, s.posZ);
+  const bursts = 4;
+  for (let i = 0; i < bursts; i++) {
+    setTimeout(() => {
+      const origin = base.clone()
+        .addScaledVector(fwd, 160 + Math.random()*70)
+        .addScaledVector(right, (Math.random()-0.5) * 60)
+        .addScaledVector(worldUp, 45 + Math.random()*35);
+      spawnFireworkBurst(origin, FIREWORK_COLORS[Math.floor(Math.random()*FIREWORK_COLORS.length)]);
+    }, i * 250);
+  }
+}
+
+function updateFireworks(dt) {
+  if (!fireworks.length) return;
+  fireworks = fireworks.filter(fw => {
+    fw.age += dt;
+    const arr = fw.points.geometry.attributes.position.array;
+    for (let i = 0; i < arr.length; i += 3) {
+      fw.velocities[i+1] -= FIREWORK_GRAVITY * dt;
+      arr[i]   += fw.velocities[i]   * dt;
+      arr[i+1] += fw.velocities[i+1] * dt;
+      arr[i+2] += fw.velocities[i+2] * dt;
+    }
+    fw.points.geometry.attributes.position.needsUpdate = true;
+    fw.points.material.opacity = Math.max(0, 1 - fw.age/fw.life);
+    if (fw.age >= fw.life) {
+      fireworksGroup.remove(fw.points);
+      fw.points.geometry.dispose();
+      fw.points.material.dispose();
+      return false;
+    }
+    return true;
+  });
+}
+
 // Dispatches Stream Deck / chat-style trigger events (from the WS connector's
 // event channel) to the matching obstacle.
 function handleObstacleEvent(kind) {
   if (kind === 'wall') spawnWall(currentSample());
   else if (kind === 'pins') spawnPins(currentSample());
   else if (kind === 'wreckingball') spawnWreckingBall(currentSample());
+  else if (kind === 'fireworks') spawnFireworks(currentSample());
 }
 
 // Drift smoke: automatic, not a button - billows from the outside of a
@@ -944,12 +1011,7 @@ function tick() {
   updatePins(s, dt);
   updateWreckingBalls(dt);
   updateDriftSmoke(s, dt);
-  // Boost: fades the speed-lines in on real hard acceleration (accelEMA,
-  // already tracked for brake dive), no button - it reacts to actual driving.
-  if (fxBoost) {
-    const boostT = Math.max(0, Math.min(1, (accelEMA - 3) / 5));
-    fxBoost.style.opacity = boostT * 0.7;
-  }
+  updateFireworks(dt);
   // Keep edit handles a roughly constant on-screen size so they stay grabbable.
   if (editMode) handleGroup.children.forEach(h => {
     h.scale.setScalar(Math.max(0.3, camera.position.distanceTo(h.position) * 0.02));
@@ -1163,6 +1225,7 @@ document.getElementById('btn-clear-props').addEventListener('click', () => { pro
 document.getElementById('btn-wall').addEventListener('click', () => spawnWall(currentSample()));
 document.getElementById('btn-pins').addEventListener('click', () => spawnPins(currentSample()));
 document.getElementById('btn-wreckingball').addEventListener('click', () => spawnWreckingBall(currentSample()));
+document.getElementById('btn-fireworks').addEventListener('click', () => spawnFireworks(currentSample()));
 
 document.getElementById('btn-copy-tel').addEventListener('click', () => {
   const sample = rawDebug.slice(-12);
