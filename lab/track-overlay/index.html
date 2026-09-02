@@ -291,7 +291,7 @@ let walls = [];   // {group, bricks:[{mesh,shadow,vel,landed}], planePos, planeF
 const wallGroup = new THREE.Group();
 scene.add(wallGroup);
 const brickGeo = new THREE.BoxGeometry(0.95, 0.45, 0.32);
-const WALL_COLS = 16, WALL_ROWS = 6, WALL_AHEAD = 80, WALL_GRAVITY = 14;
+const WALL_COLS = 16, WALL_ROWS = 6, WALL_AHEAD = 80, WALL_GRAVITY = 10;
 const WALL_BREAK_LEAD = 5.5;   // metres before the plane it starts shattering
 
 function spawnWall(s) {
@@ -335,18 +335,20 @@ function spawnWall(s) {
 function smashWall(w) {
   w.smashed = true;
   // Real car speed at the moment of impact (speedEMA, tracked continuously
-  // in trackAccel) drives the scatter: a stationary/slow tap just tumbles
-  // the bricks, a fast hit sends them flying much further and wider.
-  const speed = Math.max(0, speedEMA);            // m/s
-  const kick = Math.min(speed * 0.4, 20);          // forward "hit", capped so it stays on screen
-  const spread = 3 + speed * 0.15;
+  // in trackAccel) drives the scatter, but it's a proper explosion even
+  // standing still - a forward punch plus a wide sideways blast, not just a
+  // gentle collapse - so it actually reads as bricks flying everywhere
+  // rather than tipping into a heap where the wall stood.
+  const speed = Math.max(0, speedEMA);                    // m/s
+  const kick    = 10 + Math.min(speed * 0.45, 25);         // forward punch
+  const lateral =  8 + Math.min(speed * 0.25, 16);         // sideways blast radius
   const fwd = w.planeFwd;
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
   w.bricks.forEach(b => {
-    b.vel.set(
-      fwd.x * kick + (Math.random()-0.5) * spread,
-      Math.random() * (3 + speed*0.08) + 2,
-      fwd.z * kick + (Math.random()-0.5) * spread,
-    );
+    b.vel.copy(fwd).multiplyScalar(kick * (0.6 + Math.random()*0.8))
+      .addScaledVector(right, (Math.random()-0.5) * 2 * lateral)
+      .addScaledVector(worldUp, 4 + Math.random()*6);
   });
 }
 
