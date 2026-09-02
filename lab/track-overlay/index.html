@@ -284,13 +284,15 @@ function rebuildProps() {
 
 // Obstacles: a brick wall spawned ahead of the car (Stream Deck button, or
 // the test button here) that shatters into flying bricks the instant the car
-// reaches it. Transient - unlike props/zones there's nothing to persist.
-let walls = [];   // {group, bricks:[{mesh,vel}], planePos:Vector3, planeFwd:Vector3, smashed, smashT}
+// reaches it. Bricks fall under gravity, land, and stay put on the road
+// (like the props) rather than fading away, each with its own contact
+// shadow so landed debris reads as sitting on the tarmac.
+let walls = [];   // {group, bricks:[{mesh,shadow,vel,landed}], planePos, planeFwd, groundY, smashed}
 const wallGroup = new THREE.Group();
 scene.add(wallGroup);
 const brickGeo = new THREE.BoxGeometry(0.95, 0.45, 0.32);
-const WALL_COLS = 16, WALL_ROWS = 3, WALL_AHEAD = 80, WALL_GRAVITY = 14;
-const WALL_BREAK_LEAD = 5.5;   // metres before the plane it starts shattering (was 1.5)
+const WALL_COLS = 16, WALL_ROWS = 6, WALL_AHEAD = 80, WALL_GRAVITY = 14;
+const WALL_BREAK_LEAD = 5.5;   // metres before the plane it starts shattering
 
 function spawnWall(s) {
   if (!s) return;
@@ -299,6 +301,7 @@ function spawnWall(s) {
   const worldUp = new THREE.Vector3(0, 1, 0);
   const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
   const base = new THREE.Vector3(s.posX, s.posY, s.posZ).addScaledVector(fwd, WALL_AHEAD);
+  const groundY = base.y + groundOffset;
 
   const group = new THREE.Group();
   const bricks = [];
@@ -314,45 +317,58 @@ function spawnWall(s) {
       mesh.position.copy(base).addScaledVector(right, across).addScaledVector(worldUp, up);
       mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, worldUp, fwd));
       group.add(mesh);
-      bricks.push({ mesh, vel: new THREE.Vector3() });
+
+      const shadow = new THREE.Mesh(propShadowGeo, propShadowMat);
+      shadow.rotation.x = -Math.PI/2;
+      shadow.scale.setScalar(1.3);
+      shadow.renderOrder = 4;
+      shadow.position.set(mesh.position.x, groundY + 0.015, mesh.position.z);
+      group.add(shadow);
+
+      bricks.push({ mesh, shadow, vel: new THREE.Vector3(), landed: false });
     }
   }
   wallGroup.add(group);
-  walls.push({ group, bricks, planePos: base, planeFwd: fwd, smashed: false, smashT: 0 });
+  walls.push({ group, bricks, planePos: base, planeFwd: fwd, groundY, smashed: false });
 }
 
 function smashWall(w) {
   w.smashed = true;
   w.bricks.forEach(b => {
     b.vel.set((Math.random()-0.5)*6, Math.random()*5 + 2, (Math.random()-0.5)*6);
-    b.mesh.material.transparent = true;
   });
 }
 
+const WALL_BRICK_HALF_H = 0.225;
 function updateWalls(s, dt) {
   if (!walls.length) return;
   const carPos = s ? new THREE.Vector3(s.posX, s.posY, s.posZ) : null;
-  walls = walls.filter(w => {
+  walls.forEach(w => {
     if (!w.smashed) {
       if (carPos) {
         const signed = carPos.clone().sub(w.planePos).dot(w.planeFwd);
         if (signed >= -WALL_BREAK_LEAD) smashWall(w);   // breaking early so the shatter reads clearly
       }
-      return true;
+      return;
     }
-    w.smashT += dt;
+    const floor = w.groundY + WALL_BRICK_HALF_H;
     w.bricks.forEach(b => {
-      b.vel.y -= WALL_GRAVITY * dt;
-      b.mesh.position.addScaledVector(b.vel, dt);
-      b.mesh.rotation.x += b.vel.z * dt; b.mesh.rotation.z += b.vel.x * dt;
-      b.mesh.material.opacity = Math.max(0, 1 - w.smashT / 1.1);
+      if (!b.landed) {
+        b.vel.y -= WALL_GRAVITY * dt;
+        b.mesh.position.addScaledVector(b.vel, dt);
+        b.mesh.rotation.x += b.vel.z * dt; b.mesh.rotation.z += b.vel.x * dt;
+        if (b.mesh.position.y <= floor) {
+          b.mesh.position.y = floor;
+          b.vel.set(0, 0, 0);
+          b.landed = true;
+        }
+        b.shadow.position.set(b.mesh.position.x, w.groundY + 0.015, b.mesh.position.z);
+      }
     });
-    if (w.smashT > 1.1) {
-      wallGroup.remove(w.group);
-      w.bricks.forEach(b => { b.mesh.material.dispose(); });
-      return false;
-    }
-    return true;
+    // Same distance cull as props: landed debris stays in the world, but
+    // hides once far away so a wall smashed elsewhere on the track doesn't
+    // show through when the camera happens to face that way.
+    w.group.visible = camera.position.distanceTo(w.planePos) <= PROP_MAX_DIST;
   });
 }
 // Dispatches Stream Deck / chat-style trigger events (from the WS connector's
