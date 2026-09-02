@@ -36,9 +36,13 @@
   .transport .btn { margin:0; }
   code { background:rgba(255,255,255,0.06); padding:0.05rem 0.3rem; border-radius:3px; font-size:0.9em; }
   .pill { display:inline-block; font-size:0.66rem; color:var(--muted); background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:999px; padding:0.1rem 0.5rem; margin-left:0.4rem; }
-  /* OBS browser-source mode: transparent, chrome hidden, just the overlay. */
+  /* OBS browser-source mode: transparent stage so it composites over a game
+     capture source below it in OBS. The panel and transport stay visible and
+     interactive (reachable via OBS's "Interact" button) so calibration can
+     still be tuned while it's live - crop the source in OBS's scene to keep
+     the panel off the actual broadcast output. */
   body.obs { background:transparent; }
-  body.obs header, body.obs .panel, body.obs .transport, body.obs #video { display:none; }
+  body.obs header, body.obs #video { display:none; }
   body.obs .stage { background:transparent; }
   body.obs .layout { min-height:100vh; }
 </style>
@@ -85,9 +89,9 @@
       <button class="btn" id="btn-cam">Use capture device</button>
       <button class="btn" id="btn-screen">Share screen</button>
       <div class="hint" id="live-status" style="margin-top:0.4rem"></div>
-      <label class="row" style="margin-top:0.5rem"><span>OBS mode (transparent, hide UI)</span>
+      <label class="row" style="margin-top:0.5rem"><span>OBS mode (transparent background)</span>
         <input type="checkbox" id="obs-toggle"></label>
-      <div class="hint">Or open <code>?obs=1</code> directly as the browser-source URL. It reuses the calibration and zones saved in this browser. Press <strong>Esc</strong> any time to bring the panel back.</div>
+      <div class="hint">Or open <code>?obs=1</code> directly as the browser-source URL. It reuses the calibration and zones saved in this browser. The panel stays on screen and interactive so you can tune it live via OBS's <strong>Interact</strong> button - crop the source in your scene to keep the panel out of the actual broadcast.</div>
     </div>
 
     <div class="sec">
@@ -771,9 +775,10 @@ document.getElementById('btn-screen').addEventListener('click', () =>
   useStream(() => navigator.mediaDevices.getDisplayMedia({ video: true }), 'screen share'));
 
 // ---- OBS transparent mode -------------------------------------------------
-// OBS mode hides the whole panel, including the checkbox that turns it back
-// on/off, so Esc is the only way out once it's active - without it you're
-// stuck staring at a transparent page with no controls.
+// The panel stays visible and interactive in OBS mode (reachable through
+// OBS's Interact button) so calibration can be tuned live; only the stage
+// background goes transparent. Esc is kept as a quick way to flip it off
+// when testing in a normal browser tab.
 function setObs(on) {
   document.body.classList.toggle('obs', on);
   document.getElementById('obs-toggle').checked = on;
