@@ -302,6 +302,10 @@ function spawnWall(s) {
   const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
   const base = new THREE.Vector3(s.posX, s.posY, s.posZ).addScaledVector(fwd, WALL_AHEAD);
   const groundY = base.y + groundOffset;
+  // Build the wall from the true road surface (groundY), not the car's raw
+  // telemetry height (base.y) - they differ by groundOffset, which left the
+  // whole intact wall floating above its own shadow before it even shatters.
+  const groundBase = new THREE.Vector3(base.x, groundY, base.z);
 
   const group = new THREE.Group();
   const bricks = [];
@@ -313,8 +317,8 @@ function spawnWall(s) {
         color: new THREE.Color(0.55*shade, 0.18*shade, 0.13*shade), roughness: 0.85 });
       const mesh = new THREE.Mesh(brickGeo, mat);
       const across = (c - (WALL_COLS-1)/2) * bw;
-      const up = 0.25 + r*bh;
-      mesh.position.copy(base).addScaledVector(right, across).addScaledVector(worldUp, up);
+      const up = WALL_BRICK_HALF_H + r*bh;   // bottom row's underside sits exactly on groundY
+      mesh.position.copy(groundBase).addScaledVector(right, across).addScaledVector(worldUp, up);
       mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, worldUp, fwd));
       group.add(mesh);
 
