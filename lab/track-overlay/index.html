@@ -334,8 +334,19 @@ function spawnWall(s) {
 
 function smashWall(w) {
   w.smashed = true;
+  // Real car speed at the moment of impact (speedEMA, tracked continuously
+  // in trackAccel) drives the scatter: a stationary/slow tap just tumbles
+  // the bricks, a fast hit sends them flying much further and wider.
+  const speed = Math.max(0, speedEMA);            // m/s
+  const kick = Math.min(speed * 0.4, 20);          // forward "hit", capped so it stays on screen
+  const spread = 3 + speed * 0.15;
+  const fwd = w.planeFwd;
   w.bricks.forEach(b => {
-    b.vel.set((Math.random()-0.5)*6, Math.random()*5 + 2, (Math.random()-0.5)*6);
+    b.vel.set(
+      fwd.x * kick + (Math.random()-0.5) * spread,
+      Math.random() * (3 + speed*0.08) + 2,
+      fwd.z * kick + (Math.random()-0.5) * spread,
+    );
   });
 }
 
@@ -360,6 +371,10 @@ function updateWalls(s, dt) {
         if (b.mesh.position.y <= floor) {
           b.mesh.position.y = floor;
           b.vel.set(0, 0, 0);
+          // Lie flat (random yaw only) so the brick's actual bottom face
+          // sits exactly on the ground - a tumbled rotation left a gap
+          // between the brick and its shadow.
+          b.mesh.rotation.set(0, Math.random() * Math.PI * 2, 0);
           b.landed = true;
         }
         b.shadow.position.set(b.mesh.position.x, w.groundY + 0.015, b.mesh.position.z);
