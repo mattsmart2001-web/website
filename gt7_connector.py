@@ -10,6 +10,7 @@ Right-click the tray icon to quit.
 """
 
 import asyncio
+import http.server
 import json
 import os
 import socket
@@ -18,6 +19,7 @@ import sys
 import time
 import threading
 import logging
+import urllib.parse
 from typing import Optional
 
 # ── Silence logging to not flash a console window ──
@@ -46,11 +48,12 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "2.5"   # shown in the tray so you can confirm which build is running
+VERSION       = "2.6"   # shown in the tray so you can confirm which build is running
 GT7_PORT      = 33740
 SEND_PORT     = 33739
 WS_PORT       = 8765
 WS_HOST       = "0.0.0.0"
+TRIGGER_PORT  = 8767    # Stream Deck (or anything else) hits this to drop overlay obstacles
 HEARTBEAT_INT = 1.5    # GT7 stops streaming ~1-2s after the last heartbeat, so re-ping often
 HEARTBEAT_EVERY = 100  # also re-ping every N received packets to keep the stream alive
 
@@ -207,7 +210,7 @@ class GT7Packet:
 # ═══════════════════════════════════════════════════════════════
 #  WEBSOCKET SERVER
 # ═══════════════════════════════════════════════════════════════
-_clients = {}   # ws -> asyncio.Queue(maxsize=1): holds only the newest unsent frame
+_clients = {}   # ws -> {"tel": Queue(maxsize=1) latest-frame-only, "evt": Queue small, never coalesced}
 # Live status so the web page (and tray tooltip) can tell whether the console
 # is actually sending telemetry, not just whether the bridge is up.
 _stats = {"packets": 0, "raw": 0, "ps5": None, "last": 0.0, "debug": None}
@@ -237,20 +240,30 @@ def _status_msg():
         "listening": True,
     })
 
-async def _client_sender(ws, q):
-    # One task per client, the ONLY place that awaits ws.send. If the client is
-    # slow (OBS's embedded browser rendering at high load), this task blocks here
-    # while _broadcast keeps overwriting the single queued frame, so the client
-    # simply skips stale frames and gets the freshest one once it catches up.
-    # The receive loop is never blocked by it. websockets' own keepalive closes
-    # a truly dead connection, which ends this task and cleans the client up.
+async def _client_sender(ws, tel_q, evt_q):
+    # One task per client, the ONLY place that awaits ws.send. Services both
+    # queues concurrently: the telemetry queue (maxsize=1, _broadcast keeps
+    # overwriting it, so a slow client just skips stale frames and catches up
+    # on the freshest one) and the event queue (small, never coalesced - a
+    # Stream Deck trigger must never get silently dropped behind a busy
+    # telemetry stream). The receive loop is never blocked by any of this.
+    # websockets' own keepalive closes a truly dead connection, which ends
+    # this task and cleans the client up.
+    tel_task = asyncio.ensure_future(tel_q.get())
+    evt_task = asyncio.ensure_future(evt_q.get())
     try:
         while True:
-            msg = await q.get()
-            await ws.send(msg)
+            done, _ = await asyncio.wait({tel_task, evt_task}, return_when=asyncio.FIRST_COMPLETED)
+            if evt_task in done:
+                await ws.send(evt_task.result())
+                evt_task = asyncio.ensure_future(evt_q.get())
+            if tel_task in done:
+                await ws.send(tel_task.result())
+                tel_task = asyncio.ensure_future(tel_q.get())
     except Exception:
         pass
     finally:
+        tel_task.cancel(); evt_task.cancel()
         _clients.pop(ws, None)
 
 async def _ws_handler(ws):
@@ -261,9 +274,10 @@ async def _ws_handler(ws):
         await ws.send(_status_msg())          # tell a fresh page what we're seeing right away
     except Exception:
         return
-    q = asyncio.Queue(maxsize=1)
-    _clients[ws] = q
-    sender = asyncio.create_task(_client_sender(ws, q))
+    tel_q = asyncio.Queue(maxsize=1)
+    evt_q = asyncio.Queue(maxsize=20)
+    _clients[ws] = {"tel": tel_q, "evt": evt_q}
+    sender = asyncio.create_task(_client_sender(ws, tel_q, evt_q))
     try:
         async for _ in ws:
             pass
@@ -278,13 +292,54 @@ def _broadcast(msg: str):
     # for each client. Runs to completion without awaiting, so a slow client can
     # never stall the receive loop with backpressure; it just loses intermediate
     # frames. Kept synchronous on purpose so callers cannot accidentally block.
-    for ws, q in list(_clients.items()):
+    for ws, ch in list(_clients.items()):
         try:
+            q = ch["tel"]
             if q.full():
                 q.get_nowait()      # discard the stale frame the client hasn't sent yet
             q.put_nowait(msg)
         except Exception:
             pass
+
+def _broadcast_event(kind: str):
+    # Discrete, non-coalesced events (Stream Deck obstacle triggers). Small
+    # queue per client so a burst of button presses still all arrive.
+    msg = json.dumps({"type": "event", "event": kind})
+    for ws, ch in list(_clients.items()):
+        try:
+            ch["evt"].put_nowait(msg)
+        except Exception:
+            pass   # queue full (20 unsent events) - drop rather than block
+
+# ═══════════════════════════════════════════════════════════════
+#  TRIGGER SERVER (Stream Deck -> overlay obstacles)
+# ═══════════════════════════════════════════════════════════════
+# A tiny, separate plain-HTTP server on its own thread/port, stdlib only, so
+# a Stream Deck "Website" action can fire a GET request without touching the
+# telemetry WebSocket server, its dependencies, or its event loop directly.
+# _loop is the asyncio loop _run_bridge already creates; call_soon_threadsafe
+# hands the trigger back into it safely from this server's own thread.
+class _TriggerHandler(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass   # keep the console/tray quiet
+
+    def do_GET(self):
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        kind = (qs.get('type') or ['wall'])[0]
+        if _loop is not None:
+            _loop.call_soon_threadsafe(_broadcast_event, kind)
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(b'ok')
+
+def _start_trigger_server():
+    try:
+        srv = http.server.ThreadingHTTPServer(('0.0.0.0', TRIGGER_PORT), _TriggerHandler)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+    except Exception:
+        pass   # optional feature - never take the telemetry bridge down over this
 
 # ═══════════════════════════════════════════════════════════════
 #  UDP RECEIVER + HEARTBEAT
@@ -397,6 +452,7 @@ _loop = None
 async def _async_main(ps5_ip):
     ip_ref = [ps5_ip]
     server = await websockets.serve(_ws_handler, WS_HOST, WS_PORT)
+    _start_trigger_server()
     if ps5_ip:
         _stats["ps5"] = ps5_ip
     await asyncio.gather(
@@ -502,6 +558,7 @@ def main():
             menu=pystray.Menu(
                 pystray.MenuItem("GT7 Live Connector: Running", None, enabled=False),
                 pystray.MenuItem("Port: 8765", None, enabled=False),
+                pystray.MenuItem(f"Stream Deck trigger: {TRIGGER_PORT}", None, enabled=False),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Quit", _quit),
             )
