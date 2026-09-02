@@ -133,6 +133,13 @@
     </div>
 
     <div class="sec">
+      <h4>5 · Obstacles</h4>
+      <button class="btn gold" id="btn-wall">Drop brick wall (test)</button>
+      <div class="hint" style="margin-top:0.4rem">Builds a brick wall across the track ahead. It shatters into individual bricks the moment the car reaches it, so it reads as smashing through.</div>
+      <div class="hint" style="margin-top:0.5rem">For a Stream Deck: add a <strong>Website</strong> action set to GET <code id="wall-trigger-url">http://localhost:8767/trigger?type=wall</code> on the machine running the connector. Only reaches this page while connected to live telemetry (Connect telemetry, above); the test button here always works.</div>
+    </div>
+
+    <div class="sec">
       <h4>Debug</h4>
       <div class="hint" id="dbg" style="font-family:monospace;font-size:0.7rem;white-space:pre-line;line-height:1.5"></div>
       <button class="btn gold" id="btn-copy-tel">Copy telemetry sample</button>
@@ -228,9 +235,10 @@ function makeShadowTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0,   'rgba(0,0,0,0.85)');
-  grad.addColorStop(0.6, 'rgba(0,0,0,0.55)');
-  grad.addColorStop(1,   'rgba(0,0,0,0)');
+  grad.addColorStop(0,    'rgba(0,0,0,0.97)');
+  grad.addColorStop(0.55, 'rgba(0,0,0,0.85)');
+  grad.addColorStop(0.85, 'rgba(0,0,0,0.4)');
+  grad.addColorStop(1,    'rgba(0,0,0,0)');
   g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
   return new THREE.CanvasTexture(c);
 }
@@ -254,7 +262,7 @@ function makePropMesh(p) {
 
   const shadow = new THREE.Mesh(propShadowGeo, propShadowMat);
   shadow.rotation.x = -Math.PI/2;
-  shadow.scale.setScalar(sz * 1.15);
+  shadow.scale.setScalar(sz * 2.2);
   shadow.position.y = 0.015;
   shadow.renderOrder = 4;
 
@@ -272,6 +280,84 @@ function rebuildProps() {
   }
   props.forEach(p => propGroup.add(makePropMesh(p)));
   try { localStorage.setItem('to_props', JSON.stringify(props)); } catch {}
+}
+
+// Obstacles: a brick wall spawned ahead of the car (Stream Deck button, or
+// the test button here) that shatters into flying bricks the instant the car
+// reaches it. Transient - unlike props/zones there's nothing to persist.
+let walls = [];   // {group, bricks:[{mesh,vel}], planePos:Vector3, planeFwd:Vector3, smashed, smashT}
+const wallGroup = new THREE.Group();
+scene.add(wallGroup);
+const brickGeo = new THREE.BoxGeometry(0.95, 0.45, 0.32);
+const WALL_COLS = 8, WALL_ROWS = 3, WALL_AHEAD = 40, WALL_GRAVITY = 14;
+
+function spawnWall(s) {
+  if (!s) return;
+  const yaw = roadYaw, cp = Math.cos(roadPitch);
+  const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(roadPitch), Math.cos(yaw)*cp).normalize();
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  const base = new THREE.Vector3(s.posX, s.posY, s.posZ).addScaledVector(fwd, WALL_AHEAD);
+
+  const group = new THREE.Group();
+  const bricks = [];
+  const bw = 1.0, bh = 0.5;
+  for (let r = 0; r < WALL_ROWS; r++) {
+    for (let c = 0; c < WALL_COLS; c++) {
+      const shade = 0.85 + Math.random()*0.3;
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0.55*shade, 0.18*shade, 0.13*shade), roughness: 0.85 });
+      const mesh = new THREE.Mesh(brickGeo, mat);
+      const across = (c - (WALL_COLS-1)/2) * bw;
+      const up = 0.25 + r*bh;
+      mesh.position.copy(base).addScaledVector(right, across).addScaledVector(worldUp, up);
+      mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, worldUp, fwd));
+      group.add(mesh);
+      bricks.push({ mesh, vel: new THREE.Vector3() });
+    }
+  }
+  wallGroup.add(group);
+  walls.push({ group, bricks, planePos: base, planeFwd: fwd, smashed: false, smashT: 0 });
+}
+
+function smashWall(w) {
+  w.smashed = true;
+  w.bricks.forEach(b => {
+    b.vel.set((Math.random()-0.5)*6, Math.random()*5 + 2, (Math.random()-0.5)*6);
+    b.mesh.material.transparent = true;
+  });
+}
+
+function updateWalls(s, dt) {
+  if (!walls.length) return;
+  const carPos = s ? new THREE.Vector3(s.posX, s.posY, s.posZ) : null;
+  walls = walls.filter(w => {
+    if (!w.smashed) {
+      if (carPos) {
+        const signed = carPos.clone().sub(w.planePos).dot(w.planeFwd);
+        if (signed >= -1.5) smashWall(w);   // car has reached the wall's plane
+      }
+      return true;
+    }
+    w.smashT += dt;
+    w.bricks.forEach(b => {
+      b.vel.y -= WALL_GRAVITY * dt;
+      b.mesh.position.addScaledVector(b.vel, dt);
+      b.mesh.rotation.x += b.vel.z * dt; b.mesh.rotation.z += b.vel.x * dt;
+      b.mesh.material.opacity = Math.max(0, 1 - w.smashT / 1.1);
+    });
+    if (w.smashT > 1.1) {
+      wallGroup.remove(w.group);
+      w.bricks.forEach(b => { b.mesh.material.dispose(); });
+      return false;
+    }
+    return true;
+  });
+}
+// Dispatches Stream Deck / chat-style trigger events (from the WS connector's
+// event channel) to the matching obstacle. Only "wall" exists for now.
+function handleObstacleEvent(kind) {
+  if (kind === 'wall') spawnWall(currentSample());
 }
 
 // Zones (world-space polygons painted red).
@@ -374,6 +460,7 @@ function connectWS(url) {
   ws.onerror = () => setStatus('telemetry connection failed');
   ws.onmessage = (ev) => {
     let d; try { d = JSON.parse(ev.data); } catch { return; }
+    if (d.type === 'event') { handleObstacleEvent(d.event); return; }
     if (d.type && d.type !== 'telemetry') return;      // ignore status frames
     if (d.posX == null) return;
     liveBuffer.push({ arr: performance.now()/1000, s: {
@@ -548,6 +635,7 @@ function tick() {
     if (g.userData.spin) g.userData.mesh.rotation.y += g.userData.spin;
     g.visible = camera.position.distanceTo(g.position) <= PROP_MAX_DIST;
   });
+  updateWalls(s, dt);
   // Keep edit handles a roughly constant on-screen size so they stay grabbable.
   if (editMode) handleGroup.children.forEach(h => {
     h.scale.setScalar(Math.max(0.3, camera.position.distanceTo(h.position) * 0.02));
@@ -757,6 +845,8 @@ document.getElementById('btn-prop').addEventListener('click', () => {
   rebuildProps();
 });
 document.getElementById('btn-clear-props').addEventListener('click', () => { props = []; rebuildProps(); });
+
+document.getElementById('btn-wall').addEventListener('click', () => spawnWall(currentSample()));
 
 document.getElementById('btn-copy-tel').addEventListener('click', () => {
   const sample = rawDebug.slice(-12);
