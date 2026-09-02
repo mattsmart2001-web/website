@@ -106,7 +106,7 @@
       <label class="row"><span>Calibration grid</span><input type="checkbox" id="cal-grid"></label>
       <label class="row"><span>Ground height (m)</span><span class="v" id="v-groundy">-0.30</span></label>
       <input type="range" id="cal-groundy" min="-3" max="1" step="0.05" value="-0.3">
-      <div class="hint" style="margin:0.35rem 0 0.5rem">Turn the grid on and calibrate until its lines lie flat on the road and stay put as you drive. A whole grid is far easier to line up than one box.</div>
+      <div class="hint" style="margin:0.35rem 0 0.5rem">Turn the grid on and calibrate until its lines lie flat on the road and stay put as you drive. A whole grid is far easier to line up than one box. It tilts with the current slope and heading, so it should climb on uphills and dip on downhills rather than staying dead level.</div>
       <button class="btn gold" id="btn-export-calib">Export calibration</button>
     </div>
 
@@ -442,6 +442,11 @@ function trackAccel(s, dt) {
   prevAccelPos = { x: s.posX, z: s.posZ };
   prevAccelT = now;
 }
+// Exposed for the calibration grid: the road's own yaw/pitch, corrected for
+// mounting bias same as the camera, but WITHOUT brake dive - that's a
+// cosmetic camera wobble, not a real change in the road's slope, so the
+// grid (which represents the road) shouldn't dive with it.
+let roadYaw = 0, roadPitch = 0;
 function updateCamera(s, dt) {
   trackAccel(s, dt);
   let by, bp;
@@ -453,6 +458,7 @@ function updateCamera(s, dt) {
   const yaw   = by + calib.yawTrim*D2R;
   const pitch = bp + calib.pitchTrim*D2R + brakeDive;
   const roll  = (s.rotRoll||0)  + calib.rollTrim*D2R;
+  roadYaw = yaw; roadPitch = pitch - brakeDive;
   const cp = Math.cos(pitch);
   const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(pitch), Math.cos(yaw)*cp).normalize();
   const up  = new THREE.Vector3(0,1,0);
@@ -466,6 +472,20 @@ function updateCamera(s, dt) {
   camera.up.set(0,1,0);
   camera.lookAt(pos.clone().add(fwd));
   camera.rotateOnAxis(new THREE.Vector3(0,0,-1), roll);
+}
+
+// Tilts the calibration grid to the road's current slope + heading (roadYaw/
+// roadPitch, set by updateCamera) so it reads as flat-on-the-tarmac uphill
+// and downhill instead of always lying dead level.
+function updateCalGrid(s) {
+  const sp = 5;
+  calGrid.position.set(Math.round(s.posX/sp)*sp, s.posY + groundOffset, Math.round(s.posZ/sp)*sp);
+  const cp = Math.cos(roadPitch);
+  const fwd = new THREE.Vector3(Math.sin(roadYaw)*cp, Math.sin(roadPitch), Math.cos(roadYaw)*cp).normalize();
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
+  calGrid.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, fwd, up));
 }
 
 function currentTime() {
@@ -514,11 +534,12 @@ function tick() {
   demoGroup.visible = !usingVideo && telSource === 'synthetic';
   const s = currentSample();
   if (s) updateCamera(s, dt);
-  // Keep the calibration grid centred under the car (snapped so its lines stay
-  // world-aligned) at road height.
+  // Keep the calibration grid centred under the car (snapped so its lines
+  // don't shimmer) at road height, and tilt it to the current road slope +
+  // heading so it actually reads as "flat on the tarmac" on a hill or in a
+  // corner instead of always lying dead level.
   if (calGrid.visible && s) {
-    const sp = 5;
-    calGrid.position.set(Math.round(s.posX/sp)*sp, s.posY + groundOffset, Math.round(s.posZ/sp)*sp);
+    updateCalGrid(s);
   }
   // Gently spin any props that have spin, and hide ones too far from the
   // camera so props on a distant, unrelated part of the track don't peek
