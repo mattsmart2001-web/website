@@ -87,7 +87,7 @@
       <div class="hint" id="live-status" style="margin-top:0.4rem"></div>
       <label class="row" style="margin-top:0.5rem"><span>OBS mode (transparent, hide UI)</span>
         <input type="checkbox" id="obs-toggle"></label>
-      <div class="hint">Or open <code>?obs=1</code> directly as the browser-source URL. It reuses the calibration and zones saved in this browser.</div>
+      <div class="hint">Or open <code>?obs=1</code> directly as the browser-source URL. It reuses the calibration and zones saved in this browser. Press <strong>Esc</strong> any time to bring the panel back.</div>
     </div>
 
     <div class="sec">
@@ -125,7 +125,7 @@
       <h4>4 · Fun props</h4>
       <button class="btn gold" id="btn-prop">Drop random object</button>
       <button class="btn red" id="btn-clear-props">Clear objects</button>
-      <div class="hint" style="margin-top:0.4rem">Drops a random 3D object on the track ahead, with a soft contact shadow so it sits on the road. They stick to the world like the zones, fade out past 400m so far-off parts of the track don't show through, and show in OBS mode too.</div>
+      <div class="hint" style="margin-top:0.4rem">Drops a random 3D object on the track ahead, with a soft contact shadow so it sits on the road. They stick to the world like the zones, fade out past 200m so far-off parts of the track don't show through, and show in OBS mode too.</div>
     </div>
 
     <div class="sec">
@@ -217,14 +217,14 @@ const propGroup = new THREE.Group();
 scene.add(propGroup);
 const PROP_TYPES = ['cone','sphere','box','torus','cyl','ico'];
 const PROP_COLORS = ['#ff5252','#ffd166','#22d3ee','#a3e635','#f472b6','#c084fc','#fb923c','#ffffff'];
-const PROP_MAX_DIST = 400; // metres from the camera before a prop is hidden
+const PROP_MAX_DIST = 200; // metres from the camera before a prop is hidden
 
 function makeShadowTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0,   'rgba(0,0,0,0.55)');
-  grad.addColorStop(0.7, 'rgba(0,0,0,0.25)');
+  grad.addColorStop(0,   'rgba(0,0,0,0.85)');
+  grad.addColorStop(0.6, 'rgba(0,0,0,0.55)');
   grad.addColorStop(1,   'rgba(0,0,0,0)');
   g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
   return new THREE.CanvasTexture(c);
@@ -771,8 +771,18 @@ document.getElementById('btn-screen').addEventListener('click', () =>
   useStream(() => navigator.mediaDevices.getDisplayMedia({ video: true }), 'screen share'));
 
 // ---- OBS transparent mode -------------------------------------------------
-function setObs(on) { document.body.classList.toggle('obs', on); resize(); }
+// OBS mode hides the whole panel, including the checkbox that turns it back
+// on/off, so Esc is the only way out once it's active - without it you're
+// stuck staring at a transparent page with no controls.
+function setObs(on) {
+  document.body.classList.toggle('obs', on);
+  document.getElementById('obs-toggle').checked = on;
+  resize();
+}
 document.getElementById('obs-toggle').addEventListener('change', e => setObs(e.target.checked));
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.body.classList.contains('obs')) setObs(false);
+});
 
 // ---- Init -----------------------------------------------------------------
 buildSynthetic();
@@ -782,7 +792,6 @@ loadProps();
 const params = new URLSearchParams(location.search);
 if (params.get('obs') === '1') {
   setObs(true);
-  document.getElementById('obs-toggle').checked = true;
   connectWS(params.get('ws') || 'ws://localhost:8765');
 }
 
