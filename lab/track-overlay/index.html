@@ -149,7 +149,9 @@
       <div class="hint" style="margin-top:0.4rem">Builds a brick wall across the track ahead. It shatters into individual bricks the moment the car reaches it, so it reads as smashing through.</div>
       <button class="btn gold" id="btn-pins" style="margin-top:0.5rem">Drop bowling pins (test)</button>
       <div class="hint" style="margin-top:0.4rem">A 10-pin rack close ahead. Tips over and scatters the moment the car reaches it.</div>
-      <div class="hint" style="margin-top:0.5rem">For a Stream Deck: add a <strong>Website</strong> action set to GET a trigger URL on the machine running the connector - <code id="wall-trigger-url">http://localhost:8767/trigger?type=wall</code> for the wall, <code>...?type=pins</code> for the pins. Only reaches this page while connected to live telemetry (Connect telemetry, above); the test buttons here always work.</div>
+      <button class="btn gold" id="btn-wreckingball" style="margin-top:0.5rem">Drop wrecking ball (test)</button>
+      <div class="hint" style="margin-top:0.4rem">A ball on a chain, swinging across the track ahead - persists and keeps swinging, no smash trigger. Time your pass and dodge it.</div>
+      <div class="hint" style="margin-top:0.5rem">For a Stream Deck: add a <strong>Website</strong> action set to GET a trigger URL on the machine running the connector - <code id="wall-trigger-url">http://localhost:8767/trigger?type=wall</code> for the wall, <code>...?type=pins</code> for the pins, <code>...?type=wreckingball</code> for the wrecking ball. Only reaches this page while connected to live telemetry (Connect telemetry, above); the test buttons here always work.</div>
     </div>
 
     <div class="sec">
@@ -518,11 +520,75 @@ function updatePins(s, dt) {
   });
 }
 
+// Wrecking ball: unlike the wall/pins, this is a persistent, continuously
+// animated hazard rather than a one-shot smash - it swings across the track
+// on a chain forever (or until the page reloads), and the driver has to
+// time a pass through it themselves. No car-position trigger needed.
+let wreckingBalls = [];   // {group, ball, shadow, chain, pivot, right, groundY, phase, angSpeed, amplitude}
+const wreckGroup = new THREE.Group();
+scene.add(wreckGroup);
+const WRECK_AHEAD = 60, WRECK_HEIGHT = 7, WRECK_CHAIN_LEN = 6, WRECK_RADIUS = 1.0;
+const wreckBallGeo = new THREE.SphereGeometry(WRECK_RADIUS, 24, 18);
+const wreckBallMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, metalness: 0.7, roughness: 0.35 });
+
+function spawnWreckingBall(s) {
+  if (!s) return;
+  const yaw = roadYaw, cp = Math.cos(roadPitch);
+  const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(roadPitch), Math.cos(yaw)*cp).normalize();
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  const base = new THREE.Vector3(s.posX, s.posY, s.posZ).addScaledVector(fwd, WRECK_AHEAD);
+  const groundY = base.y + groundOffset;
+  const pivot = new THREE.Vector3(base.x, groundY + WRECK_HEIGHT, base.z);
+
+  const ball = new THREE.Mesh(wreckBallGeo, wreckBallMat);
+  const shadow = new THREE.Mesh(propShadowGeo, propShadowMat);
+  shadow.rotation.x = -Math.PI/2;
+  shadow.scale.setScalar(WRECK_RADIUS * 2.2);
+  shadow.renderOrder = 4;
+  const chainGeo = new THREE.BufferGeometry().setFromPoints([pivot, pivot]);
+  const chain = new THREE.Line(chainGeo, new THREE.LineBasicMaterial({ color: 0x888888 }));
+
+  const group = new THREE.Group();
+  group.add(ball, shadow, chain);
+  wreckGroup.add(group);
+
+  wreckingBalls.push({
+    group, ball, shadow, chain, pivot, right, groundY,
+    phase: Math.random() * Math.PI * 2,
+    angSpeed: (Math.PI*2) / 2.5,   // ~2.5s per full swing cycle
+    amplitude: 0.85,               // radians either side of hanging straight down (~49deg)
+  });
+}
+
+function updateWreckingBalls(dt) {
+  if (!wreckingBalls.length) return;
+  wreckingBalls.forEach(wb => {
+    wb.phase += dt * wb.angSpeed;
+    const swing = Math.sin(wb.phase) * wb.amplitude;
+    // Pendulum arc at fixed chain length around the pivot: swings sideways
+    // along "right" and rises slightly off the bottom as it swings out.
+    const ballPos = new THREE.Vector3(
+      wb.pivot.x + wb.right.x * Math.sin(swing) * WRECK_CHAIN_LEN,
+      wb.pivot.y - Math.cos(swing) * WRECK_CHAIN_LEN,
+      wb.pivot.z + wb.right.z * Math.sin(swing) * WRECK_CHAIN_LEN,
+    );
+    wb.ball.position.copy(ballPos);
+    wb.shadow.position.set(ballPos.x, wb.groundY + 0.015, ballPos.z);
+    const posAttr = wb.chain.geometry.attributes.position;
+    posAttr.setXYZ(0, wb.pivot.x, wb.pivot.y, wb.pivot.z);
+    posAttr.setXYZ(1, ballPos.x, ballPos.y, ballPos.z);
+    posAttr.needsUpdate = true;
+    wb.group.visible = camera.position.distanceTo(wb.pivot) <= PROP_MAX_DIST;
+  });
+}
+
 // Dispatches Stream Deck / chat-style trigger events (from the WS connector's
 // event channel) to the matching obstacle.
 function handleObstacleEvent(kind) {
   if (kind === 'wall') spawnWall(currentSample());
   else if (kind === 'pins') spawnPins(currentSample());
+  else if (kind === 'wreckingball') spawnWreckingBall(currentSample());
 }
 
 // Drift smoke: automatic, not a button - billows from the outside of a
@@ -876,6 +942,7 @@ function tick() {
   });
   updateWalls(s, dt);
   updatePins(s, dt);
+  updateWreckingBalls(dt);
   updateDriftSmoke(s, dt);
   // Boost: fades the speed-lines in on real hard acceleration (accelEMA,
   // already tracked for brake dive), no button - it reacts to actual driving.
@@ -1095,6 +1162,7 @@ document.getElementById('btn-clear-props').addEventListener('click', () => { pro
 
 document.getElementById('btn-wall').addEventListener('click', () => spawnWall(currentSample()));
 document.getElementById('btn-pins').addEventListener('click', () => spawnPins(currentSample()));
+document.getElementById('btn-wreckingball').addEventListener('click', () => spawnWreckingBall(currentSample()));
 
 document.getElementById('btn-copy-tel').addEventListener('click', () => {
   const sample = rawDebug.slice(-12);
