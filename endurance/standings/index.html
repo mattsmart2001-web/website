@@ -1,0 +1,2448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standings | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="Live championship standings for GTEC, the Gran Turismo 7 endurance championship. Driver and team points, wins, podiums, ELO ratings, updated after every round.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/standings/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Open Graph / Twitter card -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Standings">
+    <meta property="og:description" content="Live driver and team standings for the GTEC endurance championship.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/standings/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Standings">
+    <meta name="twitter:description" content="Live driver and team standings for the GTEC endurance championship.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --silver: #cbd5e1;
+            --bronze: #cd7f32;
+            --green: #22c55e;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Nav */
+        .gtec-nav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5,6,8,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--text);
+            text-decoration: none;
+            text-indent: 0.32em;
+        }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; }
+        .gtec-nav .nav-links a {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            padding: 0.45rem 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .gtec-nav .back:hover {
+            color: var(--text);
+            border-color: rgba(255,255,255,0.25);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 3rem 2rem 1.5rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .hero-eyebrow {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.58rem;
+            letter-spacing: 0.45em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 0.75rem;
+            text-indent: 0.45em;
+        }
+        .hero-title {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            line-height: 1;
+            margin-bottom: 0.4rem;
+        }
+        .hero-sub { color: var(--muted); font-size: 0.88rem; }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            border-bottom: 1px solid var(--border);
+            /* Too many tabs to fit on a phone: keep them on one line and let the
+               bar scroll sideways instead of overflowing and clipping the last
+               tabs. Scrollbar hidden for a clean look. */
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .tab-bar::-webkit-scrollbar { display: none; }
+        .tab {
+            flex: 0 0 auto;
+            white-space: nowrap;
+            padding: 0.9rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+        /* Content */
+        .content {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 4rem;
+        }
+
+        /* Force every link in the standings to inherit the row's colour,
+           overriding the browser's :visited purple. */
+        .standings a,
+        .standings a:link,
+        .standings a:visited,
+        .standings a:active { color: inherit; text-decoration: none; }
+        .standings a:hover { text-decoration: underline; }
+
+        /* Live-battle flag — a quiet inline cue next to the points-gap
+           number when this row could still catch the row above it,
+           rather than a separate section competing with the table. */
+        .battle-flag {
+            display: inline-block;
+            margin-left: 0.3rem;
+            font-size: 0.72rem;
+            cursor: help;
+        }
+
+        /* Standings table */
+        .standings {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            /* Scroll the wide driver table inside the card instead of clipping
+               its last column; keeps the rounded corners tidy on both axes. */
+            overflow-x: auto;
+            overflow-y: hidden;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead th {
+            padding: 0.85rem 0.7rem;
+            text-align: left;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        /* A touch more breathing room on the first (rank) and driver cells. */
+        thead th:first-child, tbody td:first-child { padding-left: 1.1rem; }
+        thead th.right { text-align: right; }
+        thead th.center { text-align: center; }
+
+        tbody td {
+            padding: 0.95rem 0.7rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+            position: relative;
+        }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: rgba(255,255,255,0.025); }
+        td.right { text-align: right; }
+        td.center { text-align: center; }
+        td.muted { color: var(--muted); font-size: 0.85rem; }
+
+        /* Subtle gradient sweep on every row — adds depth without shouting. */
+        tbody tr td {
+            background-image: linear-gradient(90deg, rgba(255,255,255,0.012) 0%, rgba(255,255,255,0) 60%);
+        }
+
+        /* Podium rows get a metallic-tinted gradient + left accent stripe.
+           Box-shadow inset on the first cell paints the stripe without
+           breaking the row's flexible width. */
+        tbody tr.rank-1 td {
+            background-image: linear-gradient(90deg, rgba(255,209,102,0.16) 0%, rgba(255,209,102,0.05) 55%, rgba(255,255,255,0) 100%);
+        }
+        tbody tr.rank-1 td:first-child {
+            /* 6px gold stripe + a soft inner glow so P1 sits "on top" of
+               the table. */
+            box-shadow: inset 6px 0 0 0 var(--gold), inset 0 0 0 1px rgba(255,209,102,0.18);
+        }
+        tbody tr.rank-1 td { box-shadow: inset 0 0 0 0 transparent, 0 4px 16px rgba(255,209,102,0.06); }
+        tbody tr.rank-1 td:first-child { box-shadow: inset 6px 0 0 0 var(--gold), inset 0 0 0 1px rgba(255,209,102,0.18), 0 4px 16px rgba(255,209,102,0.06); }
+        tbody tr.rank-1:hover td { background-color: rgba(255,209,102,0.07); }
+
+        tbody tr.rank-2 td { background-image: linear-gradient(90deg, rgba(199,201,201,0.08) 0%, rgba(199,201,201,0.02) 45%, rgba(255,255,255,0) 100%); }
+        tbody tr.rank-2 td:first-child { box-shadow: inset 4px 0 0 0 var(--silver); }
+        tbody tr.rank-2:hover td { background-color: rgba(199,201,201,0.035); }
+
+        tbody tr.rank-3 td { background-image: linear-gradient(90deg, rgba(205,127,50,0.09) 0%, rgba(205,127,50,0.025) 45%, rgba(255,255,255,0) 100%); }
+        tbody tr.rank-3 td:first-child { box-shadow: inset 4px 0 0 0 var(--bronze); }
+        tbody tr.rank-3:hover td { background-color: rgba(205,127,50,0.035); }
+
+        /* "Lighter" stats — small numeric columns get less visual weight
+           so the driver / team name + points are the loudest cells, but
+           still big and bright enough to read at a glance. */
+        td.lighter { color: rgba(203,213,225,0.85); font-size: 1.05rem; font-weight: 600; }
+
+        /* Leader pip + gap below the points number. */
+        .leader-pip {
+            display: block; margin-top: 0.2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem; font-weight: 700; letter-spacing: 0.2em;
+            text-transform: uppercase; color: var(--gold);
+        }
+        .points-gap {
+            display: block; margin-top: 0.2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+            color: rgba(148,163,184,0.85);
+        }
+        .pts-deduct {
+            display: block; margin-top: 0.2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em;
+            color: #f87171; text-transform: uppercase;
+        }
+        .pts-bonus {
+            display: block; margin-top: 0.2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em;
+            color: #4ade80; text-transform: uppercase;
+        }
+
+        /* "★ Leader" badge inline with the name. */
+        .leader-tag {
+            display: inline-block;
+            margin-left: 0.55rem;
+            padding: 0.12rem 0.55rem;
+            background: rgba(255,209,102,0.18);
+            border: 1px solid rgba(255,209,102,0.45);
+            border-radius: 999px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--gold);
+            vertical-align: middle;
+        }
+
+        /* Position cell stacks number + movement chip vertically. */
+        .pos-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+        .move {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em;
+            padding: 0.08rem 0.4rem; border-radius: 4px;
+        }
+        .move-up   { background: rgba(34,197,94,0.15);  color: #4ade80; }
+        .move-down { background: rgba(239,68,68,0.15);  color: #f87171; }
+        .move-flat { background: rgba(148,163,184,0.12); color: #94a3b8; }
+        .move-new  { background: rgba(255,209,102,0.15); color: var(--gold); }
+
+        /* Driver / team name — slightly larger across the board now. */
+        .name { font-size: 1rem; }
+        .driver-row .name { font-size: 1.08rem; }
+
+        /* Elo cell on drivers tab. */
+        .elo-cell { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+        .elo-num { font-family: 'Anton', sans-serif; font-size: 1rem; color: var(--gold); letter-spacing: 0.02em; line-height: 1; }
+        .elo-cell .elo-tier { margin-left: 0 !important; }
+
+        /* Manufacturer badge — bumped up so it's recognisable, not a dot. */
+        .meta-line img { width: 20px !important; height: 20px !important; }
+
+        /* Position cell */
+        .pos {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.2rem;
+            width: 50px;
+            color: var(--muted);
+        }
+        .pos.p1 { color: var(--gold); }
+        .pos.p2 { color: var(--silver); }
+        .pos.p3 { color: var(--bronze); }
+
+        /* Name + meta */
+        .name {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 0.92rem;
+        }
+        .driver-row .name { font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.03em; }
+        .meta-line {
+            font-size: 0.74rem;
+            color: var(--muted);
+            margin-top: 0.15rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        /* Keep team name + manufacturer as one flowing text run so the
+           manufacturer sits right after the team rather than floating right. */
+        .meta-line .meta-team { min-width: 0; }
+        .swatch {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            border: 1px solid rgba(255,255,255,0.15);
+            flex-shrink: 0;
+        }
+        .mfr-logo {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            flex-shrink: 0;
+            vertical-align: middle;
+        }
+        .career-num {
+            display: inline-block;
+            background: rgba(255,209,102,0.12);
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.1rem 0.45rem;
+            border-radius: 3px;
+            margin-right: 0.45rem;
+        }
+        .driver-flag { font-size: 1.05em; line-height: 1; vertical-align: baseline; }
+
+        /* Row cell with avatar to the left of name + meta */
+        .driver-cell { display: flex; align-items: center; gap: 0.6rem; }
+        .driver-cell-text { min-width: 0; }
+        .std-avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            object-fit: cover; flex-shrink: 0; background: var(--bg-2);
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .std-avatar-init { font-family: 'Anton', sans-serif; font-size: 0.95rem; color: var(--muted); opacity: 0.7; }
+        .mfr-badge-lg { display: inline-flex; align-items: center; justify-content: center; width: 34px; flex-shrink: 0; }
+        .mfr-badge-lg .mfr-logo { width: 26px; height: 26px; object-fit: contain; }
+        .nat-flag { font-size: 1.7rem; line-height: 1; width: 34px; text-align: center; flex-shrink: 0; }
+        .nat-note { color: var(--muted); font-size: 0.8rem; padding: 0.9rem 1.25rem 0; }
+        /* Manufacturer drill-in */
+        tr.mfr-row { cursor: pointer; }
+        tr.mfr-row:hover td { background: rgba(255,255,255,0.03); }
+        .mfr-go { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.06em; color: var(--gold); opacity: 0; transition: opacity 0.15s ease; margin-left: 0.4rem; }
+        tr.mfr-row:hover .mfr-go { opacity: 0.85; }
+        .mfr-detail-head { padding: 0.2rem 0 1.1rem; }
+        .mfr-back { background: none; border: none; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; padding: 0.3rem 0; transition: color 0.15s ease; }
+        .mfr-back:hover { color: var(--gold); }
+        .mfr-title { display: flex; align-items: center; gap: 0.9rem; margin-top: 0.7rem; }
+        .mfr-title .mfr-name { font-family: 'Anton', sans-serif; font-size: 1.7rem; line-height: 1; letter-spacing: 0.01em; }
+        .mfr-title .mfr-totals { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; }
+        th.mfr-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+        th.mfr-sort:hover { color: var(--gold); }
+        .sort-arr { color: var(--gold); margin-left: 0.15em; font-size: 0.8em; }
+        td.pos-num { font-family: 'Orbitron', sans-serif; color: var(--muted); text-align: center; font-size: 0.85rem; }
+        tr.nat-hi td { animation: natHi 1.8s ease; }
+        @keyframes natHi { 0%,30% { background: rgba(255,209,102,0.16); } 100% { background: transparent; } }
+        /* World map (Nations tab, collapsible) */
+        .wm-shell { position: relative; }
+        .gtec-worldmap { width: 100%; height: auto; display: block; }
+        .wm-countries path { fill: #171d29; stroke: #0a0e14; stroke-width: 0.4; vector-effect: non-scaling-stroke; }
+        .wm-countries path.wm-data { cursor: pointer; transition: fill 0.15s ease, filter 0.15s ease; }
+        .wm-countries path.wm-data:hover { filter: brightness(1.25); }
+        .wm-tt { position: absolute; z-index: 12; pointer-events: none; display: none; background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.5rem 0.7rem; box-shadow: 0 10px 30px rgba(0,0,0,0.55); font-size: 0.8rem; min-width: 150px; }
+        .wm-tt .wm-tt-h { display: flex; align-items: center; gap: 0.45rem; font-weight: 700; color: var(--text); }
+        .wm-tt .wm-tt-flag { font-size: 1.1rem; }
+        .wm-tt .wm-tt-r { display: flex; justify-content: space-between; gap: 1rem; color: var(--muted); margin-top: 0.25rem; }
+        .wm-tt .wm-tt-r b { color: var(--gold); font-family: 'Orbitron', sans-serif; }
+        .wm-legend { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.9rem; font-size: 0.72rem; color: var(--muted); }
+        .wm-legend .wm-sw { display: inline-block; width: 22px; height: 12px; border-radius: 3px; }
+        .wm-legend .wm-lg-lo { letter-spacing: 0.02em; }
+        .wm-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+        .wm-tb-lbl { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-right: 0.15rem; }
+        .wm-loading { padding: 2rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
+
+        /* Recent-form pills */
+        .form-strip { display: inline-flex; gap: 3px; }
+        .form-pill {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 24px; padding: 2px 5px; border-radius: 4px;
+            font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700;
+            background: rgba(255,255,255,0.06); color: var(--muted);
+        }
+        .form-pill.form-win    { background: rgba(255,209,102,0.18); color: var(--gold); }
+        .form-pill.form-podium { background: rgba(148,163,184,0.20); color: #e2e8f0; }
+        .form-pill.form-dnf    { background: rgba(248,113,113,0.15); color: #f87171; }
+        .form-empty { color: var(--muted); opacity: 0.5; }
+
+        /* Top-3 rostrum */
+        .podium { position: relative; display: flex; justify-content: center; align-items: flex-end; gap: 0.75rem; margin: 0.25rem 0 1.75rem; }
+        .podium::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 34px; background: radial-gradient(ellipse at center, rgba(255,209,102,0.10), transparent 72%); filter: blur(3px); pointer-events: none; z-index: 0; }
+        .podium-spot { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; width: 32%; max-width: 190px; }
+        .podium-driver { text-decoration: none; color: var(--text); text-align: center; display: block; margin-bottom: 0.55rem; transition: transform 0.15s; }
+        .podium-driver:hover { transform: translateY(-3px); }
+        .pod-av-wrap { position: relative; display: flex; justify-content: center; margin-bottom: 0.5rem; }
+        .pod-av { position: relative; z-index: 1; border-radius: 50%; object-fit: cover; background: var(--bg-2); display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--border); }
+        /* Soft gold halo behind the leader's photo. */
+        .pod-halo { display: none; }
+        .spot-1 .pod-halo { display: block; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 150%; height: 150%; border-radius: 50%; background: radial-gradient(circle, rgba(255,209,102,0.30), transparent 62%); filter: blur(7px); z-index: 0; pointer-events: none; }
+        .pod-crown { position: absolute; top: -19px; left: 50%; transform: translateX(-50%); font-size: 1.15rem; z-index: 2; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55)); }
+        /* Tiered rings: gold / silver / bronze, each with a matching glow. */
+        .spot-1 .pod-av { border-color: rgba(255,209,102,0.9); box-shadow: 0 0 0 3px rgba(255,209,102,0.14), 0 6px 20px rgba(0,0,0,0.5); }
+        .spot-2 .pod-av { border-color: rgba(226,232,240,0.85); box-shadow: 0 0 0 3px rgba(226,232,240,0.10), 0 6px 16px rgba(0,0,0,0.5); }
+        .spot-3 .pod-av { border-color: rgba(224,165,110,0.85); box-shadow: 0 0 0 3px rgba(224,165,110,0.10), 0 6px 16px rgba(0,0,0,0.5); }
+        .podium-gap { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; margin-top: 0.35rem; display: inline-block; padding: 0.14rem 0.55rem; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+        .podium-gap.leader { color: var(--gold); background: rgba(255,209,102,0.12); border-color: rgba(255,209,102,0.32); }
+        /* Team podium: manufacturer logo avatar + a small manufacturer caption. */
+        .pod-av-logo { object-fit: contain; padding: 7%; background: radial-gradient(circle at 50% 38%, rgba(255,255,255,0.05), var(--bg-2)); }
+        .podium-sub { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 0.04em; color: var(--muted); margin-top: 0.15rem; }
+        .pod-av-init { font-family: 'Anton', sans-serif; color: var(--muted); }
+        .podium-name { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.02em; line-height: 1.1; }
+        .podium-pts { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+        .podium-step { width: 100%; border-radius: 10px 10px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 0.5rem; border: 1px solid var(--border); border-bottom: none; }
+        .podium-rank { font-family: 'Anton', sans-serif; line-height: 1; }
+        .spot-1 .pod-av { width: 88px; height: 88px; border-color: rgba(255,209,102,0.6); }
+        .spot-2 .pod-av, .spot-3 .pod-av { width: 66px; height: 66px; }
+        .spot-1 .pod-av-init { font-size: 2rem; }
+        .spot-2 .pod-av-init, .spot-3 .pod-av-init { font-size: 1.4rem; }
+        .spot-1 .podium-name { font-size: 1.1rem; }
+        .podium-step { position: relative; overflow: hidden; }
+        /* Metallic plinths with a top highlight and a soft diagonal sheen. */
+        .step-1 { height: 122px; background: linear-gradient(180deg, rgba(255,209,102,0.30) 0%, rgba(255,209,102,0.08) 45%, rgba(20,24,33,0.55) 100%); border-color: rgba(255,209,102,0.42); box-shadow: inset 0 1px 0 rgba(255,255,255,0.18); }
+        .step-2 { height: 94px;  background: linear-gradient(180deg, rgba(226,232,240,0.26) 0%, rgba(203,213,225,0.06) 45%, rgba(20,24,33,0.55) 100%); border-color: rgba(203,213,225,0.34); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
+        .step-3 { height: 74px;  background: linear-gradient(180deg, rgba(214,164,120,0.26) 0%, rgba(209,154,102,0.06) 45%, rgba(20,24,33,0.55) 100%); border-color: rgba(209,154,102,0.32); box-shadow: inset 0 1px 0 rgba(255,255,255,0.12); }
+        .podium-step::before { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.07) 50%, transparent 58%); pointer-events: none; }
+        .step-1 .podium-rank { color: var(--gold); font-size: 2.1rem; text-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .step-2 .podium-rank { color: #e2e8f0; font-size: 1.65rem; text-shadow: 0 2px 8px rgba(226,232,240,0.22); }
+        .step-3 .podium-rank { color: #e0a56e; font-size: 1.65rem; text-shadow: 0 2px 8px rgba(224,165,110,0.22); }
+        /* Classy staggered reveal: plinths rise from the floor, drivers fade in. */
+        @media (prefers-reduced-motion: no-preference) {
+            .podium-step { animation: podRise 0.6s cubic-bezier(0.16,1,0.3,1) both; transform-origin: bottom center; }
+            .step-2 { animation-delay: 0.04s; } .step-1 { animation-delay: 0.12s; } .step-3 { animation-delay: 0.20s; }
+            @keyframes podRise { from { transform: scaleY(0.35); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+            .podium-driver { animation: podFade 0.5s ease both; }
+            .spot-2 .podium-driver { animation-delay: 0.16s; } .spot-1 .podium-driver { animation-delay: 0.26s; } .spot-3 .podium-driver { animation-delay: 0.34s; }
+            @keyframes podFade { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+        }
+        @media (max-width: 520px) {
+            .podium { gap: 0.4rem; }
+            .podium-name { font-size: 0.78rem; }
+            .spot-1 .podium-name { font-size: 0.9rem; }
+            .spot-1 .pod-av { width: 62px; height: 62px; }
+            .spot-2 .pod-av, .spot-3 .pod-av { width: 48px; height: 48px; }
+        }
+
+        /* Points cell */
+        .points {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.3rem;
+            color: var(--gold);
+            letter-spacing: 0.02em;
+        }
+
+        .state-msg {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+        .state-msg h3 {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.3rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .state-msg p { color: var(--muted); font-size: 0.88rem; }
+        .loading {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--muted);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 700px) {
+            .nav { padding: 1rem; }
+            .hero { padding: 2rem 1rem 1rem; }
+            .tab-bar { padding: 0 1rem; }
+            .tab { padding: 0.8rem 0.9rem; letter-spacing: 0.1em; }
+            .content { padding: 1rem 0.5rem 3rem; }
+            .standings { border-radius: 8px; border-left: none; border-right: none; }
+            thead th, tbody td { padding: 0.7rem 0.6rem; }
+            .pos { width: 36px; font-size: 1rem; }
+            .points { font-size: 1.05rem; }
+            .hide-mob { display: none; }
+        }
+
+        /* ===== Championship Battle chart ===== */
+        .battle { margin-bottom: 1.25rem; }
+        .bt-acc { background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+        .bt-head { display: flex; align-items: center; gap: 0.85rem; padding: 1rem 1.1rem; cursor: pointer; user-select: none; }
+        .bt-head:hover { background: rgba(255,255,255,0.02); }
+        .bt-ic { width: 30px; height: 30px; border-radius: 8px; background: rgba(255,209,102,0.12); border: 1px solid rgba(255,209,102,0.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .bt-titles { flex: 1; min-width: 0; }
+        .bt-title { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); }
+        .bt-sub { font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+        .bt-chev { transition: transform 0.2s; color: var(--muted); flex-shrink: 0; width: 16px; height: 16px; }
+        .bt-acc.collapsed .bt-chev { transform: rotate(-90deg); }
+        .bt-acc.collapsed .bt-body { display: none; }
+        .bt-body { padding: 0.9rem 1.2rem 1.3rem; border-top: 1px solid var(--border); }
+        .bt-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+        .bt-search-wrap { position: relative; flex: 1; min-width: 190px; }
+        .bt-search { width: 100%; background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 0.55rem 0.8rem; }
+        .bt-search::placeholder { color: #5b6472; }
+        .bt-results { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; max-height: 230px; overflow-y: auto; z-index: 8; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.55); }
+        .bt-results.open { display: block; }
+        .bt-res { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.7rem; cursor: pointer; font-size: 0.83rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .bt-res:hover { background: rgba(255,255,255,0.05); }
+        .bt-res-pos { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; color: var(--muted); min-width: 36px; }
+        .bt-res-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bt-res-pts { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+        .bt-res.added { color: #5b6472; cursor: default; }
+        .bt-res.added:hover { background: none; }
+        .bt-none { padding: 0.6rem 0.7rem; color: #5b6472; font-size: 0.8rem; }
+        .bt-preset { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-2); color: var(--muted); cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+        .bt-preset:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .bt-preset.gold { color: var(--gold); border-color: rgba(255,209,102,0.35); background: rgba(255,209,102,0.08); }
+        .bt-metric { display: inline-flex; margin-left: auto; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg-2); }
+        .bt-mbtn { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; padding: 0.5rem 0.7rem; border: none; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+        .bt-mbtn:hover { color: var(--text); }
+        .bt-mbtn.active { color: var(--gold); background: rgba(255,209,102,0.12); }
+
+        /* Form tab */
+        .form-toolbar { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin:0 0.15rem 1rem; }
+        .form-caption { font-size:0.82rem; color:var(--muted); }
+        .spark { display:block; margin:0 auto; }
+        .form-sub { font-size:0.68rem; color:var(--muted); margin-top:0.12rem; white-space:nowrap; }
+        .bt-selected { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.85rem 0 0.2rem; min-height: 1.9rem; }
+        .bt-chip { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.35rem 0.3rem 0.6rem; border-radius: 20px; border: 1px solid var(--border); background: var(--bg-2); color: var(--text); }
+        .bt-chip .cdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .bt-chip .me { font-family: 'Orbitron', sans-serif; font-size: 0.5rem; letter-spacing: 0.06em; background: rgba(255,209,102,0.16); color: var(--gold); border-radius: 4px; padding: 0.05rem 0.3rem; }
+        .bt-x { border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0 0.15rem; }
+        .bt-x:hover { color: #fca5a5; }
+        .bt-hint { font-size: 0.72rem; color: #5b6472; margin-top: 0.15rem; }
+        .bt-chart-shell { position: relative; margin-top: 0.7rem; }
+        #bt-chart { display: block; width: 100%; height: auto; overflow: visible; }
+        .bt-grid { stroke: rgba(255,255,255,0.06); }
+        .bt-axis { fill: var(--muted); font-family: 'Inter', sans-serif; font-size: 11px; }
+        .bt-yax { fill: #5b6472; font-family: 'Orbitron', sans-serif; font-size: 9px; letter-spacing: 0.08em; }
+        .bt-line { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+        .bt-dot { stroke: var(--bg-1); stroke-width: 2; }
+        .bt-end { font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 700; }
+        .bt-endpts { font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700; fill: var(--muted); }
+        .bt-guide { stroke: rgba(255,255,255,0.18); stroke-width: 1; stroke-dasharray: 3 3; }
+        .bt-empty { fill: #5b6472; font-family: 'Inter', sans-serif; font-size: 13px; }
+        .bt-tt { position: absolute; pointer-events: none; background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.7rem; font-size: 0.76rem; min-width: 150px; opacity: 0; transition: opacity 0.12s; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 5; }
+        .bt-tt-round { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.4rem; }
+        .bt-tt-row { display: flex; align-items: center; gap: 0.45rem; margin: 0.16rem 0; }
+        .bt-tt-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .bt-tt-name { flex: 1; white-space: nowrap; color: #d7dde6; }
+        .bt-tt-val { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.72rem; }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/" class="active">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div class="hero">
+    <div class="hero-eyebrow">Championship</div>
+    <div class="hero-title" id="season-title">Standings</div>
+    <div class="hero-sub" id="season-sub">&nbsp;</div>
+</div>
+
+<div class="tab-bar">
+    <button class="tab active" data-tab="drivers" onclick="setTab('drivers')">Drivers</button>
+    <button class="tab" data-tab="teams" onclick="setTab('teams')">Teams</button>
+    <button class="tab" data-tab="manufacturers" onclick="setTab('manufacturers')">Manufacturers</button>
+    <button class="tab" data-tab="nations" onclick="setTab('nations')">Nations</button>
+    <button class="tab" data-tab="ratings" onclick="setTab('ratings')">Ratings</button>
+    <button class="tab" data-tab="form" onclick="setTab('form')">Form</button>
+</div>
+
+<div class="content">
+    <div id="battle" class="battle" style="display:none"></div>
+    <div id="panel">
+        <div class="loading">Loading…</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script src="/endurance/assets/elo-tiers.js?v=3"></script>
+<script src="/endurance/assets/countries.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data.session) { if (portal) portal.style.display = ''; }
+    else              { if (signin) signin.style.display = ''; }
+});
+
+let _drivers = [];
+let _teams   = [];
+let _nations = [];   // aggregated by driver nationality (avg points per driver)
+let _nationsNoCountry = 0; // drivers with no nationality set (shown as a footnote)
+let _wmSvg = null;   // cached world SVG text (fetched once, lazily)
+let _wmOpen = false; // world-map accordion open state (persisted)
+let _wmMetric = 'avg'; // 'avg' | 'total' | 'drivers' — what the map shades by
+try { _wmOpen = localStorage.getItem('gtec_nations_map') === '1'; } catch (e) {}
+try { const m = localStorage.getItem('gtec_nations_metric'); if (m) _wmMetric = m; } catch (e) {}
+let _ratings = null; // loaded lazily
+let _season  = null;
+let _tab     = 'drivers';
+let _mfrDetail = null;                       // manufacturer id being drilled into (null = overview)
+let _mfrSort   = { key: 'points', dir: -1 }; // sort for the manufacturer driver board
+let _natDetail = null;                       // nation code being drilled into (null = overview)
+let _natSort   = { key: 'points', dir: -1 }; // sort for the nation driver board
+let _ceiling  = null; // max points still available across all remaining rounds (Split-1 ceiling), for Live Battles
+let _remaining = 0;
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Flag emoji from any 2-letter ISO country code (regional indicators).
+function flag(c) {
+    const cc = (c || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
+
+function posCls(p) {
+    if (p === 1) return 'pos p1';
+    if (p === 2) return 'pos p2';
+    if (p === 3) return 'pos p3';
+    return 'pos';
+}
+function rankCls(p) {
+    if (p === 1) return 'rank-1';
+    if (p === 2) return 'rank-2';
+    if (p === 3) return 'rank-3';
+    return '';
+}
+
+// Render the small movement chip next to the position. Returns ▲N green,
+// ▼N red, – grey, or "NEW" gold for drivers who weren't ranked before
+// the most recent event.
+function movementHTML(currentPos, prevPos) {
+    if (prevPos == null) return `<span class="move move-new">NEW</span>`;
+    const delta = prevPos - currentPos;  // positive = moved up
+    if (delta > 0)  return `<span class="move move-up">▲${delta}</span>`;
+    if (delta < 0)  return `<span class="move move-down">▼${-delta}</span>`;
+    return `<span class="move move-flat">–</span>`;
+}
+
+// Manufacturer logo (preferred) or coloured swatch fallback
+function mfrBadge(logoUrl, brandColor, name) {
+    if (logoUrl) return `<img class="mfr-logo" src="${esc(logoUrl)}" alt="${esc(name || '')}" loading="lazy">`;
+    if (brandColor) return `<span class="swatch" style="background:${esc(brandColor)}"></span>`;
+    return '';
+}
+
+// Small round driver avatar (photo, else initial).
+function driverAvatar(photo, name) {
+    if (photo) return `<img class="std-avatar" src="${esc(photo)}" alt="" loading="lazy">`;
+    const init = (name || '?').trim().charAt(0).toUpperCase();
+    return `<span class="std-avatar std-avatar-init">${esc(init)}</span>`;
+}
+
+// Recent-form strip: last few rounds as compact, colour-coded pills.
+function formStrip(form) {
+    if (!form || !form.length) return '<span class="form-empty">—</span>';
+    return `<span class="form-strip">` + form.map(f => {
+        const st = f.status || 'classified';
+        let cls = 'form-pill', label, title;
+        if (st !== 'classified') {
+            cls += ' form-dnf';
+            label = st === 'dnf' ? 'DNF' : st === 'dsq' ? 'DSQ' : st === 'dns' ? 'DNS' : st === 'withdrawn' ? 'WD' : '—';
+            title = label;
+        } else if (f.pos === 1) {
+            cls += ' form-win'; label = 'P1'; title = 'Win';
+        } else if (f.pos != null && f.pos <= 3) {
+            cls += ' form-podium'; label = 'P' + f.pos; title = 'Podium';
+        } else {
+            label = f.pos != null ? 'P' + f.pos : '—'; title = label;
+        }
+        return `<span class="${cls}" title="${esc(title)}">${label}</span>`;
+    }).join('') + `</span>`;
+}
+
+// Top-3 rostrum above the driver standings — P2 · P1 · P3, tallest in the
+// middle. Only shown once there's a genuine top three.
+function podiumSpot(d, place, leaderPts) {
+    if (!d) return '';
+    const info = _ratingByDriver[d.driver_id] || {};
+    const pts  = Number(d.points) || 0;
+    const av = info.photo
+        ? `<img class="pod-av" src="${esc(info.photo)}" alt="" loading="lazy">`
+        : `<span class="pod-av pod-av-init">${esc((d.driver_name || '?').trim().charAt(0).toUpperCase())}</span>`;
+    const flg = d.nationality ? `<span class="driver-flag">${flag(d.nationality)}</span> ` : '';
+    const crown = place === 1 ? '<div class="pod-crown">👑</div>' : '';
+    const gapNum = leaderPts - pts;
+    const gap = place === 1
+        ? '<div class="podium-gap leader">★ Leader</div>'
+        : `<div class="podium-gap">−${gapNum.toFixed(gapNum % 1 === 0 ? 0 : 1)}</div>`;
+    return `<div class="podium-spot spot-${place}">
+        <a class="podium-driver" href="/endurance/drivers/?slug=${esc(d.driver_slug)}">
+            <div class="pod-av-wrap">${crown}<span class="pod-halo"></span>${av}</div>
+            <div class="podium-name">${flg}${esc(d.driver_name)}</div>
+            <div class="podium-pts"><span class="pod-pts-num" data-pts="${pts}">${pts.toFixed(pts % 1 === 0 ? 0 : 1)}</span> pts</div>
+            ${gap}
+        </a>
+        <div class="podium-step step-${place}"><span class="podium-rank">${place}</span></div>
+    </div>`;
+}
+function renderPodium(list) {
+    if (!list || list.length < 3) return '';
+    const [p1, p2, p3] = list;
+    const leaderPts = Number(p1.points) || 0;
+    return `<div class="podium">${podiumSpot(p2, 2, leaderPts)}${podiumSpot(p1, 1, leaderPts)}${podiumSpot(p3, 3, leaderPts)}</div>`;
+}
+
+// Count the podium points up on render (skipped when reduced motion is on).
+function animatePodium() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelectorAll('.pod-pts-num[data-pts]').forEach(el => {
+        const target = Number(el.dataset.pts) || 0;
+        const dec = target % 1 === 0 ? 0 : 1;
+        const dur = 850, start = performance.now();
+        const tick = now => {
+            const t = Math.min(1, (now - start) / dur);
+            el.textContent = (target * (1 - Math.pow(1 - t, 3))).toFixed(dec);
+            if (t < 1) requestAnimationFrame(tick); else el.textContent = target.toFixed(dec);
+        };
+        requestAnimationFrame(tick);
+    });
+}
+
+// Constructors rostrum — same design as the drivers podium, but the avatar
+// is the team's manufacturer logo (or a monogram) rather than a photo.
+function teamPodiumSpot(t, place, leaderPts) {
+    if (!t) return '';
+    const pts = Number(t.points) || 0;
+    const av = t.manufacturer_logo_url
+        ? `<img class="pod-av pod-av-logo" src="${esc(t.manufacturer_logo_url)}" alt="" loading="lazy">`
+        : `<span class="pod-av pod-av-init">${esc((t.team_name || '?').trim().charAt(0).toUpperCase())}</span>`;
+    const crown = place === 1 ? '<div class="pod-crown">👑</div>' : '';
+    const gapNum = leaderPts - pts;
+    const gap = place === 1
+        ? '<div class="podium-gap leader">★ Leader</div>'
+        : `<div class="podium-gap">−${gapNum.toFixed(gapNum % 1 === 0 ? 0 : 1)}</div>`;
+    const sub = t.manufacturer_name ? `<div class="podium-sub">${esc(t.manufacturer_name)}</div>` : '';
+    return `<div class="podium-spot spot-${place}">
+        <a class="podium-driver" href="/endurance/teams/?slug=${esc(t.team_slug)}">
+            <div class="pod-av-wrap">${crown}<span class="pod-halo"></span>${av}</div>
+            <div class="podium-name">${esc(t.team_name)}</div>
+            ${sub}
+            <div class="podium-pts"><span class="pod-pts-num" data-pts="${pts}">${pts.toFixed(pts % 1 === 0 ? 0 : 1)}</span> pts</div>
+            ${gap}
+        </a>
+        <div class="podium-step step-${place}"><span class="podium-rank">${place}</span></div>
+    </div>`;
+}
+function renderTeamPodium(list) {
+    if (!list || list.length < 3) return '';
+    const [p1, p2, p3] = list;
+    const leaderPts = Number(p1.points) || 0;
+    return `<div class="podium">${teamPodiumSpot(p2, 2, leaderPts)}${teamPodiumSpot(p1, 1, leaderPts)}${teamPodiumSpot(p3, 3, leaderPts)}</div>`;
+}
+
+async function setTab(t) {
+    _tab = t;
+    // Switching tabs always returns the Manufacturers view to its overview
+    // (rather than a previously drilled-in manufacturer), and clears the
+    // deep-link param so the URL matches what's shown.
+    if (_mfrDetail || _natDetail) {
+        _mfrDetail = null;
+        _natDetail = null;
+        try { const url = new URL(location.href); url.searchParams.delete('mfr'); url.searchParams.delete('nat'); history.replaceState(null, '', url); } catch (e) {}
+    }
+    document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+    // The battle chart runs on the Drivers, Teams, Manufacturers and Ratings
+    // tabs, switching which contest it plots (points, or ELO on Ratings).
+    const battle = document.getElementById('battle');
+    const showBattle = (t === 'drivers' || t === 'teams' || t === 'manufacturers' || t === 'ratings') && _btLastIdx >= 0;
+    if (battle) battle.style.display = showBattle ? '' : 'none';
+    if (showBattle && document.getElementById('bt-acc') && _btMode !== t) btSetMode(t);
+    if (t === 'ratings' && _ratings === null) {
+        await loadRatings();
+    } else {
+        render();
+    }
+}
+
+function render() {
+    const panel = document.getElementById('panel');
+    if (_tab === 'drivers')  renderDrivers(panel);
+    else if (_tab === 'form') renderForm(panel);
+    else if (_tab === 'teams') renderTeams(panel);
+    else if (_tab === 'manufacturers') renderManufacturers(panel);
+    else if (_tab === 'nations') renderNations(panel);
+    else renderRatings(panel);
+}
+
+async function loadRatings() {
+    const panel = document.getElementById('panel');
+    panel.innerHTML = '<div class="loading">Loading ratings…</div>';
+    const { data, error } = await sb.from('driver_current_ratings')
+        .select('*')
+        .not('last_rated_at', 'is', null)
+        .order('rating', { ascending: false });
+    if (error) { panel.innerHTML = `<div class="state-msg"><p>${esc(error.message)}</p></div>`; return; }
+    _ratings = data || [];
+    renderRatings(panel);
+}
+
+// Live-battle flag — a quiet inline cue instead of a separate section.
+// Returns a small icon for the gap cell when THIS row could still catch
+// the row directly above it (their ceiling reaches or passes the row
+// above's current points); empty string when that gap is already
+// mathematically settled, or for the leader row (nothing above to chase).
+function battleFlag(rowPoints, aboveRow) {
+    if (_ceiling == null || !aboveRow) return '';
+    const abovePoints = Number(aboveRow.points) || 0;
+    if (rowPoints + _ceiling < abovePoints) return '';
+    const gap = abovePoints - rowPoints;
+    const title = `Still catchable — ${gap.toFixed(gap % 1 === 0 ? 0 : 1)} pt${gap === 1 ? '' : 's'} back, ${_remaining} round${_remaining === 1 ? '' : 's'} left`;
+    return `<span class="battle-flag" title="${esc(title)}">🔥</span>`;
+}
+
+function renderDrivers(panel) {
+    if (!_drivers.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Results Yet</h3><p>Standings will appear here once race results are recorded.</p></div>`;
+        return;
+    }
+    const leaderPoints = Number(_drivers[0].points) || 0;
+    const rows = _drivers.map((d, i) => {
+        const pos = i + 1;
+        const num = d.career_number ? `<span class="career-num">#${d.career_number}</span>` : '';
+        // Solo drivers have no team_name (and the view derives manufacturer
+        // via team_seasons, so it's null for them) — fall back to the
+        // driver's own manufacturer from driver_current_ratings so solo
+        // entries still show a manufacturer, like team drivers do.
+        const _rInfo = _ratingByDriver[d.driver_id];
+        const soloMfrName  = d.manufacturer_name     || _rInfo?.manufacturerName;
+        const soloMfrLogo  = d.manufacturer_logo_url || _rInfo?.manufacturerLogoUrl;
+        const soloMfrColor = d.brand_color           || _rInfo?.brandColor;
+        const teamLine = d.team_name
+            ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name, { size: 'lg' })}<span class="meta-team">${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='inherit'">${esc(d.team_name)}</a>` : esc(d.team_name)}${d.manufacturer_name ? ` · ${esc(d.manufacturer_name)}` : ''}</span></div>`
+            : (soloMfrName ? `<div class="meta-line">${mfrBadge(soloMfrLogo, soloMfrColor, soloMfrName)}<em style="opacity:0.75">Solo</em> · ${esc(soloMfrName)}</div>` : '');
+        const movement = movementHTML(pos, _prevDriverRank[d.driver_id]);
+        const leaderTag = pos === 1
+            ? `<span class="leader-tag">★ Leader</span>`
+            : '';
+        const ratingInfo = _ratingByDriver[d.driver_id];
+        const eloHTML = ratingInfo
+            ? `<div class="elo-cell">
+                   <span class="elo-num">${Math.round(ratingInfo.rating)}</span>
+                   ${window.eloTierBadge ? window.eloTierBadge(ratingInfo.rating, { provisional: !ratingInfo.rated }) : ''}
+               </div>`
+            : '';
+        const points = Number(d.points) || 0;
+        const gap = pos === 1
+            ? `<span class="leader-pip">LEADER</span>`
+            : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>${battleFlag(points, _drivers[i - 1])}`;
+        return `<tr class="driver-row ${rankCls(pos)}">
+            <td class="${posCls(pos)}" style="${d.brand_color ? `border-left:3px solid ${esc(d.brand_color)}` : 'border-left:3px solid transparent'}">
+                <div class="pos-stack">
+                    <span>${pos}</span>
+                    ${movement}
+                </div>
+            </td>
+            <td>
+                <div class="driver-cell">
+                    ${driverAvatar(_rInfo?.photo, d.driver_name)}
+                    <div class="driver-cell-text">
+                        <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${leaderTag}</div>
+                        ${teamLine}
+                    </div>
+                </div>
+            </td>
+            <td class="hide-mob center">${eloHTML}</td>
+            <td class="lighter center hide-mob">${d.races}</td>
+            <td class="lighter center hide-mob">${d.wins}</td>
+            <td class="lighter center hide-mob">${d.podiums}</td>
+            <td class="lighter center hide-mob">${d.poles}</td>
+            <td class="lighter center hide-mob">${d.fastest_laps}</td>
+            <td class="hide-mob center">${formStrip(_formByDriver[d.driver_id])}</td>
+            <td class="right">
+                <div class="points">${points.toFixed(points % 1 === 0 ? 0 : 1)}</div>
+                ${deductionHtml(_dedByDriver[d.driver_id])}
+                ${bonusHtml(_bonByDriver[d.driver_id])}
+                ${gap}
+            </td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        ${renderPodium(_drivers)}
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:64px">#</th>
+                    <th>Driver</th>
+                    <th class="center hide-mob">Elo</th>
+                    <th class="center hide-mob">Races</th>
+                    <th class="center hide-mob">Wins</th>
+                    <th class="center hide-mob">Pod</th>
+                    <th class="center hide-mob">Pole</th>
+                    <th class="center hide-mob">FL</th>
+                    <th class="center hide-mob">Form</th>
+                    <th class="right">Points</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+    animatePodium();
+}
+
+function renderTeams(panel) {
+    if (!_teams.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Results Yet</h3><p>Standings will appear here once race results are recorded.</p></div>`;
+        return;
+    }
+    const leaderPoints = Number(_teams[0].points) || 0;
+    const rows = _teams.map((t, i) => {
+        const pos = i + 1;
+        const mfrLine = t.manufacturer_name
+            ? `<div class="meta-line">${mfrBadge(t.manufacturer_logo_url, t.brand_color, t.manufacturer_name, { size: 'lg' })}${esc(t.manufacturer_name)}</div>`
+            : '';
+        const leaderTag = pos === 1 ? `<span class="leader-tag">★ Leader</span>` : '';
+        const points = Number(t.points) || 0;
+        const gap = pos === 1
+            ? `<span class="leader-pip">LEADER</span>`
+            : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>${battleFlag(points, _teams[i - 1])}`;
+        return `<tr class="${rankCls(pos)}">
+            <td class="${posCls(pos)}" style="${t.brand_color ? `border-left:3px solid ${esc(t.brand_color)}` : 'border-left:3px solid transparent'}">
+                <div class="pos-stack"><span>${pos}</span></div>
+            </td>
+            <td>
+                <div class="name"><a href="/endurance/teams/?slug=${esc(t.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(t.team_name)}</a>${leaderTag}</div>
+                ${mfrLine}
+            </td>
+            <td class="lighter center hide-mob">${t.races}</td>
+            <td class="lighter center hide-mob">${t.wins}</td>
+            <td class="lighter center hide-mob">${t.podiums}</td>
+            <td class="lighter center hide-mob">${t.poles}</td>
+            <td class="lighter center hide-mob">${t.fastest_laps}</td>
+            <td class="right">
+                <div class="points">${points}</div>
+                ${deductionHtml(_dedByTeam[t.team_id])}
+                ${bonusHtml(_bonByTeam[t.team_id])}
+                ${gap}
+            </td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        ${renderTeamPodium(_teams)}
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:50px">#</th>
+                    <th>Team</th>
+                    <th class="center hide-mob">Races</th>
+                    <th class="center hide-mob">Wins</th>
+                    <th class="center hide-mob">Pod</th>
+                    <th class="center hide-mob">Pole</th>
+                    <th class="center hide-mob">FL</th>
+                    <th class="right">Points</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+    animatePodium();
+}
+
+function renderManufacturers(panel) {
+    if (_mfrDetail) { renderMfrDetail(panel); return; }
+    if (!_manufacturers.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Results Yet</h3><p>Manufacturer standings appear once race results are recorded.</p></div>`;
+        return;
+    }
+    const leaderPoints = Number(_manufacturers[0].points) || 0;
+    const gridTotal = _manufacturers.reduce((s, m) => s + (Number(m.drivers) || 0), 0) || 1;
+    const rows = _manufacturers.map((m, i) => {
+        const pos = i + 1;
+        const points = Number(m.points) || 0;
+        const gap = pos === 1
+            ? `<span class="leader-pip">LEADER</span>`
+            : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>`;
+        return `<tr class="${rankCls(pos)} mfr-row" onclick="openMfr('${esc(m.id)}')" title="View ${esc(m.name)} drivers">
+            <td class="${posCls(pos)}" style="${m.color ? `border-left:3px solid ${esc(m.color)}` : 'border-left:3px solid transparent'}">${pos}</td>
+            <td>
+                <div class="driver-cell">
+                    <span class="mfr-badge-lg">${mfrBadge(m.logo, m.color, m.name)}</span>
+                    <div class="name">${esc(m.name)} <span class="mfr-go">View drivers ›</span></div>
+                </div>
+            </td>
+            <td class="lighter center hide-mob">${m.drivers}</td>
+            <td class="lighter center hide-mob" title="Share of the grid">${Math.round((Number(m.drivers) || 0) / gridTotal * 100)}%</td>
+            <td class="lighter center hide-mob">${m.wins}</td>
+            <td class="lighter center hide-mob">${m.podiums}</td>
+            <td class="lighter center hide-mob">${m.poles}</td>
+            <td class="lighter center hide-mob">${m.fl}</td>
+            <td class="center hide-mob" style="font-family:'Orbitron',sans-serif;font-size:0.82rem;color:#cbd5e1">${m.drivers ? (points / m.drivers).toFixed(1) : '—'}</td>
+            <td class="right">
+                <div class="points">${points.toFixed(points % 1 === 0 ? 0 : 1)}</div>
+                ${gap}
+            </td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:64px">#</th>
+                    <th>Manufacturer</th>
+                    <th class="center hide-mob">Drivers</th>
+                    <th class="center hide-mob" title="Share of the grid">Grid</th>
+                    <th class="center hide-mob">Wins</th>
+                    <th class="center hide-mob">Pod</th>
+                    <th class="center hide-mob">Pole</th>
+                    <th class="center hide-mob">FL</th>
+                    <th class="center hide-mob" title="Points per driver">Avg</th>
+                    <th class="right">Points</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+}
+
+// ===== Manufacturer drill-in: sortable driver leaderboard =====
+function openMfr(id) {
+    _mfrDetail = id;
+    _mfrSort = { key: 'points', dir: -1 };
+    syncMfrUrl();
+    render();
+}
+function closeMfr() {
+    _mfrDetail = null;
+    syncMfrUrl();
+    render();
+}
+function syncMfrUrl() {
+    try {
+        const url = new URL(location.href);
+        if (_mfrDetail) {
+            const m = _manufacturers.find(x => x.id === _mfrDetail);
+            url.searchParams.set('tab', 'manufacturers');
+            if (m) url.searchParams.set('mfr', m.slug); else url.searchParams.delete('mfr');
+        } else {
+            url.searchParams.delete('mfr');
+        }
+        history.replaceState(null, '', url);
+    } catch (e) {}
+}
+function mfrSortBy(key) {
+    if (_mfrSort.key === key) { _mfrSort.dir *= -1; }
+    else { _mfrSort = { key, dir: key === 'name' ? 1 : -1 }; }
+    render();
+}
+
+function renderMfrDetail(panel) {
+    const m = _manufacturers.find(x => x.id === _mfrDetail);
+    if (!m) { _mfrDetail = null; renderManufacturers(panel); return; }
+
+    const list = _driverRowsFor(d => (d.manufacturer_id || _ratingByDriver[d.driver_id]?.manufacturerId) === m.id);
+    panel.innerHTML = `
+        <div class="mfr-detail-head">
+            <button class="mfr-back" onclick="closeMfr()">‹ All manufacturers</button>
+            <div class="mfr-title">
+                <span class="mfr-badge-lg">${mfrBadge(m.logo, m.color, m.name)}</span>
+                <div>
+                    <div class="mfr-name">${esc(m.name)}</div>
+                    <div class="mfr-totals">${m.drivers} driver${m.drivers === 1 ? '' : 's'} · ${Number(m.points).toFixed(Number(m.points) % 1 === 0 ? 0 : 1)} pts · ${m.drivers ? (Number(m.points) / m.drivers).toFixed(1) : '0'} avg · ${m.wins} win${m.wins === 1 ? '' : 's'}</div>
+                </div>
+            </div>
+        </div>
+        ${_driverBoardTable(list, _mfrSort, 'mfrSortBy')}`;
+}
+
+// ===== Shared sortable driver board (manufacturer + nation drill-ins) =====
+function _driverRowsFor(predicate) {
+    return _drivers.filter(predicate).map(d => {
+        const r = _ratingByDriver[d.driver_id] || {};
+        return {
+            driver_id: d.driver_id, name: d.driver_name, slug: d.driver_slug,
+            nationality: d.nationality, career_number: d.career_number,
+            team_name: d.team_name, team_slug: d.team_slug, photo: r.photo,
+            points: Number(d.points) || 0,
+            elo: r.rating != null ? Number(r.rating) : null, rated: !!r.rated,
+            wins: Number(d.wins) || 0, podiums: Number(d.podiums) || 0,
+            poles: Number(d.poles) || 0, fl: Number(d.fastest_laps) || 0,
+            races: Number(d.races) || 0,
+        };
+    });
+}
+
+function _driverBoardTable(list, sort, sortFn) {
+    const { key, dir } = sort;
+    const val = (o) => key === 'name' ? (o.name || '').toLowerCase()
+        : key === 'elo' ? (o.elo == null ? -Infinity : o.elo) : (o[key] ?? 0);
+    list.sort((a, b) => {
+        const av = val(a), bv = val(b);
+        if (av < bv) return -1 * dir;
+        if (av > bv) return 1 * dir;
+        return (b.points - a.points) || (a.name || '').localeCompare(b.name || '');
+    });
+    const arrow = k => key === k ? `<span class="sort-arr">${dir < 0 ? '▾' : '▴'}</span>` : '';
+    const th = (k, label, cls) => `<th class="${cls || ''} mfr-sort" onclick="${sortFn}('${k}')">${label}${arrow(k)}</th>`;
+    const rows = list.map((d, i) => {
+        const num = d.career_number ? `<span class="career-num">#${d.career_number}</span>` : '';
+        const teamLine = d.team_name
+            ? `<div class="meta-line">${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
+            : `<div class="meta-line"><em style="opacity:0.75">Solo</em></div>`;
+        const eloHTML = d.elo != null
+            ? `<span class="elo-num">${Math.round(d.elo)}</span>${window.eloTierBadge ? window.eloTierBadge(d.elo, { provisional: !d.rated }) : ''}`
+            : '<span class="lighter">—</span>';
+        return `<tr class="driver-row">
+            <td class="pos-num">${i + 1}</td>
+            <td>
+                <div class="driver-cell">
+                    ${driverAvatar(d.photo, d.name)}
+                    <div class="driver-cell-text">
+                        <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.name)}</a></div>
+                        ${teamLine}
+                    </div>
+                </div>
+            </td>
+            <td class="center hide-mob"><div class="elo-cell">${eloHTML}</div></td>
+            <td class="lighter center hide-mob">${d.races}</td>
+            <td class="lighter center hide-mob">${d.wins}</td>
+            <td class="lighter center hide-mob">${d.podiums}</td>
+            <td class="lighter center hide-mob">${d.poles}</td>
+            <td class="lighter center hide-mob">${d.fl}</td>
+            <td class="right"><div class="points">${d.points.toFixed(d.points % 1 === 0 ? 0 : 1)}</div></td>
+        </tr>`;
+    }).join('');
+    return `
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:52px">#</th>
+                    ${th('name', 'Driver')}
+                    ${th('elo', 'ELO', 'center hide-mob')}
+                    ${th('races', 'Rac', 'center hide-mob')}
+                    ${th('wins', 'Wins', 'center hide-mob')}
+                    ${th('podiums', 'Pod', 'center hide-mob')}
+                    ${th('poles', 'Pole', 'center hide-mob')}
+                    ${th('fl', 'FL', 'center hide-mob')}
+                    ${th('points', 'Points', 'right')}
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+}
+
+// ===== Nation drill-in: sortable driver leaderboard =====
+function openNat(code) {
+    _natDetail = code;
+    _natSort = { key: 'points', dir: -1 };
+    syncNatUrl();
+    render();
+}
+function closeNat() {
+    _natDetail = null;
+    syncNatUrl();
+    render();
+}
+function syncNatUrl() {
+    try {
+        const url = new URL(location.href);
+        if (_natDetail) { url.searchParams.set('tab', 'nations'); url.searchParams.set('nat', _natDetail); }
+        else { url.searchParams.delete('nat'); }
+        history.replaceState(null, '', url);
+    } catch (e) {}
+}
+function natSortBy(key) {
+    if (_natSort.key === key) { _natSort.dir *= -1; }
+    else { _natSort = { key, dir: key === 'name' ? 1 : -1 }; }
+    render();
+}
+function renderNatDetail(panel) {
+    const nat = _nations.find(x => x.code === _natDetail);
+    if (!nat) { _natDetail = null; renderNations(panel); return; }
+    const fmt = v => (Number(v) % 1 === 0 ? Number(v).toFixed(0) : Number(v).toFixed(1));
+    const list = _driverRowsFor(d => (d.nationality || '').toUpperCase() === _natDetail);
+    panel.innerHTML = `
+        <div class="mfr-detail-head">
+            <button class="mfr-back" onclick="closeNat()">‹ All nations</button>
+            <div class="mfr-title">
+                <span class="nat-flag">${nat.flag || ''}</span>
+                <div>
+                    <div class="mfr-name">${esc(nat.name)}</div>
+                    <div class="mfr-totals">${nat.drivers} driver${nat.drivers === 1 ? '' : 's'} · ${fmt(nat.avg)} avg · ${fmt(nat.points)} pts · ${nat.wins} win${nat.wins === 1 ? '' : 's'}</div>
+                </div>
+            </div>
+        </div>
+        ${_driverBoardTable(list, _natSort, 'natSortBy')}`;
+}
+
+function renderNations(panel) {
+    if (_natDetail) { renderNatDetail(panel); return; }
+    if (!_nations.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Results Yet</h3><p>The Nations Cup appears once drivers with a set nationality have scored points.</p></div>`;
+        return;
+    }
+    const fmt = v => (Number(v) % 1 === 0 ? Number(v).toFixed(0) : Number(v).toFixed(1));
+    const leaderAvg = Number(_nations[0].avg) || 0;
+    const rows = _nations.map((n, i) => {
+        const pos = i + 1;
+        const avg = Number(n.avg) || 0;
+        const gap = pos === 1
+            ? `<span class="leader-pip">LEADER</span>`
+            : `<span class="points-gap">−${fmt(leaderAvg - avg)}</span>`;
+        const flag = n.flag ? `<span class="nat-flag">${n.flag}</span>` : '';
+        const top = n.topName
+            ? `<div class="meta-line">${n.topSlug
+                    ? `<a href="/endurance/drivers/?slug=${esc(n.topSlug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(n.topName)}</a>`
+                    : esc(n.topName)} · ${fmt(n.topPoints)} pts</div>`
+            : '';
+        return `<tr class="${rankCls(pos)} mfr-row" id="nat-row-${esc(n.code)}" onclick="openNat('${esc(n.code)}')" title="View ${esc(n.name)} drivers">
+            <td class="${posCls(pos)}">${pos}</td>
+            <td>
+                <div class="driver-cell">
+                    ${flag}
+                    <div>
+                        <div class="name">${esc(n.name)} <span class="mfr-go">View drivers ›</span></div>
+                        ${top}
+                    </div>
+                </div>
+            </td>
+            <td class="lighter center hide-mob">${n.drivers}</td>
+            <td class="lighter center hide-mob">${n.wins}</td>
+            <td class="lighter center hide-mob">${n.podiums}</td>
+            <td class="lighter center hide-mob">${fmt(n.points)}</td>
+            <td class="right">
+                <div class="points">${fmt(avg)}</div>
+                ${gap}
+            </td>
+        </tr>`;
+    }).join('');
+
+    const foot = _nationsNoCountry
+        ? `<p class="nat-note">${_nationsNoCountry} driver${_nationsNoCountry === 1 ? '' : 's'} without a nationality set ${_nationsNoCountry === 1 ? 'is' : 'are'} not shown. Set it in their profile to add them.</p>`
+        : '';
+
+    panel.innerHTML = `
+      <div class="bt-acc ${_wmOpen ? '' : 'collapsed'}" id="map-acc">
+        <div class="bt-head" onclick="mapToggle()">
+          <div class="bt-ic">🗺️</div>
+          <div class="bt-titles">
+            <div class="bt-title">World Map</div>
+            <div class="bt-sub">Where the grid races from. Shade by average, total points or driver count.</div>
+          </div>
+          <svg class="bt-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="bt-body">
+          <div class="wm-toolbar">
+            <span class="wm-tb-lbl">Shade by</span>
+            <button class="bt-preset ${_wmMetric === 'avg' ? 'gold' : ''}" onclick="mapSetMetric('avg')">Avg / driver</button>
+            <button class="bt-preset ${_wmMetric === 'total' ? 'gold' : ''}" onclick="mapSetMetric('total')">Total points</button>
+            <button class="bt-preset ${_wmMetric === 'drivers' ? 'gold' : ''}" onclick="mapSetMetric('drivers')">Drivers</button>
+          </div>
+          <div class="wm-shell">
+            <div id="wm-host"><div class="wm-loading">Loading map…</div></div>
+            <div class="wm-tt" id="wm-tt"></div>
+          </div>
+          <div class="wm-legend" id="wm-legend"></div>
+        </div>
+      </div>
+      <div class="standings" style="margin-top:1rem">
+            <table>
+                <thead><tr>
+                    <th style="width:64px">#</th>
+                    <th>Nation</th>
+                    <th class="center hide-mob">Drivers</th>
+                    <th class="center hide-mob">Wins</th>
+                    <th class="center hide-mob">Pod</th>
+                    <th class="center hide-mob">Total</th>
+                    <th class="right">Avg&nbsp;Pts</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+            ${foot}
+      </div>`;
+
+    if (_wmOpen) mapEnsureLoaded();
+}
+
+// ===== Nations world map (collapsible, lazy-loaded) =====
+const WM_RAMP = ['#4a3d1a', '#7a6320', '#a8842a', '#d8ab38', '#ffd166']; // low → high avg
+
+function mapToggle() {
+    const a = document.getElementById('map-acc');
+    if (!a) return;
+    a.classList.toggle('collapsed');
+    _wmOpen = !a.classList.contains('collapsed');
+    try { localStorage.setItem('gtec_nations_map', _wmOpen ? '1' : '0'); } catch (e) {}
+    if (_wmOpen) mapEnsureLoaded();
+}
+
+async function mapEnsureLoaded() {
+    const host = document.getElementById('wm-host');
+    if (!host) return;
+    if (_wmSvg === null) {
+        try {
+            const r = await fetch('/endurance/assets/world-110m.svg');
+            _wmSvg = await r.text();
+        } catch (e) {
+            host.innerHTML = '<div class="wm-loading">Map unavailable.</div>';
+            return;
+        }
+    }
+    // Inject once per render (host is rebuilt each renderNations).
+    if (!host.querySelector('svg')) {
+        host.innerHTML = _wmSvg;
+        applyMapColors();
+    }
+}
+
+function wmMetricVal(nat) {
+    return _wmMetric === 'total' ? nat.points : _wmMetric === 'drivers' ? nat.drivers : nat.avg;
+}
+function wmMetricLabel() {
+    return _wmMetric === 'total' ? 'Total points' : _wmMetric === 'drivers' ? 'Drivers' : 'Avg points / driver';
+}
+
+function applyMapColors() {
+    const svg = document.querySelector('#wm-host svg');
+    if (!svg) return;
+    const n = _nations.length;
+    // Rank countries by the selected metric so the shading always shows
+    // contrast (even when values are bunched); brightest = highest.
+    const rankByCode = {};
+    [..._nations].sort((a, b) => wmMetricVal(b) - wmMetricVal(a))
+        .forEach((nat, i) => { rankByCode[nat.code] = i; });
+
+    svg.querySelectorAll('path').forEach(p => {
+        const rank = rankByCode[p.id];
+        if (rank === undefined) { p.classList.remove('wm-data'); p.style.fill = ''; return; }
+        const tier = n <= 1 ? WM_RAMP.length - 1
+            : Math.round((1 - rank / (n - 1)) * (WM_RAMP.length - 1));
+        p.style.fill = WM_RAMP[tier];
+        p.classList.add('wm-data');
+        p.addEventListener('mousemove', wmMove);
+        p.addEventListener('mouseleave', wmLeave);
+        p.addEventListener('click', () => wmClick(p.id));
+    });
+
+    const lg = document.getElementById('wm-legend');
+    if (lg) {
+        lg.innerHTML =
+            `<span class="wm-lg-lo">${wmMetricLabel()}:</span> <span>lower</span>` +
+            WM_RAMP.map(c => `<span class="wm-sw" style="background:${c}"></span>`).join('') +
+            `<span>higher</span>` +
+            `<span style="margin-left:0.6rem"><span class="wm-sw" style="background:#171d29;border:1px solid var(--border)"></span> no entrants</span>`;
+    }
+}
+
+function mapSetMetric(m) {
+    _wmMetric = m;
+    try { localStorage.setItem('gtec_nations_metric', m); } catch (e) {}
+    document.querySelectorAll('.wm-toolbar .bt-preset').forEach(b => {
+        b.classList.toggle('gold', b.getAttribute('onclick') === `mapSetMetric('${m}')`);
+    });
+    applyMapColors();
+}
+
+function wmMove(e) {
+    const tt = document.getElementById('wm-tt');
+    const rec = _nations.find(x => x.code === e.currentTarget.id);
+    if (!tt || !rec) return;
+    const fmt = v => (Number(v) % 1 === 0 ? Number(v).toFixed(0) : Number(v).toFixed(1));
+    tt.innerHTML =
+        `<div class="wm-tt-h"><span class="wm-tt-flag">${rec.flag || ''}</span>${esc(rec.name)}</div>
+         <div class="wm-tt-r"><span>Avg / driver</span><b>${fmt(rec.avg)}</b></div>
+         <div class="wm-tt-r"><span>Drivers</span><span>${rec.drivers}</span></div>
+         <div class="wm-tt-r"><span>Total</span><span>${fmt(rec.points)}</span></div>
+         ${rec.topName ? `<div class="wm-tt-r"><span>Top</span><span>${esc(rec.topName)}</span></div>` : ''}`;
+    tt.style.display = 'block';
+    const shell = tt.parentElement.getBoundingClientRect();
+    let x = e.clientX - shell.left + 14;
+    let y = e.clientY - shell.top + 14;
+    if (x + tt.offsetWidth > shell.width) x = e.clientX - shell.left - tt.offsetWidth - 14;
+    tt.style.left = Math.max(0, x) + 'px';
+    tt.style.top = Math.max(0, y) + 'px';
+}
+
+function wmLeave() {
+    const tt = document.getElementById('wm-tt');
+    if (tt) tt.style.display = 'none';
+}
+
+function wmClick(code) {
+    // Clicking a country on the map drills into that nation's driver board.
+    if (_nations.some(n => n.code === code)) openNat(code);
+}
+
+function renderRatings(panel) {
+    if (!_ratings?.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Ratings Yet</h3><p>Ratings appear here after running Compute Elo on a completed event.</p></div>`;
+        return;
+    }
+    const rows = _ratings.map((d, i) => {
+        const pos = i + 1;
+        const delta = d.last_delta;
+        const deltaHTML = delta != null
+            ? `<span style="font-size:0.78rem;font-weight:600;color:${delta >= 0 ? '#4ade80' : '#f87171'}">${delta >= 0 ? '+' : ''}${delta}</span>`
+            : '—';
+        const teamLine = d.team_name
+            ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name)}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
+            : '';
+        return `<tr class="${rankCls(pos)}">
+            <td class="${posCls(pos)}">${pos}</td>
+            <td>
+                <div class="name"><a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a></div>
+                ${teamLine}
+            </td>
+            <td class="right"><span class="points">${d.rating}</span>${window.eloTierBadge ? window.eloTierBadge(d.rating) : ''}</td>
+            <td class="right">${deltaHTML}</td>
+            <td class="right hide-mob" style="color:var(--muted);font-size:0.85rem">${d.peak_rating}</td>
+        </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:50px">#</th>
+                    <th>Driver</th>
+                    <th class="right">Rating</th>
+                    <th class="right">Last</th>
+                    <th class="right hide-mob">Peak</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.85rem;padding:0 0.25rem">Pairwise Elo per split (K=20, seeded from GT7 DR/SR until raced). Clamped to [800–3000].</p>`;
+}
+
+// ============================================================
+// FORM — "who's hot right now": the last few rounds only, ranked by
+// points scored in the window or by ELO gained over it. Built entirely
+// from the per-round series the battle chart already computes.
+// ============================================================
+let _formMetric = 'points';   // 'points' | 'elo'
+function setFormMetric(m) { m = m === 'elo' ? 'elo' : 'points'; if (m === _formMetric) return; _formMetric = m; renderForm(document.getElementById('panel')); }
+
+function _formWindow() { return Math.min(3, _btLastIdx + 1); }
+function _cumAt(id, i) { if (i < 0) return 0; const c = _btPts[id] || []; return c[i] == null ? 0 : c[i]; }
+function _recentPts(id, k) { return _cumAt(id, _btLastIdx) - _cumAt(id, _btLastIdx - k); }
+function _eloAt(id, i) { const s = _btEloPts[id] || []; for (let j = Math.min(i, s.length - 1); j >= 0; j--) { if (s[j] != null) return s[j]; } return null; }
+// Momentum baseline: the driver's ELO k rounds ago — but if that reaches
+// before their first race (or before round 1), fall back to their DR/SR seed,
+// so a driver's whole climb from where they started is counted.
+function _eloMomentum(id, k) {
+    const now = _eloAt(id, _btLastIdx);
+    const bi = _btLastIdx - k;
+    const then = (bi >= 0 ? _eloAt(id, bi) : null) ?? _btEloSeed[id] ?? null;
+    return (now != null && then != null) ? now - then : null;
+}
+function _lastRoundPts(id, n) { const start = Math.max(0, _btLastIdx - n + 1), a = []; for (let i = start; i <= _btLastIdx; i++) a.push(_cumAt(id, i) - _cumAt(id, i - 1)); return a; }
+// ELO spark: the rating trajectory, anchored on the DR/SR seed so the very
+// first round's move (seed → after R1) is visible even at one round in. Keeps
+// the last n points, so the seed naturally drops off once the season is long.
+function _eloSpark(id, n) {
+    const s = _btEloPts[id] || [], series = [];
+    if (_btEloSeed[id] != null) series.push(_btEloSeed[id]);
+    for (let i = 0; i <= _btLastIdx; i++) if (s[i] != null) series.push(s[i]);
+    return series.slice(-n);
+}
+
+// Little inline sparkline: bars for round-by-round points, a line for ELO.
+// scaleMax = a shared points ceiling across the whole table, so bar heights are
+// comparable driver-to-driver (a 25-point round towers over an 8-point one).
+// Bar width is capped and the group centred, so a single round reads as a neat
+// bar rather than one cell-wide block.
+function sparkBars(vals, scaleMax) {
+    const w = 78, h = 28, n = Math.max(1, vals.length), gap = 3;
+    const bw = Math.min(13, (w - (n - 1) * gap) / n);
+    const x0 = (w - (n * bw + (n - 1) * gap)) / 2;   // centre the group
+    const max = (scaleMax && scaleMax > 0) ? scaleMax : Math.max(1, ...vals);
+    const bars = vals.map((v, i) => {
+        const bh = Math.max(2, (Math.min(v, max) / max) * (h - 3)), x = x0 + i * (bw + gap), y = h - bh, last = i === vals.length - 1;
+        const fill = v <= 0 ? 'rgba(255,255,255,0.14)' : (last ? '#ffd166' : 'rgba(255,209,102,0.55)');
+        return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="${fill}"/>`;
+    }).join('');
+    return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${bars}</svg>`;
+}
+// scaleMax = a shared vertical span (ELO units) across the whole table, so the
+// line's angle encodes the real amount gained/lost — a bigger swing draws a
+// steeper line. Each series is centred in the cell so none clip. Without a
+// shared scale it falls back to filling the cell (per-series normalisation).
+function sparkLine(vals, scaleMax) {
+    const w = 78, h = 28, n = Math.max(1, vals.length), pad = 3;
+    const pts = vals.map((v, i) => ({ v, i })).filter(p => p.v != null);
+    if (!pts.length) return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"></svg>`;
+    const nums = pts.map(p => p.v), min = Math.min(...nums), max = Math.max(...nums), mid = (min + max) / 2;
+    const range = (scaleMax && scaleMax > 0) ? scaleMax : ((max - min) || 1);
+    const X = i => n <= 1 ? w / 2 : i / (n - 1) * (w - 4) + 2;
+    const Y = v => (h / 2) - (v - mid) * ((h - pad * 2) / range);
+    const col = nums[nums.length - 1] >= nums[0] ? '#4ade80' : '#f87171';
+    const d = pts.map((p, k) => `${k ? 'L' : 'M'}${X(p.i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(' ');
+    const dots = pts.map(p => `<circle cx="${X(p.i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="1.7" fill="${col}"/>`).join('');
+    return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/>${dots}</svg>`;
+}
+
+function renderForm(panel) {
+    if (_btLastIdx < 0 || !_drivers.length) {
+        panel.innerHTML = `<div class="state-msg"><h3>No Form Yet</h3><p>The form guide fills in once a round or two has been raced.</p></div>`;
+        return;
+    }
+    const K = _formWindow();
+    // Points need two rounds to trend; ELO already has the pre-R1 seed, so a
+    // seed → after-R1 line is drawable from the very first round.
+    const eloHasData = _drivers.some(d => _btEloSeed[d.driver_id] != null || (_btEloPts[d.driver_id] || []).some(v => v != null));
+    // Points bars share a scale now, so even one round is a meaningful (and
+    // comparable) bar rather than the old cell-wide "yellow box".
+    const showSpark = _formMetric === 'elo' ? (_btLastIdx >= 0 && eloHasData) : (_btLastIdx >= 0);
+    const champPos = {}; _drivers.forEach((d, i) => { champPos[d.driver_id] = i + 1; });
+
+    // One shared vertical scale per metric so sparklines are comparable across
+    // drivers — the biggest ELO swing draws the steepest line, and the biggest
+    // single-round points haul draws the tallest bar.
+    let eloScaleMax = 0, ptsScaleMax = 0;
+    if (_formMetric === 'elo') {
+        _drivers.forEach(d => { const s = _eloSpark(d.driver_id, 6).filter(v => v != null); if (s.length > 1) { const r = Math.max(...s) - Math.min(...s); if (r > eloScaleMax) eloScaleMax = r; } });
+    } else {
+        _drivers.forEach(d => { const s = _lastRoundPts(d.driver_id, 5); const m = Math.max(0, ...s); if (m > ptsScaleMax) ptsScaleMax = m; });
+    }
+
+    let rows = _drivers.map(d => ({ d, id: d.driver_id, recent: _recentPts(d.driver_id, K), mom: _eloMomentum(d.driver_id, K), champ: champPos[d.driver_id] }));
+    if (_formMetric === 'points') {
+        rows.sort((a, b) => (b.recent - a.recent) || ((Number(b.d.points) || 0) - (Number(a.d.points) || 0)) || (a.d.driver_name || '').localeCompare(b.d.driver_name || ''));
+    } else {
+        const key = r => r.mom == null ? -1e9 : r.mom;
+        rows.sort((a, b) => (key(b) - key(a)) || ((_ratingByDriver[b.id]?.rating || 0) - (_ratingByDriver[a.id]?.rating || 0)) || (a.d.driver_name || '').localeCompare(b.d.driver_name || ''));
+    }
+
+    const body = rows.map((r, i) => {
+        const pos = i + 1, d = r.d, id = r.id, _rInfo = _ratingByDriver[id];
+        const num = d.career_number ? `<span class="career-num">#${d.career_number}</span>` : '';
+        const soloMfrName = d.manufacturer_name || _rInfo?.manufacturerName;
+        const teamLine = d.team_name
+            ? `<div class="meta-line">${mfrBadge(d.manufacturer_logo_url, d.brand_color, d.manufacturer_name)}${d.team_slug ? `<a href="/endurance/teams/?slug=${esc(d.team_slug)}" style="color:inherit;text-decoration:none">${esc(d.team_name)}</a>` : esc(d.team_name)}</div>`
+            : (soloMfrName ? `<div class="meta-line">${mfrBadge(_rInfo?.manufacturerLogoUrl, _rInfo?.brandColor, soloMfrName)}<em style="opacity:0.75">Solo</em></div>` : '');
+        const spark = _formMetric === 'points' ? sparkBars(_lastRoundPts(id, 5), ptsScaleMax) : sparkLine(_eloSpark(id, 6), eloScaleMax);
+        // The ranked figure, plus a "vs championship position" line so a
+        // low-standing driver on a tear stands out.
+        let figure, sub;
+        if (_formMetric === 'points') {
+            figure = `<span class="points">${r.recent > 0 ? '+' : ''}${r.recent % 1 === 0 ? r.recent : r.recent.toFixed(1)}</span>`;
+            sub = `<div class="form-sub">${(Number(d.points) || 0)} pts total · P${r.champ} overall</div>`;
+        } else {
+            figure = r.mom == null ? `<span class="lighter">—</span>` : `<span class="points" style="color:${r.mom >= 0 ? '#4ade80' : '#f87171'}">${r.mom >= 0 ? '+' : ''}${r.mom}</span>`;
+            const cur = _rInfo?.rating != null ? Math.round(_rInfo.rating) + ' ELO' : '';
+            sub = `<div class="form-sub">${cur ? cur + ' · ' : ''}P${r.champ} overall</div>`;
+        }
+        const hotVal = _formMetric === 'points' ? r.recent : (r.mom || 0);
+        const flame = (pos === 1 && hotVal > 0) ? ' <span title="Hottest right now">🔥</span>' : '';
+        return `<tr class="${rankCls(pos)}">
+            <td class="${posCls(pos)}">${pos}</td>
+            <td>
+                <div class="driver-cell">
+                    ${driverAvatar(_rInfo?.photo, d.driver_name)}
+                    <div class="driver-cell-text">
+                        <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${flame}</div>
+                        ${teamLine}
+                    </div>
+                </div>
+            </td>
+            ${showSpark ? `<td class="center hide-mob">${spark}</td>` : ''}
+            <td class="right">${figure}${sub}</td>
+        </tr>`;
+    }).join('');
+
+    const metricLabel = _formMetric === 'points' ? `Points won` : `ELO gained`;
+    panel.innerHTML = `
+        <div class="form-toolbar">
+            <div class="form-caption">Who's hot over the last ${K} round${K === 1 ? '' : 's'}.</div>
+            <span class="bt-metric" style="display:inline-flex">
+                <button class="bt-mbtn ${_formMetric === 'points' ? 'active' : ''}" onclick="setFormMetric('points')">Points form</button>
+                <button class="bt-mbtn ${_formMetric === 'elo' ? 'active' : ''}" onclick="setFormMetric('elo')">ELO momentum</button>
+            </span>
+        </div>
+        <div class="standings">
+            <table>
+                <thead><tr>
+                    <th style="width:50px">#</th>
+                    <th>Driver</th>
+                    ${showSpark ? `<th class="center hide-mob">${_formMetric === 'elo' ? 'ELO trend' : 'Last ' + Math.min(5, _btLastIdx + 1)}</th>` : ''}
+                    <th class="right">${metricLabel}</th>
+                </tr></thead>
+                <tbody>${body}</tbody>
+            </table>
+        </div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:0.85rem;padding:0 0.25rem">Form = ${_formMetric === 'points' ? `net points scored over the last ${K} completed round${K === 1 ? '' : 's'}. The bars show each of the last ${Math.min(5, _btLastIdx + 1)} round${Math.min(5, _btLastIdx + 1) === 1 ? '' : 's'} on one shared scale, so taller means more.` : `change in ELO across the last ${K} completed round${K === 1 ? '' : 's'}, from the DR/SR seed onward. Steeper lines mean a bigger swing; every line shares the same scale.`}</p>`;
+}
+
+async function load() {
+    const { data: season } = await sb.from('seasons')
+        .select('id, name, year, points_systems(points, pole_points, fastest_lap_points)')
+        .eq('is_active', true)
+        .maybeSingle();
+
+    if (!season) {
+        document.getElementById('season-sub').textContent = 'No active season.';
+        document.getElementById('panel').innerHTML =
+            `<div class="state-msg"><h3>Coming Soon</h3><p>Standings will appear here once the season is set up.</p></div>`;
+        return;
+    }
+    _season = season;
+    document.getElementById('season-title').textContent = season.name;
+    document.getElementById('season-sub').textContent = `${season.year} Championship · Live standings`;
+
+    const [d, t, ratings, perEvent, remainingRes, driverMfrs, deds, seasonEvents, myUser] = await Promise.all([
+        sb.from('driver_standings').select('*').eq('season_id', season.id),
+        sb.from('team_standings').select('*').eq('season_id', season.id),
+        sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
+        // Per-event, per-driver points so we can derive "rank before the last
+        // event" and show championship movement arrows.
+        sb.from('result_drivers')
+            .select('driver_id, points_awarded, finish_position, status, results!inner(event_id, entries(team_id), events!inner(season_id, starts_at))'),
+        // Remaining rounds — feeds Live Battles' "still catchable" ceiling,
+        // same Split-1-forever assumption as Season Stakes on the profile pages.
+        sb.from('events').select('id', { count: 'exact', head: true })
+            .eq('season_id', season.id).in('status', ['scheduled', 'in_progress']),
+        // Each driver's own manufacturer (their profile lock) — the source
+        // for showing a manufacturer on solo drivers, who have no team.
+        sb.from('drivers').select('id, photo_url, manufacturers(id, name, brand_color, logo_url)'),
+        // Points-deduction penalties this season, with reason — so the
+        // standings can show why points were docked, and from whom.
+        sb.from('penalties')
+            .select('penalty_type, points_amount, reason, driver_id, entry_id, event_id, entries(team_id, entry_drivers(driver_id)), events!inner(season_id)')
+            .in('penalty_type', ['points_deduction', 'points_bonus'])
+            .eq('events.season_id', season.id),
+        // Events for this season (for the Championship Battle chart's round axis).
+        sb.from('events').select('id, round, name, starts_at').eq('season_id', season.id).order('round'),
+        // The signed-in user's own driver, if any — powers the "Compare me" preset.
+        sb.auth.getUser(),
+    ]);
+
+    _remaining = remainingRes.count || 0;
+    const ps = season.points_systems;
+    if (ps && _remaining) {
+        const maxPos = Math.max(0, ...(ps.points || []).map(p => Number(p.points) || 0));
+        _ceiling = _remaining * (maxPos + Number(ps.pole_points || 0) + Number(ps.fastest_lap_points || 0));
+    } else {
+        _ceiling = null;
+    }
+
+    // Index ratings by driver for quick lookup during render.
+    _ratingByDriver = {};
+    (ratings.data || []).forEach(r => {
+        _ratingByDriver[r.driver_id] = { rating: r.rating, rated: !!r.last_rated_at };
+    });
+    // Merge each driver's own photo + manufacturer in. The manufacturer is
+    // the fallback source for solo drivers (no team to source it from) and
+    // for the Manufacturers championship below.
+    (driverMfrs.data || []).forEach(r => {
+        const e = _ratingByDriver[r.id] || (_ratingByDriver[r.id] = {});
+        e.photo = r.photo_url || null;
+        const m = r.manufacturers;
+        if (m) {
+            e.manufacturerId = m.id;
+            e.manufacturerName = m.name;
+            e.brandColor = m.brand_color;
+            e.manufacturerLogoUrl = m.logo_url;
+        }
+    });
+
+    // Points-deduction penalties → per-driver and per-team, with reasons.
+    // Mirrors the results page: a driver-specific penalty hits that driver;
+    // a whole-team penalty (no driver_id) hits every driver on the entry.
+    // The team always takes the hit via the entry's team.
+    _dedByDriver = {};
+    _dedByTeam = {};
+    _bonByDriver = {};
+    _bonByTeam = {};
+    const _addAdj = (map, key, amount, reason) => {
+        if (!key) return;
+        const e = map[key] || (map[key] = { amount: 0, reasons: [] });
+        e.amount += amount;
+        const r = (reason || '').trim();
+        if (r && !e.reasons.includes(r)) e.reasons.push(r);
+    };
+    (deds.data || []).forEach(p => {
+        if (!p.points_amount) return;
+        // Bonuses and deductions cascade identically; only which map they land
+        // in differs, so the standings can show "−X" and "+X" notes separately.
+        const bonus = p.penalty_type === 'points_bonus';
+        const dMap = bonus ? _bonByDriver : _dedByDriver;
+        const tMap = bonus ? _bonByTeam : _dedByTeam;
+        if (p.driver_id) {
+            _addAdj(dMap, p.driver_id, p.points_amount, p.reason);
+            _addAdj(tMap, p.entries?.team_id, p.points_amount, p.reason);
+        } else {
+            const eds = p.entries?.entry_drivers || [];
+            eds.forEach(ed => _addAdj(dMap, ed.driver_id, p.points_amount, p.reason));
+            _addAdj(tMap, p.entries?.team_id, p.points_amount * (eds.length || 1), p.reason);
+        }
+    });
+
+    // Compute previous-round positions. The "current" league is the view
+    // we just fetched; the "previous" league is the same minus the most
+    // recent event's points. Then rank both and diff.
+    _prevDriverRank = computePrevRank(perEvent.data || [], season.id, d.data || []);
+
+    // Per-driver season tiebreak: best classified finishing position (+ a
+    // fallback status rank). Lets 0-point drivers who actually finished
+    // (e.g. P11/P12, just outside the points) sort above DNF/DNS drivers,
+    // instead of everyone on 0 landing in an arbitrary order.
+    const STATUS_RANK = { classified: 0, dnf: 1, dsq: 2, withdrawn: 3, dns: 4 };
+    const _tie = {};
+    (perEvent.data || []).forEach(r => {
+        if (r.results?.events?.season_id !== season.id) return;
+        const st = r.status || 'classified';
+        const t = _tie[r.driver_id] || (_tie[r.driver_id] = { bestFinish: Infinity, bestStatus: 9 });
+        if (st === 'classified' && r.finish_position != null) t.bestFinish = Math.min(t.bestFinish, r.finish_position);
+        t.bestStatus = Math.min(t.bestStatus, STATUS_RANK[st] ?? 9);
+    });
+    const tieCompare = (a, b) => {
+        const ta = _tie[a.driver_id] || { bestFinish: Infinity, bestStatus: 9 };
+        const tb = _tie[b.driver_id] || { bestFinish: Infinity, bestStatus: 9 };
+        const aHas = ta.bestFinish !== Infinity, bHas = tb.bestFinish !== Infinity;
+        if (aHas !== bHas) return aHas ? -1 : 1;                              // any classified finish beats none
+        if (aHas && ta.bestFinish !== tb.bestFinish) return ta.bestFinish - tb.bestFinish; // better finish first
+        return ta.bestStatus - tb.bestStatus;                                // else DNF above DSQ above DNS
+    };
+
+    _drivers = (d.data || []).sort((a, b) =>
+        (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums) || tieCompare(a, b));
+    _teams   = (t.data || []).sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
+
+    // Form guide — each driver's last few rounds (chronological), from the
+    // same per-event rows used for movement arrows.
+    _formByDriver = {};
+    const _evByDriver = {};
+    (perEvent.data || []).forEach(r => {
+        if (r.results?.events?.season_id !== season.id) return;
+        (_evByDriver[r.driver_id] = _evByDriver[r.driver_id] || []).push({
+            at: r.results.events.starts_at, pos: r.finish_position, status: r.status,
+        });
+    });
+    Object.keys(_evByDriver).forEach(id => {
+        _formByDriver[id] = _evByDriver[id]
+            .sort((a, b) => new Date(a.at) - new Date(b.at))
+            .slice(-5);
+    });
+
+    // Manufacturer championship — sum each driver's points under their
+    // manufacturer (the team lock, or the driver's own for solo entries).
+    const _mMap = {};
+    _drivers.forEach(dr => {
+        const info = _ratingByDriver[dr.driver_id] || {};
+        const id   = dr.manufacturer_id || info.manufacturerId;
+        if (!id) return;
+        const m = _mMap[id] || (_mMap[id] = {
+            id,
+            name:  dr.manufacturer_name     || info.manufacturerName || 'Unknown',
+            logo:  dr.manufacturer_logo_url || info.manufacturerLogoUrl,
+            color: dr.brand_color           || info.brandColor,
+            points: 0, wins: 0, podiums: 0, poles: 0, fl: 0, drivers: 0,
+        });
+        m.points  += Number(dr.points)       || 0;
+        m.wins    += Number(dr.wins)         || 0;
+        m.podiums += Number(dr.podiums)      || 0;
+        m.poles   += Number(dr.poles)        || 0;
+        m.fl      += Number(dr.fastest_laps) || 0;
+        m.drivers += 1;
+    });
+    Object.values(_mMap).forEach(m => { m.slug = String(m.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); });
+    _manufacturers = Object.values(_mMap).sort((a, b) => (b.points - a.points) || (b.wins - a.wins));
+
+    // Nations Cup — group every driver by nationality (ISO alpha-2) and rank
+    // by AVERAGE points per driver, so a small nation with strong drivers
+    // isn't buried under a big one. Total + counts shown for context.
+    const _cty = {};
+    (window.GTEC_COUNTRIES || []).forEach(c => { _cty[c.code] = c; });
+    const _nMap = {};
+    let _noNation = 0;
+    _drivers.forEach(dr => {
+        const code = (dr.nationality || '').toUpperCase();
+        if (!code) { _noNation += 1; return; }
+        const n = _nMap[code] || (_nMap[code] = {
+            code,
+            name: _cty[code]?.name || code,
+            flag: _cty[code]?.flag || '',
+            points: 0, drivers: 0, wins: 0, podiums: 0,
+            topName: null, topSlug: null, topPoints: -Infinity,
+        });
+        const pts = Number(dr.points) || 0;
+        n.points  += pts;
+        n.drivers += 1;
+        n.wins    += Number(dr.wins)    || 0;
+        n.podiums += Number(dr.podiums) || 0;
+        if (pts > n.topPoints) { n.topPoints = pts; n.topName = dr.driver_name; n.topSlug = dr.driver_slug; }
+    });
+    _nations = Object.values(_nMap).map(n => ({ ...n, avg: n.drivers ? n.points / n.drivers : 0 }))
+        .sort((a, b) => (b.avg - a.avg) || (b.points - a.points) || (b.drivers - a.drivers));
+    _nationsNoCountry = _noNation;
+
+    await buildBattle(perEvent.data || [], deds.data || [], seasonEvents.data || [], myUser);
+
+    // Deep-link support: ?tab=… and ?mfr=<manufacturer-slug> open the right
+    // tab (and a manufacturer's driver board) straight from a shared link.
+    const params = new URLSearchParams(location.search);
+    const wantMfr = params.get('mfr');
+    const mfrMatch = wantMfr ? _manufacturers.find(x => x.slug === wantMfr) : null;
+    const wantNat = (params.get('nat') || '').toUpperCase();
+    const natMatch = wantNat ? _nations.find(x => x.code === wantNat) : null;
+    const wantTab = params.get('tab');
+    if (mfrMatch) { await setTab('manufacturers'); openMfr(mfrMatch.id); }
+    else if (natMatch) { await setTab('nations'); openNat(natMatch.code); }
+    else if (wantTab && ['drivers', 'teams', 'manufacturers', 'nations', 'ratings'].includes(wantTab)) { await setTab(wantTab); }
+    else render();
+}
+
+// ===== Championship Battle chart =====
+// Built entirely client-side from data already loaded: per-event points
+// (net of that event's deductions, so cumulative ends at the standings
+// total) over the season's completed rounds.
+let _btEvents = [];          // [{id, round, name}] every round in the season, in order
+let _btLastIdx = -1;         // index of the last completed round in _btEvents
+let _btPts    = {};          // driver_id -> cumulative points (null for rounds not yet raced)
+let _btDrivers = [];         // [{id, name, slug, pos, total}] ranked, for search/presets
+let _btMyId   = null;        // signed-in user's driver_id, if racing this season
+let _btTeamPts = {};         // team_id -> cumulative points, same shape as _btPts
+let _btTeams   = [];         // [{id, name, slug, pos, total}] ranked teams
+let _btMyTeamId = null;      // signed-in driver's current team, if any
+let _btMfrPts = {};          // manufacturer_id -> cumulative points
+let _btMfrs   = [];          // [{id, name, slug, pos, total, drivers}] ranked marques
+let _btMetric = 'total';     // 'total' | 'avg' — metric for the manufacturers chart
+let _btEloPts = {};          // driver_id -> ELO rating after each round (carried forward; null before first rated round)
+let _btEloSeed = {};         // driver_id -> DR/SR-based rating going INTO round 1 (rating_before of first rated round)
+let _btElo    = [];          // [{id, name, slug, pos, total}] drivers ranked by current ELO
+let _btMode   = 'drivers';   // which championship the chart is showing ('drivers' | 'teams' | 'manufacturers' | 'ratings')
+
+async function buildBattle(perEvent, deds, seasonEvents, myUser) {
+    const inSeason = perEvent.filter(r => r.results?.events?.season_id === _season.id);
+
+    // gross points per driver per event
+    const gross = {};
+    const scored = new Set();
+    inSeason.forEach(r => {
+        const ev = r.results?.event_id; if (!ev) return;
+        scored.add(ev);
+        (gross[r.driver_id] = gross[r.driver_id] || {})[ev] =
+            (gross[r.driver_id]?.[ev] || 0) + Number(r.points_awarded || 0);
+    });
+
+    // deductions per driver per event (driver-specific, or spread across an
+    // entry's drivers when the penalty is team-wide) — mirrors the standings.
+    const ded = {};
+    const addDed = (drv, ev, amt) => { if (!drv || !ev) return; (ded[drv] = ded[drv] || {})[ev] = (ded[drv]?.[ev] || 0) + amt; };
+    deds.forEach(p => {
+        if (!p.points_amount || !p.event_id) return;
+        if (p.driver_id) addDed(p.driver_id, p.event_id, Number(p.points_amount));
+        else (p.entries?.entry_drivers || []).forEach(edn => addDed(edn.driver_id, p.event_id, Number(p.points_amount)));
+    });
+
+    // Full season on the axis (every round), so R1..Rn always show and the
+    // lines simply grow to the right as rounds are completed.
+    _btEvents = (seasonEvents || []).map(e => ({ id: e.id, round: e.round, name: e.name }));
+    _btLastIdx = _btEvents.reduce((m, e, i) => scored.has(e.id) ? i : m, -1);
+    if (_btLastIdx < 0 || !_btEvents.length) { document.getElementById('battle').style.display = 'none'; return; }
+
+    const cumulative = (id, grossMap, dedMap) => {
+        let running = 0;
+        return _btEvents.map(e => {
+            if (!scored.has(e.id)) return null;   // round not raced yet → no point
+            running += (grossMap[id]?.[e.id] || 0) - (dedMap[id]?.[e.id] || 0);
+            return running;
+        });
+    };
+
+    _btPts = {};
+    _drivers.forEach(d => { _btPts[d.driver_id] = cumulative(d.driver_id, gross, ded); });
+    _btDrivers = _drivers.map((d, i) => ({ id: d.driver_id, name: d.driver_name, slug: d.driver_slug, pos: i + 1, total: Number(d.points) || 0 }));
+
+    // ----- Teams: a team's points per event is the sum of its drivers'
+    // points on the team's entry, less any team penalty that round. -----
+    const tGross = {}, tDed = {};
+    const tAdd = (map, tid, ev, amt) => { if (!tid || !ev) return; (map[tid] = map[tid] || {})[ev] = (map[tid]?.[ev] || 0) + amt; };
+    inSeason.forEach(r => tAdd(tGross, r.results?.entries?.team_id, r.results?.event_id, Number(r.points_awarded || 0)));
+    deds.forEach(p => {
+        if (!p.points_amount || !p.event_id) return;
+        // Driver-specific → team loses it once; whole-team → once per
+        // driver on the entry, so the team line matches the sum of its
+        // drivers (mirrors team_standings and the per-driver ded above).
+        const mult = p.driver_id ? 1 : ((p.entries?.entry_drivers || []).length || 1);
+        tAdd(tDed, p.entries?.team_id, p.event_id, Number(p.points_amount) * mult);
+    });
+    _btTeamPts = {};
+    _teams.forEach(t => { _btTeamPts[t.team_id] = cumulative(t.team_id, tGross, tDed); });
+    _btTeams = _teams.map((t, i) => ({ id: t.team_id, name: t.team_name, slug: t.team_slug, pos: i + 1, total: Number(t.points) || 0 }));
+
+    // ----- Manufacturers: sum each driver's per-event net points under their
+    // manufacturer, so a marque's line matches the manufacturers standings. -----
+    const driverMfr = {};
+    _drivers.forEach(d => {
+        const info = _ratingByDriver[d.driver_id] || {};
+        const mid = d.manufacturer_id || info.manufacturerId;
+        if (mid) driverMfr[d.driver_id] = mid;
+    });
+    const mGross = {}, mDed = {};
+    inSeason.forEach(r => {
+        const mid = driverMfr[r.driver_id], ev = r.results?.event_id;
+        if (!mid || !ev) return;
+        (mGross[mid] = mGross[mid] || {})[ev] = (mGross[mid]?.[ev] || 0) + Number(r.points_awarded || 0);
+    });
+    Object.keys(ded).forEach(drv => {
+        const mid = driverMfr[drv]; if (!mid) return;
+        Object.entries(ded[drv]).forEach(([ev, amt]) => { (mDed[mid] = mDed[mid] || {})[ev] = (mDed[mid]?.[ev] || 0) + amt; });
+    });
+    _btMfrPts = {};
+    _manufacturers.forEach(m => { _btMfrPts[m.id] = cumulative(m.id, mGross, mDed); });
+    _btMfrs = _manufacturers.map((m, i) => ({ id: m.id, name: m.name, slug: m.slug, pos: i + 1, total: Number(m.points) || 0, drivers: Number(m.drivers) || 1 }));
+
+    // ----- ELO battle: each driver's rating *after* every round, carried
+    // forward across rounds they sat out, so the line traces their rating
+    // trajectory rather than a cumulative total. -----
+    await buildEloBattle();
+
+    // Signed-in driver → "Compare me" (their line) and "My team".
+    _btMyId = null; _btMyTeamId = null;
+    const uid = myUser?.data?.user?.id;
+    if (uid) {
+        const { data: mine } = await sb.from('drivers').select('id, current_team_id').eq('user_id', uid).maybeSingle();
+        if (mine && _btPts[mine.id]) _btMyId = mine.id;
+        if (mine?.current_team_id && _btTeamPts[mine.current_team_id]) _btMyTeamId = mine.current_team_id;
+    }
+
+    renderBattle();
+}
+
+// Pull the per-round ELO history (driver_ratings.rating_after) for this
+// season and turn it into one carried-forward series per driver, aligned to
+// the same round axis as the points chart.
+async function buildEloBattle() {
+    _btEloPts = {}; _btElo = []; _btEloSeed = {};
+    const evIds = _btEvents.map(e => e.id);
+    if (!evIds.length) return;
+    let rows = [];
+    try {
+        const { data } = await sb.from('driver_ratings')
+            .select('driver_id, event_id, rating_after, rating_before')
+            .in('event_id', evIds);
+        rows = data || [];
+    } catch (e) { rows = []; }
+
+    // driver_id -> { event_id -> rating_after }, plus the set of rounds that
+    // have been rated at all, so lines stop at the last completed round rather
+    // than carrying flat into rounds that haven't happened yet.
+    const evIndex = {}; _btEvents.forEach((e, i) => { evIndex[e.id] = i; });
+    const byDrv = {}, ratedEv = new Set(), seedIdx = {};
+    rows.forEach(r => {
+        const i = evIndex[r.event_id]; if (i == null) return;
+        (byDrv[r.driver_id] = byDrv[r.driver_id] || {})[r.event_id] = Number(r.rating_after);
+        ratedEv.add(r.event_id);
+        // Seed = the DR/SR-based rating the driver carried INTO their first
+        // rated round (rating_before of their earliest event), so ELO momentum
+        // can measure from where they actually started, not from round 1's result.
+        if (seedIdx[r.driver_id] == null || i < seedIdx[r.driver_id]) {
+            seedIdx[r.driver_id] = i;
+            _btEloSeed[r.driver_id] = Number(r.rating_before);
+        }
+    });
+    let lastRatedIdx = -1;
+    _btEvents.forEach((e, i) => { if (ratedEv.has(e.id)) lastRatedIdx = i; });
+
+    // Carry each rating forward across rounds the driver skipped; leave null
+    // before their first rated round (line starts at their debut) and after the
+    // last completed round (no flat tail into un-raced rounds).
+    Object.keys(byDrv).forEach(id => {
+        let cur = null;
+        _btEloPts[id] = _btEvents.map((e, i) => {
+            if (byDrv[id][e.id] != null) cur = byDrv[id][e.id];
+            return i <= lastRatedIdx ? cur : null;   // null until debut, then last-known, null past the final rated round
+        });
+    });
+
+    // Rank the picker list by current rating (last known point on each line),
+    // richest first, so "Top 8" loads the strongest drivers.
+    _btElo = _drivers
+        .filter(d => _btEloPts[d.driver_id] && _btEloPts[d.driver_id].some(v => v != null))
+        .map(d => {
+            const s = _btEloPts[d.driver_id];
+            let last = 0; for (let i = s.length - 1; i >= 0; i--) { if (s[i] != null) { last = s[i]; break; } }
+            return { id: d.driver_id, name: d.driver_name, slug: d.driver_slug, total: Math.round(last) };
+        })
+        .sort((a, b) => b.total - a.total)
+        .map((d, i) => ({ ...d, pos: i + 1 }));
+}
+
+// Mode-aware accessors so the same picker/chart drives every championship.
+function _btList()   { return _btMode === 'teams' ? _btTeams : _btMode === 'manufacturers' ? _btMfrs : _btMode === 'ratings' ? _btElo : _btDrivers; }
+function _btSeries(id) {
+    if (_btMode === 'ratings') return _btEloPts[id];
+    if (_btMode === 'manufacturers') {
+        const s = _btMfrPts[id]; if (!s) return s;
+        if (_btMetric === 'avg') { const n = _btById(id)?.drivers || 1; return s.map(v => v == null ? v : v / n); }
+        return s;
+    }
+    return (_btMode === 'teams' ? _btTeamPts : _btPts)[id];
+}
+function _btMine()   { return _btMode === 'teams' ? _btMyTeamId : (_btMode === 'manufacturers' || _btMode === 'ratings') ? null : _btMyId; }
+// Singular/plural noun for the current mode, for hints and empty states.
+function _btNoun(pl) { const s = _btMode === 'teams' ? 'team' : _btMode === 'manufacturers' ? 'manufacturer' : 'driver'; return pl ? s + 's' : s; }
+// Unit suffix on end-labels / count-ups: points everywhere except the ELO chart.
+function _btUnit() { return _btMode === 'ratings' ? 'ELO' : 'pts'; }
+
+const BT_PALETTE = ['#ffd166', '#38bdf8', '#34d399', '#c084fc', '#f87171', '#fb923c', '#818cf8', '#f472b6'];
+let _btSlots = BT_PALETTE.map(c => ({ color: c, id: null }));
+const _btActive = () => _btSlots.filter(s => s.id && _btById(s.id)).map(s => ({ d: _btById(s.id), color: s.color }));
+const _btById = id => _btList().find(x => x.id === id);
+const _btOn = id => _btSlots.some(s => s.id === id);
+function _btAdd(id) { if (_btOn(id)) return true; const slot = _btSlots.find(s => !s.id); if (!slot) return false; slot.id = id; return true; }
+function btRemove(id) { const s = _btSlots.find(x => x.id === id); if (s) s.id = null; btRefresh(); btSave(); }
+function btTop() { _btSlots.forEach(s => s.id = null); _btList().slice(0, 8).forEach(x => _btAdd(x.id)); btRefresh('full'); }
+function btMe() { _btSlots.forEach(s => s.id = null); if (_btMine()) _btAdd(_btMine()); _btList().slice(0, 3).forEach(x => _btAdd(x.id)); btRefresh('full'); }
+function btClear() { _btSlots.forEach(s => s.id = null); btRefresh(); }
+
+// Switch the chart between the drivers' and constructors' championships.
+function btSetMode(mode) {
+    _btMode = mode;
+    _btSlots.forEach(s => s.id = null);
+    const sub = document.querySelector('#bt-acc .bt-sub');
+    const inp = document.getElementById('bt-search');
+    const cmp = document.getElementById('bt-compare');
+    const subs = {
+        teams: "See how the constructors' fight unfolded. Search any team, or load the top 8.",
+        manufacturers: 'See how each marque built its haul. Search any manufacturer, or load the top 8.',
+        ratings: 'See how driver ELO climbed and fell round by round. Search any driver, or load the top 8.',
+        drivers: 'See how the title fight unfolded. Search any driver, or load the top 8.'
+    };
+    if (sub) sub.textContent = subs[mode] || subs.drivers;
+    const ttl = document.querySelector('#bt-acc .bt-title');
+    if (ttl) ttl.textContent = mode === 'ratings' ? 'ELO Battle' : 'Championship Battle';
+    if (inp) { inp.placeholder = `🔍  Add a ${_btNoun(false)} by name…`; inp.value = ''; }
+    const res = document.getElementById('bt-results'); if (res) res.classList.remove('open');
+    if (cmp) {
+        if (_btMine()) { cmp.style.display = ''; cmp.textContent = mode === 'teams' ? 'My team' : 'Compare me'; }
+        else cmp.style.display = 'none';
+    }
+    // The Total / Avg toggle only makes sense for the manufacturers chart.
+    const met = document.getElementById('bt-metric');
+    if (met) met.style.display = mode === 'manufacturers' ? '' : 'none';
+    _btUpdateMetricButtons();
+    // Restore the viewer's last selection for this mode; else default to Top 8.
+    if (btRestore(mode)) btRefresh('full'); else btTop();
+}
+
+// Manufacturers chart: swap between marque totals and points-per-driver.
+function btSetMetric(m) {
+    if (m !== 'avg') m = 'total';
+    if (_btMetric === m) return;
+    _btMetric = m;
+    _btUpdateMetricButtons();
+    btRefresh('full');
+}
+function _btUpdateMetricButtons() {
+    const t = document.getElementById('bt-m-total'), a = document.getElementById('bt-m-avg');
+    if (t) t.classList.toggle('active', _btMetric === 'total');
+    if (a) a.classList.toggle('active', _btMetric === 'avg');
+}
+
+// Remember the chart selection across refreshes, per mode, in localStorage.
+function btStorageKey(m) { return 'gtec_battle_' + m; }
+function btSave() { try { localStorage.setItem(btStorageKey(_btMode), JSON.stringify(_btSlots.filter(s => s.id).map(s => s.id))); } catch (e) {} }
+function btRestore(mode) {
+    let raw; try { raw = localStorage.getItem(btStorageKey(mode)); } catch (e) { return false; }
+    if (raw == null) return false;
+    let ids; try { ids = JSON.parse(raw); } catch (e) { return false; }
+    if (!Array.isArray(ids)) return false;
+    const valid = ids.filter(id => _btById(id));
+    if (ids.length > 0 && valid.length === 0) return false;   // all stale (e.g. new season) → default
+    _btSlots.forEach(s => s.id = null);
+    valid.slice(0, _btSlots.length).forEach(id => _btAdd(id));
+    return true;
+}
+
+function renderBattle() {
+    const host = document.getElementById('battle');
+    host.innerHTML = `
+      <div class="bt-acc collapsed" id="bt-acc">
+        <div class="bt-head" onclick="btToggle()">
+          <div class="bt-ic">📈</div>
+          <div class="bt-titles">
+            <div class="bt-title">Championship Battle</div>
+            <div class="bt-sub">See how the title fight unfolded. Search any driver, or load the top 8.</div>
+          </div>
+          <svg class="bt-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="bt-body">
+          <div class="bt-toolbar">
+            <div class="bt-search-wrap">
+              <input class="bt-search" id="bt-search" placeholder="🔍  Add a driver by name…" autocomplete="off" oninput="btSearch()" onfocus="btSearch()">
+              <div class="bt-results" id="bt-results"></div>
+            </div>
+            <button class="bt-preset gold" onclick="btTop();btSave()">Top 8</button>
+            <button class="bt-preset" id="bt-compare" onclick="btMe();btSave()" style="display:none">Compare me</button>
+            <button class="bt-preset" onclick="btClear();btSave()">Clear</button>
+            <span class="bt-metric" id="bt-metric" style="display:none">
+              <button class="bt-mbtn active" id="bt-m-total" onclick="btSetMetric('total')">Total</button>
+              <button class="bt-mbtn" id="bt-m-avg" onclick="btSetMetric('avg')">Avg / driver</button>
+            </span>
+          </div>
+          <div class="bt-selected" id="bt-selected"></div>
+          <div class="bt-hint" id="bt-hint"></div>
+          <div class="bt-chart-shell">
+            <svg id="bt-chart" viewBox="0 0 760 400" role="img" aria-label="Cumulative championship points by round"></svg>
+            <div class="bt-tt" id="bt-tt"></div>
+          </div>
+        </div>
+      </div>`;
+    btGrid();
+    btSetMode(_btMode);
+    if (_tab === 'drivers' || _tab === 'teams' || _tab === 'manufacturers' || _tab === 'ratings') host.style.display = '';
+}
+
+function btSearch() {
+    const q = document.getElementById('bt-search').value.trim().toLowerCase();
+    const box = document.getElementById('bt-results');
+    const meLabel = _btMode === 'teams' ? 'MINE' : 'YOU';
+    let list = _btList();
+    if (q) list = list.filter(d => (d.name || '').toLowerCase().includes(q));
+    list = list.slice(0, 8);
+    if (!list.length) { box.innerHTML = `<div class="bt-none">No ${_btNoun(false)} found.</div>`; box.classList.add('open'); return; }
+    box.innerHTML = list.map(d => {
+        const on = _btOn(d.id);
+        const me = d.id === _btMine() ? ` <span class="me" style="font-size:.6rem">${meLabel}</span>` : '';
+        return `<div class="bt-res ${on ? 'added' : ''}" ${on ? '' : `onclick="btPick('${d.id}')"`}>
+          <span class="bt-res-pos">P${d.pos}</span>
+          <span class="bt-res-name">${esc(d.name)}${me}</span>
+          <span class="bt-res-pts">${on ? '✓ added' : d.total + ' ' + _btUnit()}</span></div>`;
+    }).join('');
+    box.classList.add('open');
+}
+function btPick(id) {
+    if (_btAdd(id) === false) { btFlash(`That\'s 8. Remove one to add another.`); return; }
+    document.getElementById('bt-search').value = '';
+    document.getElementById('bt-results').classList.remove('open');
+    btRefresh('grow');
+    btSave();
+}
+document.addEventListener('click', e => {
+    if (!e.target.closest('.bt-search-wrap')) { const r = document.getElementById('bt-results'); if (r) r.classList.remove('open'); }
+});
+
+let _btHintTimer;
+function btFlash(msg) { const h = document.getElementById('bt-hint'); if (!h) return; h.textContent = msg; h.style.color = '#fca5a5'; clearTimeout(_btHintTimer); _btHintTimer = setTimeout(btHint, 1800); }
+function btHint() { const h = document.getElementById('bt-hint'); if (!h) return; const n = _btActive().length; const noun = _btNoun(true); h.style.color = '#5b6472';
+    h.textContent = n ? `${n} of 8 lines · search ${_btList().length} ${noun} or use a preset` : `Nothing selected. Search a ${_btNoun(false)} or hit a preset.`; }
+function btSelected() {
+    const wrap = document.getElementById('bt-selected'); if (!wrap) return;
+    const meLabel = _btMode === 'teams' ? 'MINE' : 'YOU';
+    wrap.innerHTML = _btActive().map(a => {
+        const me = a.d.id === _btMine() ? `<span class="me">${meLabel}</span>` : '';
+        return `<span class="bt-chip"><span class="cdot" style="background:${a.color}"></span>${esc(a.d.name)}${me}<button class="bt-x" onclick="btRemove('${a.d.id}')">✕</button></span>`;
+    }).join('');
+}
+
+// chart geometry
+const BT_W = 760, BT_H = 400, BT_PL = 46, BT_PR = 150, BT_PT = 18, BT_PB = 38;
+const _btPW = BT_W - BT_PL - BT_PR, _btPH = BT_H - BT_PT - BT_PB;
+const _btNS = 'http://www.w3.org/2000/svg';
+const _btEl = (n, a) => { const e = document.createElementNS(_btNS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+function _btX(i) { return _btEvents.length <= 1 ? BT_PL : BT_PL + i / (_btEvents.length - 1) * _btPW; }
+// A round-ish axis step scaled to the data — so an Avg/driver chart (values
+// in the single/low-double digits) isn't squashed against a 50-unit grid.
+function _btNiceStep(m) { for (const s of [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500]) { if (m / s <= 5) return s; } return Math.ceil(m / 5 / 500) * 500; }
+// The ELO chart floats its baseline (ratings sit in a high, narrow band, so a
+// 0-based axis would flatten every line); points charts always start at 0.
+function _btYMin() {
+    if (_btMode !== 'ratings') return 0;
+    let lo = Infinity; _btActive().forEach(a => { (_btSeries(a.d.id) || []).forEach(v => { if (v != null && v < lo) lo = v; }); });
+    if (!isFinite(lo)) return 0;
+    let hi = 0; _btActive().forEach(a => { (_btSeries(a.d.id) || []).forEach(v => { if (v != null && v > hi) hi = v; }); });
+    const step = _btNiceStep(Math.max(hi - lo, 20) * 1.25);
+    return Math.max(800, Math.floor((lo - step * 0.5) / step) * step);   // pad below, floor to a gridline, never under the ELO floor
+}
+function _btYMax(min) {
+    min = min || 0;
+    let m = min; _btActive().forEach(a => { (_btSeries(a.d.id) || []).forEach(v => { if (v != null && v > m) m = v; }); });
+    const range = Math.max(m - min, 10), step = _btNiceStep(range);
+    return min + Math.max(step, Math.ceil(range / step) * step);
+}
+function _btY(v, max) { const min = _btYMinCache; return BT_PT + _btPH - ((v - min) / (max - min)) * _btPH; }
+
+let _btSvg, _btSeriesG, _btGuide, _btYCache = 200, _btYMinCache = 0;
+function btGrid() {
+    _btSvg = document.getElementById('bt-chart'); _btSvg.innerHTML = '';
+    _btGridG = _btEl('g', {}); _btSvg.appendChild(_btGridG);
+    _btAttachHover();
+}
+let _btGridG;
+function btDrawGrid(max, min) {
+    _btGridG.innerHTML = '';
+    min = min || 0;
+    for (let v = min; v <= max + 0.5; v += _btNiceStep(max - min)) {
+        _btGridG.appendChild(_btEl('line', { class: 'bt-grid', x1: BT_PL, y1: _btY(v, max), x2: BT_PL + _btPW, y2: _btY(v, max) }));
+        const t = _btEl('text', { class: 'bt-yax', x: BT_PL - 10, y: _btY(v, max) + 3, 'text-anchor': 'end' }); t.textContent = v; _btGridG.appendChild(t);
+    }
+    _btEvents.forEach((e, i) => { const t = _btEl('text', { class: 'bt-axis', x: _btX(i), y: BT_H - BT_PB + 20, 'text-anchor': 'middle' }); t.textContent = 'R' + e.round; _btGridG.appendChild(t); });
+}
+// ---- animation ------------------------------------------------------------
+const BT_DUR = 1500, BT_STAG = 140;   // staggered "draw the season", mid-speed
+let _btRaf = [], _btDrawnIds = [];
+function _btClearRaf() { _btRaf.forEach(id => cancelAnimationFrame(id)); _btRaf = []; }
+function _btExpanded() { const a = document.getElementById('bt-acc'); return !!a && !a.classList.contains('collapsed'); }
+function _btReduceMotion() { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+function btToggle() { const a = document.getElementById('bt-acc'); if (!a) return; a.classList.toggle('collapsed'); if (!a.classList.contains('collapsed')) btDraw('full'); }
+
+// Animate one series: draw its line left→right, pop dots as the draw passes,
+// count its points up, and fade the name/leader in at the finish.
+function _btAnimateSeries(h, delay) {
+    const len = h.path.getTotalLength();
+    h.path.style.strokeDasharray = len; h.path.style.strokeDashoffset = len;
+    h.dots.forEach(c => { c.style.opacity = 0; c.style.transform = 'scale(0)'; });
+    [h.nm, h.pt, h.leader].forEach(n => { if (n) n.style.opacity = 0; });
+    const nP = h.dots.length, t0 = performance.now() + delay;
+    const step = now => {
+        const t = Math.max(0, Math.min(1, (now - t0) / BT_DUR)), e = 1 - Math.pow(1 - t, 3);
+        h.path.style.strokeDashoffset = len * (1 - e);
+        h.dots.forEach((c, i) => { const f = nP <= 1 ? 0 : i / (nP - 1); if (e >= f) { c.style.transition = 'opacity .18s, transform .18s'; c.style.opacity = 1; c.style.transform = 'scale(1)'; } });
+        h.pt.textContent = Math.round(h.last * e) + ' ' + h.unit;
+        if (t >= 1) { [h.nm, h.pt, h.leader].forEach(n => { if (n) { n.style.transition = 'opacity .3s'; n.style.opacity = ''; } }); h.pt.textContent = Math.round(h.last) + ' ' + h.unit; return; }
+        _btRaf.push(requestAnimationFrame(step));
+    };
+    _btRaf.push(requestAnimationFrame(step));
+}
+
+function btDraw(anim) {
+    _btClearRaf();
+    if (_btSeriesG) _btSeriesG.remove();
+    const min = _btYMin(); _btYMinCache = min;
+    const max = _btYMax(min); _btYCache = max; btDrawGrid(max, min);
+    _btSeriesG = _btEl('g', {}); _btSvg.appendChild(_btSeriesG);
+    const active = _btActive();
+    if (!active.length) { const t = _btEl('text', { class: 'bt-empty', x: BT_PL + _btPW / 2, y: BT_PT + _btPH / 2, 'text-anchor': 'middle' }); t.textContent = `Pick a ${_btNoun(false)} to start comparing.`; _btSeriesG.appendChild(t); _btDrawnIds = []; return; }
+
+    // Compute end-label positions (de-collide; centre the stack when the
+    // field is bunched, else keep labels by their line heights, clamped).
+    const lastX = _btX(_btLastIdx), labelX = BT_PL + _btPW + 12;
+    const labels = active.map(a => { const v = (_btSeries(a.d.id) || [])[_btLastIdx]; const last = v == null ? 0 : v; return { a, last, y: _btY(last, max) }; }).sort((x, y) => x.y - y.y);
+    const GAP = 30, topLimit = BT_PT + 12, botLimit = BT_PT + _btPH - 6;
+    const n = labels.length, blockH = (n - 1) * GAP, avail = botLimit - topLimit;
+    for (let i = 1; i < n; i++) if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
+    const saturated = n > 1 && (labels[n - 1].y - labels[0].y) <= blockH + 0.5;
+    if (saturated && blockH < avail) { const start = topLimit + (avail - blockH) / 2; labels.forEach((L, i) => { L.y = start + i * GAP; }); }
+    else { const over = labels[n - 1].y - botLimit; if (over > 0) labels.forEach(L => { L.y -= over; }); const under = topLimit - labels[0].y; if (under > 0) labels.forEach(L => { L.y += under; }); }
+    const labY = new Map(labels.map(L => [L.a.d.id, { y: L.y, last: L.last }]));
+
+    const canAnim = anim && anim !== 'none' && _btExpanded() && !_btReduceMotion();
+
+    active.forEach((a, idx) => {
+        const pts = [];
+        (_btSeries(a.d.id) || []).forEach((v, i) => { if (v != null) pts.push({ i, v }); });
+        if (!pts.length) return;
+        const dstr = pts.map((p, k) => `${k ? 'L' : 'M'}${_btX(p.i)},${_btY(p.v, max)}`).join(' ');
+        const path = _btEl('path', { class: 'bt-line', d: dstr, stroke: a.color }); _btSeriesG.appendChild(path);
+        const dots = pts.map(p => { const c = _btEl('circle', { class: 'bt-dot', cx: _btX(p.i), cy: _btY(p.v, max), r: 3.4, fill: a.color }); _btSeriesG.appendChild(c); return c; });
+        const L = labY.get(a.d.id) || { y: _btY(_btYMinCache, max), last: _btYMinCache };
+        let leader = null;
+        const anchorY = _btY(L.last, max);
+        if (lastX < labelX - 20 || Math.abs(L.y - anchorY) > 3) { leader = _btEl('line', { x1: lastX + 4, y1: anchorY, x2: labelX - 4, y2: L.y - 4, stroke: a.color, 'stroke-width': 1, opacity: 0.4 }); _btSeriesG.appendChild(leader); }
+        const nm = _btEl('text', { class: 'bt-end', x: labelX, y: L.y - 4, fill: a.color }); nm.textContent = a.d.name; _btSeriesG.appendChild(nm);
+        const pt = _btEl('text', { class: 'bt-endpts', x: labelX, y: L.y + 8 }); pt.textContent = Math.round(L.last) + ' ' + _btUnit(); _btSeriesG.appendChild(pt);
+
+        const isNew = _btDrawnIds.indexOf(a.d.id) === -1;
+        const animateThis = canAnim && (anim === 'full' || (anim === 'grow' && isNew));
+        if (animateThis) _btAnimateSeries({ path, dots, nm, pt, leader, last: L.last, unit: _btUnit() }, anim === 'full' ? idx * BT_STAG : 0);
+    });
+
+    _btGuide = _btEl('line', { class: 'bt-guide', x1: 0, y1: BT_PT, x2: 0, y2: BT_PT + _btPH, opacity: 0 }); _btSeriesG.appendChild(_btGuide);
+    _btDrawnIds = active.map(a => a.d.id);
+}
+function _btAttachHover() {
+    _btSvg.addEventListener('mousemove', e => {
+        const active = _btActive(); if (!active.length || !_btGuide) return;
+        const rect = _btSvg.getBoundingClientRect(), sx = (e.clientX - rect.left) / rect.width * BT_W;
+        let i = _btEvents.length <= 1 ? 0 : Math.round((sx - BT_PL) / _btPW * (_btEvents.length - 1));
+        i = Math.max(0, Math.min(_btLastIdx, i));   // only completed rounds carry data
+        _btGuide.setAttribute('x1', _btX(i)); _btGuide.setAttribute('x2', _btX(i)); _btGuide.setAttribute('opacity', 1);
+        const rows = active.map(a => ({ name: a.d.name, color: a.color, v: Math.round((_btSeries(a.d.id) || [])[i] || 0) })).sort((x, y) => y.v - x.v);
+        const tt = document.getElementById('bt-tt');
+        tt.innerHTML = `<div class="bt-tt-round">Round ${_btEvents[i].round}</div>` + rows.map(x => `<div class="bt-tt-row"><span class="bt-tt-dot" style="background:${x.color}"></span><span class="bt-tt-name">${esc(x.name)}</span><span class="bt-tt-val" style="color:${x.color}">${x.v}</span></div>`).join('');
+        tt.style.opacity = 1; const px = _btX(i) / BT_W * rect.width; tt.style.left = Math.min(px + 16, rect.width - 168) + 'px'; tt.style.top = '8px';
+    });
+    _btSvg.addEventListener('mouseleave', () => { const tt = document.getElementById('bt-tt'); if (tt) tt.style.opacity = 0; if (_btGuide) _btGuide.setAttribute('opacity', 0); });
+}
+function btRefresh(anim) { btSelected(); btHint(); btDraw(anim || 'none'); }
+
+// Strip out the latest event's points-contribution per driver, re-rank,
+// and return a map of driver_id → previous position (1-based) so we can
+// show ▲ / ▼ / – movement arrows.
+function computePrevRank(perEvent, seasonId, currentDrivers) {
+    const inSeason = perEvent.filter(r => r.results?.events?.season_id === seasonId);
+    if (!inSeason.length) return {};
+    const lastTs = inSeason
+        .map(r => r.results.events.starts_at)
+        .filter(Boolean)
+        .sort()
+        .pop();
+    if (!lastTs) return {};
+
+    // Driver → points awarded before the latest event.
+    const prev = {};
+    currentDrivers.forEach(d => { prev[d.driver_id] = 0; });
+    inSeason.forEach(r => {
+        if (r.results.events.starts_at === lastTs) return;
+        prev[r.driver_id] = (prev[r.driver_id] || 0) + Number(r.points_awarded || 0);
+    });
+
+    // Drivers who hadn't scored at all before the last event stay unranked
+    // so we can show a "NEW" indicator instead of fake movement.
+    const sorted = Object.entries(prev)
+        .filter(([, p]) => p > 0)
+        .sort((a, b) => b[1] - a[1]);
+    const rankMap = {};
+    sorted.forEach(([id], i) => { rankMap[id] = i + 1; });
+    return rankMap;
+}
+
+let _ratingByDriver = {};
+let _prevDriverRank = {};
+let _formByDriver   = {};
+let _manufacturers  = [];
+let _dedByDriver    = {};
+let _dedByTeam      = {};
+let _bonByDriver    = {};
+let _bonByTeam      = {};
+
+// Small red "points docked" note with the reason(s), e.g. "−2 · bump drafting".
+function deductionHtml(info) {
+    if (!info || !info.amount) return '';
+    const why = (info.reasons || []).join(', ');
+    return `<div class="pts-deduct" title="${esc(why ? why + ' ' : '')}(−${info.amount} pts)">−${info.amount}${why ? ` · ${esc(why)}` : ''}</div>`;
+}
+
+// Small green "points awarded" note with the reason(s), e.g. "+1 · original pole".
+function bonusHtml(info) {
+    if (!info || !info.amount) return '';
+    const why = (info.reasons || []).join(', ');
+    return `<div class="pts-bonus" title="${esc(why ? why + ' ' : '')}(+${info.amount} pts)">+${info.amount}${why ? ` · ${esc(why)}` : ''}</div>`;
+}
+
+load();
+</script>
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>

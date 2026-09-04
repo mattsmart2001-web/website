@@ -1,0 +1,1369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Track Overlay Lab</title>
+<style>
+  :root { --bg:#07090d; --panel:#0d1219; --card:#141b25; --border:rgba(255,255,255,0.1); --text:#f1f5f9; --muted:#94a3b8; --gold:#ffd166; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:Inter,system-ui,sans-serif; }
+  header { padding:0.7rem 1rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+  header .t { font-family:'Anton',Impact,sans-serif; letter-spacing:0.03em; font-size:1.1rem; }
+  header .k { font:700 0.55rem/1 'Orbitron',monospace; letter-spacing:0.3em; text-transform:uppercase; color:var(--gold); }
+  header a { color:var(--muted); text-decoration:none; font-size:0.8rem; margin-left:auto; }
+  .layout { display:flex; min-height:calc(100vh - 49px); }
+  .stage { flex:1; position:relative; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  #video { max-width:100%; max-height:100%; display:block; }
+  #overlay { position:absolute; left:0; top:0; pointer-events:none; }
+  .panel { width:320px; flex-shrink:0; background:var(--panel); border-left:1px solid var(--border); padding:1rem; overflow-y:auto; max-height:calc(100vh - 49px); }
+  .sec { margin-bottom:1.3rem; }
+  .sec h4 { font:700 0.6rem/1 'Orbitron',monospace; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin:0 0 0.6rem; }
+  label.row { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; font-size:0.78rem; margin-bottom:0.5rem; color:var(--text); }
+  label.row .v { color:var(--gold); font-family:'Orbitron',monospace; font-size:0.72rem; min-width:52px; text-align:right; }
+  input[type=range] { width:100%; accent-color:var(--gold); }
+  .field { margin-bottom:0.6rem; }
+  .btn { display:inline-flex; align-items:center; gap:0.35rem; padding:0.45rem 0.7rem; border-radius:7px; border:1px solid var(--border); background:linear-gradient(180deg,#1c2432,#131922); color:#d7dde5; font-size:0.75rem; font-weight:600; cursor:pointer; margin:0.15rem 0.15rem 0.15rem 0; }
+  .btn:hover { border-color:rgba(255,255,255,0.25); color:#fff; }
+  .btn.gold { color:var(--gold); border-color:rgba(255,209,102,0.4); }
+  .btn.red { color:#fca5a5; border-color:rgba(239,68,68,0.4); }
+  .file { display:block; font-size:0.72rem; color:var(--muted); margin-bottom:0.55rem; }
+  .file input { display:block; margin-top:0.2rem; font-size:0.72rem; max-width:100%; }
+  .hint { font-size:0.72rem; color:var(--muted); line-height:1.5; }
+  .transport { position:absolute; left:0; right:0; bottom:0; padding:0.6rem 0.8rem; background:linear-gradient(0deg,rgba(0,0,0,0.8),transparent); display:flex; align-items:center; gap:0.7rem; }
+  .transport input[type=range] { flex:1; }
+  .transport .btn { margin:0; }
+  code { background:rgba(255,255,255,0.06); padding:0.05rem 0.3rem; border-radius:3px; font-size:0.9em; }
+  .pill { display:inline-block; font-size:0.66rem; color:var(--muted); background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:999px; padding:0.1rem 0.5rem; margin-left:0.4rem; }
+  /* OBS browser-source mode: transparent stage so it composites over a game
+     capture source below it in OBS. The panel and transport stay visible and
+     interactive (reachable via OBS's "Interact" button) so calibration can
+     still be tuned while it's live - crop the source in OBS's scene to keep
+     the panel off the actual broadcast output. */
+  body.obs { background:transparent; }
+  body.obs header, body.obs #video { display:none; }
+  body.obs .stage { background:transparent; }
+  body.obs .layout { min-height:100vh; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./lib/three.module.js" } }
+</script>
+</head>
+<body>
+<header>
+  <div><span class="k">SparksTheory Lab</span><div class="t">Track Overlay <span class="pill" id="mode-pill">synthetic</span></div></div>
+  <a href="/lab/">&larr; Lab</a>
+</header>
+
+<div class="layout">
+  <div class="stage" id="stage">
+    <video id="video" playsinline muted></video>
+    <canvas id="overlay"></canvas>
+    <div class="transport">
+      <button class="btn" id="play">Play</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0">
+      <span id="clock" style="font:0.72rem 'Orbitron',monospace;color:var(--muted);min-width:74px;text-align:right">0.00s</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="sec">
+      <h4>1 · Load</h4>
+      <label class="file">Replay video (bumper cam)
+        <input type="file" id="f-video" accept="video/*"></label>
+      <label class="file">Telemetry log (.jsonl from recorder.py)
+        <input type="file" id="f-tel" accept=".jsonl,.json,.txt"></label>
+      <label class="file">Zones (.json, optional)
+        <input type="file" id="f-zones" accept=".json"></label>
+      <button class="btn" id="btn-synth">Reset to synthetic demo</button>
+    </div>
+
+    <div class="sec">
+      <h4>1b · Live (instead of a file)</h4>
+      <div class="hint" style="margin-bottom:0.55rem">Drive the overlay from the running replay in real time. Telemetry from the connector; video from a capture card / screen, or leave it off and use this page as a transparent OBS browser source over your game capture.</div>
+      <div class="field">
+        <input type="text" id="ws-url" value="ws://localhost:8765" style="width:100%;padding:0.4rem 0.5rem;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.75rem">
+      </div>
+      <button class="btn gold" id="btn-ws">Connect telemetry</button>
+      <button class="btn" id="btn-cam">Use capture device</button>
+      <button class="btn" id="btn-screen">Share screen</button>
+      <div class="hint" id="live-status" style="margin-top:0.4rem"></div>
+      <label class="row" style="margin-top:0.5rem"><span>OBS mode (transparent background)</span>
+        <input type="checkbox" id="obs-toggle"></label>
+      <div class="hint">Or open <code>?obs=1</code> directly as the browser-source URL. It reuses the calibration and zones saved in this browser. The panel stays on screen and interactive so you can tune it live via OBS's <strong>Interact</strong> button - crop the source in your scene to keep the panel out of the actual broadcast.</div>
+    </div>
+
+    <div class="sec">
+      <h4>2 · Camera calibration</h4>
+      <div class="hint" style="margin-bottom:0.6rem">Dial these until a red zone sits flat on the tarmac and stays put as you drive past it. <strong>Brake dive</strong> is separate: GT7's bumper cam cosmetically dips under braking (the horizon rises) which isn't in the telemetry at all, so raise it from 0 until objects stop sinking relative to the road under heavy braking.</div>
+      <div id="sliders"></div>
+      <label class="row" style="margin-top:0.3rem"><span>Heading from motion (recommended)</span><input type="checkbox" id="cal-motion" checked></label>
+      <div class="hint" style="margin:0 0 0.5rem">Points the camera along the direction of travel instead of the raw yaw field. Fixes the overlay sliding sideways as you drive. Turn off only if you want to test the raw telemetry orientation.</div>
+      <label class="row"><span>Heading smoothing</span><span class="v" id="v-smooth">0.12</span></label>
+      <input type="range" id="cal-smooth" min="0.03" max="0.4" step="0.01" value="0.12">
+      <div class="hint" style="margin:0 0 0.5rem">Lower = steadier but laggier in corners; higher = snappier but jumpier.</div>
+      <label class="row"><span>Calibration grid</span><input type="checkbox" id="cal-grid"></label>
+      <label class="row"><span>Ground height (m)</span><span class="v" id="v-groundy">-0.30</span></label>
+      <input type="range" id="cal-groundy" min="-3" max="1" step="0.05" value="-0.3">
+      <div class="hint" style="margin:0.35rem 0 0.5rem">Turn the grid on and calibrate until its lines lie flat on the road and stay put as you drive. A whole grid is far easier to line up than one box. It tilts with the current slope and heading, so it should climb on uphills and dip on downhills rather than staying dead level.</div>
+      <button class="btn gold" id="btn-export-calib">Export calibration</button>
+    </div>
+
+    <div class="sec">
+      <h4>3 · Author a no-go zone</h4>
+      <div class="hint" style="margin-bottom:0.6rem">Scrub so the car sits at a corner of the penalty patch, then drop a point. 3+ points make a zone.</div>
+      <button class="btn gold" id="btn-box">Drop a box ahead</button>
+      <button class="btn" id="btn-corner">Drop corner at car</button>
+      <button class="btn" id="btn-newzone">New zone</button>
+      <button class="btn red" id="btn-undo">Undo point</button>
+      <div style="border-top:1px solid var(--border);margin:0.65rem 0 0.55rem"></div>
+      <button class="btn" id="btn-edit">Edit vertices</button>
+      <button class="btn red" id="btn-del-vert">Delete selected</button>
+      <div class="hint" style="margin:0.45rem 0">In edit mode: drag a gold handle to move a corner, the blue handle to move the whole box. Click a corner to select it, then arrow keys nudge it (Shift = bigger steps).</div>
+      <div class="hint" id="zone-status" style="margin:0.5rem 0"></div>
+      <button class="btn gold" id="btn-export-zones">Export zones</button>
+    </div>
+
+    <div class="sec">
+      <h4>4 · Fun props</h4>
+      <button class="btn gold" id="btn-prop">Drop random object</button>
+      <button class="btn red" id="btn-clear-props">Clear objects</button>
+      <div class="hint" style="margin-top:0.4rem">Drops a random 3D object on the track ahead, with a soft contact shadow so it sits on the road. They stick to the world like the zones, fade out past 200m so far-off parts of the track don't show through, and show in OBS mode too.</div>
+    </div>
+
+    <div class="sec">
+      <h4>5 · Obstacles</h4>
+      <button class="btn gold" id="btn-wall">Drop brick wall (test)</button>
+      <div class="hint" style="margin-top:0.4rem">Builds a brick wall across the track ahead. It shatters into individual bricks the moment the car reaches it, so it reads as smashing through.</div>
+      <button class="btn gold" id="btn-pins" style="margin-top:0.5rem">Drop bowling pins (test)</button>
+      <div class="hint" style="margin-top:0.4rem">A 10-pin rack close ahead. Tips over and scatters the moment the car reaches it.</div>
+      <button class="btn gold" id="btn-wreckingball" style="margin-top:0.5rem">Drop wrecking ball (test)</button>
+      <div class="hint" style="margin-top:0.4rem">A ball on a chain, swinging across the track ahead - persists and keeps swinging, no smash trigger. Time your pass and dodge it.</div>
+      <button class="btn gold" id="btn-fireworks" style="margin-top:0.5rem">Fireworks (test)</button>
+      <div class="hint" style="margin-top:0.4rem">A staggered burst of colourful fireworks far down the track, high enough to stay visible from a distance - a celebration trigger, not an obstacle.</div>
+      <button class="btn red" id="btn-clear-obstacles" style="margin-top:0.5rem">Clear ALL items (test)</button>
+      <div class="hint" style="margin-top:0.4rem">Removes every prop, wall, pin, wrecking ball and firework in one go - a full reset between takes. Leaves zones and calibration untouched.</div>
+      <div class="hint" style="margin-top:0.5rem">For a Stream Deck: add a <strong>Website</strong> action set to GET a trigger URL on the machine running the connector - <code id="wall-trigger-url">http://localhost:8767/trigger?type=wall</code> for the wall, <code>...?type=pins</code> for the pins, <code>...?type=wreckingball</code> for the wrecking ball, <code>...?type=fireworks</code> for fireworks, <code>...?type=clear</code> to clear everything. Only reaches this page while connected to live telemetry (Connect telemetry, above); the test buttons here always work.</div>
+    </div>
+
+    <div class="sec">
+      <h4>Debug</h4>
+      <div class="hint" id="dbg" style="font-family:monospace;font-size:0.7rem;white-space:pre-line;line-height:1.5"></div>
+      <button class="btn gold" id="btn-copy-tel">Copy telemetry sample</button>
+      <div class="hint" style="margin-top:0.35rem">Play the replay for a few seconds, then click this and paste it to Claude so we can see what the numbers are doing.</div>
+    </div>
+
+    <div class="sec">
+      <h4>Notes</h4>
+      <div class="hint">
+        Deterministic replay + a rigid bumper cam is what makes this work: calibrate once, and the zones stay glued to the track.
+        This is a fit test, not the finished overlay. Orientation offsets in the telemetry are unverified - if the world tilts, that is the pitch/roll field to confirm.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ---- Calibration state (all adjustable live) ------------------------------
+const CALIB_DEFS = [
+  { key:'offFwd',   label:'Cam forward (m)', min:-2,  max:6,   step:0.05, val:1.8 },
+  { key:'offUp',    label:'Cam up (m)',      min:-1,  max:3,   step:0.05, val:0.6 },
+  { key:'offRight', label:'Cam right (m)',   min:-2,  max:2,   step:0.05, val:0.0 },
+  { key:'fov',      label:'FOV (deg)',       min:40,  max:120, step:1,    val:75  },
+  { key:'yawTrim',  label:'Yaw trim (deg)',  min:-180,max:180, step:0.5,  val:0   },
+  { key:'pitchTrim',label:'Pitch trim (deg)',min:-30, max:30,  step:0.5,  val:0   },
+  { key:'rollTrim', label:'Roll trim (deg)', min:-30, max:30,  step:0.5,  val:0   },
+  { key:'brakeDive',label:'Brake dive (deg/g)', min:0, max:15, step:0.5,  val:0   },
+  { key:'timeOff',  label:'Time offset (s)', min:-5,  max:5,   step:0.02, val:0   },
+];
+const calib = {};
+CALIB_DEFS.forEach(d => calib[d.key] = d.val);
+
+// ---- three.js ------------------------------------------------------------
+const stage = document.getElementById('stage');
+const video = document.getElementById('video');
+const canvas = document.getElementById('overlay');
+const renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, 16/9, 0.1, 5000);
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.85); sun.position.set(1, 2, 1); scene.add(sun);
+
+// Synthetic ground + grid, shown only in demo mode as a stand-in "road".
+const demoGroup = new THREE.Group();
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(4000, 4000),
+  new THREE.MeshBasicMaterial({ color:0x0b0f14 }));
+ground.rotation.x = -Math.PI/2;
+demoGroup.add(ground);
+const grid = new THREE.GridHelper(4000, 400, 0x223047, 0x162131);
+demoGroup.add(grid);
+scene.add(demoGroup);
+
+// Calibration grid: a world-aligned ground grid that recenters under the car
+// at road height. If the camera is calibrated, its lines lie flat on the road
+// and flow smoothly; if not, they slide or tilt. Far easier to judge than one
+// box.
+let groundOffset = -0.3;
+function makeChecker() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.clearRect(0,0,64,64);
+  g.fillStyle = 'rgba(34,211,238,0.95)';
+  g.fillRect(0,0,32,32); g.fillRect(32,32,32,32);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(40, 40);   // 200m / 5m cells
+  return tex;
+}
+const calGrid = new THREE.Mesh(
+  new THREE.PlaneGeometry(200, 200),
+  new THREE.MeshBasicMaterial({ map:makeChecker(), transparent:true, opacity:0.4,
+    depthTest:false, side:THREE.DoubleSide }));
+calGrid.rotation.x = -Math.PI/2; calGrid.renderOrder = 5; calGrid.visible = false;
+scene.add(calGrid);
+
+// Fun props: random 3D objects dropped on the track. Same world-space
+// projection as the zones, so they stick to the road once calibrated.
+// Each carries a soft contact-shadow disc so it reads as sitting on the
+// road, and fades out past PROP_MAX_DIST so props on a far-off part of
+// the track don't show through when the camera happens to face them.
+let props = [];                 // {type, color, x, y, z, size, rotY, spin}
+const propGroup = new THREE.Group();
+scene.add(propGroup);
+const PROP_TYPES = ['cone','sphere','box','torus','cyl','ico'];
+const PROP_COLORS = ['#ff5252','#ffd166','#22d3ee','#a3e635','#f472b6','#c084fc','#fb923c','#ffffff'];
+const PROP_MAX_DIST = 200; // metres from the camera before a prop is hidden
+
+function makeShadowTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0,    'rgba(0,0,0,0.97)');
+  grad.addColorStop(0.55, 'rgba(0,0,0,0.85)');
+  grad.addColorStop(0.85, 'rgba(0,0,0,0.4)');
+  grad.addColorStop(1,    'rgba(0,0,0,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+// Shared between every prop (cheap: same geometry/material, per-instance scale only).
+const propShadowGeo = new THREE.CircleGeometry(0.5, 24);
+const propShadowMat = new THREE.MeshBasicMaterial({
+  map: makeShadowTexture(), transparent: true, depthWrite: false, side: THREE.DoubleSide });
+
+function makePropMesh(p) {
+  const sz = p.size;
+  let geo, yOff = sz*0.5, rotX = 0;
+  if (p.type === 'cone')   geo = new THREE.ConeGeometry(sz*0.5, sz, 22);
+  else if (p.type === 'sphere') geo = new THREE.SphereGeometry(sz*0.5, 22, 16);
+  else if (p.type === 'box') geo = new THREE.BoxGeometry(sz, sz, sz);
+  else if (p.type === 'torus') { geo = new THREE.TorusGeometry(sz*0.5, sz*0.2, 16, 32); rotX = Math.PI/2; yOff = sz*0.2; }
+  else if (p.type === 'cyl') geo = new THREE.CylinderGeometry(sz*0.4, sz*0.4, sz, 22);
+  else geo = new THREE.IcosahedronGeometry(sz*0.6, 0);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color:p.color, roughness:0.45, metalness:0.15 }));
+  mesh.position.y = yOff;
+  mesh.rotation.set(rotX, p.rotY || 0, 0);
+
+  const shadow = new THREE.Mesh(propShadowGeo, propShadowMat);
+  shadow.rotation.x = -Math.PI/2;
+  shadow.scale.setScalar(sz * 2.2);
+  shadow.position.y = 0.015;
+  shadow.renderOrder = 4;
+
+  const group = new THREE.Group();
+  group.position.set(p.x, p.y, p.z);
+  group.add(shadow, mesh);
+  group.userData.mesh = mesh;
+  group.userData.spin = p.spin || 0;
+  return group;
+}
+function rebuildProps() {
+  while (propGroup.children.length) {
+    const g = propGroup.children.pop();
+    g.traverse(o => { if (o.isMesh && o.geometry !== propShadowGeo) o.geometry.dispose(); });
+  }
+  props.forEach(p => propGroup.add(makePropMesh(p)));
+  try { localStorage.setItem('to_props', JSON.stringify(props)); } catch {}
+}
+
+// Obstacles: a brick wall spawned ahead of the car (Stream Deck button, or
+// the test button here) that shatters into flying bricks the instant the car
+// reaches it. Bricks fall under gravity, land, and stay put on the road
+// (like the props) rather than fading away, each with its own contact
+// shadow so landed debris reads as sitting on the tarmac.
+let walls = [];   // {group, bricks:[{mesh,shadow,vel,landed}], planePos, planeFwd, groundY, smashed}
+const wallGroup = new THREE.Group();
+scene.add(wallGroup);
+const brickGeo = new THREE.BoxGeometry(0.95, 0.45, 0.32);
+const WALL_COLS = 16, WALL_ROWS = 6, WALL_AHEAD = 80, WALL_GRAVITY = 10;
+const WALL_BREAK_LEAD = 5.5;   // metres before the plane it starts shattering
+
+function spawnWall(s) {
+  if (!s) return;
+  const yaw = roadYaw, cp = Math.cos(roadPitch);
+  const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(roadPitch), Math.cos(yaw)*cp).normalize();
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  const base = new THREE.Vector3(s.posX, s.posY, s.posZ).addScaledVector(fwd, WALL_AHEAD);
+  const groundY = base.y + groundOffset;
+  // Build the wall from the true road surface (groundY), not the car's raw
+  // telemetry height (base.y) - they differ by groundOffset, which left the
+  // whole intact wall floating above its own shadow before it even shatters.
+  const groundBase = new THREE.Vector3(base.x, groundY, base.z);
+
+  const group = new THREE.Group();
+  const bricks = [];
+  const bw = 1.0, bh = 0.5;
+  for (let r = 0; r < WALL_ROWS; r++) {
+    for (let c = 0; c < WALL_COLS; c++) {
+      const shade = 0.85 + Math.random()*0.3;
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0.55*shade, 0.18*shade, 0.13*shade), roughness: 0.85 });
+      const mesh = new THREE.Mesh(brickGeo, mat);
+      const across = (c - (WALL_COLS-1)/2) * bw;
+      const up = WALL_BRICK_HALF_H + r*bh;   // bottom row's underside sits exactly on groundY
+      mesh.position.copy(groundBase).addScaledVector(right, across).addScaledVector(worldUp, up);
+      mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, worldUp, fwd));
+      group.add(mesh);
+
+      const shadow = new THREE.Mesh(propShadowGeo, propShadowMat);
+      shadow.rotation.x = -Math.PI/2;
+      shadow.scale.setScalar(1.3);
+      shadow.renderOrder = 4;
+      shadow.position.set(mesh.position.x, groundY + 0.015, mesh.position.z);
+      group.add(shadow);
+
+      bricks.push({ mesh, shadow, vel: new THREE.Vector3(), landed: false });
+    }
+  }
+  wallGroup.add(group);
+  walls.push({ group, bricks, planePos: base, planeFwd: fwd, groundY, smashed: false });
+}
+
+function smashWall(w) {
+  w.smashed = true;
+  // Real car speed at the moment of impact (speedEMA, tracked continuously
+  // in trackAccel) drives the scatter, but it's a proper explosion even
+  // standing still - a forward punch plus a wide sideways blast, not just a
+  // gentle collapse - so it actually reads as bricks flying everywhere
+  // rather than tipping into a heap where the wall stood.
+  const speed = Math.max(0, speedEMA);                    // m/s
+  const kick    = 10 + Math.min(speed * 0.45, 25);         // forward punch
+  const lateral =  8 + Math.min(speed * 0.25, 16);         // sideways blast radius
+  const fwd = w.planeFwd;
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  w.bricks.forEach(b => {
+    b.vel.copy(fwd).multiplyScalar(kick * (0.6 + Math.random()*0.8))
+      .addScaledVector(right, (Math.random()-0.5) * 2 * lateral)
+      .addScaledVector(worldUp, 4 + Math.random()*6);
+  });
+}
+
+const WALL_BRICK_HALF_H = 0.225;
+function updateWalls(s, dt) {
+  if (!walls.length) return;
+  const carPos = s ? new THREE.Vector3(s.posX, s.posY, s.posZ) : null;
+  walls.forEach(w => {
+    if (!w.smashed) {
+      if (carPos) {
+        const signed = carPos.clone().sub(w.planePos).dot(w.planeFwd);
+        if (signed >= -WALL_BREAK_LEAD) smashWall(w);   // breaking early so the shatter reads clearly
+      }
+      return;
+    }
+    const floor = w.groundY + WALL_BRICK_HALF_H;
+    w.bricks.forEach(b => {
+      if (!b.landed) {
+        b.vel.y -= WALL_GRAVITY * dt;
+        b.mesh.position.addScaledVector(b.vel, dt);
+        b.mesh.rotation.x += b.vel.z * dt; b.mesh.rotation.z += b.vel.x * dt;
+        if (b.mesh.position.y <= floor) {
+          b.mesh.position.y = floor;
+          b.vel.set(0, 0, 0);
+          // Lie flat (random yaw only) so the brick's actual bottom face
+          // sits exactly on the ground - a tumbled rotation left a gap
+          // between the brick and its shadow.
+          b.mesh.rotation.set(0, Math.random() * Math.PI * 2, 0);
+          b.landed = true;
+        }
+        b.shadow.position.set(b.mesh.position.x, w.groundY + 0.015, b.mesh.position.z);
+      }
+    });
+    // Same distance cull as props: landed debris stays in the world, but
+    // hides once far away so a wall smashed elsewhere on the track doesn't
+    // show through when the camera happens to face that way.
+    w.group.visible = camera.position.distanceTo(w.planePos) <= PROP_MAX_DIST;
+  });
+}
+
+// Bowling pins: a standard 10-pin triangle placed ahead of the car, closer
+// than the wall since they're meant to be an easy, frequent hit. Same
+// approach-and-knock pattern as the wall, but pins tip onto their side
+// instead of lying flat, and the scatter is a lighter, more comedic bowl-
+// through rather than an explosion.
+let pinRacks = [];   // {group, pins:[{mesh,shadow,vel,landed}], planePos, planeFwd, groundY, knocked}
+const pinsGroup = new THREE.Group();
+scene.add(pinsGroup);
+const PIN_HEIGHT = 0.75, PIN_BASE_R = 0.14, PIN_TOP_R = 0.06;
+const pinBodyGeo = new THREE.CylinderGeometry(PIN_TOP_R, PIN_BASE_R, PIN_HEIGHT, 14);
+const pinStripeGeo = new THREE.TorusGeometry(PIN_TOP_R * 1.35, 0.025, 8, 20);
+const pinBodyMat = new THREE.MeshStandardMaterial({ color: 0xf5f2ea, roughness: 0.55 });
+const pinStripeMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 });
+const PINS_AHEAD = 50, PINS_GRAVITY = 10;
+const PIN_BREAK_LEAD = 3.5;   // pins sit much closer to the car than the wall, so a shorter lead still reads fine
+
+function makePin() {
+  const body = new THREE.Mesh(pinBodyGeo, pinBodyMat);
+  body.position.y = PIN_HEIGHT / 2;
+  const stripe = new THREE.Mesh(pinStripeGeo, pinStripeMat);
+  stripe.position.y = PIN_HEIGHT * 0.68;
+  stripe.rotation.x = Math.PI / 2;
+  const group = new THREE.Group();
+  group.add(body, stripe);
+  return group;
+}
+
+function spawnPins(s) {
+  if (!s) return;
+  const yaw = roadYaw, cp = Math.cos(roadPitch);
+  const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(roadPitch), Math.cos(yaw)*cp).normalize();
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  const base = new THREE.Vector3(s.posX, s.posY, s.posZ).addScaledVector(fwd, PINS_AHEAD);
+  const groundY = base.y + groundOffset;
+  const groundBase = new THREE.Vector3(base.x, groundY, base.z);
+
+  const spacing = 0.35;
+  const rowCounts = [1, 2, 3, 4];   // headpin nearest the car, widening toward the back
+  const group = new THREE.Group();
+  const pins = [];
+  rowCounts.forEach((count, rowIdx) => {
+    const rowBack = rowIdx * spacing * 0.87;
+    for (let i = 0; i < count; i++) {
+      const across = (i - (count-1)/2) * spacing;
+      const pin = makePin();
+      pin.position.copy(groundBase).addScaledVector(fwd, rowBack).addScaledVector(right, across);
+      pin.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, worldUp, fwd));
+      group.add(pin);
+
+      const shadow = new THREE.Mesh(propShadowGeo, propShadowMat);
+      shadow.rotation.x = -Math.PI/2;
+      shadow.scale.setScalar(0.55);
+      shadow.renderOrder = 4;
+      shadow.position.set(pin.position.x, groundY + 0.015, pin.position.z);
+      group.add(shadow);
+
+      pins.push({ mesh: pin, shadow, vel: new THREE.Vector3(), landed: false });
+    }
+  });
+  pinsGroup.add(group);
+  pinRacks.push({ group, pins, planePos: base, planeFwd: fwd, groundY, knocked: false });
+}
+
+function knockPins(rack) {
+  rack.knocked = true;
+  const speed = Math.max(0, speedEMA);
+  const kick = 6 + Math.min(speed * 0.35, 18);
+  const lateral = 3 + Math.min(speed * 0.12, 8);
+  const fwd = rack.planeFwd;
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  rack.pins.forEach(p => {
+    p.vel.copy(fwd).multiplyScalar(kick * (0.5 + Math.random()*0.9))
+      .addScaledVector(right, (Math.random()-0.5) * 2 * lateral)
+      .addScaledVector(worldUp, 3 + Math.random()*3);
+  });
+}
+
+function updatePins(s, dt) {
+  if (!pinRacks.length) return;
+  const carPos = s ? new THREE.Vector3(s.posX, s.posY, s.posZ) : null;
+  pinRacks.forEach(rack => {
+    if (!rack.knocked) {
+      if (carPos) {
+        const signed = carPos.clone().sub(rack.planePos).dot(rack.planeFwd);
+        if (signed >= -PIN_BREAK_LEAD) knockPins(rack);
+      }
+      return;
+    }
+    const floor = rack.groundY + PIN_BASE_R;
+    rack.pins.forEach(p => {
+      if (!p.landed) {
+        p.vel.y -= PINS_GRAVITY * dt;
+        p.mesh.position.addScaledVector(p.vel, dt);
+        p.mesh.rotation.x += p.vel.z * dt * 1.5; p.mesh.rotation.z += p.vel.x * dt * 1.5;
+        if (p.mesh.position.y <= floor) {
+          p.mesh.position.y = floor;
+          p.vel.set(0, 0, 0);
+          // A pin that survives a hit standing is the exception, not the
+          // rule - tip it onto its side.
+          p.mesh.rotation.set(Math.PI/2, Math.random() * Math.PI * 2, 0);
+          p.landed = true;
+        }
+        p.shadow.position.set(p.mesh.position.x, rack.groundY + 0.015, p.mesh.position.z);
+      }
+    });
+    rack.group.visible = camera.position.distanceTo(rack.planePos) <= PROP_MAX_DIST;
+  });
+}
+
+// Wrecking ball: unlike the wall/pins, this is a persistent, continuously
+// animated hazard rather than a one-shot smash - it swings across the track
+// on a chain forever (or until the page reloads), and the driver has to
+// time a pass through it themselves. No car-position trigger needed.
+let wreckingBalls = [];   // {group, ball, shadow, chain, pivot, right, groundY, phase, angSpeed, amplitude}
+const wreckGroup = new THREE.Group();
+scene.add(wreckGroup);
+const WRECK_AHEAD = 60, WRECK_HEIGHT = 7, WRECK_CHAIN_LEN = 6, WRECK_RADIUS = 1.0;
+const wreckBallGeo = new THREE.SphereGeometry(WRECK_RADIUS, 24, 18);
+const wreckBallMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, metalness: 0.7, roughness: 0.35 });
+
+function spawnWreckingBall(s) {
+  if (!s) return;
+  const yaw = roadYaw, cp = Math.cos(roadPitch);
+  const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(roadPitch), Math.cos(yaw)*cp).normalize();
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  const base = new THREE.Vector3(s.posX, s.posY, s.posZ).addScaledVector(fwd, WRECK_AHEAD);
+  const groundY = base.y + groundOffset;
+  const pivot = new THREE.Vector3(base.x, groundY + WRECK_HEIGHT, base.z);
+
+  const ball = new THREE.Mesh(wreckBallGeo, wreckBallMat);
+  const shadow = new THREE.Mesh(propShadowGeo, propShadowMat);
+  shadow.rotation.x = -Math.PI/2;
+  shadow.scale.setScalar(WRECK_RADIUS * 2.2);
+  shadow.renderOrder = 4;
+  const chainGeo = new THREE.BufferGeometry().setFromPoints([pivot, pivot]);
+  const chain = new THREE.Line(chainGeo, new THREE.LineBasicMaterial({ color: 0x888888 }));
+
+  const group = new THREE.Group();
+  group.add(ball, shadow, chain);
+  wreckGroup.add(group);
+
+  wreckingBalls.push({
+    group, ball, shadow, chain, pivot, right, groundY,
+    phase: Math.random() * Math.PI * 2,
+    angSpeed: (Math.PI*2) / 2.5,   // ~2.5s per full swing cycle
+    amplitude: 0.85,               // radians either side of hanging straight down (~49deg)
+  });
+}
+
+function updateWreckingBalls(dt) {
+  if (!wreckingBalls.length) return;
+  wreckingBalls.forEach(wb => {
+    wb.phase += dt * wb.angSpeed;
+    const swing = Math.sin(wb.phase) * wb.amplitude;
+    // Pendulum arc at fixed chain length around the pivot: swings sideways
+    // along "right" and rises slightly off the bottom as it swings out.
+    const ballPos = new THREE.Vector3(
+      wb.pivot.x + wb.right.x * Math.sin(swing) * WRECK_CHAIN_LEN,
+      wb.pivot.y - Math.cos(swing) * WRECK_CHAIN_LEN,
+      wb.pivot.z + wb.right.z * Math.sin(swing) * WRECK_CHAIN_LEN,
+    );
+    wb.ball.position.copy(ballPos);
+    wb.shadow.position.set(ballPos.x, wb.groundY + 0.015, ballPos.z);
+    const posAttr = wb.chain.geometry.attributes.position;
+    posAttr.setXYZ(0, wb.pivot.x, wb.pivot.y, wb.pivot.z);
+    posAttr.setXYZ(1, ballPos.x, ballPos.y, ballPos.z);
+    posAttr.needsUpdate = true;
+    wb.group.visible = camera.position.distanceTo(wb.pivot) <= PROP_MAX_DIST;
+  });
+}
+
+// Fireworks: a celebration burst, deliberately placed far down/up the track
+// and NOT distance-culled like the other obstacles - the whole point is to
+// be visible from far away. Several staggered bursts per trigger for a
+// "show" feel, using THREE.Points (one draw call per burst) rather than
+// individual meshes since there can be ~90 particles per burst.
+let fireworks = [];
+const fireworksGroup = new THREE.Group();
+scene.add(fireworksGroup);
+const FIREWORK_COLORS = [0xff5252, 0xffd166, 0x22d3ee, 0xa3e635, 0xf472b6, 0xc084fc, 0xfb923c, 0xffffff];
+const FIREWORK_GRAVITY = 9;
+
+function spawnFireworkBurst(origin, color) {
+  const count = 90;
+  const positions = new Float32Array(count * 3);
+  const velocities = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2*Math.random() - 1);   // uniform point on a sphere
+    const speed = 9 + Math.random() * 11;
+    velocities[i*3]   = Math.sin(phi)*Math.cos(theta) * speed;
+    velocities[i*3+1] = Math.cos(phi) * speed;
+    velocities[i*3+2] = Math.sin(phi)*Math.sin(theta) * speed;
+    positions[i*3] = origin.x; positions[i*3+1] = origin.y; positions[i*3+2] = origin.z;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({
+    color, size: 3, sizeAttenuation: true, transparent: true, opacity: 1,
+    depthWrite: false, blending: THREE.AdditiveBlending });
+  const points = new THREE.Points(geo, mat);
+  fireworksGroup.add(points);
+  fireworks.push({ points, velocities, age: 0, life: 1.8 + Math.random()*0.4 });
+}
+
+// Bursts are staggered with setTimeout, independent of the render loop, so a
+// show already in progress has bursts still pending when "clear all" is
+// pressed - track their timer ids so clearAllObstacles can cancel the ones
+// that haven't fired yet, not just remove what's already on screen.
+let pendingFireworkTimeouts = [];
+function spawnFireworks(s) {
+  if (!s) return;
+  const yaw = roadYaw, cp = Math.cos(roadPitch);
+  const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(roadPitch), Math.cos(yaw)*cp).normalize();
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  const base = new THREE.Vector3(s.posX, s.posY, s.posZ);
+  const bursts = 4;
+  for (let i = 0; i < bursts; i++) {
+    const id = setTimeout(() => {
+      const origin = base.clone()
+        .addScaledVector(fwd, 160 + Math.random()*70)
+        .addScaledVector(right, (Math.random()-0.5) * 60)
+        .addScaledVector(worldUp, 45 + Math.random()*35);
+      spawnFireworkBurst(origin, FIREWORK_COLORS[Math.floor(Math.random()*FIREWORK_COLORS.length)]);
+    }, i * 250);
+    pendingFireworkTimeouts.push(id);
+  }
+}
+
+function updateFireworks(dt) {
+  if (!fireworks.length) return;
+  fireworks = fireworks.filter(fw => {
+    fw.age += dt;
+    const arr = fw.points.geometry.attributes.position.array;
+    for (let i = 0; i < arr.length; i += 3) {
+      fw.velocities[i+1] -= FIREWORK_GRAVITY * dt;
+      arr[i]   += fw.velocities[i]   * dt;
+      arr[i+1] += fw.velocities[i+1] * dt;
+      arr[i+2] += fw.velocities[i+2] * dt;
+    }
+    fw.points.geometry.attributes.position.needsUpdate = true;
+    fw.points.material.opacity = Math.max(0, 1 - fw.age/fw.life);
+    if (fw.age >= fw.life) {
+      fireworksGroup.remove(fw.points);
+      fw.points.geometry.dispose();
+      fw.points.material.dispose();
+      return false;
+    }
+    return true;
+  });
+}
+
+// Clears every spawned item (props, wall debris, pins, wrecking balls, any
+// in-flight fireworks) - a full reset for between takes. Deliberately leaves
+// zones and calibration alone; those are setup, not "items".
+function clearAllObstacles() {
+  props = [];
+  rebuildProps();
+  walls.forEach(w => {
+    wallGroup.remove(w.group);
+    w.bricks.forEach(b => b.mesh.material.dispose());
+  });
+  walls = [];
+  pinRacks.forEach(rack => pinsGroup.remove(rack.group));
+  pinRacks = [];
+  wreckingBalls.forEach(wb => {
+    wreckGroup.remove(wb.group);
+    wb.chain.geometry.dispose();
+    wb.chain.material.dispose();
+  });
+  wreckingBalls = [];
+  pendingFireworkTimeouts.forEach(id => clearTimeout(id));
+  pendingFireworkTimeouts = [];
+  fireworks.forEach(fw => {
+    fireworksGroup.remove(fw.points);
+    fw.points.geometry.dispose();
+    fw.points.material.dispose();
+  });
+  fireworks = [];
+}
+
+// Dispatches Stream Deck / chat-style trigger events (from the WS connector's
+// event channel) to the matching obstacle.
+function handleObstacleEvent(kind) {
+  if (kind === 'wall') spawnWall(currentSample());
+  else if (kind === 'pins') spawnPins(currentSample());
+  else if (kind === 'wreckingball') spawnWreckingBall(currentSample());
+  else if (kind === 'fireworks') spawnFireworks(currentSample());
+  else if (kind === 'clear') clearAllObstacles();
+}
+
+// Drift smoke: automatic, not a button - billows from the outside of a
+// corner once lateralEMA (see trackLateral, above) crosses a "that's a real
+// corner" threshold. Sprites always face the camera, so no billboard math.
+function makeSmokeTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0,   'rgba(215,215,220,0.55)');
+  grad.addColorStop(0.5, 'rgba(200,200,205,0.28)');
+  grad.addColorStop(1,   'rgba(200,200,205,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+const smokeTex = makeSmokeTexture();
+const smokeGroup = new THREE.Group();
+scene.add(smokeGroup);
+let smokePuffs = [];
+let smokeCooldown = 0;
+const DRIFT_LAT_THRESHOLD = 3.2;   // m/s^2 (~0.33g) sustained turning before smoke kicks in
+
+function updateDriftSmoke(s, dt) {
+  smokeCooldown -= dt;
+  const latAbs = Math.abs(lateralEMA);
+  if (s && latAbs > DRIFT_LAT_THRESHOLD && speedEMA > 3 && smokeCooldown <= 0) {
+    smokeCooldown = 0.07;
+    const worldUp = new THREE.Vector3(0, 1, 0);
+    const fwd = new THREE.Vector3(Math.sin(roadYaw)*Math.cos(roadPitch), Math.sin(roadPitch), Math.cos(roadYaw)*Math.cos(roadPitch)).normalize();
+    const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+    const side = lateralEMA > 0 ? 1 : -1;   // billows from the outside of the turn
+    const groundY = s.posY + groundOffset;
+    for (let i = 0; i < 2; i++) {
+      const mat = new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false });
+      const spr = new THREE.Sprite(mat);
+      spr.position.set(s.posX, groundY + 0.3, s.posZ)
+        .addScaledVector(right, side * (0.8 + Math.random()*0.8))
+        .addScaledVector(worldUp, Math.random()*0.4);
+      const startScale = 0.8 + Math.random()*0.5;
+      spr.scale.setScalar(startScale);
+      smokeGroup.add(spr);
+      smokePuffs.push({
+        spr, startScale, age: 0, life: 1.3 + Math.random()*0.6,
+        vel: new THREE.Vector3(right.x*side*(0.4+Math.random()*0.6), 0.6+Math.random()*0.5, right.z*side*(0.4+Math.random()*0.6)),
+      });
+    }
+  }
+  smokePuffs = smokePuffs.filter(p => {
+    p.age += dt;
+    p.spr.position.addScaledVector(p.vel, dt);
+    p.vel.multiplyScalar(0.98);   // drag - drifts, then hangs
+    p.spr.scale.setScalar(p.startScale * (1 + p.age*0.6));   // expands as it disperses
+    p.spr.material.opacity = Math.max(0, 1 - p.age/p.life) * 0.6;
+    if (p.age >= p.life) {
+      smokeGroup.remove(p.spr);
+      p.spr.material.dispose();
+      return false;
+    }
+    return true;
+  });
+}
+
+// Zones (world-space polygons painted red).
+let zones = [];                 // array of arrays of {x,y,z}
+let zoneMeshes = [];
+const zoneGroup = new THREE.Group();
+scene.add(zoneGroup);
+
+// Vertex editing: draggable handles on top of the zones.
+let editMode = false, dragging = null, selected = null;   // selected = {zi, vi}
+const handleGroup = new THREE.Group();
+scene.add(handleGroup);
+const raycaster = new THREE.Raycaster();
+const centroid = poly => {
+  const c = poly.reduce((a,p)=>({x:a.x+p.x,y:a.y+p.y,z:a.z+p.z}),{x:0,y:0,z:0});
+  const n = poly.length || 1; return { x:c.x/n, y:c.y/n, z:c.z/n };
+};
+function buildHandles() {
+  while (handleGroup.children.length) { const c = handleGroup.children.pop(); c.geometry.dispose(); }
+  handleGroup.visible = editMode;
+  if (!editMode) return;
+  zones.forEach((poly, zi) => {
+    if (poly.length >= 3) {
+      const c = centroid(poly);
+      const ch = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 10),
+        new THREE.MeshBasicMaterial({ color:0x38bdf8, depthTest:false }));
+      ch.position.set(c.x, c.y + 0.05, c.z); ch.renderOrder = 20; ch.userData = { zi, type:'center' };
+      handleGroup.add(ch);
+    }
+    poly.forEach((p, vi) => {
+      const sel = selected && selected.zi === zi && selected.vi === vi;
+      const h = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 10),
+        new THREE.MeshBasicMaterial({ color: sel ? 0xffffff : 0xffd166, depthTest:false }));
+      h.position.set(p.x, p.y + 0.05, p.z); h.renderOrder = 21; h.userData = { zi, vi, type:'vertex' };
+      handleGroup.add(h);
+    });
+  });
+}
+
+function rebuildZones() {
+  zoneMeshes.forEach(m => { zoneGroup.remove(m); m.geometry.dispose(); });
+  zoneMeshes = [];
+  zones.forEach(poly => {
+    if (poly.length < 3) {
+      // Show in-progress points as small markers so authoring is visible.
+      poly.forEach(p => {
+        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8),
+          new THREE.MeshBasicMaterial({ color:0xffd166 }));
+        dot.position.set(p.x, p.y + 0.1, p.z);
+        zoneGroup.add(dot); zoneMeshes.push(dot);
+      });
+      return;
+    }
+    // Fan-triangulate from the centroid: fine for the soft blobs we need.
+    const c = poly.reduce((a,p)=>({x:a.x+p.x,y:a.y+p.y,z:a.z+p.z}),{x:0,y:0,z:0});
+    c.x/=poly.length; c.y/=poly.length; c.z/=poly.length;
+    const verts = [c.x, c.y, c.z];
+    poly.forEach(p => verts.push(p.x, p.y, p.z));
+    const idx = [];
+    for (let i=1;i<=poly.length;i++) idx.push(0, i, (i % poly.length) + 1);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    g.setIndex(idx);
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({
+      color:0xff2b2b, transparent:true, opacity:0.5, side:THREE.DoubleSide,
+      depthTest:false, depthWrite:false }));
+    zoneGroup.add(m); zoneMeshes.push(m);
+  });
+  document.getElementById('zone-status').textContent =
+    `${zones.length} zone(s), ${zones.reduce((n,z)=>n+z.length,0)} points`;
+  buildHandles();
+  saveZones();
+}
+
+// ---- Telemetry ------------------------------------------------------------
+let tel = [];                    // sorted samples {t, posX, posY, posZ, rotYaw, rotPitch, rotRoll}
+let usingVideo = false;          // a video element (file or stream) is the backdrop
+let telSource = 'synthetic';     // synthetic | file | live
+let synthClock = 0, playing = false, lastT = performance.now();
+
+// Live telemetry ring buffer: each entry stamped with arrival time so the
+// timeOffset slider can delay it to match capture-card / OBS video latency.
+let liveBuffer = [];
+let rawDebug = [];
+let ws = null;
+function pickLive() {
+  if (!liveBuffer.length) return null;
+  const want = performance.now()/1000 - Math.max(0, calib.timeOff);
+  let chosen = liveBuffer[0];
+  for (let i = 0; i < liveBuffer.length; i++) {
+    if (liveBuffer[i].arr <= want) chosen = liveBuffer[i]; else break;
+  }
+  return chosen.s;
+}
+function connectWS(url) {
+  try { if (ws) ws.close(); } catch {}
+  ws = new WebSocket(url);
+  ws.onopen = () => { telSource = 'live'; setStatus('telemetry connected'); refreshPill(); };
+  ws.onclose = () => { if (telSource === 'live') setStatus('telemetry disconnected'); };
+  ws.onerror = () => setStatus('telemetry connection failed');
+  ws.onmessage = (ev) => {
+    let d; try { d = JSON.parse(ev.data); } catch { return; }
+    if (d.type === 'event') { handleObstacleEvent(d.event); return; }
+    if (d.type && d.type !== 'telemetry') return;      // ignore status frames
+    if (d.posX == null) return;
+    liveBuffer.push({ arr: performance.now()/1000, s: {
+      posX:d.posX, posY:d.posY, posZ:d.posZ,
+      rotYaw:d.rotYaw ?? 0, rotPitch:d.rotPitch ?? 0, rotRoll:d.rotRoll ?? 0 } });
+    if (liveBuffer.length > 400) liveBuffer.splice(0, liveBuffer.length - 400);
+    rawDebug.push(d);                                   // full frames for diagnosis
+    if (rawDebug.length > 60) rawDebug.shift();
+  };
+}
+
+function sampleAt(t) {
+  if (!tel.length) return null;
+  if (t <= tel[0].t) return tel[0];
+  if (t >= tel[tel.length-1].t) return tel[tel.length-1];
+  let lo=0, hi=tel.length-1;
+  while (hi - lo > 1) { const mid=(lo+hi)>>1; if (tel[mid].t < t) lo=mid; else hi=mid; }
+  const a=tel[lo], b=tel[hi], f=(t-a.t)/((b.t-a.t)||1);
+  const lerp=(k)=>a[k] + (b[k]-a[k])*f;
+  return { t, posX:lerp('posX'), posY:lerp('posY'), posZ:lerp('posZ'),
+           rotYaw:lerp('rotYaw'), rotPitch:lerp('rotPitch'), rotRoll:lerp('rotRoll') };
+}
+
+const D2R = Math.PI/180;
+// Derive heading + pitch from the direction of travel, which is self
+// consistent with the car's motion (no sideways slide) and does not rely on
+// GT7's unverified rotation-field convention. Updates only after the car has
+// moved a short baseline, to keep it stable at low speed.
+let useMotion = true;
+let motionSmooth = 0.12;         // heading smoothing (lower = smoother, more lag)
+let prevPos = null;
+let vEMA = { x:0, y:0, z:0 };    // smoothed velocity vector -> heading
+let headYP = { yaw: 0, pitch: 0 };
+function motionYP(s) {
+  if (prevPos) {
+    const dx = s.posX-prevPos.x, dy = s.posY-prevPos.y, dz = s.posZ-prevPos.z;
+    // Only fold in real movement (skip duplicate frames / standing still), and
+    // smooth the velocity vector rather than the raw angle to avoid wrap jumps.
+    if (Math.hypot(dx, dz) > 0.002) {
+      vEMA.x += (dx-vEMA.x)*motionSmooth;
+      vEMA.y += (dy-vEMA.y)*motionSmooth;
+      vEMA.z += (dz-vEMA.z)*motionSmooth;
+    }
+  }
+  prevPos = { x:s.posX, y:s.posY, z:s.posZ };
+  const horiz = Math.hypot(vEMA.x, vEMA.z);
+  if (horiz > 1e-4) headYP = { yaw: Math.atan2(vEMA.x, vEMA.z), pitch: Math.atan2(vEMA.y, horiz) };
+  return headYP;
+}
+// GT7's bumper cam cosmetically dips under braking and lifts under
+// acceleration (a rendering effect, not a physics rotation), so it isn't in
+// any telemetry field. Approximate it from the car's own deceleration -
+// tracked independently of the yaw/pitch source above, from raw position
+// deltas, so it works whether "Heading from motion" is on or off.
+let prevAccelPos = null, prevAccelT = null, speedEMA = 0, accelEMA = 0;
+function trackAccel(s, dt) {
+  const now = (typeof s.t === 'number') ? s.t : (prevAccelT === null ? 0 : prevAccelT + dt);
+  const rdt = prevAccelT === null ? 0 : now - prevAccelT;
+  if (prevAccelPos && rdt > 0.001) {
+    const inst = Math.hypot(s.posX - prevAccelPos.x, s.posZ - prevAccelPos.z) / rdt;
+    const prevSpeedEMA = speedEMA;
+    speedEMA += (inst - speedEMA) * 0.3;
+    const accel = (speedEMA - prevSpeedEMA) / rdt;   // m/s^2, negative under braking
+    accelEMA += (accel - accelEMA) * 0.25;
+  }
+  prevAccelPos = { x: s.posX, z: s.posZ };
+  prevAccelT = now;
+}
+// Lateral G for the drift-smoke effect: v * yaw-rate, the standard
+// centripetal-acceleration relation, using the already-smoothed
+// motion-derived heading so it doesn't need its own noisy differentiation.
+let prevLatYaw = null, lateralEMA = 0;
+function trackLateral(dt) {
+  if (prevLatYaw !== null && dt > 0.001) {
+    let dYaw = headYP.yaw - prevLatYaw;
+    if (dYaw > Math.PI) dYaw -= Math.PI*2; else if (dYaw < -Math.PI) dYaw += Math.PI*2;
+    const lat = speedEMA * (dYaw / dt);   // m/s^2, signed with the turn direction
+    lateralEMA += (lat - lateralEMA) * 0.25;
+  }
+  prevLatYaw = headYP.yaw;
+}
+// Exposed for the calibration grid: the road's own yaw/pitch, corrected for
+// mounting bias same as the camera, but WITHOUT brake dive - that's a
+// cosmetic camera wobble, not a real change in the road's slope, so the
+// grid (which represents the road) shouldn't dive with it.
+let roadYaw = 0, roadPitch = 0;
+function updateCamera(s, dt) {
+  trackAccel(s, dt);
+  let by, bp;
+  if (useMotion) { const yp = motionYP(s); by = yp.yaw; bp = yp.pitch; }
+  else { by = s.rotYaw||0; bp = s.rotPitch||0; }
+  trackLateral(dt);   // needs headYP, which motionYP just updated above
+  // Negative accelEMA (braking) pitches the camera down, so the horizon
+  // rises to match the game's own cosmetic brake-dive.
+  const brakeDive = (accelEMA / 9.81) * calib.brakeDive * D2R;
+  const yaw   = by + calib.yawTrim*D2R;
+  const pitch = bp + calib.pitchTrim*D2R + brakeDive;
+  const roll  = (s.rotRoll||0)  + calib.rollTrim*D2R;
+  roadYaw = yaw; roadPitch = pitch - brakeDive;
+  const cp = Math.cos(pitch);
+  const fwd = new THREE.Vector3(Math.sin(yaw)*cp, Math.sin(pitch), Math.cos(yaw)*cp).normalize();
+  const up  = new THREE.Vector3(0,1,0);
+  const right = new THREE.Vector3().crossVectors(fwd, up).normalize();
+  const pos = new THREE.Vector3(s.posX, s.posY, s.posZ)
+    .addScaledVector(fwd, calib.offFwd)
+    .addScaledVector(up, calib.offUp)
+    .addScaledVector(right, calib.offRight);
+  camera.fov = calib.fov; camera.updateProjectionMatrix();
+  camera.position.copy(pos);
+  camera.up.set(0,1,0);
+  camera.lookAt(pos.clone().add(fwd));
+  camera.rotateOnAxis(new THREE.Vector3(0,0,-1), roll);
+}
+
+// Tilts the calibration grid to the road's current slope + heading (roadYaw/
+// roadPitch, set by updateCamera) so it reads as flat-on-the-tarmac uphill
+// and downhill instead of always lying dead level.
+function updateCalGrid(s) {
+  const sp = 5;
+  calGrid.position.set(Math.round(s.posX/sp)*sp, s.posY + groundOffset, Math.round(s.posZ/sp)*sp);
+  const cp = Math.cos(roadPitch);
+  const fwd = new THREE.Vector3(Math.sin(roadYaw)*cp, Math.sin(roadPitch), Math.cos(roadYaw)*cp).normalize();
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const right = new THREE.Vector3().crossVectors(fwd, worldUp).normalize();
+  const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
+  calGrid.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, fwd, up));
+}
+
+function currentTime() {
+  return (usingVideo ? video.currentTime : synthClock) + calib.timeOff;
+}
+function currentSample() {
+  return telSource === 'live' ? pickLive() : sampleAt(currentTime());
+}
+function setStatus(t) { const el = document.getElementById('live-status'); if (el) el.textContent = t; }
+function refreshPill() {
+  document.getElementById('mode-pill').textContent =
+    (telSource === 'live' ? 'live' : usingVideo ? 'video' : 'synthetic');
+}
+
+// ---- Render loop ----------------------------------------------------------
+function resize() {
+  // Sit the overlay exactly on the video's rendered rectangle. A capture-card
+  // feed is letterboxed (object-fit: contain) inside the stage, so the canvas
+  // has to match that inner rect and aspect, not the whole stage, or the 3D
+  // scene and the video road are at different scales and never line up.
+  const sw = stage.clientWidth, sh = stage.clientHeight;
+  let x = 0, y = 0, w = sw, h = sh;
+  if (usingVideo && video.videoWidth) {
+    const va = video.videoWidth / video.videoHeight, sa = sw / sh;
+    if (va > sa) { w = sw; h = sw / va; } else { h = sh; w = sh * va; }
+    x = (sw - w) / 2; y = (sh - h) / 2;
+  }
+  canvas.style.left = x + 'px'; canvas.style.top = y + 'px';
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+video.addEventListener('loadedmetadata', resize);
+video.addEventListener('resize', resize);
+
+function tick() {
+  requestAnimationFrame(tick);
+  const now = performance.now();
+  const dt = (now - lastT)/1000; lastT = now;
+  if (!usingVideo && telSource !== 'live' && playing) {
+    synthClock += dt;
+    if (tel.length && synthClock > tel[tel.length-1].t) synthClock = 0;
+  }
+  // Show the synthetic grid only in the pure demo state.
+  demoGroup.visible = !usingVideo && telSource === 'synthetic';
+  const s = currentSample();
+  if (s) updateCamera(s, dt);
+  // Keep the calibration grid centred under the car (snapped so its lines
+  // don't shimmer) at road height, and tilt it to the current road slope +
+  // heading so it actually reads as "flat on the tarmac" on a hill or in a
+  // corner instead of always lying dead level.
+  if (calGrid.visible && s) {
+    updateCalGrid(s);
+  }
+  // Gently spin any props that have spin, and hide ones too far from the
+  // camera so props on a distant, unrelated part of the track don't peek
+  // through when the camera happens to point at them.
+  propGroup.children.forEach(g => {
+    if (g.userData.spin) g.userData.mesh.rotation.y += g.userData.spin;
+    g.visible = camera.position.distanceTo(g.position) <= PROP_MAX_DIST;
+  });
+  updateWalls(s, dt);
+  updatePins(s, dt);
+  updateWreckingBalls(dt);
+  updateDriftSmoke(s, dt);
+  updateFireworks(dt);
+  // Keep edit handles a roughly constant on-screen size so they stay grabbable.
+  if (editMode) handleGroup.children.forEach(h => {
+    h.scale.setScalar(Math.max(0.3, camera.position.distanceTo(h.position) * 0.02));
+  });
+  // Scrub + clock UI (only meaningful for file / synthetic timelines).
+  if (telSource !== 'live') {
+    const dur = usingVideo ? (video.duration||0) : (tel.length ? tel[tel.length-1].t : 0);
+    const cur = usingVideo ? video.currentTime : synthClock;
+    if (dur) document.getElementById('scrub').value = String(Math.round(cur/dur*1000));
+    document.getElementById('clock').textContent = cur.toFixed(2)+'s';
+  } else {
+    document.getElementById('clock').textContent = 'live';
+  }
+  const dbg = document.getElementById('dbg');
+  if (dbg) {
+    dbg.textContent =
+      `source: ${telSource}   frames: ${liveBuffer.length}\n` +
+      (s ? `pos  x ${s.posX.toFixed(1)}  y ${s.posY.toFixed(1)}  z ${s.posZ.toFixed(1)}\n` +
+           `rot  yaw ${(s.rotYaw||0).toFixed(3)}  pitch ${(s.rotPitch||0).toFixed(3)}  roll ${(s.rotRoll||0).toFixed(3)}\n` +
+           `travel heading ${(headYP.yaw*180/Math.PI).toFixed(0)}deg  pitch ${(headYP.pitch*180/Math.PI).toFixed(1)}deg`
+         : 'no sample yet');
+  }
+  renderer.render(scene, camera);
+}
+resize(); tick();
+
+// ---- Synthetic demo data --------------------------------------------------
+function buildSynthetic() {
+  // A gently curving flat "lap" driven forward, plus one red patch off to the
+  // left so you can see it hold position as the camera approaches and passes.
+  tel = [];
+  const HZ = 30, SECS = 24, SPEED = 40; // m/s
+  let x=0, z=0;
+  for (let i=0;i<HZ*SECS;i++){
+    const t = i/HZ;
+    const yaw = 0.15*Math.sin(t*0.25);        // slow S
+    x += Math.sin(yaw)*SPEED/HZ;
+    z += Math.cos(yaw)*SPEED/HZ;
+    tel.push({ t, posX:x, posY:0, posZ:z, rotYaw:yaw, rotPitch:0, rotRoll:0 });
+  }
+  // Zone: a 6x8m patch ~150m ahead, a couple of metres left of the line.
+  const anchor = tel.find(s => s.posZ > 150) || tel[tel.length-1];
+  const cx = anchor.posX - 4, cz = anchor.posZ;
+  zones = [[
+    { x:cx-3, y:0, z:cz-4 }, { x:cx+3, y:0, z:cz-4 },
+    { x:cx+3, y:0, z:cz+4 }, { x:cx-3, y:0, z:cz+4 },
+  ]];
+  rebuildZones();
+  usingVideo = false; telSource = 'synthetic'; synthClock = 0; playing = true;
+  video.removeAttribute('src'); video.load(); video.style.display='none';
+  refreshPill();
+  resize();
+}
+
+// ---- File loading ---------------------------------------------------------
+document.getElementById('f-video').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  video.src = URL.createObjectURL(file);
+  video.style.display = 'block';
+  video.onloadedmetadata = () => { usingVideo = true; playing=false; resize();
+    document.getElementById('mode-pill').textContent = 'video'; };
+});
+document.getElementById('f-tel').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const text = await file.text();
+  const rows = text.split('\n').filter(l => l.trim()).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  // Accept recorder.py output; default missing orientation to 0.
+  tel = rows.map(r => ({
+    t: r.t ?? 0, posX:r.posX ?? 0, posY:r.posY ?? 0, posZ:r.posZ ?? 0,
+    rotYaw:r.rotYaw ?? 0, rotPitch:r.rotPitch ?? 0, rotRoll:r.rotRoll ?? 0,
+  })).sort((a,b)=>a.t-b.t);
+  synthClock = 0; telSource = 'file'; refreshPill();
+});
+document.getElementById('f-zones').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try { zones = JSON.parse(await file.text()); rebuildZones(); }
+  catch { alert('Could not parse zones JSON.'); }
+});
+document.getElementById('btn-synth').addEventListener('click', buildSynthetic);
+
+// ---- Calibration sliders --------------------------------------------------
+const slidersEl = document.getElementById('sliders');
+CALIB_DEFS.forEach(d => {
+  const wrap = document.createElement('div'); wrap.className='field';
+  wrap.innerHTML = `<label class="row"><span>${d.label}</span><span class="v" id="v-${d.key}">${d.val}</span></label>`;
+  const inp = document.createElement('input');
+  inp.type='range'; inp.min=d.min; inp.max=d.max; inp.step=d.step; inp.value=d.val;
+  inp.addEventListener('input', () => { calib[d.key]=parseFloat(inp.value);
+    document.getElementById('v-'+d.key).textContent = inp.value; saveCalib(); });
+  inp.dataset.key = d.key;
+  wrap.appendChild(inp); slidersEl.appendChild(wrap);
+});
+
+// ---- Zone authoring -------------------------------------------------------
+// Use the live feed when live, the timeline otherwise (the old version always
+// read the empty file array, so corners never landed in live mode).
+function carPoint() { const s = currentSample(); return s ? { x:s.posX, y:s.posY, z:s.posZ } : null; }
+document.getElementById('btn-corner').addEventListener('click', () => {
+  const p = carPoint(); if (!p) return;
+  if (!zones.length) zones.push([]);
+  zones[zones.length-1].push(p); rebuildZones();
+});
+// One click drops a ready-made box on the road ahead, oriented to travel, so
+// you always get a visible zone you can then drag into shape.
+document.getElementById('btn-box').addEventListener('click', () => {
+  const s = currentSample(); if (!s) return;
+  const yaw = headYP.yaw;
+  const fx = Math.sin(yaw), fz = Math.cos(yaw);   // forward on the ground
+  const rx = Math.cos(yaw), rz = -Math.sin(yaw);  // right
+  const cx = s.posX + fx*15, cz = s.posZ + fz*15, cy = s.posY + groundOffset;
+  const hw = 4, hl = 4;
+  const corner = (a, b) => ({ x: cx + rx*a + fx*b, y: cy, z: cz + rz*a + fz*b });
+  zones.push([corner(-hw,-hl), corner(hw,-hl), corner(hw,hl), corner(-hw,hl)]);
+  rebuildZones();
+});
+document.getElementById('btn-newzone').addEventListener('click', () => { zones.push([]); rebuildZones(); });
+document.getElementById('btn-undo').addEventListener('click', () => {
+  for (let i=zones.length-1;i>=0;i--) { if (zones[i].length) { zones[i].pop(); if (!zones[i].length) zones.splice(i,1); break; } }
+  rebuildZones();
+});
+
+// ---- Vertex editing (drag / select / nudge / delete) ----------------------
+function ndc(e) {
+  const r = canvas.getBoundingClientRect();
+  return new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+}
+canvas.addEventListener('pointerdown', e => {
+  if (!editMode) return;
+  raycaster.setFromCamera(ndc(e), camera);
+  const hit = raycaster.intersectObjects(handleGroup.children, false)[0];
+  if (!hit) { selected = null; buildHandles(); return; }
+  const ud = hit.object.userData;
+  if (ud.type === 'vertex') selected = { zi:ud.zi, vi:ud.vi };
+  const planeY = ud.type === 'vertex' ? zones[ud.zi][ud.vi].y : centroid(zones[ud.zi]).y;
+  const plane = new THREE.Plane(new THREE.Vector3(0,1,0), -planeY);
+  const p0 = new THREE.Vector3(); raycaster.ray.intersectPlane(plane, p0);
+  dragging = { ud, plane, start:p0, orig: zones[ud.zi].map(q => ({ ...q })) };
+  buildHandles(); e.preventDefault();
+});
+canvas.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  raycaster.setFromCamera(ndc(e), camera);
+  const p = new THREE.Vector3();
+  if (!raycaster.ray.intersectPlane(dragging.plane, p)) return;
+  const ud = dragging.ud;
+  if (ud.type === 'vertex') { const v = zones[ud.zi][ud.vi]; v.x = p.x; v.z = p.z; }
+  else { const dx = p.x-dragging.start.x, dz = p.z-dragging.start.z;
+    zones[ud.zi] = dragging.orig.map(q => ({ x:q.x+dx, y:q.y, z:q.z+dz })); }
+  rebuildZones();
+});
+window.addEventListener('pointerup', () => { dragging = null; });
+window.addEventListener('keydown', e => {
+  if (!editMode || !selected) return;
+  const v = zones[selected.zi]?.[selected.vi]; if (!v) return;
+  const step = e.shiftKey ? 1 : 0.2;
+  if (e.key === 'ArrowUp') v.z += step; else if (e.key === 'ArrowDown') v.z -= step;
+  else if (e.key === 'ArrowLeft') v.x -= step; else if (e.key === 'ArrowRight') v.x += step;
+  else return;
+  e.preventDefault(); rebuildZones();
+});
+document.getElementById('btn-edit').addEventListener('click', () => {
+  editMode = !editMode;
+  canvas.style.pointerEvents = editMode ? 'auto' : 'none';
+  const b = document.getElementById('btn-edit');
+  b.classList.toggle('gold', editMode);
+  b.textContent = editMode ? 'Editing (on)' : 'Edit vertices';
+  if (!editMode) { selected = null; dragging = null; }
+  buildHandles();
+});
+document.getElementById('btn-del-vert').addEventListener('click', () => {
+  if (!selected) return;
+  const z = zones[selected.zi]; if (!z) return;
+  z.splice(selected.vi, 1);
+  if (!z.length) zones.splice(selected.zi, 1);
+  selected = null; rebuildZones();
+});
+
+// ---- Export ---------------------------------------------------------------
+function download(name, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type:'application/json' });
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+document.getElementById('btn-export-calib').addEventListener('click', () => download('camera-calibration.json', calib));
+document.getElementById('btn-export-zones').addEventListener('click', () => download('zones.json', zones));
+
+// Calibration grid + heading controls.
+document.getElementById('cal-motion').addEventListener('change', e => {
+  useMotion = e.target.checked; prevPos = null; vEMA = { x:0, y:0, z:0 };
+});
+document.getElementById('cal-smooth').addEventListener('input', e => {
+  motionSmooth = parseFloat(e.target.value);
+  document.getElementById('v-smooth').textContent = motionSmooth.toFixed(2);
+});
+document.getElementById('cal-grid').addEventListener('change', e => { calGrid.visible = e.target.checked; });
+// Fun props.
+const rnd = arr => arr[Math.floor(Math.random()*arr.length)];
+document.getElementById('btn-prop').addEventListener('click', () => {
+  const s = currentSample(); if (!s) return;
+  const yaw = headYP.yaw, fx = Math.sin(yaw), fz = Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+  const dist = 10 + Math.random()*18, lat = (Math.random()-0.5)*8;
+  props.push({
+    type: rnd(PROP_TYPES), color: rnd(PROP_COLORS),
+    x: s.posX + fx*dist + rx*lat, y: s.posY + groundOffset, z: s.posZ + fz*dist + rz*lat,
+    size: 1 + Math.random()*1.6, rotY: Math.random()*6.28, spin: (Math.random()-0.5)*0.03,
+  });
+  rebuildProps();
+});
+document.getElementById('btn-clear-props').addEventListener('click', () => { props = []; rebuildProps(); });
+
+document.getElementById('btn-wall').addEventListener('click', () => spawnWall(currentSample()));
+document.getElementById('btn-pins').addEventListener('click', () => spawnPins(currentSample()));
+document.getElementById('btn-wreckingball').addEventListener('click', () => spawnWreckingBall(currentSample()));
+document.getElementById('btn-fireworks').addEventListener('click', () => spawnFireworks(currentSample()));
+document.getElementById('btn-clear-obstacles').addEventListener('click', () => clearAllObstacles());
+
+document.getElementById('btn-copy-tel').addEventListener('click', () => {
+  const sample = rawDebug.slice(-12);
+  const text = JSON.stringify(sample, null, 2);
+  navigator.clipboard.writeText(text).then(
+    () => setStatus(`copied ${sample.length} telemetry frames to clipboard`),
+    () => { setStatus('clipboard blocked; sample logged to console'); console.log(text); });
+});
+document.getElementById('cal-groundy').addEventListener('input', e => {
+  groundOffset = parseFloat(e.target.value);
+  document.getElementById('v-groundy').textContent = groundOffset.toFixed(2);
+});
+
+// ---- Persistence (so calibration + zones survive reloads and OBS mode) -----
+function saveCalib() { try { localStorage.setItem('to_calib', JSON.stringify(calib)); } catch {} }
+function saveZones() { try { localStorage.setItem('to_zones', JSON.stringify(zones)); } catch {} }
+function loadCalib() {
+  try {
+    const s = JSON.parse(localStorage.getItem('to_calib') || 'null'); if (!s) return;
+    Object.keys(s).forEach(k => { if (k in calib) calib[k] = s[k]; });
+    document.querySelectorAll('#sliders input[type=range]').forEach(inp => {
+      const k = inp.dataset.key; if (k in calib) { inp.value = calib[k]; document.getElementById('v-'+k).textContent = calib[k]; }
+    });
+  } catch {}
+}
+function loadZones() {
+  try { const z = JSON.parse(localStorage.getItem('to_zones') || 'null'); if (z && z.length) { zones = z; rebuildZones(); } } catch {}
+}
+function loadProps() {
+  try { const p = JSON.parse(localStorage.getItem('to_props') || 'null'); if (p && p.length) { props = p; rebuildProps(); } } catch {}
+}
+
+// ---- Live: telemetry + video ----------------------------------------------
+document.getElementById('btn-ws').addEventListener('click', () =>
+  connectWS(document.getElementById('ws-url').value.trim() || 'ws://localhost:8765'));
+
+async function useStream(getStream, label) {
+  try {
+    const stream = await getStream();
+    video.srcObject = stream; video.style.display = 'block';
+    await video.play().catch(()=>{});
+    usingVideo = true; refreshPill(); resize(); setStatus(label + ' connected');
+  } catch (e) { setStatus(label + ' failed: ' + e.message); }
+}
+document.getElementById('btn-cam').addEventListener('click', async () => {
+  // Grant + label devices, then let the user pick (capture card is often not
+  // the default camera).
+  try {
+    await navigator.mediaDevices.getUserMedia({ video: true });
+    const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    let deviceId = cams[0]?.deviceId;
+    if (cams.length > 1) {
+      const pick = prompt('Pick video device:\n' + cams.map((c,i)=>`${i}: ${c.label||'device '+i}`).join('\n'), '0');
+      const idx = Math.max(0, Math.min(cams.length-1, parseInt(pick)||0));
+      deviceId = cams[idx].deviceId;
+    }
+    useStream(() => navigator.mediaDevices.getUserMedia({ video: { deviceId: deviceId ? { exact: deviceId } : undefined } }), 'capture device');
+  } catch (e) { setStatus('capture failed: ' + e.message); }
+});
+document.getElementById('btn-screen').addEventListener('click', () =>
+  useStream(() => navigator.mediaDevices.getDisplayMedia({ video: true }), 'screen share'));
+
+// ---- OBS transparent mode -------------------------------------------------
+// The panel stays visible and interactive in OBS mode (reachable through
+// OBS's Interact button) so calibration can be tuned live; only the stage
+// background goes transparent. Esc is kept as a quick way to flip it off
+// when testing in a normal browser tab.
+function setObs(on) {
+  document.body.classList.toggle('obs', on);
+  document.getElementById('obs-toggle').checked = on;
+  resize();
+}
+document.getElementById('obs-toggle').addEventListener('change', e => setObs(e.target.checked));
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.body.classList.contains('obs')) setObs(false);
+});
+
+// ---- Init -----------------------------------------------------------------
+buildSynthetic();
+loadCalib();
+loadZones();
+loadProps();
+const params = new URLSearchParams(location.search);
+if (params.get('obs') === '1') {
+  setObs(true);
+  connectWS(params.get('ws') || 'ws://localhost:8765');
+}
+
+// ---- Transport ------------------------------------------------------------
+document.getElementById('play').addEventListener('click', () => {
+  if (usingVideo) { video.paused ? video.play() : video.pause(); }
+  else { playing = !playing; }
+  document.getElementById('play').textContent = (usingVideo ? !video.paused : playing) ? 'Pause' : 'Play';
+});
+document.getElementById('scrub').addEventListener('input', e => {
+  const f = e.target.value/1000;
+  if (usingVideo && video.duration) video.currentTime = f*video.duration;
+  else if (tel.length) synthClock = f*tel[tel.length-1].t;
+});
+</script>
+</body>
+</html>

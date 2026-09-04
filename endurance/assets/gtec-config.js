@@ -1,0 +1,13 @@
+// GTEC — Supabase configuration
+// Fill in your project credentials from: Supabase → Project Settings → API
+// The anon key is safe to commit — it's a public client key.
+// The service_role key must NEVER appear here — Netlify Functions only.
+//
+// vapidPublicKey is the public half of the web push VAPID keypair — also
+// safe to commit, same as the anon key. The matching private key lives
+// ONLY in the Netlify env var VAPID_PRIVATE_KEY, never here.
+window.GTEC_CONFIG = {
+    supabaseUrl:     'https://wtryzoabpkqtucfpmbnn.supabase.co',
+    supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0cnl6b2FicGtxdHVjZnBtYm5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTg0MjMsImV4cCI6MjA5NTk5NDQyM30.Jpx_23mxUsiS5Ke2MCZKOKBu09bH1XuViY6heAB-jds',
+    vapidPublicKey:  'BOw-0o-Z4blUAHYQNUdNXHrTuXQQnbSbKjJk-TI_aUZKkNiZQRV-Bu0DG0AmwZxU6TOssGUkhKF8FX4msRHTfD0'
+};

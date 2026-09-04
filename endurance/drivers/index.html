@@ -1,0 +1,2098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drivers | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="Driver list for GTEC, the team-based Gran Turismo 7 endurance championship. Profiles, career stats, ELO ratings, achievements, head-to-heads and season form.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/drivers/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Open Graph / Twitter card -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Drivers">
+    <meta property="og:description" content="Every driver competing in the GTEC endurance championship.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/drivers/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Drivers">
+    <meta name="twitter:description" content="Every driver competing in the GTEC endurance championship.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --green: #22c55e;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .gtec-nav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5,6,8,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--text);
+            text-decoration: none;
+            text-indent: 0.32em;
+        }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; }
+        .gtec-nav .nav-links a {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            padding: 0.45rem 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .gtec-nav .back:hover {
+            color: var(--text);
+            border-color: rgba(255,255,255,0.25);
+        }
+
+        /* Hero */
+        .hero { padding: 3rem 2rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+        .hero-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; }
+        .hero-title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.4rem; }
+        .hero-sub { color: var(--muted); font-size: 0.88rem; }
+
+        /* Content */
+        .content { max-width: 1100px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+
+        /* Search bar — shared between Drivers and Teams listings */
+        .gtec-search-wrap {
+            position: relative;
+            max-width: 480px;
+            margin: 0 auto 1.75rem;
+        }
+        .gtec-search-icon {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px; height: 16px;
+            color: var(--muted);
+            pointer-events: none;
+        }
+        .gtec-search-input {
+            width: 100%;
+            padding: 0.7rem 1rem 0.7rem 2.4rem;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92rem;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .gtec-search-input::placeholder { color: var(--muted); }
+        .gtec-search-input:focus {
+            border-color: rgba(255,209,102,0.55);
+            box-shadow: 0 0 0 3px rgba(255,209,102,0.12);
+        }
+        .sort-pills { display:flex; align-items:center; gap:0.4rem; max-width:480px; margin:0 auto 1.5rem; flex-wrap:wrap; }
+        .sort-pills.mfr-pills { max-width:100%; flex-wrap:nowrap; overflow-x:auto; justify-content:flex-start; padding-bottom:0.35rem; scrollbar-width:thin; }
+        .sort-pills.mfr-pills .sort-btn,
+        .sort-pills.mfr-pills .sort-label { flex-shrink:0; }
+        .sort-pills.mfr-pills::-webkit-scrollbar { height:4px; }
+        .sort-pills.mfr-pills::-webkit-scrollbar-thumb { background:var(--border); border-radius:999px; }
+        .sort-label { font-size:0.72rem; color:var(--muted); margin-right:0.15rem; }
+        .sort-btn { background:transparent; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:0.72rem; font-weight:600; letter-spacing:0.08em; padding:0.28rem 0.85rem; cursor:pointer; transition:border-color 0.15s,color 0.15s; font-family:inherit; }
+        .sort-btn:hover { border-color:rgba(255,255,255,0.25); color:var(--text); }
+        .sort-btn.sort-btn-active { border-color:var(--gold); color:var(--gold); }
+
+        /* ===== LISTING ===== */
+
+        /* Stats strip */
+        .driver-stats-strip {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            margin: 0 auto 2rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            max-width: 560px;
+        }
+        .dss-item {
+            flex: 1;
+            padding: 0.85rem 0.5rem 0.7rem;
+            text-align: center;
+            position: relative;
+        }
+        .dss-item + .dss-item::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 20%; bottom: 20%;
+            width: 1px;
+            background: var(--border);
+        }
+        .dss-value {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.75rem;
+            letter-spacing: 0.03em;
+            color: var(--gold);
+            line-height: 1;
+            display: block;
+        }
+        .dss-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.47rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            display: block;
+            margin-top: 0.25rem;
+        }
+
+        /* Ticker */
+        .driver-ticker-wrap {
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto 2rem;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 0.55rem 0;
+        }
+        .driver-ticker-wrap::before,
+        .driver-ticker-wrap::after {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 80px;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .driver-ticker-wrap::before {
+            left: 0;
+            background: linear-gradient(to right, var(--bg), transparent);
+        }
+        .driver-ticker-wrap::after {
+            right: 0;
+            background: linear-gradient(to left, var(--bg), transparent);
+        }
+        .driver-ticker-track {
+            display: flex;
+            width: max-content;
+            animation: gtec-ticker 96s linear infinite;
+        }
+        .driver-ticker-track:hover { animation-play-state: paused; }
+        @keyframes gtec-ticker {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+        .driver-ticker-item {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            white-space: nowrap;
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .driver-ticker-item .tic-num {
+            color: var(--gold);
+            opacity: 0.7;
+        }
+        .driver-ticker-sep {
+            color: var(--gold);
+            opacity: 0.3;
+            font-size: 0.5rem;
+            align-self: center;
+        }
+
+        /* Portrait card grid */
+        .driver-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 0.85rem;
+        }
+        .driver-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            text-decoration: none;
+            color: var(--text);
+            cursor: pointer;
+            position: relative;
+            aspect-ratio: 3 / 4;
+            transform-style: preserve-3d;
+            will-change: transform;
+            transition: border-color 0.2s, transform 0.08s, box-shadow 0.2s;
+        }
+        .driver-card:hover { border-color: rgba(255,209,102,0.45); }
+
+        /* ===== THE GRID — starting-grid formation view ===== */
+        /* View toggle (segmented control) */
+        .view-toggle { display:inline-flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; background:var(--bg-1); }
+        .view-toggle .vt-btn { font-family:'Orbitron',sans-serif; font-size:0.6rem; letter-spacing:0.09em; text-transform:uppercase; font-weight:700; padding:0.5rem 0.85rem; border:none; background:transparent; color:var(--muted); cursor:pointer; transition:all 0.14s; display:inline-flex; align-items:center; gap:0.4rem; white-space:nowrap; }
+        .view-toggle .vt-btn svg { width:13px; height:13px; }
+        .view-toggle .vt-btn:hover { color:var(--text); }
+        .view-toggle .vt-btn.active { color:#0c0d10; background:var(--gold); }
+        .view-bar { display:flex; justify-content:center; margin:0 auto 1.1rem; }
+
+        /* Start-lights gantry — the ceremony above the formation */
+        .grid-gantry { display:none; flex-direction:column; align-items:center; gap:0.55rem; margin:0.4rem auto 1.6rem; }
+        .driver-grid.view-grid ~ .grid-gantry, .grid-gantry.show { display:flex; }
+        .gantry-lights { display:flex; gap:0.5rem; padding:0.5rem 0.8rem; background:linear-gradient(#15171c,#0b0c0f); border:1px solid var(--border); border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.4); }
+        .gantry-lights .lamp { width:15px; height:15px; border-radius:50%; background:#2a0d0d; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06); transition:background 0.18s, box-shadow 0.18s; }
+        .gantry-lights .lamp.on { background:radial-gradient(circle at 40% 35%, #ff6b6b, #d61f1f 70%); box-shadow:0 0 10px 2px rgba(220,31,31,0.7), inset 0 0 0 1px rgba(255,255,255,0.15); }
+        .gantry-lights.go .lamp { background:radial-gradient(circle at 40% 35%, #7bffa8, #16b34a 70%); box-shadow:0 0 12px 3px rgba(22,179,74,0.7), inset 0 0 0 1px rgba(255,255,255,0.18); }
+        .gantry-label { font-family:'Orbitron',sans-serif; font-size:0.58rem; letter-spacing:0.34em; text-transform:uppercase; color:var(--muted); font-weight:700; }
+
+        /* Formation layout: alternate columns drop half a card (echelon).
+           Offset via position (not transform) so the 3-D hover tilt is free. */
+        .driver-grid.view-grid { align-items:start; }
+        .driver-grid.view-grid .driver-card[data-col-odd] { position:relative; top:2.15rem; }
+        .driver-grid.view-grid { margin-bottom:2.15rem; }
+
+        /* Rank chip (P1, P2 …) — hidden in card view, shown in the formation */
+        .grid-pos { display:none; position:absolute; top:0; left:0; z-index:4;
+            font-family:'Orbitron',sans-serif; font-weight:800; font-size:0.62rem; letter-spacing:0.04em;
+            padding:0.2rem 0.44rem; border-bottom-right-radius:9px; border-top-left-radius:9px;
+            background:rgba(10,11,14,0.82); color:var(--muted); backdrop-filter:blur(4px);
+            box-shadow:0 2px 8px rgba(0,0,0,0.4); }
+        .driver-grid.view-grid .grid-pos { display:block; }
+        .driver-card.gp-1 .grid-pos { color:#0c0d10; background:linear-gradient(135deg,#ffe08a,#f0b429); }
+        .driver-card.gp-2 .grid-pos { color:#0c0d10; background:linear-gradient(135deg,#f4f6fb,#c2cad6); }
+        .driver-card.gp-3 .grid-pos { color:#0c0d10; background:linear-gradient(135deg,#f0b78a,#cd7f42); }
+        /* Podium glow on the front row (base state; hover tilt takes over inline) */
+        .driver-grid.view-grid .driver-card.gp-1 { border-color:rgba(240,180,41,0.55); box-shadow:0 0 0 1px rgba(240,180,41,0.35), 0 10px 26px rgba(240,180,41,0.14); }
+        .driver-grid.view-grid .driver-card.gp-2 { border-color:rgba(194,202,214,0.5); box-shadow:0 0 0 1px rgba(194,202,214,0.28), 0 10px 24px rgba(194,202,214,0.1); }
+        .driver-grid.view-grid .driver-card.gp-3 { border-color:rgba(205,127,66,0.5); box-shadow:0 0 0 1px rgba(205,127,66,0.28), 0 10px 24px rgba(205,127,66,0.1); }
+
+        /* Grid-walk entrance */
+        @keyframes gridIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+        .driver-grid.grid-walk .driver-card { opacity:0; animation:gridIn 0.5s cubic-bezier(.2,.7,.3,1) both; animation-delay:calc(var(--gi,0) * 45ms); }
+        .driver-grid.grid-walk .driver-card[data-col-odd] { /* keep echelon offset during entrance */ }
+
+        @media (prefers-reduced-motion: reduce) {
+            .driver-grid.grid-walk .driver-card { animation:none; opacity:1; }
+            .gantry-lights .lamp, .gantry-lights.go .lamp { transition:none; }
+        }
+
+        /* Photo fills the whole card */
+        .driver-card-photo {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-2);
+            overflow: hidden;
+        }
+        .driver-card-photo img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            object-position: top center;
+        }
+
+        /* Gradient overlay — fades photo into dark at bottom */
+        .driver-card-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to top,
+                rgba(5,6,8,0.97) 0%,
+                rgba(5,6,8,0.75) 42%,
+                transparent 75%
+            );
+        }
+
+        /* Ghost number — centred in photo area, very subtle */
+        .driver-card-ghost {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -58%);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 5rem;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            color: rgba(255,255,255,0.06);
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* ELO badge — top-left */
+        .driver-card-elo {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.3rem;
+            padding: 0.18rem 0.5rem 0.15rem;
+            background: rgba(5,6,8,0.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,209,102,0.28);
+            border-radius: 5px;
+            line-height: 1;
+        }
+        .driver-card-elo.is-provisional { border-style: dashed; opacity: 0.85; }
+        .driver-card-elo-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.44rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .driver-card-elo-value {
+            font-family: 'Anton', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: 0.03em;
+            color: var(--gold);
+            line-height: 1;
+        }
+
+        /* PTS badge — top-right */
+        .driver-card-pts {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.05rem;
+            padding: 0.22rem 0.45rem 0.18rem;
+            background: rgba(5,6,8,0.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,209,102,0.28);
+            border-radius: 5px;
+            line-height: 1;
+        }
+        .driver-card-pts-value {
+            font-family: 'Anton', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.03em;
+            color: var(--gold);
+            line-height: 1;
+        }
+        .driver-card-pts-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.38rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        /* Info block — overlay at bottom of card */
+        .driver-card-info {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 0.6rem 0.7rem 0.65rem;
+            z-index: 2;
+        }
+        .driver-card-num {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.15em;
+            margin-bottom: 0.12rem;
+        }
+        .driver-card-name {
+            font-family: 'Anton', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            line-height: 1.1;
+            margin-bottom: 0.25rem;
+        }
+        .driver-card-meta {
+            font-size: 0.68rem;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+        .driver-card-meta .team-line {
+            color: rgba(241,245,249,0.7);
+            font-size: 0.65rem;
+        }
+
+        /* Tier badge + badges row — right column, under the PTS badge */
+        .driver-card-side-badges {
+            position: absolute;
+            top: 2.65rem;
+            right: 0.5rem;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.35rem;
+        }
+        .driver-card-badges {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 0.22rem;
+        }
+        .driver-card-badge {
+            width: 22px; height: 22px;
+            font-size: 0.78rem;
+            display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.12), rgba(0,0,0,0.45) 75%);
+            border: 1px solid rgba(255,209,102,0.3);
+            border-radius: 50%;
+            cursor: default;
+            transition: transform 0.15s, box-shadow 0.15s;
+            font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+        }
+        .driver-card-badge:hover {
+            transform: scale(1.25);
+            box-shadow: 0 0 10px rgba(255,209,102,0.35);
+        }
+        .driver-card-badge img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        /* Custom artwork already has its own border baked in — drop the
+           circular ring built for bare emoji so it sits on its own. */
+        .driver-card-badge.driver-card-badge-artwork {
+            background: none;
+            border: none;
+        }
+        .driver-card-badge.driver-card-badge-artwork img {
+            border-radius: 0;
+            object-fit: contain;
+        }
+
+        /* Placeholder initials when no photo */
+        .driver-initials {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Anton', sans-serif;
+            font-size: 3rem;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            opacity: 0.35;
+        }
+
+        /* Elo tier pill inside card — remove margin, shrink */
+        .driver-card-tier { margin-top: 0.3rem; }
+        .driver-card-tier .elo-tier { margin-left: 0 !important; font-size: 0.55rem !important; padding: 0.12rem 0.5rem !important; }
+
+        /* ===== PROFILE ===== */
+        .profile-header {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-end;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .profile-avatar {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 3px solid var(--border);
+            overflow: hidden;
+            background: var(--bg-2);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-avatar-init { font-family: 'Anton', sans-serif; font-size: 3rem; color: var(--muted); opacity: 0.5; }
+        .profile-name-block { flex: 1; min-width: 0; }
+        .profile-number { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; color: var(--gold); letter-spacing: 0.2em; margin-bottom: 0.35rem; }
+        .profile-name { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.5rem; }
+        .profile-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+        .share-btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.55rem 1rem;
+            margin-top: 0.85rem;
+            background: linear-gradient(135deg, rgba(255,209,102,0.18), rgba(255,209,102,0.06));
+            border: 1px solid rgba(255,209,102,0.45);
+            border-radius: 999px;
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .share-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(255,209,102,0.3), rgba(255,209,102,0.12));
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(255,209,102,0.18);
+        }
+        .share-btn:disabled { opacity: 0.7; cursor: progress; }
+        .share-btn svg { width: 14px; height: 14px; }
+        .profile-tag {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.3rem 0.75rem;
+            background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px;
+            font-size: 0.76rem; color: var(--muted);
+        }
+        .profile-tag .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+        .profile-tag .tag-link { color: inherit; text-decoration: none; transition: color 0.15s; }
+        .profile-tag .tag-link:hover { color: var(--gold); text-decoration: underline; }
+        .pill-leader {
+            display: inline-block;
+            margin-left: 0.3rem;
+            padding: 0.1rem 0.45rem;
+            background: rgba(255,209,102,0.15);
+            border: 1px solid rgba(255,209,102,0.4);
+            border-radius: 999px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--gold);
+        }
+        .rating-chip {
+            display: inline-flex; align-items: stretch; overflow: hidden;
+            border-radius: 6px; border: 1px solid var(--border);
+            font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+        }
+        .rating-chip .rc-label { padding: 0.3rem 0.55rem; color: var(--muted); background: var(--bg-2); }
+        .rating-chip .rc-value { padding: 0.3rem 0.6rem; color: #fff; font-weight: 800; }
+        .rc-E  { background: #475569; }
+        .rc-D  { background: #16a34a; }
+        .rc-C  { background: #0ea5e9; }
+        .rc-B  { background: #ca8a04; }
+        .rc-A  { background: #dc2626; }
+        .rc-Ap { background: linear-gradient(135deg,#dc2626,#7f1d1d); }
+        .rc-S  { background: linear-gradient(135deg,#a855f7,#4c1d95); }
+
+        /* Stat bar */
+        .stat-bar {
+            display: flex;
+            gap: 0;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        .stat-item {
+            flex: 1;
+            padding: 1rem 0.75rem;
+            text-align: center;
+            border-right: 1px solid var(--border);
+        }
+        .stat-item:last-child { border-right: none; }
+        .stat-label { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem; }
+        .stat-value { font-family: 'Anton', sans-serif; font-size: 1.6rem; line-height: 1; color: var(--text); }
+        .stat-value.gold { background: linear-gradient(180deg, #fff 0%, var(--gold) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+        /* Section */
+        .section { margin-bottom: 2rem; }
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 1rem;
+            text-indent: 0.35em;
+        }
+        .bio-text { color: var(--muted); line-height: 1.7; font-size: 0.9rem; }
+
+        /* Season Stakes — best/worst possible finish still open, shown
+           for every driver, not just the title fight. */
+        .stakes-bar {
+            display: flex; gap: 0;
+            background: var(--bg-1);
+            border: 1px solid rgba(255,209,102,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .stakes-item { flex: 1; padding: 0.85rem 0.75rem; text-align: center; border-right: 1px solid var(--border); }
+        .stakes-item:last-child { border-right: none; }
+        .stakes-label { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+        .stakes-value { font-family: 'Anton', sans-serif; font-size: 1.35rem; line-height: 1; color: var(--text); }
+        .stakes-item.stakes-best .stakes-value { color: #4ade80; }
+        .stakes-item.stakes-worst .stakes-value { color: #f87171; }
+        .stakes-note { font-size: 0.72rem; color: var(--muted); text-align: center; margin-top: 0.6rem; }
+
+        /* Split journey — a horizontal scroll of stops showing which split
+           the driver raced in each round, with promotion / relegation
+           indicators between them. */
+        .split-timeline {
+            display: flex;
+            gap: 0.75rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+        .split-stop {
+            min-width: 96px;
+            flex: 0 0 auto;
+            background: rgba(255,255,255,0.025);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.65rem 0.75rem;
+            text-align: center;
+        }
+        .split-stop-circuit {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.35rem;
+        }
+        .split-stop-split {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.5rem;
+            line-height: 1;
+            letter-spacing: 0.04em;
+            color: var(--text);
+            margin-bottom: 0.35rem;
+        }
+        .split-stop-move {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            padding: 0.15rem 0.4rem;
+            border-radius: 999px;
+            display: inline-block;
+        }
+        .split-stop-move.move-up   { color: #4ade80; background: rgba(74,222,128,0.1); }
+        .split-stop-move.move-down { color: #f87171; background: rgba(248,113,113,0.1); }
+        .split-stop-move.move-same { color: var(--muted); background: rgba(255,255,255,0.04); }
+        .split-stop-move.move-new  { color: var(--gold);  background: rgba(255,209,102,0.08); }
+
+        /* Animated split-trajectory chart: split number over rounds, best
+           split at the top so a rising line means climbing the grid. */
+        .sj-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .sj-chip {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: var(--bg-2); border: 1px solid var(--border);
+            border-radius: 999px; padding: 0.32rem 0.85rem;
+            opacity: 0; animation: sjFade 0.5s ease 0.3s forwards;
+        }
+        .sj-chip-k { color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.6rem; font-weight: 700; }
+        .sj-chip-v { color: var(--text); font-weight: 700; font-size: 0.78rem; }
+        .sj-chip-up   .sj-chip-v { color: #4ade80; }
+        .sj-chip-down .sj-chip-v { color: #f87171; }
+        .sj-chip-same .sj-chip-v { color: var(--muted); }
+        .sj-chart-wrap { overflow-x: auto; padding-bottom: 0.5rem; }
+        .sj-svg { display: block; }
+        .sj-grid { stroke: rgba(255,255,255,0.06); stroke-width: 1; }
+        .sj-ylabel, .sj-xlabel { fill: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; }
+        .sj-xlabel { opacity: 0; animation: sjFade 0.5s ease forwards; }
+        .sj-area { fill: url(#sjArea); opacity: 0; animation: sjFade 0.8s ease 0.9s forwards; }
+        .sj-line {
+            fill: none; stroke: url(#sjLine); stroke-width: 2.5;
+            stroke-linecap: round; stroke-linejoin: round;
+            stroke-dasharray: 4000; stroke-dashoffset: 4000;
+            animation: sjDraw 1.3s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+            filter: drop-shadow(0 0 5px rgba(255,209,102,0.35));
+        }
+        .sj-dot {
+            stroke: #0b0e14; stroke-width: 2;
+            opacity: 0; transform: scale(0);
+            transform-box: fill-box; transform-origin: center;
+            animation: sjPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .sj-dot-up    { fill: #4ade80; }
+        .sj-dot-down  { fill: #f87171; }
+        .sj-dot-same  { fill: #94a3b8; }
+        .sj-dot-start { fill: #ffd166; }
+        .sj-dot-peak  { filter: drop-shadow(0 0 5px rgba(255,209,102,0.75)); }
+        @keyframes sjDraw { to { stroke-dashoffset: 0; } }
+        @keyframes sjPop  { to { opacity: 1; transform: scale(1); } }
+        @keyframes sjFade { to { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) {
+            .sj-line, .sj-dot, .sj-area, .sj-xlabel, .sj-chip { animation: none; opacity: 1; transform: none; stroke-dashoffset: 0; }
+        }
+
+        /* Discipline */
+        .discipline-list { display: flex; flex-direction: column; gap: 0.65rem; }
+        .disc-row {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--muted);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+        }
+        .disc-row-penalty            { border-left-color: #f87171; }
+        .disc-row-steward            { border-left-color: var(--gold); }
+        .disc-head { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.35rem; }
+        .disc-pill {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem; font-weight: 700;
+            letter-spacing: 0.18em; text-transform: uppercase;
+            padding: 0.25rem 0.55rem; border-radius: 4px;
+            background: rgba(255,255,255,0.06); color: var(--muted);
+            white-space: nowrap;
+        }
+        .disc-pill.disc-penalty    { background: rgba(239,68,68,0.15); color: #fca5a5; }
+        .disc-pill.disc-reprimand  { background: rgba(255,209,102,0.15); color: var(--gold); }
+        .disc-pill.disc-dsq        { background: rgba(239,68,68,0.2); color: #fca5a5; }
+        .disc-pill.disc-no_action  { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .disc-meta { font-size: 0.75rem; color: var(--muted); }
+        .disc-meta a { color: inherit; text-decoration: none; }
+        .disc-meta a:hover { color: var(--text); }
+        .disc-title { font-weight: 600; font-size: 0.92rem; margin-bottom: 0.25rem; }
+        .disc-body  { font-size: 0.84rem; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
+
+        /* Table */
+        .data-table {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .data-table table { width: 100%; border-collapse: collapse; }
+        .data-table th {
+            padding: 0.7rem 1.1rem;
+            text-align: left;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .data-table th.right { text-align: right; }
+        .data-table td {
+            padding: 0.75rem 1.1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.87rem;
+            vertical-align: middle;
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .data-table td.right { text-align: right; }
+        .data-table td.muted { color: var(--muted); }
+        .pts { font-weight: 700; color: var(--gold); }
+        .pts-deduct { margin-top: 0.2rem; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #f87171; }
+        .pos-badge {
+            display: inline-block;
+            min-width: 28px;
+            text-align: center;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            background: var(--bg-2);
+        }
+        .pos-1 { background: rgba(255,209,102,0.2); color: var(--gold); }
+        .pos-2 { background: rgba(203,213,225,0.15); color: #cbd5e1; }
+        .pos-3 { background: rgba(205,127,50,0.2); color: #cd7f32; }
+        .status-dnf { color: #fca5a5; font-size: 0.76rem; }
+        .status-dsq { color: #fca5a5; font-size: 0.76rem; }
+
+        /* Back link */
+        .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.82rem; text-decoration: none; margin-bottom: 1.5rem; }
+        .back-link:hover { color: var(--text); }
+
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+        .empty-msg { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
+
+        /* Rating sparkline */
+        .sparkline-wrap {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.1rem 1.25rem;
+        }
+        .sparkline-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 0.75rem;
+        }
+        .sparkline-rating {
+            font-family: 'Anton', sans-serif;
+            font-size: 2rem;
+            line-height: 1;
+            background: linear-gradient(180deg, #fff 0%, var(--gold) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .sparkline-delta { font-size: 0.85rem; font-weight: 600; }
+        .delta-up { color: var(--green); }
+        .delta-down { color: #f87171; }
+        .sparkline-peak { font-size: 0.76rem; color: var(--muted); text-align: right; }
+
+        @media (max-width: 600px) {
+            .nav { padding: 1rem; }
+            .hero { padding: 2rem 1rem 1rem; }
+            .content { padding: 1rem 1rem 3rem; }
+            .stat-bar { flex-wrap: wrap; }
+            .stat-item { min-width: 33%; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+            /* Stack the header into a single centred column: avatar on top,
+               then name, tags, badges and the share button all centred, so
+               nothing is left orphaned to one side. */
+            .profile-header { gap: 1rem; flex-direction: column; align-items: center; text-align: center; }
+            .profile-avatar { width: 104px; height: 104px; }
+            .profile-name-block { width: 100%; }
+            .profile-tags { justify-content: center; }
+            .gtec-badge-strip { justify-content: center; }
+            .hide-mob { display: none; }
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/" class="active">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div id="app"><div class="loading">Loading…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script src="/endurance/assets/elo-tiers.js?v=3"></script>
+<script src="/endurance/assets/gtec-badges.js?v=22"></script>
+<script src="/endurance/assets/gtec-share-card.js?v=5"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb  = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data.session) { if (portal) portal.style.display = ''; }
+    else              { if (signin) signin.style.display = ''; }
+});
+const app = document.getElementById('app');
+const slug = new URLSearchParams(location.search).get('slug');
+
+const FLAGS = { AD:'🇦🇩',AE:'🇦🇪',AT:'🇦🇹',AU:'🇦🇺',BE:'🇧🇪',BH:'🇧🇭',BR:'🇧🇷',CA:'🇨🇦',CN:'🇨🇳',CZ:'🇨🇿',DE:'🇩🇪',ES:'🇪🇸',FR:'🇫🇷',GB:'🇬🇧',HU:'🇭🇺',IT:'🇮🇹',JP:'🇯🇵',MX:'🇲🇽',NL:'🇳🇱',PL:'🇵🇱',PT:'🇵🇹',SA:'🇸🇦',SE:'🇸🇪',SG:'🇸🇬',US:'🇺🇸' };
+// Flag emoji from any 2-letter ISO country code (regional indicators), so
+// every nationality renders — not just the hardcoded FLAGS subset above.
+function flag(c) {
+    const cc = (c || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
+function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function initials(name) { return (name || '??').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2); }
+
+function posBadge(pos, status) {
+    if (!pos && status && status !== 'classified') {
+        return `<span class="status-${esc(status)}">${esc(status.toUpperCase())}</span>`;
+    }
+    if (!pos) return '<span class="pos-badge">—</span>';
+    const cls = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
+    return `<span class="pos-badge ${cls}">P${pos}</span>`;
+}
+
+function makeSparkline(ratings) {
+    if (ratings.length < 2) return '';
+    const W = 400, H = 60, P = 8;
+    const vals = ratings.map(r => r.rating_after);
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const range = (hi - lo) || 40;
+    const xFn = i => P + (i / (vals.length - 1)) * (W - P * 2);
+    const yFn = v => P + (1 - (v - lo) / range) * (H - P * 2);
+    const pts = vals.map((v, i) => `${xFn(i).toFixed(1)},${yFn(v).toFixed(1)}`).join(' ');
+    const up  = vals[vals.length - 1] >= vals[0];
+    const col = up ? '#22c55e' : '#f87171';
+    const base1500 = lo < 1500 && hi > 1500;
+    const bY = yFn(1500).toFixed(1);
+    const baseLine = base1500
+        ? `<line x1="${P}" y1="${bY}" x2="${W - P}" y2="${bY}" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4,4"/>`
+        : '';
+    const dots = vals.map((v, i) =>
+        `<circle cx="${xFn(i).toFixed(1)}" cy="${yFn(v).toFixed(1)}" r="3.5" fill="${col}" stroke="var(--bg-1)" stroke-width="1.5"><title>${esc(ratings[i].events?.name || '')}: ${v}</title></circle>`
+    ).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block">
+        ${baseLine}
+        <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+        ${dots}
+    </svg>`;
+}
+
+function avatarHTML(url, name, size = 'card') {
+    if (url) return `<img src="${esc(url)}" alt="${esc(name)}" loading="lazy">`;
+    return `<span class="${size === 'profile' ? 'profile-avatar-init' : 'driver-initials'}">${initials(name)}</span>`;
+}
+
+function mfrBadge(logoUrl, brandColor, name, opts = {}) {
+    const big = opts.size === 'lg';
+    if (logoUrl) {
+        const dim = big ? 22 : 14;
+        return `<img src="${esc(logoUrl)}" alt="${esc(name || '')}" loading="lazy" style="width:${dim}px;height:${dim}px;object-fit:contain;vertical-align:middle;display:inline-block">`;
+    }
+    if (brandColor) return `<span class="swatch" style="background:${esc(brandColor)}"></span>`;
+    return '';
+}
+
+// ============================================================
+// LISTING
+// ============================================================
+async function showListing() {
+    document.title = 'Drivers | GTEC';
+    const [{ data, error }, { data: ratings }, { data: allSeasons }, { data: standings }, { data: hostEntries }, { data: streamLinks }] = await Promise.all([
+        sb.from('drivers')
+            .select('id, display_name, slug, nationality, career_number, photo_url, manual_badges, willing_host, teams!current_team_id(name,slug), manufacturers(name,brand_color,logo_url,car_name)')
+            .order('display_name'),
+        sb.from('driver_current_ratings').select('driver_id, rating, last_rated_at'),
+        sb.from('seasons').select('id, year, is_active'),
+        sb.from('driver_standings').select('driver_id, season_id, points, wins, races'),
+        // Career-wide count of splits actually hosted (not just "willing to
+        // host") feeds the Community badge ladder.
+        sb.from('entries').select('host_driver_id').not('host_driver_id', 'is', null),
+        // Every driver who's posted a stream link earns the Content Creator badge.
+        sb.from('driver_stream_links').select('driver_id'),
+    ]);
+
+    if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
+
+    // One source of truth: driver_current_ratings.rating. The view returns
+    // 1500 for drivers with no driver_ratings rows (fresh or reset), so the
+    // badge always agrees with what shows on the driver's profile. Drivers
+    // who actually have race history (last_rated_at) get a solid pill;
+    // everyone else gets a provisional dashed pill at the same rating.
+    const ratingMap   = {};
+    const ratedDriver = {};
+    (ratings || []).forEach(r => {
+        ratingMap[r.driver_id] = r.rating;
+        if (r.last_rated_at) ratedDriver[r.driver_id] = r.rating;
+    });
+    const activeSznId = (allSeasons || []).find(s => s.is_active)?.id;
+    // Season 1 = the earliest season by year. Anyone with a standings row
+    // there was on the Season 1 grid and earns the Founding Member badge.
+    const firstSeasonId = (allSeasons || []).slice().sort((a, b) => (a.year || 0) - (b.year || 0))[0]?.id;
+    const foundingSet = new Set();
+    const pointsMap = {};
+    const winsMap   = {};
+    const racesMap  = {};
+    // Group completed-season standings for title badge computation
+    const _sznGroups = {};
+    (standings || []).forEach(s => {
+        if (!activeSznId || s.season_id === activeSznId) pointsMap[s.driver_id] = Number(s.points || 0);
+        winsMap[s.driver_id]  = (winsMap[s.driver_id]  || 0) + Number(s.wins  || 0);
+        racesMap[s.driver_id] = (racesMap[s.driver_id] || 0) + Number(s.races || 0);
+        if (firstSeasonId && s.season_id === firstSeasonId && Number(s.races) > 0) foundingSet.add(s.driver_id);
+        if (s.season_id !== activeSznId) {
+            if (!_sznGroups[s.season_id]) _sznGroups[s.season_id] = [];
+            _sznGroups[s.season_id].push({ driver_id: s.driver_id, points: Number(s.points || 0) });
+        }
+    });
+    // Rank drivers within each completed season; build driver_id → [finish positions]
+    const seasonFinishesMap = {};
+    Object.values(_sznGroups).forEach(group => {
+        group.sort((a, b) => b.points - a.points);
+        group.forEach((entry, idx) => {
+            if (!seasonFinishesMap[entry.driver_id]) seasonFinishesMap[entry.driver_id] = [];
+            seasonFinishesMap[entry.driver_id].push(idx + 1);
+        });
+    });
+
+    const hostCountMap = {};
+    (hostEntries || []).forEach(e => {
+        hostCountMap[e.host_driver_id] = (hostCountMap[e.host_driver_id] || 0) + 1;
+    });
+
+    const streamCreatorSet = new Set((streamLinks || []).map(s => s.driver_id));
+
+    function cardBadges(d, totalWins, totalRaces, seasonFinishes) {
+        const cats = window.BADGE_CATEGORIES;
+        if (!cats) return '';
+        const manualBadges = Array.isArray(d.manual_badges) ? d.manual_badges : [];
+        const stats = { wins: totalWins, starts: totalRaces, hostCount: hostCountMap[d.id] || 0, manualBadges, seasonFinishes: seasonFinishes || [], foundingMember: foundingSet.has(d.id), hasStreamLink: streamCreatorSet.has(d.id) };
+
+        const seen = new Set();
+        const earned = [];
+        function add(b) { if (b && !seen.has(b.key)) { seen.add(b.key); earned.push(b); } }
+
+        function topEarned(catKey) {
+            const cat = cats.find(c => c.key === catKey);
+            if (!cat) return null;
+            return cat.badges.find(b => {
+                if (manualBadges.includes(b.key)) return true;
+                if (typeof b.evalFn === 'function') { try { return b.evalFn(stats); } catch (_) { return false; } }
+                if (cat.type === 'threshold') return (Number(stats[cat.stat]) || 0) >= b.threshold;
+                return false;
+            }) || null;
+        }
+
+        // First picks: best badge from each competitive category
+        add(topEarned('victories'));
+        add(topEarned('titles'));
+        add(topEarned('career'));
+        add(topEarned('community'));
+
+        // Fill remaining slots from manually-granted badges across all categories
+        const fillOrder = ['victories', 'titles', 'career', 'secrets', 'circuits', 'community'];
+        for (const catKey of fillOrder) {
+            if (earned.length >= 8) break;
+            const cat = cats.find(c => c.key === catKey);
+            if (!cat) continue;
+            for (const b of cat.badges) {
+                if (earned.length >= 8) break;
+                if (!seen.has(b.key) && manualBadges.includes(b.key)) add(b);
+            }
+        }
+
+        if (!earned.length) return '';
+        const chips = earned.map(b => {
+            const artwork = window.gtecBadgeIsImage && window.gtecBadgeIsImage(b.icon);
+            const icon    = window.gtecBadgeIconMarkup ? window.gtecBadgeIconMarkup(b.icon) : b.icon;
+            const cls     = 'driver-card-badge' + (artwork ? ' driver-card-badge-artwork' : '');
+            return `<span class="${cls}" title="${b.name} — ${b.blurb}">${icon}</span>`;
+        }).join('');
+        return `<div class="driver-card-badges">${chips}</div>`;
+    }
+
+    const cards = (data || []).map(d => {
+        let elo = null;
+        let tier = '';
+        let provisional = false;
+        if (window.eloTierBadge) {
+            const r = ratingMap[d.id];
+            if (r != null) {
+                elo = Math.round(r);
+                provisional = ratedDriver[d.id] == null;
+                tier = window.eloTierBadge(r, { provisional });
+            }
+        }
+        const eloRow = elo != null
+            ? `<div class="driver-card-elo${provisional ? ' is-provisional' : ''}">
+                   <span class="driver-card-elo-label">ELO</span>
+                   <span class="driver-card-elo-value">${elo}</span>
+               </div>`
+            : '';
+        // Pre-compute a lowercase search bag on the card so the filter
+        // doesn't have to dig through the DOM on every keystroke.
+        const search = [
+            d.display_name,
+            d.career_number ? '#' + d.career_number : '',
+            d.career_number,
+            d.teams?.name,
+            d.manufacturers?.name,
+            d.nationality,
+        ].filter(Boolean).join(' ').toLowerCase();
+        const pts    = pointsMap[d.id] || 0;
+        const eloVal = ratingMap[d.id] != null ? Math.round(ratingMap[d.id]) : 0;
+        const mfrColor = d.manufacturers?.brand_color || '';
+        const badgeRow = cardBadges(d, winsMap[d.id] || 0, racesMap[d.id] || 0, seasonFinishesMap[d.id]);
+        return `
+        <div class="driver-card" data-search="${esc(search)}" data-name="${esc(d.display_name)}" data-elo="${eloVal}" data-points="${pts}" data-wins="${winsMap[d.id] || 0}" data-mfr="${esc(d.manufacturers?.name || '')}" onclick="location.href='/endurance/drivers/?slug=${esc(d.slug)}'" style="${mfrColor ? `border-left-color:${esc(mfrColor)}` : ''}">
+            <div class="grid-pos"></div>
+            <div class="driver-card-photo">
+                ${avatarHTML(d.photo_url, d.display_name, 'card')}
+            </div>
+            <div class="driver-card-overlay"></div>
+            ${d.career_number ? `<div class="driver-card-ghost">${d.career_number}</div>` : ''}
+            ${eloRow}
+            <div class="driver-card-pts">
+                <span class="driver-card-pts-value">${pts}</span>
+                <span class="driver-card-pts-label">PTS</span>
+            </div>
+            ${badgeRow ? `<div class="driver-card-side-badges">${badgeRow}</div>` : ''}
+            <div class="driver-card-info">
+                ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
+                <div class="driver-card-name">${esc(d.display_name)}</div>
+                <div class="driver-card-meta">
+                    ${d.nationality ? `<span>${flag(d.nationality)} ${esc(d.nationality)}</span>` : ''}
+                    ${d.teams?.name ? `<div class="team-line">${esc(d.teams.name)}</div>` : ''}
+                </div>
+                ${tier ? `<div class="driver-card-tier">${tier}</div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+
+    // Manufacturer filter buttons
+    const mfrs = [...new Set((data || []).map(d => d.manufacturers?.name).filter(Boolean))].sort();
+    const mfrFilterHtml = mfrs.length ? `
+        <div class="sort-pills mfr-pills" style="margin-bottom:1.25rem">
+            <span class="sort-label">Manufacturer:</span>
+            <button class="sort-btn mfr-filter-btn sort-btn-active" data-mfr="" onclick="setDriverMfr('',this)">All</button>
+            ${mfrs.map(m => `<button class="sort-btn mfr-filter-btn" data-mfr="${esc(m)}" onclick="setDriverMfr(this.dataset.mfr,this)">${esc(m)}</button>`).join('')}
+        </div>` : '';
+
+    // Stats strip counts
+    const totalDrivers = (data || []).length;
+    const totalTeams   = new Set((data || []).map(d => d.teams?.name).filter(Boolean)).size;
+    const totalNations = new Set((data || []).map(d => d.nationality).filter(Boolean)).size;
+    const totalMfrs    = new Set((data || []).map(d => d.manufacturers?.name).filter(Boolean)).size;
+
+    // Ticker — build a list of all driver names (sorted A-Z) then duplicate for seamless loop
+    const tickerNames = (data || [])
+        .slice()
+        .sort((a, b) => (a.display_name || '').localeCompare(b.display_name || ''))
+        .map(d => {
+            const num = d.career_number ? `<span class="tic-num">#${d.career_number}</span>` : '';
+            return `<span class="driver-ticker-item">${num}${esc(d.display_name)}</span><span class="driver-ticker-sep">◆</span>`;
+        }).join('');
+    const tickerHTML = tickerNames
+        ? `<div class="driver-ticker-wrap">
+               <div class="driver-ticker-track">${tickerNames}${tickerNames}</div>
+           </div>`
+        : '';
+
+    app.innerHTML = `
+        <div class="hero">
+            <div class="hero-eyebrow">Championship</div>
+            <div class="hero-title">Drivers</div>
+            <div class="hero-sub" id="drivers-count-sub">${data.length} registered driver${data.length !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="content">
+            ${data.length ? `
+                <div class="driver-stats-strip">
+                    <div class="dss-item">
+                        <span class="dss-value">${totalDrivers}</span>
+                        <span class="dss-label">Drivers</span>
+                    </div>
+                    <div class="dss-item">
+                        <span class="dss-value">${totalTeams}</span>
+                        <span class="dss-label">Teams</span>
+                    </div>
+                    <div class="dss-item">
+                        <span class="dss-value">${totalNations}</span>
+                        <span class="dss-label">Nations</span>
+                    </div>
+                    <div class="dss-item">
+                        <span class="dss-value">${totalMfrs}</span>
+                        <span class="dss-label">Manufacturers</span>
+                    </div>
+                </div>
+                ${tickerHTML}
+                <div class="gtec-search-wrap" style="margin-bottom:0.65rem">
+                    <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input class="gtec-search-input" id="drivers-search" type="search" autocomplete="off"
+                           placeholder="Search driver, team, nationality or #number" oninput="applyDriverFilters()">
+                </div>
+                <div class="view-bar">
+                    <div class="view-toggle" role="tablist" aria-label="Roster layout">
+                        <button class="vt-btn" id="vt-grid" onclick="setDriverView('grid',this)" aria-label="Starting grid view">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3v18M18 3v18"/><path d="M4 7h4M16 11h4M4 15h4M16 19h4"/></svg>The Grid
+                        </button>
+                        <button class="vt-btn" id="vt-cards" onclick="setDriverView('cards',this)" aria-label="Card view">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Cards
+                        </button>
+                    </div>
+                </div>
+                <div class="sort-pills">
+                    <span class="sort-label">Sort:</span>
+                    <button class="sort-btn sort-btn-active" data-sort="alpha" onclick="sortCards('.driver-grid','.driver-card','alpha')">A–Z</button>
+                    <button class="sort-btn" data-sort="elo" onclick="sortCards('.driver-grid','.driver-card','elo')">ELO</button>
+                    <button class="sort-btn" data-sort="points" onclick="sortCards('.driver-grid','.driver-card','points')">Points</button>
+                </div>
+                ${mfrFilterHtml}
+                <div class="grid-gantry" id="grid-gantry">
+                    <div class="gantry-lights" id="gantry-lights">
+                        <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
+                    </div>
+                    <div class="gantry-label">Starting Grid</div>
+                </div>
+                <div class="driver-grid">${cards}</div>
+                <div class="empty-msg" id="drivers-empty" style="display:none">No drivers match your search.</div>
+            ` : `<div class="empty-msg">No drivers registered yet.</div>`}
+        </div>`;
+
+    // Apply the saved layout. The Grid is the default — a merit-ranked
+    // starting formation with a lights-out reveal on load.
+    if (data.length) {
+        document.getElementById('vt-grid')?.classList.toggle('active', _driverView === 'grid');
+        document.getElementById('vt-cards')?.classList.toggle('active', _driverView === 'cards');
+        if (_driverView === 'grid') {
+            const grid = document.querySelector('.driver-grid');
+            grid?.classList.add('view-grid');
+            document.getElementById('grid-gantry')?.classList.add('show');
+            sortCards('.driver-grid', '.driver-card', 'points');   // championship order, lays out too
+            playGridEntrance();
+        }
+    }
+}
+
+// 3-D tilt on driver cards — event delegation so it works after sort re-renders
+(function () {
+    let active = null;
+    document.addEventListener('mousemove', e => {
+        const card = e.target.closest('.driver-card');
+        if (!card) return;
+        if (active && active !== card) resetCard(active);
+        active = card;
+        const rect = card.getBoundingClientRect();
+        const cx = rect.left + rect.width  / 2;
+        const cy = rect.top  + rect.height / 2;
+        const dx = (e.clientX - cx) / (rect.width  / 2);
+        const dy = (e.clientY - cy) / (rect.height / 2);
+        const rotX = -dy * 8;
+        const rotY =  dx * 8;
+        card.style.transform = `perspective(700px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(6px)`;
+        card.style.boxShadow = `${-rotY * 1.5}px ${rotX * 1.5}px 28px rgba(0,0,0,0.45)`;
+    });
+    document.addEventListener('mouseleave', e => { if (active) { resetCard(active); active = null; } }, true);
+    document.addEventListener('mouseout', e => {
+        if (!e.relatedTarget?.closest('.driver-card')) { if (active) { resetCard(active); active = null; } }
+    });
+    function resetCard(card) {
+        card.style.transform = '';
+        card.style.boxShadow = '';
+    }
+})();
+
+let _driverMfrFilter = '';
+
+function setDriverMfr(mfr, btn) {
+    _driverMfrFilter = mfr;
+    document.querySelectorAll('.mfr-filter-btn').forEach(b => b.classList.remove('sort-btn-active'));
+    if (btn) btn.classList.add('sort-btn-active');
+    applyDriverFilters();
+}
+
+function applyDriverFilters() {
+    const q = (document.getElementById('drivers-search')?.value || '').toLowerCase().trim();
+    const mfr = _driverMfrFilter.toLowerCase();
+    const cards = document.querySelectorAll('.driver-card');
+    let shown = 0;
+    cards.forEach(card => {
+        const matchQ = !q || (card.getAttribute('data-search') || '').includes(q);
+        const matchMfr = !mfr || (card.getAttribute('data-mfr') || '').toLowerCase() === mfr;
+        const match = matchQ && matchMfr;
+        card.style.display = match ? '' : 'none';
+        if (match) shown++;
+    });
+    const countEl = document.getElementById('drivers-count-sub');
+    if (countEl) countEl.textContent = (q || mfr)
+        ? `${shown} match${shown === 1 ? '' : 'es'} of ${cards.length}`
+        : `${cards.length} registered driver${cards.length !== 1 ? 's' : ''}`;
+    const emptyEl = document.getElementById('drivers-empty');
+    if (emptyEl) emptyEl.style.display = ((q || mfr) && shown === 0) ? '' : 'none';
+    if (_driverView === 'grid') layoutGrid();
+}
+
+// Generic card filter — reads data-search attributes and toggles
+// display:none on non-matching cards. Updates the count line + empty
+// state so it doesn't look broken when nothing matches.
+function filterCards(input, cardClass, countId, singular, plural) {
+    const q = (input.value || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('.' + cardClass);
+    let shown = 0;
+    cards.forEach(card => {
+        const bag = card.getAttribute('data-search') || '';
+        const match = !q || bag.includes(q);
+        card.style.display = match ? '' : 'none';
+        if (match) shown++;
+    });
+    const countEl = countId && document.getElementById(countId);
+    if (countEl) {
+        countEl.textContent = q
+            ? `${shown} match${shown === 1 ? '' : 'es'} of ${cards.length}`
+            : `${cards.length} registered ${shown === 1 ? singular : plural}`;
+    }
+    const emptyId = (countId || '').replace('-count-sub', '-empty');
+    const emptyEl = emptyId && document.getElementById(emptyId);
+    if (emptyEl) emptyEl.style.display = (q && shown === 0) ? '' : 'none';
+}
+
+function sortCards(gridSel, cardSel, sortKey) {
+    document.querySelectorAll('.sort-btn:not(.mfr-filter-btn)').forEach(b => {
+        b.classList.toggle('sort-btn-active', b.dataset.sort === sortKey);
+    });
+    const grid = document.querySelector(gridSel);
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll(cardSel));
+    const num = (c, k) => Number(c.dataset[k]) || 0;
+    const byName = (a, b) => (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' });
+    cards.sort((a, b) => {
+        if (sortKey === 'alpha') return byName(a, b);
+        // Championship order: points, then wins, then ELO, then name — so a
+        // driver on 0 points never outranks one who has actually scored.
+        if (sortKey === 'points') {
+            return (num(b, 'points') - num(a, 'points'))
+                || (num(b, 'wins') - num(a, 'wins'))
+                || (num(b, 'elo') - num(a, 'elo'))
+                || byName(a, b);
+        }
+        // ELO/pace order: rating, then points, then name.
+        return (num(b, 'elo') - num(a, 'elo'))
+            || (num(b, 'points') - num(a, 'points'))
+            || byName(a, b);
+    });
+    cards.forEach(c => grid.appendChild(c));
+    if (grid.classList.contains('view-grid')) layoutGrid();
+}
+
+// ===== THE GRID — starting-grid formation =====
+let _driverView = 'grid';
+try { const v = localStorage.getItem('gtec_driver_view'); if (v === 'cards' || v === 'grid') _driverView = v; } catch (e) {}
+
+// Number the visible cards in their current (sorted/filtered) order, mark the
+// echelon columns, and crown the front row. Re-run after any sort/filter/resize.
+function layoutGrid() {
+    const grid = document.querySelector('.driver-grid');
+    if (!grid || !grid.classList.contains('view-grid')) return;
+    const cardW = 160 + 0.85 * 16;                       // min card width + grid gap
+    const cols = Math.max(1, Math.floor((grid.clientWidth + 0.85 * 16) / cardW));
+    const vis = Array.from(grid.querySelectorAll('.driver-card')).filter(c => c.style.display !== 'none');
+    vis.forEach((c, i) => {
+        const col = i % cols;
+        if (col % 2 === 1) c.setAttribute('data-col-odd', ''); else c.removeAttribute('data-col-odd');
+        c.classList.toggle('gp-1', i === 0);
+        c.classList.toggle('gp-2', i === 1);
+        c.classList.toggle('gp-3', i === 2);
+        const chip = c.querySelector('.grid-pos');
+        if (chip) chip.textContent = 'P' + (i + 1);
+    });
+    // Cards hidden by a filter shouldn't keep a stale rank/echelon class.
+    grid.querySelectorAll('.driver-card').forEach(c => {
+        if (c.style.display === 'none') { c.removeAttribute('data-col-odd'); c.classList.remove('gp-1', 'gp-2', 'gp-3'); }
+    });
+}
+
+// Flip between the formation and the plain card matrix.
+function setDriverView(view, btn) {
+    _driverView = view === 'cards' ? 'cards' : 'grid';
+    try { localStorage.setItem('gtec_driver_view', _driverView); } catch (e) {}
+    const grid = document.querySelector('.driver-grid');
+    const gantry = document.getElementById('grid-gantry');
+    document.getElementById('vt-grid')?.classList.toggle('active', _driverView === 'grid');
+    document.getElementById('vt-cards')?.classList.toggle('active', _driverView === 'cards');
+    if (!grid) return;
+    if (_driverView === 'grid') {
+        grid.classList.add('view-grid');
+        if (gantry) gantry.classList.add('show');
+        // A starting grid ranks on merit — nudge an alphabetical sort to points.
+        const active = document.querySelector('.sort-btn.sort-btn-active:not(.mfr-filter-btn)');
+        if (active && active.dataset.sort === 'alpha') sortCards('.driver-grid', '.driver-card', 'points');
+        else layoutGrid();
+        playGridEntrance();
+    } else {
+        grid.classList.remove('view-grid', 'grid-walk');
+        if (gantry) gantry.classList.remove('show');
+        grid.querySelectorAll('.driver-card').forEach(c => { c.removeAttribute('data-col-odd'); c.classList.remove('gp-1', 'gp-2', 'gp-3'); c.style.removeProperty('--gi'); });
+    }
+}
+
+// Staggered "grid walk" reveal + a quick lights-out cue (once, on entry).
+function playGridEntrance() {
+    const grid = document.querySelector('.driver-grid');
+    if (!grid) return;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const vis = Array.from(grid.querySelectorAll('.driver-card')).filter(c => c.style.display !== 'none');
+    vis.forEach((c, i) => c.style.setProperty('--gi', Math.min(i, 22)));   // cap the cascade so the tail doesn't lag
+    if (reduce) { runLights(true); return; }
+    grid.classList.remove('grid-walk'); void grid.offsetWidth; grid.classList.add('grid-walk');
+    runLights(false);
+}
+
+// Five reds on, then out → green. Purely decorative; skipped for reduced motion.
+let _lightsTimers = [];
+function runLights(instant) {
+    const box = document.getElementById('gantry-lights');
+    if (!box) return;
+    _lightsTimers.forEach(clearTimeout); _lightsTimers = [];
+    const lamps = [...box.querySelectorAll('.lamp')];
+    box.classList.remove('go'); lamps.forEach(l => l.classList.remove('on'));
+    if (instant) { box.classList.add('go'); return; }
+    lamps.forEach((l, i) => _lightsTimers.push(setTimeout(() => l.classList.add('on'), 160 + i * 150)));
+    _lightsTimers.push(setTimeout(() => { lamps.forEach(l => l.classList.remove('on')); box.classList.add('go'); }, 160 + lamps.length * 150 + 260));
+}
+
+// Keep the echelon columns correct as the viewport (and column count) change.
+let _gridResizeT;
+window.addEventListener('resize', () => { clearTimeout(_gridResizeT); _gridResizeT = setTimeout(() => { if (_driverView === 'grid') layoutGrid(); }, 120); });
+
+// ============================================================
+// SEASON STAKES — best/worst possible finish still mathematically
+// open for a driver in the active season. Ceiling per remaining round
+// assumes the most generous case (Split 1 / 100% multiplier, pole +
+// fastest lap + the win) rather than trying to predict actual future
+// splits — splits are Elo-sorted each round, so a driver who really
+// did win everything from here would be climbing toward Split 1
+// anyway. Every driver gets a number, not just the title fight:
+//   best  = 1 + rivals whose CURRENT points already beat this
+//           driver's ceiling (uncatchable even in the fantasy case)
+//   worst = 1 + rivals whose CEILING could still reach or pass this
+//           driver's floor (their current points, scoring nothing
+//           more) — ties assumed to go against this driver here,
+//           since remaining-round tie-breaks can't be known in advance
+// ============================================================
+async function fetchSeasonStakes(driverId) {
+    const { data: season } = await sb.from('seasons')
+        .select('id, year, points_systems(points, pole_points, fastest_lap_points)')
+        .eq('is_active', true)
+        .maybeSingle();
+    if (!season) return null;
+
+    const [{ count: remaining }, { data: allDrivers }, { data: standings }] = await Promise.all([
+        sb.from('events').select('id', { count: 'exact', head: true })
+            .eq('season_id', season.id).in('status', ['scheduled', 'in_progress']),
+        sb.from('drivers').select('id'),
+        sb.from('driver_standings').select('driver_id, points, wins, podiums').eq('season_id', season.id),
+    ]);
+    if (!remaining) return null; // season over, or nothing scheduled yet to project against
+
+    const ps = season.points_systems;
+    if (!ps) return null;
+    const maxPos = Math.max(0, ...(ps.points || []).map(p => Number(p.points) || 0));
+    const ceiling = remaining * (maxPos + Number(ps.pole_points || 0) + Number(ps.fastest_lap_points || 0));
+
+    const standingsMap = new Map((standings || []).map(s => [s.driver_id, s]));
+    const field = (allDrivers || []).map(d => {
+        const s = standingsMap.get(d.id);
+        return { driver_id: d.id, points: Number(s?.points || 0), wins: Number(s?.wins || 0), podiums: Number(s?.podiums || 0) };
+    });
+
+    const me = field.find(f => f.driver_id === driverId);
+    if (!me) return null;
+
+    const sorted = [...field].sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
+    const currentPosition = sorted.findIndex(f => f.driver_id === driverId) + 1;
+    const myCeiling = me.points + ceiling;
+
+    let best = 1, worst = 1;
+    field.forEach(f => {
+        if (f.driver_id === driverId) return;
+        if (f.points > myCeiling) best++;                  // still ahead even in my fantasy best
+        if (f.points + ceiling >= me.points) worst++;       // could reach or pass my floor
+    });
+
+    return { seasonYear: season.year, remaining, currentPoints: me.points, currentPosition, totalDrivers: field.length, best, worst };
+}
+
+// ============================================================
+// PROFILE
+// ============================================================
+// Upsert a single <meta>/<link> in <head> so client-rendered driver pages
+// carry per-driver SEO + social tags (Google renders JS and indexes these).
+function _upsertHeadTag(selector, tag, identAttrs, valueAttr, value) {
+    let el = document.head.querySelector(selector);
+    if (!el) { el = document.createElement(tag); for (const k in identAttrs) el.setAttribute(k, identAttrs[k]); document.head.appendChild(el); }
+    el.setAttribute(valueAttr, value);
+}
+
+// Turn a driver profile into its own discoverable, shareable page: unique
+// title/description/canonical, Open Graph + Twitter card (using the driver's
+// photo), and Person/ProfilePage/BreadcrumbList structured data.
+function setDriverSEO(d, rating) {
+    const base = 'https://sparkstheory.co.uk/endurance/drivers/';
+    const url = `${base}?slug=${encodeURIComponent(d.slug)}`;
+    const num = d.career_number ? `#${d.career_number} ` : '';
+    const bits = [];
+    if (d.nationality) bits.push(d.nationality);
+    if (d.teams?.name) bits.push(d.teams.name);
+    if (d.manufacturers?.name) bits.push(d.manufacturers.name);
+    if (rating?.rating) bits.push(`${Math.round(rating.rating)} ELO`);
+    const tail = bits.length ? ` — ${bits.join(' · ')}.` : '.';
+    const desc = `${num}${d.display_name}${tail} Career stats, ELO rating, race history and season form in GTEC, the Gran Turismo 7 (GT7) endurance championship.`;
+    const title = `${d.display_name} | GTEC Driver`;
+    const img = d.photo_url || 'https://sparkstheory.co.uk/endurance/assets/og-card.png';
+
+    document.title = title;
+    _upsertHeadTag('meta[name="description"]', 'meta', { name: 'description' }, 'content', desc);
+    _upsertHeadTag('link[rel="canonical"]', 'link', { rel: 'canonical' }, 'href', url);
+    _upsertHeadTag('meta[property="og:type"]', 'meta', { property: 'og:type' }, 'content', 'profile');
+    _upsertHeadTag('meta[property="og:title"]', 'meta', { property: 'og:title' }, 'content', title);
+    _upsertHeadTag('meta[property="og:description"]', 'meta', { property: 'og:description' }, 'content', desc);
+    _upsertHeadTag('meta[property="og:url"]', 'meta', { property: 'og:url' }, 'content', url);
+    _upsertHeadTag('meta[property="og:image"]', 'meta', { property: 'og:image' }, 'content', img);
+    _upsertHeadTag('meta[name="twitter:title"]', 'meta', { name: 'twitter:title' }, 'content', title);
+    _upsertHeadTag('meta[name="twitter:description"]', 'meta', { name: 'twitter:description' }, 'content', desc);
+    _upsertHeadTag('meta[name="twitter:image"]', 'meta', { name: 'twitter:image' }, 'content', img);
+
+    const graph = [
+        { '@type': 'ProfilePage', '@id': url + '#page', url, name: title,
+          isPartOf: { '@id': 'https://sparkstheory.co.uk/endurance/#site' },
+          about: { '@id': url + '#person' }, breadcrumb: { '@id': url + '#bc' } },
+        { '@type': 'Person', '@id': url + '#person', name: d.display_name, url,
+          nationality: d.nationality || undefined,
+          image: d.photo_url || undefined,
+          memberOf: d.teams?.name ? { '@type': 'SportsTeam', name: d.teams.name } : undefined,
+          worksFor: { '@id': 'https://sparkstheory.co.uk/endurance/#org' } },
+        { '@type': 'BreadcrumbList', '@id': url + '#bc', itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'GTEC', item: 'https://sparkstheory.co.uk/endurance/' },
+            { '@type': 'ListItem', position: 2, name: 'Drivers', item: base },
+            { '@type': 'ListItem', position: 3, name: d.display_name, item: url },
+        ] },
+    ];
+    let ld = document.getElementById('driver-ld');
+    if (!ld) { ld = document.createElement('script'); ld.type = 'application/ld+json'; ld.id = 'driver-ld'; document.head.appendChild(ld); }
+    ld.textContent = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
+}
+
+async function showProfile() {
+    const { data: driver, error } = await sb.from('drivers')
+        .select('*, teams!current_team_id(name,slug,leader_driver_id), manufacturers(name,brand_color,logo_url,car_name)')
+        .eq('slug', slug)
+        .maybeSingle();
+
+    if (error || !driver) {
+        app.innerHTML = `<div class="hero"><div class="hero-title">Driver not found</div></div>
+            <div class="content"><a class="back-link" href="/endurance/drivers/">← All Drivers</a></div>`;
+        return;
+    }
+    document.title = `${driver.display_name} | GTEC`;
+
+    // Season career stats + rating history in parallel with race history
+    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes, hostCountRes, dedRes, streamLinkRes] = await Promise.all([
+        sb.from('driver_standings').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
+        sb.from('driver_ratings').select('rating_before, rating_after, delta, event_id, events(round, name)').eq('driver_id', driver.id).order('created_at'),
+        sb.from('driver_current_ratings').select('rating, peak_rating').eq('driver_id', driver.id).maybeSingle(),
+        sb.from('result_drivers')
+        .select(`
+            finish_position, status, points_awarded, pole_point, fastest_lap_point, laps_driven,
+            results(
+                event_id, entry_id,
+                entries(car_number, lobby_number, teams(name)),
+                events(id, round, name, starts_at, circuit_name, seasons(year, name))
+            )
+        `)
+        .eq('driver_id', driver.id),
+        sb.from('penalties')
+            .select('penalty_type, penalty_value, reason, created_at, events(name, slug, starts_at)')
+            .eq('driver_id', driver.id),
+        sb.from('steward_decisions')
+            .select('decision_no, title, content, ruling, issued_at, events(name, slug, starts_at)')
+            .eq('driver_id', driver.id),
+        fetchSeasonStakes(driver.id),
+        // Career-wide count of splits actually hosted, feeds the Community
+        // badge ladder (replaces the old "willing to host" flag check).
+        sb.from('entries').select('id', { count: 'exact', head: true }).eq('host_driver_id', driver.id),
+        // Points-deduction penalties affecting this driver (their own, or a
+        // whole-team penalty on an entry they were part of), with reason and
+        // season — to show the dock + reason on the Career Stats points.
+        sb.from('penalties')
+            .select('points_amount, reason, driver_id, entry_id, event_id, entries(entry_drivers(driver_id)), events(seasons(year))')
+            .eq('penalty_type', 'points_deduction'),
+        // Any stream link this driver's posted earns the Content Creator badge.
+        sb.from('driver_stream_links').select('id', { count: 'exact', head: true }).eq('driver_id', driver.id),
+    ]);
+
+    // Make this driver its own indexable, shareable entity (per-driver title,
+    // description, canonical, social card and Person/ProfilePage schema) so
+    // Google treats every driver page as a distinct result, not one list page.
+    setDriverSEO(driver, currentRatingRes?.data);
+
+    // Positions Gained (grid → flag): per-driver grid slot vs per-driver
+    // finish, across this driver's classified finishes. Qualifying is
+    // per-driver (migrations 27/28), so key the grid by event for this driver.
+    let posGained = null;
+    const pgRaces = (historyRes.data || []).filter(r =>
+        r.status === 'classified' && r.finish_position != null && r.results?.event_id);
+    if (pgRaces.length) {
+        const { data: pgQuali } = await sb.from('qualifying_results')
+            .select('event_id, position').eq('driver_id', driver.id);
+        const pgGrid = new Map((pgQuali || []).map(q => [q.event_id, q.position]));
+        let net = 0, n = 0;
+        pgRaces.forEach(r => {
+            const g = pgGrid.get(r.results.event_id);
+            if (g == null) return;
+            net += g - r.finish_position; n += 1;
+        });
+        if (n > 0) posGained = net;
+    }
+
+    // Sum this driver's deductions, keyed both by season year (Career Stats)
+    // and by event (Race History).
+    const dedBySeasonYear = {};
+    const dedByEvent = {};
+    (dedRes.data || []).forEach(p => {
+        if (!p.points_amount) return;
+        const hits = p.driver_id
+            ? p.driver_id === driver.id
+            : (p.entries?.entry_drivers || []).some(ed => ed.driver_id === driver.id);
+        if (!hits) return;
+        const r = (p.reason || '').trim();
+        const add = (map, key) => {
+            if (key == null) return;
+            const e = map[key] || (map[key] = { amount: 0, reasons: [] });
+            e.amount += p.points_amount;
+            if (r && !e.reasons.includes(r)) e.reasons.push(r);
+        };
+        add(dedBySeasonYear, p.events?.seasons?.year);
+        add(dedByEvent, p.event_id);
+    });
+
+    const hostCount  = hostCountRes.count || 0;
+    const seasons    = seasonsRes.data  || [];
+    const ratingHist = ratingRes.data   || [];
+    const currentRatingRow = currentRatingRes.data;
+    const rawHistory = historyRes.data  || [];
+    const penalties  = penaltiesRes.data || [];
+    const stewards   = stewardRes.data   || [];
+
+    const history = rawHistory
+        .filter(r => r.results?.events?.starts_at)
+        .sort((a, b) => new Date(b.results.events.starts_at) - new Date(a.results.events.starts_at))
+        .slice(0, 15);
+
+    // Distinct circuit names the driver has classified-finished, used
+    // by the Circuits badge category to decide which flags to light up.
+    const completedCircuits = Array.from(new Set(
+        rawHistory
+            .filter(r => (r.status || 'classified') === 'classified')
+            .map(r => (r.results?.events?.circuit_name || '').toLowerCase())
+            .filter(Boolean)
+    ));
+
+    // Finishing positions across completed seasons + secret-badge
+    // detection in parallel.
+    const [{ data: _seasonsList }, { data: _allStandings }, { data: _secretBadges }] = await Promise.all([
+        sb.from('seasons').select('id, year, is_active'),
+        sb.from('driver_standings').select('driver_id, season_id, points, races'),
+        sb.rpc('driver_secret_badges', { p_driver_id: driver.id }),
+    ]);
+    const seasonFinishes = [];
+    (_seasonsList || []).filter(s => !s.is_active).forEach(s => {
+        const standings = (_allStandings || [])
+            .filter(r => r.season_id === s.id && Number(r.points) > 0)
+            .sort((a, b) => Number(b.points) - Number(a.points));
+        const idx = standings.findIndex(r => r.driver_id === driver.id);
+        if (idx >= 0) seasonFinishes.push(idx + 1);
+    });
+    const secretBadges = _secretBadges || {};
+    // Founding Member — raced in Season 1 (earliest season by year).
+    const _firstSeasonId = (_seasonsList || []).slice().sort((a, b) => (a.year || 0) - (b.year || 0))[0]?.id;
+    const foundingMember = !!_firstSeasonId && (_allStandings || []).some(r => r.driver_id === driver.id && r.season_id === _firstSeasonId && Number(r.races) > 0);
+
+    // Current rating — driver_current_ratings.rating/peak_rating already
+    // fall back to the DR/SR seed for drivers with no race history, so use
+    // it rather than hardcoding 1500 here.
+    const currentRating = ratingHist.length ? ratingHist[ratingHist.length - 1].rating_after : (currentRatingRow?.rating ?? 1500);
+    const peakRating    = ratingHist.length ? Math.max(...ratingHist.map(r => r.rating_after)) : (currentRatingRow?.peak_rating ?? 1500);
+    const lastDelta     = ratingHist.length ? ratingHist[ratingHist.length - 1].delta : null;
+    const isProvisional = ratingHist.length === 0;
+
+    // Career totals
+    const totals = seasons.reduce((acc, s) => {
+        acc.points   += Number(s.points || 0);
+        acc.wins     += Number(s.wins || 0);
+        acc.podiums  += Number(s.podiums || 0);
+        acc.poles    += Number(s.poles || 0);
+        acc.fl       += Number(s.fastest_laps || 0);
+        acc.races    += Number(s.races || 0);
+        return acc;
+    }, { points: 0, wins: 0, podiums: 0, poles: 0, fl: 0, races: 0 });
+
+    // Tags
+    const tags = [];
+    if (driver.nationality) tags.push(`${flag(driver.nationality)} ${esc(driver.nationality)}`);
+    if (driver.psn_id)      tags.push(`PSN: ${esc(driver.psn_id)}`);
+    if (driver.teams?.name) {
+        const badge = mfrBadge(driver.manufacturers?.logo_url, driver.manufacturers?.brand_color, driver.manufacturers?.name);
+        const leaderPill = driver.teams.leader_driver_id === driver.id
+            ? ' <span class="pill-leader" title="Team Leader">★ Leader</span>'
+            : '';
+        const teamName = driver.teams.slug
+            ? `<a class="tag-link" href="/endurance/teams/?slug=${esc(driver.teams.slug)}">${esc(driver.teams.name)}</a>`
+            : esc(driver.teams.name);
+        tags.push(`${badge}${teamName}${leaderPill}`);
+    }
+    if (driver.manufacturers?.name && !driver.teams?.name) {
+        const mfr = driver.manufacturers;
+        tags.push(`${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}`);
+    }
+    if (driver.joined_at) tags.push(`Since ${esc(driver.joined_at.slice(0,4))}`);
+    if (driver.willing_host) tags.push('<span style="color:#ffd166">🎛️</span> Lobby Host');
+
+    const ratingClass = r => 'rc-' + (r === 'A+' ? 'Ap' : r);
+    const ratingChips = [];
+    if (driver.gt7_dr_rating) {
+        ratingChips.push(`<span class="rating-chip"><span class="rc-label">DR</span><span class="rc-value ${ratingClass(driver.gt7_dr_rating)}">${esc(driver.gt7_dr_rating)}</span></span>`);
+    }
+    if (driver.gt7_sr_rating) {
+        ratingChips.push(`<span class="rating-chip"><span class="rc-label">SR</span><span class="rc-value ${ratingClass(driver.gt7_sr_rating)}">${esc(driver.gt7_sr_rating)}</span></span>`);
+    }
+
+    const tagsHTML = tags.map(t => `<span class="profile-tag">${t}</span>`).join('') + ratingChips.join('');
+
+    // Season Stakes — best/worst possible finish still mathematically
+    // open in the active season, for every driver, not just the
+    // handful fighting for P1. Hidden if the season's over or hasn't
+    // started, or this driver isn't in the current roster.
+    const seasonStakesHTML = seasonStakes ? `
+        <div class="section">
+            <div class="section-title">${seasonStakes.seasonYear} Championship Picture</div>
+            <div class="stakes-bar">
+                <div class="stakes-item">
+                    <div class="stakes-label">Currently</div>
+                    <div class="stakes-value">P${seasonStakes.currentPosition}</div>
+                </div>
+                <div class="stakes-item stakes-best">
+                    <div class="stakes-label">Best Possible</div>
+                    <div class="stakes-value">P${seasonStakes.best}</div>
+                </div>
+                <div class="stakes-item stakes-worst">
+                    <div class="stakes-label">Worst Possible</div>
+                    <div class="stakes-value">P${seasonStakes.worst}</div>
+                </div>
+            </div>
+            <div class="stakes-note">${seasonStakes.currentPoints.toFixed(seasonStakes.currentPoints % 1 === 0 ? 0 : 1)} pts · ${seasonStakes.remaining} round${seasonStakes.remaining === 1 ? '' : 's'} left · P${seasonStakes.best}${seasonStakes.best === seasonStakes.worst ? '' : `–P${seasonStakes.worst}`} still mathematically possible</div>
+        </div>` : '';
+
+    // Career stats table
+    const seasonsHTML = (seasons || []).length ? `
+        <div class="section">
+            <div class="section-title">Career Stats</div>
+            <div class="data-table">
+                <table>
+                    <thead><tr>
+                        <th>Season</th><th>Team</th><th class="right">Pts</th>
+                        <th class="right">Races</th><th class="right">Wins</th>
+                        <th class="right">Pod</th><th class="right hide-mob">Poles</th><th class="right hide-mob">FL</th>
+                    </tr></thead>
+                    <tbody>
+                        ${seasons.map(s => `<tr>
+                            <td>${s.season_year}</td>
+                            <td class="muted">${s.team_name ? `${mfrBadge(s.manufacturer_logo_url, s.brand_color, s.manufacturer_name)} ${esc(s.team_name)}` : '—'}</td>
+                            <td class="right pts">${Number(s.points).toFixed(s.points % 1 === 0 ? 0 : 1)}${(() => { const dd = dedBySeasonYear[s.season_year]; return dd && dd.amount ? `<div class="pts-deduct" title="${esc(dd.reasons.join(', '))} (−${dd.amount} pts)">−${dd.amount}${dd.reasons.length ? ` · ${esc(dd.reasons.join(', '))}` : ''}</div>` : ''; })()}</td>
+                            <td class="right muted">${s.races}</td>
+                            <td class="right muted">${s.wins}</td>
+                            <td class="right muted">${s.podiums}</td>
+                            <td class="right muted hide-mob">${s.poles}</td>
+                            <td class="right muted hide-mob">${s.fastest_laps}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>` : '';
+
+    // Split journey: chronological list of which split this driver raced in
+    // each event, with promotion / relegation arrows between stops. Only
+    // shown once a driver has actually raced two or more rounds. Sort by
+    // round number (always present) rather than starts_at (which may not be).
+    const splitJourney = rawHistory
+        .filter(r => r.results?.events?.round != null && r.results?.entries?.lobby_number != null)
+        .sort((a, b) => (a.results.events.round ?? 0) - (b.results.events.round ?? 0))
+        .map(r => ({
+            circuit: r.results.events.circuit_name || r.results.events.name || 'Round',
+            round:   r.results.events.round,
+            split:   r.results.entries.lobby_number,
+        }));
+
+    // Draw the journey as an animated trajectory: split number over rounds,
+    // best split (lowest number) at the top, so climbing the grid literally
+    // reads as a line rising. The path draws itself in and the nodes pop in
+    // sequence; a summary chip row calls out peak, current split and trend.
+    function buildSplitTrajectory(journey) {
+        const n = journey.length;
+        const splits = journey.map(s => s.split);
+        const minS = Math.min(...splits), maxS = Math.max(...splits);
+        const range = maxS - minS;
+        const padL = 46, padR = 30, padT = 30, padB = 40, stepX = 72, plotH = 140;
+        const W = padL + (n - 1) * stepX + padR;
+        const H = padT + plotH + padB;
+        const baseY = padT + plotH;
+        const xFor = i => padL + i * stepX;
+        const yFor = s => range === 0 ? padT + plotH / 2 : padT + ((s - minS) / range) * plotH;
+
+        let grid = '';
+        for (let s = minS; s <= maxS; s++) {
+            const y = yFor(s);
+            grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${y.toFixed(1)}" class="sj-grid"/>`;
+            grid += `<text x="${padL - 10}" y="${(y + 3).toFixed(1)}" class="sj-ylabel" text-anchor="end">S${s}</text>`;
+        }
+
+        const pts = journey.map((s, i) => ({ x: xFor(i), y: yFor(s.split), round: s.round, circuit: s.circuit, split: s.split }));
+        const linePath = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+        const areaPath = `M${pts[0].x.toFixed(1)},${baseY} ` + pts.map(p => `L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ` L${pts[n - 1].x.toFixed(1)},${baseY} Z`;
+
+        const nodes = pts.map((p, i) => {
+            const prev = i > 0 ? journey[i - 1].split : null;
+            let cls = 'sj-dot-start';
+            if (prev != null) cls = p.split < prev ? 'sj-dot-up' : p.split > prev ? 'sj-dot-down' : 'sj-dot-same';
+            if (p.split === minS) cls += ' sj-dot-peak';
+            const delay = (0.5 + i * 0.09).toFixed(2);
+            return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="7" class="sj-dot ${cls}" style="animation-delay:${delay}s"><title>R${p.round} ${esc(p.circuit)} · Split ${p.split}</title></circle>
+                <text x="${p.x.toFixed(1)}" y="${(baseY + 20).toFixed(1)}" class="sj-xlabel" text-anchor="middle" style="animation-delay:${delay}s">R${p.round}</text>`;
+        }).join('');
+
+        const first = journey[0].split, last = journey[n - 1].split;
+        const trend = last < first ? { t: 'Climbing', c: 'up', a: '↑' }
+            : last > first ? { t: 'Sliding', c: 'down', a: '↓' }
+            : { t: 'Holding', c: 'same', a: '→' };
+        const chips = `<div class="sj-chips">
+            <span class="sj-chip"><span class="sj-chip-k">Peak</span><span class="sj-chip-v">Split ${minS}</span></span>
+            <span class="sj-chip"><span class="sj-chip-k">Now</span><span class="sj-chip-v">Split ${last}</span></span>
+            <span class="sj-chip sj-chip-${trend.c}"><span class="sj-chip-k">Trend</span><span class="sj-chip-v">${trend.a} ${trend.t}</span></span>
+        </div>`;
+
+        return `${chips}<div class="sj-chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="sj-svg" role="img" aria-label="Split number by round">
+            <defs>
+                <linearGradient id="sjLine" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#ffd166"/><stop offset="100%" stop-color="#f59e0b"/>
+                </linearGradient>
+                <linearGradient id="sjArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffd166" stop-opacity="0.22"/><stop offset="100%" stop-color="#ffd166" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            ${grid}
+            <path d="${areaPath}" class="sj-area"/>
+            <path d="${linePath}" class="sj-line"/>
+            ${nodes}
+        </svg></div>`;
+    }
+
+    const splitJourneyHTML = splitJourney.length >= 2 ? `
+        <div class="section">
+            <div class="section-title">Split Journey</div>
+            ${buildSplitTrajectory(splitJourney)}
+            <div class="split-timeline">
+                ${splitJourney.map((stop, i) => {
+                    const prev = i > 0 ? splitJourney[i - 1].split : null;
+                    let moveCls = 'move-new', moveTxt = 'START';
+                    if (prev != null) {
+                        if (stop.split < prev)      { moveCls = 'move-up';   moveTxt = `↑ ${prev - stop.split}`; }
+                        else if (stop.split > prev) { moveCls = 'move-down'; moveTxt = `↓ ${stop.split - prev}`; }
+                        else                        { moveCls = 'move-same'; moveTxt = '–'; }
+                    }
+                    return `<div class="split-stop">
+                        <div class="split-stop-circuit">${esc(stop.circuit)}</div>
+                        <div class="split-stop-split">S${stop.split}</div>
+                        <div class="split-stop-move ${moveCls}">${moveTxt}</div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>` : '';
+
+    // Race history table
+    const historyHTML = history.length ? `
+        <div class="section">
+            <div class="section-title">Race History</div>
+            <div class="data-table">
+                <table>
+                    <thead><tr>
+                        <th>Event</th><th>Season</th><th class="hide-mob">Car</th>
+                        <th class="right">Pos</th><th class="right">Pts</th>
+                    </tr></thead>
+                    <tbody>
+                        ${history.map(r => {
+                            const res = r.results;
+                            const ev  = res?.events;
+                            const pts = r.points_awarded || 0;
+                            const evDed = dedByEvent[ev?.id];
+                            const netPts = pts - (evDed?.amount || 0);   // net after this round's deduction, matching the season total
+                            const bonuses = [r.pole_point ? 'Pole' : '', r.fastest_lap_point ? 'FL' : ''].filter(Boolean).join(' · ');
+                            return `<tr>
+                                <td>
+                                    <strong>R${ev?.round ?? '?'} — ${esc(ev?.name)}</strong>
+                                    ${bonuses ? `<span style="font-size:0.7rem;color:var(--gold);margin-left:0.4rem">${bonuses}</span>` : ''}
+                                </td>
+                                <td class="muted">${esc(ev?.seasons?.year)}</td>
+                                <td class="muted hide-mob">${res?.entries?.car_number ? '#' + res.entries.car_number : ''} ${esc(res?.entries?.teams?.name || 'Solo')}</td>
+                                <td class="right">${posBadge(r.finish_position, r.status)}</td>
+                                <td class="right pts">${netPts}${evDed && evDed.amount ? `<div class="pts-deduct" title="${pts} earned − ${evDed.amount} (${esc(evDed.reasons.join(', '))})">−${evDed.amount} · ${esc(evDed.reasons.join(', '))}</div>` : ''}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>` : '';
+
+    // Discipline: penalties + steward decisions merged + sorted desc
+    const discItems = [
+        ...penalties.map(p => ({
+            kind: 'penalty',
+            when: p.events?.starts_at || p.created_at,
+            eventName: p.events?.name || '',
+            eventSlug: p.events?.slug || '',
+            label: (p.penalty_type || '').replace(/_/g,' '),
+            value: p.penalty_value || '',
+            body:  p.reason || '',
+        })),
+        ...stewards.map(s => ({
+            kind: 'steward',
+            when: s.events?.starts_at || s.issued_at,
+            eventName: s.events?.name || '',
+            eventSlug: s.events?.slug || '',
+            label: s.ruling || 'decision',
+            value: s.decision_no || '',
+            title: s.title || '',
+            body:  s.content || '',
+        })),
+    ].sort((a, b) => new Date(b.when) - new Date(a.when));
+
+    const disciplineHTML = discItems.length ? `
+        <div class="section">
+            <div class="section-title">Discipline</div>
+            <div class="discipline-list">
+                ${discItems.map(d => {
+                    const dateStr = d.when ? new Date(d.when).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
+                    const eventLink = d.eventSlug
+                        ? `<a href="/endurance/results/?slug=${esc(d.eventSlug)}">${esc(d.eventName)}</a>`
+                        : esc(d.eventName);
+                    const pill = d.kind === 'steward'
+                        ? `<span class="disc-pill disc-${esc(d.label)}">${esc(d.label.replace(/_/g,' '))}</span>`
+                        : `<span class="disc-pill disc-penalty">${esc(d.label)}${d.value ? ' · ' + esc(d.value) : ''}</span>`;
+                    return `<div class="disc-row disc-row-${d.kind}">
+                        <div class="disc-head">
+                            ${pill}
+                            <div class="disc-meta">${eventLink ? eventLink + ' · ' : ''}${dateStr}</div>
+                        </div>
+                        ${d.title ? `<div class="disc-title">${esc(d.title)}</div>` : ''}
+                        ${d.body  ? `<div class="disc-body">${esc(d.body)}</div>` : ''}
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>` : '';
+
+    app.innerHTML = `
+        <div class="hero">
+            <div class="hero-eyebrow">Driver Profile</div>
+        </div>
+        <div class="content">
+            <a class="back-link" href="/endurance/drivers/">← All Drivers</a>
+            <div class="profile-header">
+                <div class="profile-avatar">${avatarHTML(driver.photo_url, driver.display_name, 'profile')}</div>
+                <div class="profile-name-block">
+                    ${driver.career_number ? `<div class="profile-number">#${driver.career_number}</div>` : ''}
+                    <div class="profile-name">${esc(driver.display_name)}</div>
+                    <div class="profile-tags">${tagsHTML}</div>
+                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [], hostCount, foundingMember, hasStreamLink: (streamLinkRes?.count || 0) > 0 }) : ''}
+                    <button class="share-btn" id="share-profile-btn" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                            <polyline points="16 6 12 2 8 6"/>
+                            <line x1="12" y1="2" x2="12" y2="15"/>
+                        </svg>
+                        <span>Share Driver Card</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="stat-bar">
+                <div class="stat-item"><div class="stat-label">Elo Rating${isProvisional ? ' <span style="color:var(--muted);font-size:0.55rem;letter-spacing:0.15em">· Provisional</span>' : ''}</div><div class="stat-value gold">${currentRating}</div>${window.eloTierBadge ? `<div style="margin-top:0.35rem">${window.eloTierBadge(currentRating, { provisional: isProvisional })}</div>` : ''}</div>
+                <div class="stat-item"><div class="stat-label">Points</div><div class="stat-value">${totals.points.toFixed(totals.points % 1 === 0 ? 0 : 1)}</div></div>
+                <div class="stat-item"><div class="stat-label">Races</div><div class="stat-value">${totals.races}</div></div>
+                <div class="stat-item"><div class="stat-label">Wins</div><div class="stat-value">${totals.wins}</div></div>
+                <div class="stat-item hide-mob"><div class="stat-label">Podiums</div><div class="stat-value">${totals.podiums}</div></div>
+                <div class="stat-item hide-mob"><div class="stat-label">Poles</div><div class="stat-value">${totals.poles}</div></div>
+                ${posGained != null ? `<div class="stat-item hide-mob"><div class="stat-label">Net Positions</div><div class="stat-value" style="color:${posGained > 0 ? '#22c55e' : posGained < 0 ? '#f87171' : ''}">${posGained > 0 ? '+' : ''}${posGained}</div></div>` : ''}
+            </div>
+
+            ${seasonStakesHTML}
+
+            ${driver.bio ? `<div class="section"><div class="section-title">Bio</div><div class="bio-text">${esc(driver.bio)}</div></div>` : ''}
+
+            ${seasonsHTML}
+            ${splitJourneyHTML}
+            ${historyHTML}
+            ${disciplineHTML}
+
+            ${!seasons.length && !history.length && !discItems.length ? `<div class="empty-msg" style="margin-top:1rem">No race history yet — check back after the first event.</div>` : ''}
+        </div>`;
+
+    // Share-card button — needs closure access to the freshly-computed
+    // driver + totals so the painter doesn't have to re-fetch anything.
+    const shareBtn = document.getElementById('share-profile-btn');
+    if (shareBtn && window.gtecShareCard) {
+        const tier = window.eloTier ? (window.eloTier(currentRating)?.name || null) : null;
+        shareBtn.addEventListener('click', () => window.gtecShareCard({
+            driver: {
+                display_name:       driver.display_name,
+                slug:               driver.slug,
+                career_number:      driver.career_number,
+                nationality:        driver.nationality,
+                photo_url:          driver.photo_url,
+                team_name:          driver.teams?.name || null,
+                manufacturer_name:  driver.manufacturers?.name || null,
+                manufacturer_color: driver.manufacturers?.brand_color || null,
+            },
+            stats: {
+                elo:     Number.isFinite(currentRating) ? currentRating : null,
+                tier:    isProvisional ? null : tier,
+                points:  Number(totals.points || 0).toFixed(totals.points % 1 === 0 ? 0 : 1),
+                wins:    totals.wins,
+                podiums: totals.podiums,
+                races:   totals.races,
+            },
+            buttonEl: shareBtn,
+        }));
+    }
+}
+
+// ============================================================
+// Init
+// ============================================================
+if (slug) showProfile();
+else showListing();
+</script>
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>

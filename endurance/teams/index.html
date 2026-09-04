@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teams | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="Team profiles, rosters and constructors' standings from GTEC, the team-based Gran Turismo 7 endurance championship.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/teams/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Open Graph / Twitter card -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Teams">
+    <meta property="og:description" content="Every team competing in the GTEC endurance championship.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/teams/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Teams">
+    <meta name="twitter:description" content="Every team competing in the GTEC endurance championship.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608; --bg-1: #0a0e15; --bg-2: #11161f;
+            --text: #f1f5f9; --muted: #94a3b8;
+            --gold: #ffd166; --gold-deep: #c79a3a; --green: #22c55e;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .gtec-nav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5,6,8,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--text);
+            text-decoration: none;
+            text-indent: 0.32em;
+        }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; }
+        .gtec-nav .nav-links a {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            padding: 0.45rem 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .gtec-nav .back:hover {
+            color: var(--text);
+            border-color: rgba(255,255,255,0.25);
+        }
+
+        /* Hero */
+        .hero { padding: 3rem 2rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+        .hero-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; }
+        .team-profile-banner { width: 100%; aspect-ratio: 3 / 1; max-height: 280px; object-fit: cover; border-radius: 14px; margin-bottom: 1.75rem; display: block; border: 1px solid var(--border); }
+        .hero-title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.4rem; }
+        .hero-sub { color: var(--muted); font-size: 0.88rem; }
+
+        .content { max-width: 1100px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+
+        /* Search bar — shared treatment with the Drivers listing */
+        .gtec-search-wrap {
+            position: relative;
+            max-width: 480px;
+            margin: 0 auto 1.75rem;
+        }
+        .gtec-search-icon {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px; height: 16px;
+            color: var(--muted);
+            pointer-events: none;
+        }
+        .gtec-search-input {
+            width: 100%;
+            padding: 0.7rem 1rem 0.7rem 2.4rem;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92rem;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .gtec-search-input::placeholder { color: var(--muted); }
+        .gtec-search-input:focus {
+            border-color: rgba(255,209,102,0.55);
+            box-shadow: 0 0 0 3px rgba(255,209,102,0.12);
+        }
+        .sort-pills { display:flex; align-items:center; gap:0.4rem; max-width:480px; margin:0 auto 1.5rem; flex-wrap:wrap; }
+        .sort-label { font-size:0.72rem; color:var(--muted); margin-right:0.15rem; }
+        .sort-btn { background:transparent; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:0.72rem; font-weight:600; letter-spacing:0.08em; padding:0.28rem 0.85rem; cursor:pointer; transition:border-color 0.15s,color 0.15s; font-family:inherit; }
+        .sort-btn:hover { border-color:rgba(255,255,255,0.25); color:var(--text); }
+        .sort-btn.sort-btn-active { border-color:var(--gold); color:var(--gold); }
+
+        /* ===== LISTING ===== */
+        .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+        .team-card {
+            background: var(--bg-1); border: 1px solid var(--border); border-top: 3px solid var(--border); border-radius: 12px;
+            padding: 1.5rem; cursor: pointer; text-decoration: none; color: var(--text);
+            transition: border-color 0.2s, transform 0.15s;
+            display: flex; flex-direction: column; gap: 0.75rem;
+            position: relative; overflow: hidden;
+        }
+        .team-card:hover { border-color: rgba(255,209,102,0.35); transform: translateY(-2px); }
+        .team-card-banner {
+            display: block; width: calc(100% + 3rem); height: 110px; object-fit: cover;
+            margin: -1.5rem -1.5rem 0.25rem; border-radius: 12px 12px 0 0;
+        }
+        .team-card-logo-bg {
+            position: absolute; bottom: -18px; right: -18px;
+            width: 150px; height: 150px;
+            object-fit: contain;
+            opacity: 0.07;
+            filter: grayscale(1) brightness(4);
+            pointer-events: none; user-select: none;
+            transition: opacity 0.2s;
+        }
+        .team-card:hover .team-card-logo-bg { opacity: 0.13; }
+        .team-card-mfr { display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: var(--muted); }
+        .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0; }
+        .team-card-name { font-family: 'Anton', sans-serif; font-size: 1.35rem; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; }
+        .team-card-meta { font-size: 0.76rem; color: var(--muted); }
+        .team-card-drivers { display: flex; flex-wrap: wrap; gap: 0.4rem; padding-top: 0.65rem; margin-top: 0.35rem; border-top: 1px solid rgba(255,255,255,0.07); }
+        .team-card-driver {
+            display: flex; align-items: center; gap: 0.45rem;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px;
+            padding: 0.28rem 0.7rem 0.28rem 0.28rem;
+            text-decoration: none; color: var(--text);
+            transition: border-color 0.2s;
+            flex: 1; min-width: 0;
+        }
+        .team-card-driver:hover { border-color: rgba(255,209,102,0.4); }
+        .tcd-avatar { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .tcd-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .tcd-avatar-init { font-family: 'Anton', sans-serif; font-size: 0.7rem; color: var(--muted); }
+        .tcd-info { min-width: 0; overflow: hidden; }
+        .tcd-num { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; color: var(--gold); line-height: 1.2; }
+        .tcd-name { font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+
+        /* ===== PROFILE ===== */
+        .profile-header { margin-bottom: 1.75rem; }
+        .profile-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
+        .profile-name { font-family: 'Anton', sans-serif; font-size: clamp(2.2rem, 6vw, 3.5rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.75rem; }
+        .profile-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .profile-tag { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.75rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; font-size: 0.76rem; color: var(--muted); }
+        .leader-pill { display: inline-block; padding: 0.1rem 0.45rem; background: rgba(255,209,102,0.15); color: var(--gold); border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; margin-right: 0.25rem; }
+
+        /* Stat bar */
+        .stat-bar { display: flex; background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 2rem; }
+        .stat-item { flex: 1; padding: 1rem 0.75rem; text-align: center; border-right: 1px solid var(--border); }
+        .stat-item:last-child { border-right: none; }
+        .stat-label { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem; }
+        .stat-value { font-family: 'Anton', sans-serif; font-size: 1.6rem; line-height: 1; }
+        .stat-value.gold { background: linear-gradient(180deg, #fff 0%, var(--gold) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+        /* Season Stakes — best/worst possible finish still open, shown
+           for every team, not just the title fight. */
+        .stakes-bar {
+            display: flex; gap: 0;
+            background: var(--bg-1);
+            border: 1px solid rgba(255,209,102,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .stakes-item { flex: 1; padding: 0.85rem 0.75rem; text-align: center; border-right: 1px solid var(--border); }
+        .stakes-item:last-child { border-right: none; }
+        .stakes-label { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+        .stakes-value { font-family: 'Anton', sans-serif; font-size: 1.35rem; line-height: 1; color: var(--text); }
+        .stakes-item.stakes-best .stakes-value { color: #4ade80; }
+        .stakes-item.stakes-worst .stakes-value { color: #f87171; }
+        .stakes-note { font-size: 0.72rem; color: var(--muted); text-align: center; margin-top: 0.6rem; }
+
+        /* Driver roster — centered portrait photo cards (teams hold up to 2 drivers) */
+        .driver-roster { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; }
+        .driver-card {
+            position: relative;
+            width: 240px; max-width: 100%;
+            aspect-ratio: 3 / 4;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            text-decoration: none; color: var(--text);
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .driver-card:hover { border-color: rgba(255,209,102,0.45); transform: translateY(-3px); }
+        .driver-card-photo { position: absolute; inset: 0; background: var(--bg-2); }
+        .driver-card-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+        .driver-avatar-init {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Anton', sans-serif; font-size: 3.5rem;
+            color: var(--muted); opacity: 0.35;
+        }
+        .driver-card-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(5,6,8,0.97) 0%, rgba(5,6,8,0.7) 42%, transparent 75%);
+        }
+        .driver-card-ghost {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -58%);
+            font-family: 'Orbitron', sans-serif; font-weight: 900;
+            font-size: 5.5rem; line-height: 1; letter-spacing: -0.04em;
+            color: rgba(255,255,255,0.06); pointer-events: none; user-select: none;
+        }
+        .driver-card-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 0.85rem 1rem 1rem; z-index: 2; }
+        .driver-card-num { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; color: var(--gold); letter-spacing: 0.15em; margin-bottom: 0.2rem; }
+        .driver-card-name { font-family: 'Anton', sans-serif; font-size: 1.5rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.05; margin-bottom: 0.3rem; }
+        .driver-card-meta { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
+
+        /* Section */
+        .section { margin-bottom: 2rem; }
+        .section-title { font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.35em; text-transform: uppercase; color: var(--gold); margin-bottom: 1rem; text-indent: 0.35em; }
+        .section-title.centered { text-align: center; }
+        .bio-text { color: var(--muted); line-height: 1.7; font-size: 0.9rem; }
+
+        /* Table */
+        .data-table { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+        .data-table table { width: 100%; border-collapse: collapse; }
+        .data-table th { padding: 0.7rem 1.1rem; text-align: left; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); background: var(--bg-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+        .data-table th.right { text-align: right; }
+        .data-table td { padding: 0.75rem 1.1rem; border-bottom: 1px solid var(--border); font-size: 0.87rem; vertical-align: middle; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .data-table td.right { text-align: right; }
+        .data-table td.muted { color: var(--muted); }
+        .pts { font-weight: 700; color: var(--gold); }
+
+        .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.82rem; text-decoration: none; margin-bottom: 1.5rem; }
+        .back-link:hover { color: var(--text); }
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+        .empty-msg { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
+
+        @media (max-width: 600px) {
+            .nav { padding: 1rem; }
+            .hero, .content { padding: 1.5rem 1rem; }
+            .stat-bar { flex-wrap: wrap; }
+            .stat-item { min-width: 33%; border-bottom: 1px solid var(--border); }
+            .hide-mob { display: none; }
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/" class="active">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div id="app"><div class="loading">Loading…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb  = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data.session) { if (portal) portal.style.display = ''; }
+    else              { if (signin) signin.style.display = ''; }
+});
+const app = document.getElementById('app');
+const slug = new URLSearchParams(location.search).get('slug');
+
+const FLAGS = { AD:'🇦🇩',AE:'🇦🇪',AT:'🇦🇹',AU:'🇦🇺',BE:'🇧🇪',BH:'🇧🇭',BR:'🇧🇷',CA:'🇨🇦',CN:'🇨🇳',CZ:'🇨🇿',DE:'🇩🇪',ES:'🇪🇸',FR:'🇫🇷',GB:'🇬🇧',HU:'🇭🇺',IT:'🇮🇹',JP:'🇯🇵',MX:'🇲🇽',NL:'🇳🇱',PL:'🇵🇱',PT:'🇵🇹',SA:'🇸🇦',SE:'🇸🇪',SG:'🇸🇬',US:'🇺🇸' };
+// Flag emoji from any 2-letter ISO country code (regional indicators), so
+// every nationality renders — not just the hardcoded FLAGS subset above.
+function flag(c) {
+    const cc = (c || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
+function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function initials(name) { return (name || '??').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2); }
+
+function driverAvatarHTML(url, name) {
+    if (url) return `<img src="${esc(url)}" alt="${esc(name)}" loading="lazy">`;
+    return `<span class="driver-avatar-init">${initials(name)}</span>`;
+}
+
+function mfrBadge(logoUrl, brandColor, name) {
+    if (logoUrl) return `<img src="${esc(logoUrl)}" alt="${esc(name || '')}" loading="lazy" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;display:inline-block">`;
+    if (brandColor) return `<span class="swatch" style="background:${esc(brandColor)}"></span>`;
+    return '';
+}
+
+// ============================================================
+// LISTING
+// ============================================================
+async function showListing() {
+    document.title = 'Teams | GTEC';
+    const [{ data, error }, { data: activeSeasons }, { data: standings }, { data: dCounts }] = await Promise.all([
+        sb.from('teams').select('id, name, slug, home_country, bio, banner_url, manufacturers(name,brand_color,logo_url,car_name)').order('name'),
+        sb.from('seasons').select('id').eq('is_active', true).limit(1),
+        sb.from('team_standings').select('team_id, season_id, points'),
+        sb.from('drivers').select('id, display_name, slug, career_number, photo_url, current_team_id').not('current_team_id', 'is', null).order('display_name'),
+    ]);
+
+    if (error) { app.innerHTML = `<div class="loading">${esc(error.message)}</div>`; return; }
+
+    const activeSznId = (activeSeasons || [])[0]?.id;
+    const pointsMap = {};
+    (standings || []).forEach(s => {
+        if (!activeSznId || s.season_id === activeSznId) pointsMap[s.team_id] = Number(s.points || 0);
+    });
+    const driversByTeam = {};
+    (dCounts || []).forEach(r => {
+        if (r.current_team_id) {
+            if (!driversByTeam[r.current_team_id]) driversByTeam[r.current_team_id] = [];
+            driversByTeam[r.current_team_id].push(r);
+        }
+    });
+
+    const cards = (data || []).map(t => {
+        const mfr = t.manufacturers;
+        const teamDrivers = driversByTeam[t.id] || [];
+        const dCount = teamDrivers.length;
+        const search = [
+            t.name,
+            t.home_country,
+            mfr?.name,
+            ...teamDrivers.map(d => d.display_name),
+        ].filter(Boolean).join(' ').toLowerCase();
+        const pts = pointsMap[t.id] || 0;
+        const driversHtml = teamDrivers.length
+            ? `<div class="team-card-drivers">${teamDrivers.map(d => {
+                const avatarInner = d.photo_url
+                    ? `<img src="${esc(d.photo_url)}" alt="${esc(d.display_name)}" loading="lazy">`
+                    : `<span class="tcd-avatar-init">${initials(d.display_name)}</span>`;
+                return `<a class="team-card-driver" href="/endurance/drivers/?slug=${esc(d.slug)}" onclick="event.stopPropagation()">
+                    <div class="tcd-avatar">${avatarInner}</div>
+                    <div class="tcd-info">
+                        ${d.career_number ? `<div class="tcd-num">#${d.career_number}</div>` : ''}
+                        <div class="tcd-name">${esc(d.display_name)}</div>
+                    </div>
+                </a>`;
+              }).join('')}</div>`
+            : '';
+        return `
+        <div class="team-card" data-search="${esc(search)}" data-name="${esc(t.name)}" data-points="${pts}" data-mfr="${esc(mfr?.name || '')}" onclick="location.href='/endurance/teams/?slug=${esc(t.slug)}'" style="${mfr?.brand_color ? `border-top-color:${esc(mfr.brand_color)}` : ''}">
+            ${t.banner_url ? `<img class="team-card-banner" src="${esc(t.banner_url)}" alt="">` : ''}
+            ${mfr?.logo_url ? `<img class="team-card-logo-bg" src="${esc(mfr.logo_url)}" alt="" aria-hidden="true">` : ''}
+            ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}</div>` : ''}
+            <div class="team-card-name">${esc(t.name)}</div>
+            <div class="team-card-meta">
+                ${t.home_country ? flag(t.home_country) + ' ' + esc(t.home_country) + ' &nbsp;·&nbsp; ' : ''}
+                ${dCount} driver${dCount !== 1 ? 's' : ''}
+            </div>
+            ${driversHtml}
+        </div>`;
+    }).join('');
+
+    app.innerHTML = `
+        <div class="hero">
+            <div class="hero-eyebrow">Championship</div>
+            <div class="hero-title">Teams</div>
+            <div class="hero-sub" id="teams-count-sub">${data.length} registered team${data.length !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="content">
+            ${data.length ? `
+                <div class="gtec-search-wrap" style="margin-bottom:0.65rem">
+                    <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input class="gtec-search-input" id="teams-search" type="search" autocomplete="off"
+                           placeholder="Search team, manufacturer or nationality" oninput="filterCards(this,'team-card','teams-count-sub','team','teams')">
+                </div>
+                <div class="sort-pills">
+                    <span class="sort-label">Sort:</span>
+                    <button class="sort-btn sort-btn-active" data-sort="alpha" onclick="sortCards('.team-grid','.team-card','alpha')">A–Z</button>
+                    <button class="sort-btn" data-sort="points" onclick="sortCards('.team-grid','.team-card','points')">Points</button>
+                    <button class="sort-btn" data-sort="mfr" onclick="sortCards('.team-grid','.team-card','mfr')">Manufacturer</button>
+                </div>
+                <div class="team-grid">${cards}</div>
+                <div class="empty-msg" id="teams-empty" style="display:none">No teams match your search.</div>
+            ` : `<div class="empty-msg">No teams registered yet.</div>`}
+        </div>`;
+}
+
+function filterCards(input, cardClass, countId, singular, plural) {
+    const q = (input.value || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('.' + cardClass);
+    let shown = 0;
+    cards.forEach(card => {
+        const bag = card.getAttribute('data-search') || '';
+        const match = !q || bag.includes(q);
+        card.style.display = match ? '' : 'none';
+        if (match) shown++;
+    });
+    const countEl = countId && document.getElementById(countId);
+    if (countEl) {
+        countEl.textContent = q
+            ? `${shown} match${shown === 1 ? '' : 'es'} of ${cards.length}`
+            : `${cards.length} registered ${shown === 1 ? singular : plural}`;
+    }
+    const emptyId = (countId || '').replace('-count-sub', '-empty');
+    const emptyEl = emptyId && document.getElementById(emptyId);
+    if (emptyEl) emptyEl.style.display = (q && shown === 0) ? '' : 'none';
+}
+
+function sortCards(gridSel, cardSel, sortKey) {
+    document.querySelectorAll('.sort-btn').forEach(b => {
+        b.classList.toggle('sort-btn-active', b.dataset.sort === sortKey);
+    });
+    const grid = document.querySelector(gridSel);
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll(cardSel));
+    cards.sort((a, b) => {
+        if (sortKey === 'alpha') {
+            return (a.dataset.name || '').localeCompare(b.dataset.name || '', undefined, { sensitivity: 'base' });
+        }
+        if (sortKey === 'mfr') {
+            return (a.dataset.mfr || '').localeCompare(b.dataset.mfr || '', undefined, { sensitivity: 'base' });
+        }
+        return (Number(b.dataset[sortKey]) || 0) - (Number(a.dataset[sortKey]) || 0);
+    });
+    cards.forEach(c => grid.appendChild(c));
+}
+
+// ============================================================
+// PROFILE
+// ============================================================
+// ============================================================
+// SEASON STAKES (Teams) — same engine as the drivers' version in
+// endurance/drivers/index.html, swapped to team_standings. Roster is
+// team_seasons (who's actually entered this season), not the full
+// historical teams table, since old teams from past seasons shouldn't
+// count as rivals.
+// ============================================================
+async function fetchTeamSeasonStakes(teamId) {
+    const { data: season } = await sb.from('seasons')
+        .select('id, year, points_systems(points, pole_points, fastest_lap_points)')
+        .eq('is_active', true)
+        .maybeSingle();
+    if (!season) return null;
+
+    const [{ count: remaining }, { data: seasonTeams }, { data: standings }] = await Promise.all([
+        sb.from('events').select('id', { count: 'exact', head: true })
+            .eq('season_id', season.id).in('status', ['scheduled', 'in_progress']),
+        sb.from('team_seasons').select('team_id').eq('season_id', season.id),
+        sb.from('team_standings').select('team_id, points, wins, podiums').eq('season_id', season.id),
+    ]);
+    if (!remaining) return null; // season over, or nothing scheduled yet to project against
+
+    const ps = season.points_systems;
+    if (!ps) return null;
+    const maxPos = Math.max(0, ...(ps.points || []).map(p => Number(p.points) || 0));
+    const ceiling = remaining * (maxPos + Number(ps.pole_points || 0) + Number(ps.fastest_lap_points || 0));
+
+    const standingsMap = new Map((standings || []).map(s => [s.team_id, s]));
+    const field = (seasonTeams || []).map(t => {
+        const s = standingsMap.get(t.team_id);
+        return { team_id: t.team_id, points: Number(s?.points || 0), wins: Number(s?.wins || 0), podiums: Number(s?.podiums || 0) };
+    });
+
+    const me = field.find(f => f.team_id === teamId);
+    if (!me) return null;
+
+    const sorted = [...field].sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
+    const currentPosition = sorted.findIndex(f => f.team_id === teamId) + 1;
+    const myCeiling = me.points + ceiling;
+
+    let best = 1, worst = 1;
+    field.forEach(f => {
+        if (f.team_id === teamId) return;
+        if (f.points > myCeiling) best++;
+        if (f.points + ceiling >= me.points) worst++;
+    });
+
+    return { seasonYear: season.year, remaining, currentPoints: me.points, currentPosition, totalTeams: field.length, best, worst };
+}
+
+async function showProfile() {
+    const { data: team, error } = await sb.from('teams')
+        .select('*, manufacturers(name,brand_color,logo_url,car_name), leader:drivers!leader_driver_id(id, display_name, slug)')
+        .eq('slug', slug)
+        .maybeSingle();
+
+    if (error || !team) {
+        app.innerHTML = `<div class="hero"><div class="hero-title">Team not found</div></div>
+            <div class="content"><a class="back-link" href="/endurance/teams/">← All Teams</a></div>`;
+        return;
+    }
+    document.title = `${team.name} | GTEC`;
+
+    // Current drivers + season standings in parallel
+    const [driversRes, standingsRes, seasonStakes] = await Promise.all([
+        sb.from('drivers')
+            .select('id, display_name, slug, nationality, career_number, photo_url')
+            .eq('current_team_id', team.id)
+            .order('display_name'),
+        sb.from('team_standings')
+            .select('*')
+            .eq('team_id', team.id)
+            .order('season_year', { ascending: false }),
+        fetchTeamSeasonStakes(team.id),
+    ]);
+
+    const drivers  = driversRes.data  || [];
+    const standings = standingsRes.data || [];
+
+    // Career totals
+    const totals = standings.reduce((acc, s) => {
+        acc.points  += Number(s.points || 0);
+        acc.wins    += Number(s.wins || 0);
+        acc.podiums += Number(s.podiums || 0);
+        acc.poles   += Number(s.poles || 0);
+        acc.races   += Number(s.races || 0);
+        return acc;
+    }, { points: 0, wins: 0, podiums: 0, poles: 0, races: 0 });
+
+    // Tags
+    const tags = [];
+    if (team.manufacturers?.name) {
+        const mfr = team.manufacturers;
+        const badge = mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name);
+        tags.push(`${badge}${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}`);
+    }
+    if (team.home_country) tags.push(`${flag(team.home_country)} ${esc(team.home_country)}`);
+    if (team.founded_on)   tags.push(`Est. ${esc(team.founded_on.slice(0,4))}`);
+    if (team.leader?.display_name) {
+        const slugAttr = team.leader.slug ? esc(team.leader.slug) : '';
+        const linkOpen = team.leader.slug ? `<a href="/endurance/drivers/?slug=${slugAttr}" style="color:inherit;text-decoration:none">` : '';
+        const linkClose = team.leader.slug ? '</a>' : '';
+        tags.push(`<span class="leader-pill">★ Team Leader</span> ${linkOpen}${esc(team.leader.display_name)}${linkClose}`);
+    }
+
+    // Season Stakes — best/worst possible finish still mathematically
+    // open in the active season, same engine as the driver profile page.
+    const seasonStakesHTML = seasonStakes ? `
+        <div class="section">
+            <div class="section-title">${seasonStakes.seasonYear} Championship Picture</div>
+            <div class="stakes-bar">
+                <div class="stakes-item">
+                    <div class="stakes-label">Currently</div>
+                    <div class="stakes-value">P${seasonStakes.currentPosition}</div>
+                </div>
+                <div class="stakes-item stakes-best">
+                    <div class="stakes-label">Best Possible</div>
+                    <div class="stakes-value">P${seasonStakes.best}</div>
+                </div>
+                <div class="stakes-item stakes-worst">
+                    <div class="stakes-label">Worst Possible</div>
+                    <div class="stakes-value">P${seasonStakes.worst}</div>
+                </div>
+            </div>
+            <div class="stakes-note">${seasonStakes.currentPoints} pts · ${seasonStakes.remaining} round${seasonStakes.remaining === 1 ? '' : 's'} left · P${seasonStakes.best}${seasonStakes.best === seasonStakes.worst ? '' : `–P${seasonStakes.worst}`} still mathematically possible</div>
+        </div>` : '';
+
+    // Roster HTML
+    const rosterHTML = drivers.length ? `
+        <div class="section">
+            <div class="section-title centered">Current Drivers</div>
+            <div class="driver-roster">
+                ${drivers.map(d => `
+                    <a class="driver-card" href="/endurance/drivers/?slug=${esc(d.slug)}">
+                        <div class="driver-card-photo">${driverAvatarHTML(d.photo_url, d.display_name)}</div>
+                        <div class="driver-card-overlay"></div>
+                        ${d.career_number ? `<div class="driver-card-ghost">${d.career_number}</div>` : ''}
+                        <div class="driver-card-info">
+                            ${d.career_number ? `<div class="driver-card-num">#${d.career_number}</div>` : ''}
+                            <div class="driver-card-name">${esc(d.display_name)}</div>
+                            ${d.nationality ? `<div class="driver-card-meta">${flag(d.nationality)} ${esc(d.nationality)}</div>` : ''}
+                        </div>
+                    </a>`).join('')}
+            </div>
+        </div>` : '';
+
+    // Season history table
+    const historyHTML = standings.length ? `
+        <div class="section">
+            <div class="section-title">Season History</div>
+            <div class="data-table">
+                <table>
+                    <thead><tr>
+                        <th>Season</th><th>Manufacturer</th>
+                        <th class="right">Pts</th><th class="right">Races</th>
+                        <th class="right">Wins</th><th class="right">Pod</th>
+                        <th class="right hide-mob">Poles</th>
+                    </tr></thead>
+                    <tbody>
+                        ${standings.map(s => `<tr>
+                            <td>${s.season_year}</td>
+                            <td class="muted">${s.manufacturer_name ? `${mfrBadge(s.manufacturer_logo_url, s.brand_color, s.manufacturer_name)} ${esc(s.manufacturer_name)}` : '—'}</td>
+                            <td class="right pts">${s.points}</td>
+                            <td class="right muted">${s.races}</td>
+                            <td class="right muted">${s.wins}</td>
+                            <td class="right muted">${s.podiums}</td>
+                            <td class="right muted hide-mob">${s.poles}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>` : '';
+
+    app.innerHTML = `
+        <div class="hero">
+            <div class="hero-eyebrow">Team Profile</div>
+        </div>
+        <div class="content">
+            <a class="back-link" href="/endurance/teams/">← All Teams</a>
+
+            ${team.banner_url ? `<img class="team-profile-banner" src="${esc(team.banner_url)}" alt="${esc(team.name)} banner">` : ''}
+
+            <div class="profile-header">
+                <div class="profile-name">${esc(team.name)}</div>
+                <div class="profile-tags">${tags.map(t => `<span class="profile-tag">${t}</span>`).join('')}</div>
+            </div>
+
+            ${standings.length ? `
+            <div class="stat-bar">
+                <div class="stat-item"><div class="stat-label">Points</div><div class="stat-value gold">${totals.points}</div></div>
+                <div class="stat-item"><div class="stat-label">Races</div><div class="stat-value">${totals.races}</div></div>
+                <div class="stat-item"><div class="stat-label">Wins</div><div class="stat-value">${totals.wins}</div></div>
+                <div class="stat-item"><div class="stat-label">Podiums</div><div class="stat-value">${totals.podiums}</div></div>
+                <div class="stat-item hide-mob"><div class="stat-label">Poles</div><div class="stat-value">${totals.poles}</div></div>
+                <div class="stat-item hide-mob"><div class="stat-label">Seasons</div><div class="stat-value">${standings.length}</div></div>
+            </div>` : ''}
+
+            ${seasonStakesHTML}
+
+            ${team.bio ? `<div class="section"><div class="section-title">About</div><div class="bio-text">${esc(team.bio)}</div></div>` : ''}
+
+            ${rosterHTML}
+            ${historyHTML}
+
+            ${!standings.length && !drivers.length ? `<div class="empty-msg">No data yet — check back after the first race.</div>` : ''}
+        </div>`;
+}
+
+// ============================================================
+// Init
+// ============================================================
+if (slug) showProfile();
+else showListing();
+</script>
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>

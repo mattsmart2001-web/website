@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "uk.co.sparkstheory.gtec",
+      "sha256_cert_fingerprints": [
+        "AF:71:93:64:10:CD:B5:64:89:0F:2B:D9:01:02:C8:8B:4B:A4:40:1A:08:2B:53:A3:2A:08:04:FA:EB:50:E7:B6",
+        "E0:12:B9:23:BF:07:EF:EE:E9:5E:37:41:24:7D:84:BE:35:08:79:BC:B0:75:C1:33:68:8F:34:0F:60:25:CF:39"
+      ]
+    }
+  }
+]

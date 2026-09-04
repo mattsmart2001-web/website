@@ -1,0 +1,182 @@
+name: Build GT7 Live Connector
+
+# Builds the Windows GT7-Live-Connector.exe with PyInstaller, mirroring
+# build_connector.bat.
+#
+#  - Every push that touches the connector uploads the fresh .exe as a
+#    downloadable build artifact (so it is always test-built).
+#  - A manual run ("Run workflow" on the Actions tab, with a version like
+#    v2.1) also publishes it to a GitHub Release, so the site's
+#    /releases/latest/download/GT7-Live-Connector.exe link serves the new build.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to publish (e.g. v2.1). Leave blank to build without releasing."
+        required: false
+        default: "v2.1"
+  push:
+    branches:
+      - claude/add-signup-page-pBzI2
+      - claude/hello-l02wij
+    paths:
+      - "gt7_connector.py"
+      - "build_connector.bat"
+      - "requirements.txt"
+      - ".github/workflows/build-connector.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build one-folder (zip)
+        # --onedir zipped up is flagged by Defender far less than a onefile .exe.
+        # --noupx: UPX-packed binaries trip Defender's heuristics; skip it.
+        # --version-file: embeds real version metadata (further reduces false positives).
+        run: >
+          pyinstaller --onedir --noconsole --noupx --distpath dist_dir
+          --name "GT7-Live-Connector"
+          --icon NONE
+          --version-file connector_version.txt
+          --collect-all Crypto
+          --hidden-import=Crypto.Cipher.Salsa20
+          --hidden-import=Crypto.Cipher._Salsa20
+          gt7_connector.py
+
+      - name: Add README and zip the folder
+        shell: pwsh
+        run: |
+          $readme = @"
+          GT7 LIVE CONNECTOR - READ THIS FIRST
+
+          1) Right-click this zip in Windows and choose "Extract All".
+          2) Open the extracted GT7-Live-Connector folder.
+          3) Run GT7-Live-Connector.exe from INSIDE that folder.
+
+          Do NOT run the .exe straight from inside the zip - Windows does not
+          unpack the support files, and you will get "Failed to load Python DLL".
+          Keep GT7-Live-Connector.exe together with the _internal folder; if you
+          move the .exe on its own it will not start.
+
+          If Windows flags it as a virus, that is a false positive on the packaged
+          Python app. Allow it in Windows Security, then run it.
+          "@
+          Set-Content -Path dist_dir/GT7-Live-Connector/README.txt -Value $readme -Encoding utf8
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path dist_dir/GT7-Live-Connector -DestinationPath dist/GT7-Live-Connector.zip -Force
+
+      - name: Build single-file (exe fallback)
+        # A onefile .exe that "just runs" (no extraction). Handy for anyone who
+        # hits the DLL error from not extracting the zip. May draw an AV prompt.
+        run: >
+          pyinstaller --onefile --noconsole --noupx --distpath dist
+          --name "GT7-Live-Connector"
+          --icon NONE
+          --version-file connector_version.txt
+          --collect-all Crypto
+          --hidden-import=Crypto.Cipher.Salsa20
+          --hidden-import=Crypto.Cipher._Salsa20
+          gt7_connector.py
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: GT7-Live-Connector-windows
+          path: |
+            dist/GT7-Live-Connector.zip
+            dist/GT7-Live-Connector.exe
+          if-no-files-found: error
+
+  # Apple Silicon only. GitHub is retiring the Intel (macos-13) hosted runners,
+  # so those jobs get starved in the queue and cancelled, blocking the release.
+  # Every Mac sold since late 2020 is Apple Silicon, so this covers current Macs.
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller pyobjc-framework-Cocoa
+
+      - name: Build macOS app
+        # --windowed builds a .app bundle (needed for the menu-bar tray icon).
+        # --version-file / --icon NONE are Windows-only, so omitted here.
+        run: >
+          pyinstaller --windowed --noupx
+          --name "GT7-Live-Connector"
+          --collect-all Crypto
+          --hidden-import=Crypto.Cipher.Salsa20
+          --hidden-import=Crypto.Cipher._Salsa20
+          gt7_connector.py
+
+      - name: Zip the .app
+        # ditto preserves the bundle structure and the executable bit.
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            "dist/GT7-Live-Connector.app" \
+            "dist/GT7-Live-Connector-macOS-AppleSilicon.zip"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GT7-Live-Connector-macos-AppleSilicon
+          path: dist/GT7-Live-Connector-macOS-AppleSilicon.zip
+          if-no-files-found: error
+
+  # Single publisher: waits for all OS builds, gathers their artifacts, and
+  # uploads them to the release in one go. Publishing from one job (instead of
+  # each OS job in parallel) avoids the asset-upload race that 404s.
+  # Publish from ONE branch only. Both deploy branches get the same commit, so
+  # publishing from each would fire two simultaneous `gh release upload` runs
+  # against the same tag and race, which can drop assets. The other branch still
+  # builds (and tests) its artifacts above; it just skips the publish.
+  release:
+    needs: [windows, macos]
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/claude/add-signup-page-pBzI2')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: GT7-Live-Connector-*
+          merge-multiple: true
+          path: assets
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_VERSION: "v2.4"
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          else
+            TAG="$DEFAULT_VERSION"
+          fi
+          NOTES="Automated build of the GT7 Live Connector for Windows and macOS. Windows: the .zip (extract the whole folder, then run GT7-Live-Connector.exe inside) or the single-file .exe. macOS (Apple Silicon): the .zip (unzip, then right-click the app and Open the first time). Includes the telemetry decryption fix, freeze fix, and self-diagnosing status."
+          echo "Publishing $TAG with:"; ls -1 assets
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest
+          gh release upload "$TAG" assets/* --repo "$GITHUB_REPOSITORY" --clobber

@@ -1,0 +1,2459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Driver Portal | GTEC</title>
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608; --bg-1: #0a0e15; --bg-2: #11161f;
+            --text: #f1f5f9; --muted: #94a3b8; --gold: #ffd166;
+            --gold-deep: #c79a3a; --green: #22c55e; --red: #ef4444;
+            --silver: #c0c0c0; --bronze: #cd7f32;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav — standard gtec-nav (matches site-wide) with portal user chip */
+        .gtec-nav {
+            position: sticky; top: 0; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5,6,8,0.9); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; transition: color 0.2s, border-color 0.2s; }
+        .gtec-nav .back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .nav-user { font-size: 0.72rem; color: var(--muted); }
+        .btn-sm { padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'Inter', sans-serif; transition: color 0.15s, border-color 0.15s; }
+        .btn-sm:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Layout */
+        .page { max-width: 860px; margin: 0 auto; padding: 2.5rem 2rem 5rem; }
+
+        /* Profile header */
+        .profile-header { display: flex; align-items: flex-start; gap: 1.75rem; margin-bottom: 2.5rem; flex-wrap: wrap; }
+        .avatar { width: 88px; height: 88px; border-radius: 50%; border: 2px solid var(--border); background: var(--bg-2); flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-family: 'Anton', sans-serif; font-size: 2.2rem; color: var(--muted); }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-meta { flex: 1; min-width: 200px; }
+        .profile-meta h1 { font-family: 'Anton', sans-serif; font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.05; margin-bottom: 0.4rem; }
+        .profile-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; margin-bottom: 0.6rem; transition: color 0.15s; }
+        .profile-share-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            margin-bottom: 0.6rem;
+            padding: 0.4rem 0.85rem;
+            background: linear-gradient(135deg, rgba(255,209,102,0.18), rgba(255,209,102,0.05));
+            border: 1px solid rgba(255,209,102,0.45);
+            border-radius: 999px;
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .profile-share-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(255,209,102,0.3), rgba(255,209,102,0.1));
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(255,209,102,0.15);
+        }
+        .profile-share-btn:disabled { opacity: 0.7; cursor: progress; }
+        .profile-link:hover { color: var(--gold); }
+        .profile-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .pill-leader-inline {
+            display: inline-block;
+            margin-left: 0.35rem;
+            padding: 0.1rem 0.45rem;
+            background: rgba(255,209,102,0.15);
+            border: 1px solid rgba(255,209,102,0.4);
+            border-radius: 999px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--gold);
+            vertical-align: middle;
+        }
+        .tag { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; padding: 0.22rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--muted); }
+
+        /* Cards */
+        .card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 1.75rem; margin-bottom: 1.25rem; }
+        .card-title { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.35em; text-transform: uppercase; color: var(--gold); margin-bottom: 1.25rem; text-indent: 0.35em; }
+
+        /* Season standing card */
+        .standing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; }
+        .standing-item .si-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.25rem; }
+        .standing-item .si-value { font-family: 'Anton', sans-serif; font-size: 1.6rem; letter-spacing: 0.04em; line-height: 1; }
+        .standing-item .si-deduct { margin-top: 0.3rem; font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #f87171; }
+        .si-pos { color: var(--gold); }
+        .elo-bar-wrap { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
+        .elo-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+        .elo-value { font-family: 'Anton', sans-serif; font-size: 1.3rem; color: var(--gold); }
+        .elo-delta { font-size: 0.75rem; font-weight: 600; }
+        .elo-up { color: var(--green); }
+        .elo-dn { color: var(--red); }
+
+        /* Recent results */
+        .results-list { display: flex; flex-direction: column; gap: 0.6rem; }
+        .result-row { display: flex; align-items: center; gap: 0.85rem; padding: 0.65rem 0.85rem; background: var(--bg-2); border-radius: 8px; text-decoration: none; color: var(--text); transition: background 0.15s; }
+        .result-row:hover { background: rgba(255,255,255,0.04); }
+
+        /* Split journey — same component as the public driver profile:
+           a horizontal scroll of stops showing which split the driver
+           raced in each round, with promotion / relegation indicators. */
+        .split-timeline { display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 0.5rem; }
+        .split-stop { min-width: 96px; flex: 0 0 auto; background: rgba(255,255,255,0.025); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.75rem; text-align: center; }
+        .split-stop-circuit { font-size: 0.65rem; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.35rem; }
+        .split-stop-split { font-family: 'Anton', sans-serif; font-size: 1.5rem; line-height: 1; letter-spacing: 0.04em; color: var(--text); margin-bottom: 0.35rem; }
+        .split-stop-move { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; padding: 0.15rem 0.4rem; border-radius: 999px; display: inline-block; }
+        .split-stop-move.move-up   { color: #4ade80; background: rgba(74,222,128,0.1); }
+        .split-stop-move.move-down { color: #f87171; background: rgba(248,113,113,0.1); }
+        .split-stop-move.move-same { color: var(--muted); background: rgba(255,255,255,0.04); }
+        .split-stop-move.move-new  { color: var(--gold);  background: rgba(255,209,102,0.08); }
+
+        /* Inbox */
+        .inbox-list {
+            display: flex; flex-direction: column; gap: 0.85rem;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 0.45rem;
+        }
+        /* Subtle scrollbar — keeps the thread list scannable on long inboxes */
+        .inbox-list::-webkit-scrollbar { width: 8px; }
+        .inbox-list::-webkit-scrollbar-track { background: transparent; }
+        .inbox-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+        .inbox-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        .inbox-thread { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.95rem 1.1rem; }
+        .inbox-thread.unread { border-color: rgba(255,209,102,0.45); }
+        .inbox-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.35rem; }
+        .inbox-subj { font-weight: 600; font-size: 0.92rem; }
+        .inbox-when { font-size: 0.7rem; color: var(--muted); font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; }
+        .inbox-body { font-size: 0.85rem; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
+        .inbox-incident { font-size: 0.78rem; margin-top: 0.45rem; word-break: break-all; }
+        .inbox-incident a { color: var(--gold); text-decoration: none; }
+        .inbox-incident a:hover { text-decoration: underline; }
+        .inbox-reply { margin-top: 0.85rem; padding: 0.85rem 1rem; background: rgba(255,209,102,0.06); border: 1px solid rgba(255,209,102,0.2); border-left: 3px solid var(--gold); border-radius: 6px; }
+        .inbox-reply-head { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.35rem; }
+        .inbox-reply-body { font-size: 0.86rem; line-height: 1.55; white-space: pre-wrap; color: var(--text); }
+        .inbox-status { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.18rem 0.5rem; border-radius: 4px; }
+        .inbox-status.new         { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .inbox-status.in_progress { background: rgba(255,209,102,0.15); color: var(--gold); }
+        .inbox-status.resolved    { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .inbox-status.dismissed   { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+        /* Team-application rows (find-a-team + leader inbox) */
+        .open-team-row, .req-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.85rem 1rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.65rem; flex-wrap: wrap; }
+        .open-team-name { font-weight: 600; font-size: 0.95rem; }
+        .open-team-meta { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+        .pill { display: inline-block; padding: 0.18rem 0.5rem; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; }
+        .pill-gold  { background: rgba(255,209,102,0.15); color: var(--gold); }
+        .pill-green { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .pill-muted { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .window-closed-msg {
+            padding: 0.85rem 1rem;
+            background: rgba(255,209,102,0.06);
+            border: 1px solid rgba(255,209,102,0.25);
+            border-left: 3px solid var(--gold);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.85rem;
+            line-height: 1.55;
+        }
+        .window-closed-msg strong { color: var(--gold); margin-right: 0.35rem; }
+        .btn-small { padding: 0.45rem 0.9rem; border-radius: 6px; font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); transition: color 0.15s, border-color 0.15s; }
+        .btn-small:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .btn-small.primary { background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: #1a1300; border: none; }
+        .btn-small.primary:hover { filter: brightness(1.08); }
+        .btn-small.danger:hover { color: #fca5a5; border-color: rgba(239,68,68,0.4); }
+
+        /* Team summary on portal */
+        .team-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.85rem 1.5rem; }
+        .team-info-item .ti-label { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.25rem; }
+        .team-info-item .ti-value { font-size: 0.92rem; font-weight: 600; }
+        .team-info-item .ti-value a { color: inherit; text-decoration: none; }
+        .team-info-item .ti-value a:hover { color: var(--gold); }
+        .team-roster { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.9rem; }
+        .roster-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.5rem 0.75rem; background: var(--bg-2); border-radius: 6px; font-size: 0.85rem; }
+        .roster-row a { color: var(--text); text-decoration: none; flex: 1; }
+        .roster-row a:hover { color: var(--gold); }
+        .roster-row .pill { flex-shrink: 0; }
+        .result-pos { font-family: 'Anton', sans-serif; font-size: 1.2rem; width: 28px; text-align: center; flex-shrink: 0; }
+        .pos-1-c { color: var(--gold); } .pos-2-c { color: var(--silver); } .pos-3-c { color: var(--bronze); }
+        .result-info { flex: 1; min-width: 0; }
+        .result-name { font-size: 0.84rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .result-meta { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
+        .result-pts { font-family: 'Anton', sans-serif; font-size: 1rem; color: var(--gold); white-space: nowrap; }
+        .result-dnf { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; color: var(--red); }
+
+        /* Upcoming events */
+        .upcoming-list { display: flex; flex-direction: column; gap: 0.6rem; }
+        .upcoming-row { display: flex; align-items: center; gap: 0.85rem; padding: 0.75rem 0.85rem; background: var(--bg-2); border-radius: 8px; border-left: 3px solid var(--gold); transition: border-color 0.2s; }
+        .upcoming-row.absent { border-left-color: var(--red, #ef4444); opacity: 0.65; }
+        .upcoming-round { font-family: 'Anton', sans-serif; font-size: 1.4rem; color: var(--gold); min-width: 28px; text-align: center; }
+        .upcoming-info { flex: 1; }
+        .upcoming-name { font-size: 0.86rem; font-weight: 600; }
+        .upcoming-meta { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
+        .upcoming-absent-toggle { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; flex-shrink: 0; cursor: pointer; }
+        .upcoming-absent-toggle input[type=checkbox] { width: 16px; height: 16px; accent-color: #ef4444; cursor: pointer; }
+        .upcoming-absent-toggle span { font-size: 0.65rem; color: var(--muted); white-space: nowrap; }
+
+        /* Edit form */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .form-group.full { grid-column: 1 / -1; }
+        .field-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+        input[type="text"], input[type="url"], input[type="date"], textarea, select {
+            background: var(--bg-2); border: 1px solid var(--border); border-radius: 7px;
+            color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.88rem;
+            padding: 0.65rem 0.85rem; width: 100%; outline: none; transition: border-color 0.15s;
+        }
+        input:focus, textarea:focus, select:focus { border-color: rgba(255,209,102,0.5); }
+        input::placeholder, textarea::placeholder { color: rgba(148,163,184,0.45); }
+        textarea { resize: vertical; min-height: 90px; }
+        .form-hint { font-size: 0.72rem; color: var(--muted); }
+
+        /* Photo upload */
+        .photo-row { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.25rem; }
+        .avatar-upload { position: relative; width: 76px; height: 76px; border-radius: 50%; flex-shrink: 0; cursor: pointer; overflow: hidden; }
+        .avatar-upload img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .avatar-upload .placeholder { width: 100%; height: 100%; background: var(--bg-2); border: 2px dashed rgba(255,255,255,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 1.6rem; font-family: 'Anton', sans-serif; }
+        .avatar-upload .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; }
+        .avatar-upload:hover .overlay { opacity: 1; }
+        .upload-info { flex: 1; }
+        .btn-upload { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: border-color 0.15s; }
+        .btn-upload:hover { border-color: rgba(255,209,102,0.4); }
+        .btn-upload:disabled { opacity: 0.45; cursor: not-allowed; }
+        .upload-progress { height: 3px; background: var(--border); border-radius: 2px; margin-top: 0.5rem; overflow: hidden; display: none; }
+        .upload-progress-bar { height: 100%; background: linear-gradient(90deg, var(--gold-deep), var(--gold)); border-radius: 2px; width: 0; transition: width 0.3s; }
+
+        /* Team banner upload */
+        .banner-upload { position: relative; width: 100%; aspect-ratio: 3 / 1; border-radius: 8px; cursor: pointer; overflow: hidden; background: var(--bg-2); margin-bottom: 0.75rem; }
+        .banner-upload img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .banner-upload .placeholder { width: 100%; height: 100%; border: 2px dashed rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.8rem; text-align: center; padding: 0.5rem; }
+        .banner-upload .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; color: #fff; font-size: 0.8rem; font-weight: 600; }
+        .banner-upload:hover .overlay { opacity: 1; }
+
+        /* Split result screenshot uploads */
+        .host-ss-event { border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem; margin-bottom: 0.75rem; }
+        .host-ss-event:last-child { margin-bottom: 0; }
+        .host-ss-event-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.15rem; }
+        .host-ss-event-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.65rem; }
+        .host-ss-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+        .host-ss-slot { position: relative; aspect-ratio: 16 / 9; border-radius: 6px; cursor: pointer; overflow: hidden; background: var(--bg-2); display: block; }
+        .host-ss-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .host-ss-slot .placeholder { width: 100%; height: 100%; border: 2px dashed rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.68rem; text-align: center; padding: 0.3rem; }
+        .host-ss-slot .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; color: #fff; font-size: 0.68rem; font-weight: 600; text-align: center; }
+        .host-ss-slot:hover .overlay { opacity: 1; }
+        .host-ss-slot-label { font-size: 0.65rem; color: var(--muted); text-align: center; margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        @media (max-width: 480px) {
+            .host-ss-slots { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Incidents / stewards */
+        .inc-clip-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+        .inc-clip-chip { flex-shrink: 0; min-width: 84px; text-align: center; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); background: var(--bg-2); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.5rem; }
+        .inc-row { border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 0.9rem; margin-bottom: 0.6rem; }
+        .inc-row:last-child { margin-bottom: 0; }
+        .inc-row-top { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+        .inc-ref { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.62rem; letter-spacing: 0.06em; color: var(--cyan, #0ea5e9); background: rgba(14,165,233,0.13); border: 1px solid rgba(14,165,233,0.3); border-radius: 5px; padding: 0.2rem 0.45rem; }
+        .inc-parties { font-weight: 600; font-size: 0.86rem; }
+        .inc-parties .vs { color: var(--muted); font-weight: 400; margin: 0 0.3rem; }
+        .inc-meta { font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem; }
+        .inc-withdraw { margin-left: auto; background: transparent; border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 600; padding: 0.3rem 0.7rem; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+        .inc-withdraw:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.5); }
+        .inc-outcome { margin-top: 0.55rem; padding-top: 0.55rem; border-top: 1px solid var(--border); font-size: 0.82rem; color: #d7dde6; }
+        .inc-outcome .ol { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.2rem; }
+        .status-pill { display: inline-flex; align-items: center; gap: 0.3rem; font-family: 'Orbitron', sans-serif; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 20px; padding: 0.25rem 0.55rem; }
+        .status-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+        .sp-open { color: #fb923c; background: rgba(251,146,60,0.13); border: 1px solid rgba(251,146,60,0.3); }
+        .sp-under_review { color: #0ea5e9; background: rgba(14,165,233,0.13); border: 1px solid rgba(14,165,233,0.3); }
+        .sp-resolved { color: #22c55e; background: rgba(34,197,94,0.13); border: 1px solid rgba(34,197,94,0.3); }
+        .sp-dismissed { color: var(--muted); background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+
+        /* Save */
+        .btn-save { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.75rem; background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: #1a1300; border: none; border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: filter 0.2s; }
+        .btn-save:hover { filter: brightness(1.08); }
+        .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.25rem; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 8px; font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+        .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Contact Admin button + modal */
+        .btn-contact { align-self: flex-start; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.1rem; background: rgba(255,209,102,0.08); border: 1px solid rgba(255,209,102,0.3); border-radius: 999px; color: var(--gold); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+        .btn-contact:hover { background: rgba(255,209,102,0.15); border-color: rgba(255,209,102,0.55); }
+        .header-icon-btn { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+        .header-icon-btn:hover { border-color: rgba(255,209,102,0.4); color: var(--text); }
+        .header-icon-btn.active { background: rgba(255,209,102,0.12); border-color: rgba(255,209,102,0.45); color: var(--gold); }
+        .header-icon-btn.unsupported { opacity: 0.35; border-style: dashed; }
+        .contact-overlay { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 1.5rem; }
+        .contact-overlay.open { display: flex; }
+        .contact-modal { width: 100%; max-width: 540px; background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem 1.6rem 1.6rem; max-height: 92vh; overflow-y: auto; }
+        .contact-modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+        .contact-modal-title { font-family: 'Anton', sans-serif; font-size: 1.25rem; letter-spacing: 0.06em; text-transform: uppercase; }
+        .contact-modal-close { background: none; border: none; color: var(--muted); font-size: 1.5rem; line-height: 1; cursor: pointer; padding: 0 0.35rem; }
+        .contact-modal-close:hover { color: var(--text); }
+        .contact-modal-sub { font-size: 0.82rem; color: var(--muted); line-height: 1.5; margin-bottom: 1.25rem; }
+        .contact-modal textarea { resize: vertical; min-height: 120px; }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 1.25rem; right: 1.25rem; z-index: 200; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
+        .toast { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.84rem; pointer-events: auto; animation: toast-in 0.2s ease; max-width: 320px; }
+        @keyframes toast-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+        .toast.success { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+        .toast.error   { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+
+        /* Auth loading screen */
+        #auth-loading { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; font-family: 'Orbitron', sans-serif; font-size: 0.72rem; letter-spacing: 0.3em; color: var(--muted); text-transform: uppercase; }
+
+        .empty-note { color: var(--muted); font-size: 0.84rem; padding: 0.75rem 0; }
+
+        @media (max-width: 580px) {
+            .portal-nav { padding: 1rem; }
+            .page { padding: 1.5rem 1rem 3rem; }
+            .form-grid { grid-template-columns: 1fr; }
+            .form-group.full { grid-column: 1; }
+            .standing-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<div id="auth-loading">Loading…</div>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/" class="active">My Profile</a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <span class="nav-user" id="nav-user"></span>
+        <button class="btn-sm" id="btn-logout">Sign out</button>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div class="page" id="page" style="display:none">
+
+    <!-- Profile header -->
+    <div class="profile-header">
+        <div class="avatar" id="avatar-el">?</div>
+        <div class="profile-meta">
+            <h1 id="driver-name">—</h1>
+            <div>
+                <a class="profile-link" id="public-link" href="#">View public profile →</a>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem 0.75rem;align-items:center">
+                <button class="profile-share-btn" id="share-profile-btn" type="button" style="display:none">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                        <polyline points="16 6 12 2 8 6"/>
+                        <line x1="12" y1="2" x2="12" y2="15"/>
+                    </svg>
+                    <span>Share Driver Card</span>
+                </button>
+                <button class="profile-share-btn" id="obs-widget-btn" type="button" style="display:none" title="Copy a link to your OBS streaming overlay">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
+                        <rect x="3" y="4" width="18" height="14" rx="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="18" x2="12" y2="21"/>
+                    </svg>
+                    <span>OBS Widget</span>
+                </button>
+            </div>
+            <div class="profile-tags" id="profile-tags"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+            <button class="header-icon-btn" id="ticker-link-btn" type="button" title="Copy the OBS standings ticker link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></svg>
+            </button>
+            <button class="header-icon-btn" id="push-toggle-btn" type="button" style="display:none" title="Enable push notifications">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </button>
+            <button class="btn-contact" onclick="openContactModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                Contact Admin
+            </button>
+        </div>
+    </div>
+
+    <!-- Contact admin modal -->
+    <div class="contact-overlay" id="contact-overlay" onclick="if (event.target === this) closeContactModal()">
+        <div class="contact-modal">
+            <div class="contact-modal-head">
+                <div class="contact-modal-title">Contact Admin</div>
+                <button class="contact-modal-close" onclick="closeContactModal()" aria-label="Close">×</button>
+            </div>
+            <p class="contact-modal-sub">Race dispute, scheduling issue, or anything else — admins will see this and reply in your portal inbox below.</p>
+            <div class="form-group">
+                <label class="field-label">Subject</label>
+                <input type="text" id="contact-subject" placeholder="e.g. Incident in Round 3, split 1">
+            </div>
+            <div class="form-group">
+                <label class="field-label">Message <span style="color:#fca5a5">*</span></label>
+                <textarea id="contact-message" rows="6" placeholder="Describe what happened…"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="field-label">Incident Link <span class="td-muted" style="font-weight:normal;font-size:0.7rem">(optional)</span></label>
+                <input type="url" id="contact-url" placeholder="https://… (YouTube, Twitch clip, screenshot, etc.)">
+            </div>
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
+                <button class="btn-ghost" onclick="closeContactModal()">Cancel</button>
+                <button class="btn-save" id="contact-submit" onclick="submitContactMessage()">Send to Admin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Season standing + Elo -->
+    <div class="card" id="card-standing" style="display:none">
+        <div class="card-title" id="standing-season-label">Current Season</div>
+        <div class="standing-grid" id="standing-grid"></div>
+        <div class="elo-bar-wrap">
+            <div class="elo-label">Elo Rating</div>
+            <div class="elo-value" id="elo-value">—</div>
+            <div id="elo-tier-el"></div>
+            <div id="elo-delta-el"></div>
+        </div>
+    </div>
+
+    <!-- Report an incident — file an on-track dispute to the stewards -->
+    <div class="card" id="card-incidents" style="display:none">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap">
+            <span>Stewards &amp; Incidents</span>
+            <button class="btn-contact" id="btn-report-incident" onclick="toggleIncidentForm()">Report an Incident</button>
+        </div>
+
+        <!-- Submission form (hidden until the button is pressed) -->
+        <form id="incident-form" style="display:none;margin-bottom:1.25rem" onsubmit="submitIncident(event)">
+            <p class="form-hint" style="margin-bottom:1rem">Contact under braking, a punt, unsafe rejoin. Describe it and link your clips. The stewards review it privately; you'll see the verdict here and in your inbox. Reporting stays open for 48 hours after a round ends, then closes.</p>
+            <div class="form-group" style="margin-bottom:0.8rem">
+                <label class="field-label">Event <span style="color:#fca5a5">*</span></label>
+                <select id="inc-event" required onchange="onIncidentEventChange()"><option value="">— select an event you raced —</option></select>
+            </div>
+            <div class="form-group" style="margin-bottom:0.8rem">
+                <label class="field-label">Driver involved <span style="color:#fca5a5">*</span></label>
+                <select id="inc-accused" required><option value="">— pick a driver —</option></select>
+            </div>
+            <div class="form-group" style="margin-bottom:0.8rem">
+                <label class="field-label">What happened? <span style="color:#fca5a5">*</span></label>
+                <textarea id="inc-desc" rows="4" required placeholder="Lap, corner, and what you're disputing…"></textarea>
+            </div>
+            <div class="form-group" style="margin-bottom:0.35rem">
+                <label class="field-label">Clip links <span style="color:#fca5a5">*</span> <span class="td-muted" style="font-weight:normal;font-size:0.7rem;text-transform:none;letter-spacing:0">(YouTube etc., min 30s each)</span></label>
+            </div>
+            <div class="inc-clip-row"><span class="inc-clip-chip">Your POV 1 *</span><input type="url" id="inc-clip1" required placeholder="https://youtu.be/…"></div>
+            <div class="inc-clip-row"><span class="inc-clip-chip">Your POV 2</span><input type="url" id="inc-clip2" placeholder="optional"></div>
+            <div class="inc-clip-row"><span class="inc-clip-chip">Other POV 1</span><input type="url" id="inc-clip3" placeholder="other driver's angle (optional)"></div>
+            <div class="inc-clip-row"><span class="inc-clip-chip">Other POV 2</span><input type="url" id="inc-clip4" placeholder="optional"></div>
+            <p class="form-hint" style="margin-top:0.5rem">Links only, no video is uploaded. Keep clips unlisted or public so stewards can open them.</p>
+            <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem">
+                <button type="button" class="btn-ghost" onclick="toggleIncidentForm(false)">Cancel</button>
+                <button type="submit" class="btn-save" id="btn-submit-incident">Submit to Stewards</button>
+            </div>
+        </form>
+
+        <!-- The driver's own filed incidents -->
+        <div id="incident-list"></div>
+    </div>
+
+    <!-- Inbox -->
+    <div class="card" id="card-inbox" style="display:none">
+        <div class="card-title">Inbox <span id="inbox-unread-pill" style="display:none;margin-left:0.5rem;padding:0.18rem 0.55rem;background:var(--gold);color:#1a1300;border-radius:999px;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.15em">0 NEW</span></div>
+        <div class="inbox-list" id="inbox-list"></div>
+    </div>
+
+    <!-- Career badges -->
+    <div class="card" id="card-badges" style="display:none">
+        <div class="card-title">Career Badges</div>
+        <div id="badges-grid"></div>
+    </div>
+
+    <!-- Upcoming events -->
+    <div class="card" id="card-upcoming" style="display:none">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap">
+            Upcoming Events
+            <a href="webcal://sparkstheory.co.uk/endurance/calendar.ics" style="font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;text-transform:none;letter-spacing:normal;color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem" title="Subscribe in your phone or desktop calendar app">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Subscribe to Calendar
+            </a>
+        </div>
+        <div class="upcoming-list" id="upcoming-list"></div>
+    </div>
+
+    <!-- Race lobby — current event, split, and lobby ID -->
+    <div class="card" id="card-lobby-room" style="display:none">
+        <div class="card-title">Race Lobby</div>
+        <div class="standing-grid">
+            <div class="standing-item">
+                <div class="si-label">Current Event</div>
+                <div class="si-value" id="lobby-room-event" style="font-size:1rem">—</div>
+            </div>
+            <div class="standing-item">
+                <div class="si-label">Split</div>
+                <div class="si-value" id="lobby-room-split">—</div>
+            </div>
+            <div class="standing-item">
+                <div class="si-label">Lobby ID</div>
+                <div class="si-value" id="lobby-room-id" style="font-size:1.3rem">—</div>
+            </div>
+        </div>
+        <div id="lobby-room-extra"></div>
+    </div>
+
+    <!-- Broadcast your stream — once the split is allocated, a driver can post
+         a live-stream link that shows up on the public Media page. -->
+    <div class="card" id="card-stream-link" style="display:none">
+        <div class="card-title">Broadcast Your Stream</div>
+        <p style="color:var(--muted);font-size:0.85rem;margin:0 0 0.85rem">Streaming this race on YouTube, Twitch or Kick? Post the link and it appears on the GTEC <a href="/endurance/media/" style="color:var(--gold);text-decoration:none">Media page</a> for everyone to watch live.</p>
+        <div class="form-group">
+            <label class="field-label">Your stream link</label>
+            <input type="url" id="stream-link-input" placeholder="e.g. https://youtube.com/watch?v=…" inputmode="url" autocomplete="off">
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-top:0.6rem">
+            <button class="btn-save" id="stream-link-save" onclick="saveStreamLink()">Post Stream</button>
+            <button class="btn-ghost" id="stream-link-remove" onclick="removeStreamLink()" style="display:none">Remove</button>
+            <span id="stream-link-status" style="font-size:0.8rem;color:var(--muted)"></span>
+        </div>
+    </div>
+
+    <!-- Split result screenshots — hosts of recently-run splits upload
+         their 2 qualifying + 2 race results screenshots here for admin. -->
+    <div class="card" id="card-host-screenshots" style="display:none">
+        <div class="card-title">Race Result Screenshots</div>
+        <p style="color:var(--muted);font-size:0.85rem;margin:0 0 0.85rem">Splits you've hosted recently. Upload the qualifying and race results screens so admin can enter results.</p>
+        <div id="host-screenshots-list"></div>
+    </div>
+
+    <!-- Recent results -->
+    <div class="card" id="card-results" style="display:none">
+        <div class="card-title">Recent Results</div>
+        <div class="results-list" id="results-list"></div>
+    </div>
+
+    <!-- Split journey -->
+    <div class="card" id="card-split-journey" style="display:none">
+        <div class="card-title">Split Journey</div>
+        <div class="split-timeline" id="split-journey-list"></div>
+    </div>
+
+    <!-- Team (shown if driver is on a team) -->
+    <div class="card" id="card-team" style="display:none">
+        <div class="card-title">
+            <span id="team-card-title">Team</span>
+            <span id="team-leader-pill" class="pill pill-gold" style="display:none;margin-left:0.5rem">★ Team Leader</span>
+        </div>
+        <div id="team-summary"></div>
+        <div id="team-leave-wrap" style="display:none;margin-top:1.1rem;padding-top:1.1rem;border-top:1px solid var(--border)">
+            <button class="btn-small danger" onclick="leaveTeam()">Leave Team</button>
+        </div>
+        <div id="team-edit" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)">
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.85rem">Team Settings</div>
+            <div class="form-group full" style="margin-bottom:1.25rem">
+                <label class="field-label">Team Banner</label>
+                <div class="banner-upload" id="banner-upload" onclick="document.getElementById('banner-file').click()">
+                    <div class="placeholder" id="banner-placeholder">Click to upload a banner</div>
+                    <div class="overlay">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="margin-right:0.4rem"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        Change Banner
+                    </div>
+                </div>
+                <input type="file" id="banner-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadTeamBanner(this)">
+                <div class="upload-progress" id="banner-upload-progress">
+                    <div class="upload-progress-bar" id="banner-upload-bar"></div>
+                </div>
+                <div class="form-hint">Recommended 1200×400px (3:1), JPG/PNG/WebP, under 5MB. Shows on the teams grid and your team page.</div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label class="field-label">Team Bio</label>
+                    <textarea id="team-bio" placeholder="Tell the championship about your team…"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="field-label">Home Country</label>
+                    <select id="team-home-country"></select>
+                </div>
+                <div class="form-group">
+                    <label class="field-label">Founded On</label>
+                    <input type="date" id="team-founded-on">
+                </div>
+            </div>
+            <div style="margin-top:1rem">
+                <button class="btn-save" id="btn-save-team" onclick="saveTeamSettings()">Save Team</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team requests (shown to team leaders only) -->
+    <div class="card" id="card-team-requests" style="display:none">
+        <div class="card-title">Drivers Applying to Your Team</div>
+        <div id="team-requests-list"></div>
+    </div>
+
+    <!-- Find a team (shown to drivers without a team) -->
+    <div class="card" id="card-find-team" style="display:none">
+        <div class="card-title">Find a Team</div>
+        <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.85rem">Teams with an open seat are listed below. Send a short message and the team leader will decide.</p>
+        <div id="find-team-list"></div>
+    </div>
+
+    <!-- Driver's outstanding outgoing requests -->
+    <div class="card" id="card-my-requests" style="display:none">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Your Team Applications</span>
+            <button id="btn-clear-all-requests" class="btn-small danger" onclick="clearAllMyRequests()" style="display:none">Clear All</button>
+        </div>
+        <div id="my-requests-list"></div>
+    </div>
+
+    <!-- Edit profile -->
+    <div class="card">
+        <div class="card-title">Edit Your Profile</div>
+        <div class="photo-row">
+            <div class="avatar-upload" id="avatar-upload" onclick="document.getElementById('photo-file').click()">
+                <div class="placeholder" id="upload-placeholder">?</div>
+                <div class="overlay">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+            </div>
+            <div class="upload-info">
+                <button class="btn-upload" id="btn-upload" onclick="document.getElementById('photo-file').click()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                    Upload Photo
+                </button>
+                <div class="upload-progress" id="upload-progress">
+                    <div class="upload-progress-bar" id="upload-bar"></div>
+                </div>
+                <div style="font-size:0.72rem;color:var(--muted);margin-top:0.35rem">JPG, PNG or WebP · Max 2 MB</div>
+            </div>
+        </div>
+        <input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadPhoto(this)">
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="field-label">PSN ID</label>
+                <input type="text" id="field-psn" placeholder="YourPSNHandle">
+            </div>
+            <div class="form-group">
+                <label class="field-label">Discord Username</label>
+                <input type="text" id="field-discord" placeholder="yourhandle">
+                <div class="field-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem">Used for championship DMs &amp; claim links.</div>
+            </div>
+            <div class="form-group">
+                <label class="field-label">Nationality</label>
+                <select id="field-nationality"></select>
+            </div>
+            <div class="form-group">
+                <label class="field-label">Date of Birth</label>
+                <input type="date" id="field-dob">
+            </div>
+            <div class="form-group">
+                <label class="field-label">Career Number</label>
+                <input type="number" id="field-career-num" min="1" max="999" placeholder="e.g. 7" oninput="checkCareerNumber()">
+                <div class="field-hint" id="career-num-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem">1–999. Must not be taken by another driver.</div>
+            </div>
+            <div class="form-group full">
+                <label class="field-label">Bio</label>
+                <textarea id="field-bio" placeholder="Tell the championship about yourself…"></textarea>
+            </div>
+        </div>
+        <div style="margin-top:1.5rem">
+            <button class="btn-save" id="btn-save" onclick="saveProfile()">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Change password -->
+    <div class="card">
+        <div class="card-title">Change Password</div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="field-label">New Password</label>
+                <input type="password" id="field-new-password" placeholder="At least 8 characters" minlength="8" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label class="field-label">Confirm</label>
+                <input type="password" id="field-new-password-confirm" placeholder="Re-enter password" minlength="8" autocomplete="new-password">
+            </div>
+        </div>
+        <div style="margin-top:1.5rem">
+            <button class="btn-save" id="btn-change-password" onclick="changePassword()">Update Password</button>
+        </div>
+    </div>
+
+    <!-- Delete account -->
+    <div class="card" style="border-color:rgba(239,68,68,0.25)">
+        <div class="card-title" style="color:#f87171">Delete Account</div>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.25rem">Permanently removes your login access. Your race history and driver profile remain in the championship records. If you change your mind, contact an admin and you can be re-invited at any time.</p>
+        <button class="btn-small danger" onclick="deleteMyAccount()">Delete My Account</button>
+    </div>
+
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script src="/endurance/assets/elo-tiers.js?v=3"></script>
+<script src="/endurance/assets/gtec-badges.js?v=22"></script>
+<script src="/endurance/assets/gtec-share-card.js?v=5"></script>
+<script src="/endurance/assets/gtec-push.js"></script>
+<script src="../assets/countries.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+
+const FLAGS = { AD:'🇦🇩',AE:'🇦🇪',AT:'🇦🇹',AU:'🇦🇺',BE:'🇧🇪',BR:'🇧🇷',CA:'🇨🇦',CN:'🇨🇳',CZ:'🇨🇿',DE:'🇩🇪',ES:'🇪🇸',FR:'🇫🇷',GB:'🇬🇧',HU:'🇭🇺',IT:'🇮🇹',JP:'🇯🇵',MX:'🇲🇽',NL:'🇳🇱',PL:'🇵🇱',PT:'🇵🇹',SA:'🇸🇦',SE:'🇸🇪',SG:'🇸🇬',US:'🇺🇸' };
+// Flag emoji from any 2-letter ISO country code (regional indicators), so
+// every nationality renders — not just the hardcoded FLAGS subset above.
+function flag(c) {
+    const cc = (c || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
+
+let driverId = null;
+
+function toast(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = msg;
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+}
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+}
+
+function setPhotoUI(url, initial = '?') {
+    const wrap = document.getElementById('avatar-upload');
+    const placeholder = document.getElementById('upload-placeholder');
+    if (url) {
+        let img = wrap.querySelector('img');
+        if (!img) {
+            img = document.createElement('img'); img.alt = '';
+            wrap.insertBefore(img, wrap.firstChild);
+        }
+        img.src = url;
+        placeholder.style.display = 'none';
+        const hdr = document.getElementById('avatar-el');
+        hdr.innerHTML = `<img src="${esc(url)}" alt="">`;
+    } else {
+        placeholder.textContent = initial;
+        placeholder.style.display = '';
+    }
+}
+
+async function uploadPhoto(input) {
+    const file = input.files[0]; input.value = '';
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { toast('Image must be under 2 MB.', 'error'); return; }
+    const btn = document.getElementById('btn-upload');
+    const prog = document.getElementById('upload-progress');
+    const bar  = document.getElementById('upload-bar');
+    btn.disabled = true; btn.textContent = 'Uploading…';
+    prog.style.display = 'block'; bar.style.width = '30%';
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+    const { error: upErr } = await sb.storage.from('gtec-drivers').upload(`${driverId}.${ext}`, file, { upsert: true, contentType: file.type });
+    if (upErr) { toast(upErr.message, 'error'); btn.disabled = false; btn.textContent = 'Upload Photo'; prog.style.display = 'none'; return; }
+    bar.style.width = '75%';
+    const { data: { publicUrl } } = sb.storage.from('gtec-drivers').getPublicUrl(`${driverId}.${ext}`);
+    const { error: upd } = await sb.from('drivers').update({ photo_url: publicUrl }).eq('id', driverId);
+    bar.style.width = '100%';
+    setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0'; }, 600);
+    btn.disabled = false; btn.textContent = 'Upload Photo';
+    if (upd) { toast(upd.message, 'error'); return; }
+    setPhotoUI(publicUrl);
+    toast('Photo updated!', 'success');
+}
+
+function setBannerUI(url) {
+    const wrap = document.getElementById('banner-upload');
+    const placeholder = document.getElementById('banner-placeholder');
+    if (!wrap) return;
+    if (url) {
+        let img = wrap.querySelector('img');
+        if (!img) {
+            img = document.createElement('img'); img.alt = '';
+            wrap.insertBefore(img, wrap.firstChild);
+        }
+        img.src = url;
+        placeholder.style.display = 'none';
+    } else {
+        placeholder.style.display = '';
+    }
+}
+
+async function uploadTeamBanner(input) {
+    const file = input.files[0]; input.value = '';
+    if (!file) return;
+    if (!_editableTeam) { toast('Only the team leader can upload a banner.', 'error'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5 MB.', 'error'); return; }
+    const prog = document.getElementById('banner-upload-progress');
+    const bar  = document.getElementById('banner-upload-bar');
+    prog.style.display = 'block'; bar.style.width = '30%';
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+    const { error: upErr } = await sb.storage.from('gtec-team-banners').upload(`${_editableTeam.id}.${ext}`, file, { upsert: true, contentType: file.type });
+    if (upErr) { toast(upErr.message, 'error'); prog.style.display = 'none'; return; }
+    bar.style.width = '75%';
+    const { data: { publicUrl } } = sb.storage.from('gtec-team-banners').getPublicUrl(`${_editableTeam.id}.${ext}`);
+    const bustedUrl = `${publicUrl}?v=${Date.now()}`;
+    const { error: upd } = await sb.from('teams').update({ banner_url: bustedUrl }).eq('id', _editableTeam.id);
+    bar.style.width = '100%';
+    setTimeout(() => { prog.style.display = 'none'; bar.style.width = '0'; }, 600);
+    if (upd) { toast(upd.message, 'error'); return; }
+    _editableTeam.banner_url = bustedUrl;
+    setBannerUI(bustedUrl);
+    toast('Banner updated!', 'success');
+}
+
+function openContactModal() {
+    document.getElementById('contact-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('contact-message').focus(), 50);
+}
+function closeContactModal() {
+    document.getElementById('contact-overlay').classList.remove('open');
+    document.getElementById('contact-subject').value = '';
+    document.getElementById('contact-message').value = '';
+    document.getElementById('contact-url').value = '';
+}
+
+async function submitContactMessage() {
+    const btn      = document.getElementById('contact-submit');
+    const subject  = document.getElementById('contact-subject').value.trim() || null;
+    const message  = document.getElementById('contact-message').value.trim();
+    const urlInput = document.getElementById('contact-url').value.trim();
+
+    if (!message) { toast('Please write a message.', 'error'); return; }
+    if (urlInput && !/^https?:\/\//i.test(urlInput)) {
+        toast('Incident link should start with http:// or https://', 'error'); return;
+    }
+    if (!driverId) { toast('Profile not loaded yet — try again in a moment.', 'error'); return; }
+
+    btn.disabled = true; btn.textContent = 'Sending…';
+    const { data: authData } = await sb.auth.getUser();
+    const userId = authData.user?.id || null;
+    const { data: newMsg, error } = await sb.from('driver_contact_messages').insert({
+        driver_id:    driverId,
+        user_id:      userId,
+        subject,
+        message,
+        incident_url: urlInput || null,
+    }).select('id').single();
+    btn.disabled = false; btn.textContent = 'Send to Admin';
+    if (error) { toast(error.message, 'error'); return; }
+    // Seed the thread with the driver's message as the first post
+    await sb.from('message_thread_posts').insert({ message_id: newMsg.id, sender_type: 'driver', sender_id: userId, content: message });
+    closeContactModal();
+    await loadInbox(driverId);
+    toast('Message sent — replies appear in your inbox.', 'success');
+}
+
+async function changePassword() {
+    const pwEl   = document.getElementById('field-new-password');
+    const cfEl   = document.getElementById('field-new-password-confirm');
+    const btn    = document.getElementById('btn-change-password');
+    const pw     = pwEl.value;
+    const cf     = cfEl.value;
+
+    if (pw.length < 8) { toast('Password must be at least 8 characters.', 'error'); return; }
+    if (pw !== cf)     { toast('Passwords do not match.', 'error'); return; }
+
+    btn.disabled = true; btn.textContent = 'Updating…';
+    const { error } = await sb.auth.updateUser({ password: pw });
+    btn.disabled = false; btn.textContent = 'Update Password';
+    if (error) { toast(error.message, 'error'); return; }
+    pwEl.value = ''; cfEl.value = '';
+    toast('Password updated.', 'success');
+}
+
+async function deleteMyAccount() {
+    // Block admins from accidentally deleting themselves
+    const { data: roleRow } = await sb.from('user_roles')
+        .select('role')
+        .eq('user_id', (await sb.auth.getUser()).data.user?.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+    if (roleRow) {
+        alert('Admin accounts cannot be deleted from the driver portal. If you need to remove your admin access, contact another administrator.');
+        return;
+    }
+
+    const confirmed = confirm(
+        'Delete your account?\n\n' +
+        'Your login access will be removed permanently. ' +
+        'Your race history and driver profile will remain in the championship records.\n\n' +
+        'If you change your mind, contact an admin — you can be re-invited at any time.\n\n' +
+        'This cannot be undone.'
+    );
+    if (!confirmed) return;
+    const phrase = prompt('Type DELETE to confirm:');
+    if (phrase !== 'DELETE') { toast('Cancelled.', 'error'); return; }
+    const { data, error } = await sb.rpc('delete_my_account');
+    if (error || data?.error) { toast(error?.message || data.error, 'error'); return; }
+    await sb.auth.signOut().catch(() => {});
+    window.location.replace('/endurance/');
+}
+
+// Live availability check on the career-number input. Greens up when
+// the number is free, reds when another driver already has it. Save
+// will still hard-block a taken number via a refetch on submit.
+let _careerNumCheckTimer = null;
+async function checkCareerNumber() {
+    const hint = document.getElementById('career-num-hint');
+    const inp  = document.getElementById('field-career-num');
+    const raw  = inp.value.trim();
+    if (!raw) {
+        hint.textContent = '1–999. Must not be taken by another driver.';
+        hint.style.color = 'var(--muted)';
+        return;
+    }
+    const num = parseInt(raw, 10);
+    if (!Number.isFinite(num) || num < 1 || num > 999) {
+        hint.textContent = 'Pick a number between 1 and 999.';
+        hint.style.color = '#f87171';
+        return;
+    }
+    clearTimeout(_careerNumCheckTimer);
+    _careerNumCheckTimer = setTimeout(async () => {
+        const { data: clash } = await sb.from('drivers')
+            .select('id, display_name')
+            .eq('career_number', num)
+            .neq('id', driverId)
+            .maybeSingle();
+        if (clash) {
+            hint.textContent = `#${num} is already taken by ${clash.display_name}.`;
+            hint.style.color = '#f87171';
+        } else {
+            hint.textContent = `#${num} is available.`;
+            hint.style.color = '#4ade80';
+        }
+    }, 250);
+}
+
+async function saveProfile() {
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    const rawNum = document.getElementById('field-career-num').value.trim();
+    let careerNumber = null;
+    if (rawNum) {
+        const n = parseInt(rawNum, 10);
+        if (!Number.isFinite(n) || n < 1 || n > 999) {
+            btn.disabled = false; btn.textContent = 'Save Changes';
+            toast('Career number must be 1–999.', 'error');
+            return;
+        }
+        careerNumber = n;
+        // Final uniqueness check before update — guards against races
+        // between input keystrokes and submit.
+        const { data: clash } = await sb.from('drivers')
+            .select('id, display_name')
+            .eq('career_number', n)
+            .neq('id', driverId)
+            .maybeSingle();
+        if (clash) {
+            btn.disabled = false; btn.textContent = 'Save Changes';
+            toast(`#${n} is already taken by ${clash.display_name}.`, 'error');
+            return;
+        }
+    }
+
+    const payload = {
+        bio:              document.getElementById('field-bio').value || null,
+        psn_id:           document.getElementById('field-psn').value.trim() || null,
+        discord_username: document.getElementById('field-discord').value.trim() || null,
+        nationality:      document.getElementById('field-nationality').value.trim().toUpperCase() || null,
+        date_of_birth:    document.getElementById('field-dob').value || null,
+        career_number:    careerNumber,
+    };
+    const { error } = await sb.from('drivers').update(payload).eq('id', driverId);
+    btn.disabled = false; btn.textContent = 'Save Changes';
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Profile saved.', 'success');
+    // Update nationality tag live
+    if (payload.nationality) {
+        const tags = document.getElementById('profile-tags');
+        const natTag = tags.querySelector('[data-nat]');
+        if (natTag) natTag.textContent = `${flag(payload.nationality)} ${payload.nationality}`;
+    }
+}
+
+// ── Load dashboard data ────────────────────────────────────────
+async function loadStanding(driverId) {
+    const { data: season } = await sb.from('seasons').select('id,name,year').eq('is_active', true).maybeSingle();
+    if (!season) return;
+
+    const [allStRes, ratingRes, pensRes] = await Promise.all([
+        sb.from('driver_standings')
+            .select('driver_id, points, races, wins, podiums, fastest_laps')
+            .eq('season_id', season.id),
+        sb.from('driver_current_ratings').select('*').eq('driver_id', driverId).maybeSingle(),
+        // This driver's points-deduction penalties this season (with reason)
+        // so we can show why points were docked, matching the standings.
+        sb.from('penalties')
+            .select('points_amount, reason, driver_id, entry_id, entries(entry_drivers(driver_id)), events!inner(season_id)')
+            .eq('penalty_type', 'points_deduction')
+            .eq('events.season_id', season.id),
+    ]);
+
+    // Sum this driver's deductions: a driver-specific penalty, or a
+    // whole-team penalty on an entry they were part of.
+    let dedAmount = 0; const dedReasons = [];
+    (pensRes.data || []).forEach(p => {
+        if (!p.points_amount) return;
+        const hits = p.driver_id
+            ? p.driver_id === driverId
+            : (p.entries?.entry_drivers || []).some(ed => ed.driver_id === driverId);
+        if (!hits) return;
+        dedAmount += p.points_amount;
+        const r = (p.reason || '').trim();
+        if (r && !dedReasons.includes(r)) dedReasons.push(r);
+    });
+
+    const all = (allStRes.data || []).slice().sort((a, b) => Number(b.points) - Number(a.points));
+    const rankIdx = all.findIndex(r => r.driver_id === driverId);
+    const st = rankIdx >= 0 ? all[rankIdx] : null;
+    const driverRank = rankIdx >= 0 ? rankIdx + 1 : null;
+    const rt = ratingRes.data;
+
+    const card = document.getElementById('card-standing');
+    document.getElementById('standing-season-label').textContent = `${season.name} — Season Standing`;
+
+    if (st) {
+        const dedNote = dedAmount
+            ? `−${dedAmount}${dedReasons.length ? ` · ${dedReasons.join(', ')}` : ''}`
+            : '';
+        const items = [
+            { label: 'Position', value: Number(st.points) > 0 && driverRank ? `P${driverRank}` : '—', cls: 'si-pos' },
+            { label: 'Points',   value: Number(st.points ?? 0).toFixed(Number(st.points ?? 0) % 1 === 0 ? 0 : 1), note: dedNote },
+            { label: 'Races',    value: st.races  ?? 0 },
+            { label: 'Wins',     value: st.wins   ?? 0 },
+            { label: 'Podiums',  value: st.podiums ?? 0 },
+            { label: 'Fastest Laps', value: st.fastest_laps ?? 0 },
+        ];
+        document.getElementById('standing-grid').innerHTML = items.map(i =>
+            `<div class="standing-item"><div class="si-label">${i.label}</div><div class="si-value ${i.cls||''}">${i.value}</div>${i.note ? `<div class="si-deduct" title="${esc(i.note)} (points docked)">${esc(i.note)}</div>` : ''}</div>`
+        ).join('');
+    }
+
+    if (rt) {
+        const elo = Math.round(rt.rating ?? 1500);
+        const provisional = !rt.last_rated_at;
+        document.getElementById('elo-value').textContent = elo;
+        document.getElementById('elo-tier-el').innerHTML = window.eloTierBadge ? window.eloTierBadge(elo, { provisional }) : '';
+        const delta = rt.last_delta;
+        if (delta != null) {
+            const sign = delta >= 0 ? '+' : '';
+            document.getElementById('elo-delta-el').innerHTML = `<span class="elo-delta ${delta >= 0 ? 'elo-up' : 'elo-dn'}">(${sign}${delta})</span>`;
+        }
+        _shareStats.elo  = elo;
+        _shareStats.tier = !provisional && window.eloTier ? (window.eloTier(elo)?.name || null) : null;
+    } else {
+        document.getElementById('elo-value').textContent = '1500';
+        document.getElementById('elo-tier-el').innerHTML = window.eloTierBadge ? window.eloTierBadge(1500, { provisional: true }) : '';
+        _shareStats.elo  = 1500;
+        _shareStats.tier = null;
+    }
+
+    if (st) {
+        _shareStats.points  = Number(st.points ?? 0).toFixed(Number(st.points ?? 0) % 1 === 0 ? 0 : 1);
+        _shareStats.wins    = st.wins    ?? 0;
+        _shareStats.podiums = st.podiums ?? 0;
+        _shareStats.races   = st.races   ?? 0;
+    }
+
+    // Now that we have driver + stats wired, reveal the Share Card button
+    // (was hidden in markup until the data was loaded).
+    armShareButton();
+    armObsWidgetButton();
+
+    card.style.display = '';
+}
+
+function armObsWidgetButton() {
+    const btn = document.getElementById('obs-widget-btn');
+    if (!btn || btn.dataset.armed === '1' || !_shareDriver) return;
+    btn.dataset.armed = '1';
+    btn.style.display = '';
+    btn.addEventListener('click', () => {
+        const url = `${location.origin}/endurance/obs/driver-card/?slug=${_shareDriver.slug}`;
+        navigator.clipboard.writeText(url).then(() => toast('OBS widget link copied!', 'success'));
+    });
+}
+
+// Standings ticker link needs no driver-specific data, so it's armed
+// once at load rather than waiting on the async profile load.
+(function armTickerLinkButton() {
+    const btn = document.getElementById('ticker-link-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+        const url = `${location.origin}/endurance/obs/standings-ticker/`;
+        navigator.clipboard.writeText(url).then(() => toast('Standings ticker link copied!', 'success'));
+    });
+})();
+
+function armShareButton() {
+    const btn = document.getElementById('share-profile-btn');
+    if (!btn || btn.dataset.armed === '1' || !_shareDriver || !window.gtecShareCard) return;
+    btn.dataset.armed = '1';
+    btn.style.display = '';
+    btn.addEventListener('click', () => window.gtecShareCard({
+        driver: {
+            display_name:      _shareDriver.display_name,
+            slug:              _shareDriver.slug,
+            career_number:     _shareDriver.career_number,
+            nationality:       _shareDriver.nationality,
+            photo_url:         _shareDriver.photo_url,
+            team_name:          _shareDriver.teams?.name || null,
+            manufacturer_name:  _shareDriver.manufacturers?.name || null,
+            manufacturer_color: _shareDriver.manufacturers?.brand_color || null,
+        },
+        stats: _shareStats,
+        buttonEl: btn,
+    }));
+}
+
+async function loadUpcoming(driverId) {
+    const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+    if (!season) return;
+    const { data: events } = await sb.from('events')
+        .select('id,name,slug,round,circuit_name,circuit_country,starts_at,duration_hours')
+        .eq('season_id', season.id)
+        .eq('status', 'scheduled')
+        .gte('starts_at', new Date().toISOString())
+        .order('starts_at').limit(3);
+    if (!events?.length) return;
+
+    const eventIds = events.map(e => e.id);
+    const { data: absenceRows } = await sb.from('driver_event_absences')
+        .select('event_id')
+        .eq('driver_id', driverId)
+        .in('event_id', eventIds);
+    const absentSet = new Set((absenceRows || []).map(r => r.event_id));
+
+    document.getElementById('card-upcoming').style.display = '';
+    document.getElementById('upcoming-list').innerHTML = events.map(e => {
+        const isAbsent = absentSet.has(e.id);
+        return `
+        <div class="upcoming-row${isAbsent ? ' absent' : ''}" id="upcoming-row-${e.id}">
+            <div class="upcoming-round">${e.round}</div>
+            <div class="upcoming-info">
+                <div class="upcoming-name">${esc(e.name)}</div>
+                <div class="upcoming-meta">${flag(e.circuit_country)} ${esc(e.circuit_name)} · ${fmtDate(e.starts_at)} · ${e.duration_hours}h</div>
+            </div>
+            <label class="upcoming-absent-toggle" title="Flag yourself as unable to attend this event">
+                <input type="checkbox" ${isAbsent ? 'checked' : ''} onchange="toggleAbsence('${e.id}','${driverId}',this)">
+                <span>Can't attend</span>
+            </label>
+        </div>`;
+    }).join('');
+}
+
+async function toggleAbsence(eventId, driverId, checkbox) {
+    if (checkbox.checked) {
+        const { error } = await sb.from('driver_event_absences').upsert({ driver_id: driverId, event_id: eventId }, { onConflict: 'driver_id,event_id' });
+        if (error) { toast('Could not save — please try again.', 'error'); checkbox.checked = false; return; }
+    } else {
+        const { error } = await sb.from('driver_event_absences').delete().eq('driver_id', driverId).eq('event_id', eventId);
+        if (error) { toast('Could not save — please try again.', 'error'); checkbox.checked = true; return; }
+    }
+    const row = document.getElementById(`upcoming-row-${eventId}`);
+    if (row) row.classList.toggle('absent', checkbox.checked);
+}
+
+// Race Lobby card: Current Event / Split / Lobby ID. Shows as soon as the
+// driver has an entry in the next scheduled event, even before splits
+// exist. Split fills in the moment it's allocated in admin — for every
+// driver, so the portal mirrors the admin splits view directly. Lobby ID
+// fills in once the host posts it.
+let _lobbyRoomCtx = null; // { eventId, lobbyNumber, isHost }
+
+async function loadLobbyRoomCode(driverId) {
+    // The stream card unlocks on the same condition as the lobby split; hide it
+    // by default and only show it once we know the driver's split is allocated.
+    const streamCard = document.getElementById('card-stream-link');
+    if (streamCard) streamCard.style.display = 'none';
+    _streamCtx = null;
+
+    const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+    if (!season) { document.getElementById('card-lobby-room').style.display = 'none'; return; }
+
+    const { data: rows } = await sb.from('entry_drivers')
+        .select('entries!inner(id, event_id, lobby_number, host_driver_id, events!inner(id, name, round, starts_at, status, splits_notified_at, season_id))')
+        .eq('driver_id', driverId)
+        .eq('entries.events.season_id', season.id)
+        .eq('entries.events.status', 'scheduled');
+
+    const candidates = (rows || []).map(r => r.entries).filter(Boolean);
+    if (!candidates.length) { document.getElementById('card-lobby-room').style.display = 'none'; return; }
+
+    candidates.sort((a, b) => new Date(a.events.starts_at) - new Date(b.events.starts_at));
+    const en = candidates[0];
+    const ev = en.events;
+    const isHost = en.lobby_number != null && en.host_driver_id === driverId;
+    // Every driver sees their split as soon as it's allocated in admin, so
+    // the portal mirrors the admin splits view and hosts can share the
+    // Lobby ID with the right drivers without waiting on a notify step.
+    const splitKnown = en.lobby_number != null;
+
+    document.getElementById('lobby-room-event').textContent = `R${ev.round} · ${ev.name}`;
+    document.getElementById('lobby-room-split').textContent = splitKnown ? en.lobby_number : 'TBC';
+
+    const idEl = document.getElementById('lobby-room-id');
+    const extra = document.getElementById('lobby-room-extra');
+
+    if (!splitKnown) {
+        idEl.textContent = '—';
+        extra.innerHTML = '';
+        _lobbyRoomCtx = null;
+        document.getElementById('card-lobby-room').style.display = '';
+        return;
+    }
+
+    _lobbyRoomCtx = { eventId: ev.id, lobbyNumber: en.lobby_number, isHost };
+
+    const { data: rc } = await sb.from('lobby_room_codes')
+        .select('room_code, updated_at')
+        .eq('event_id', ev.id)
+        .eq('lobby_number', en.lobby_number)
+        .maybeSingle();
+
+    idEl.textContent = rc?.room_code || (isHost ? '—' : 'Pending');
+
+    if (isHost) {
+        extra.innerHTML = `
+            <p style="color:var(--muted);font-size:0.85rem;margin:0.75rem 0">You're hosting this split. Post the Lobby ID here once you've created the Custom Race in GT7. Everyone in your split can see it, even if they're not on Discord.</p>
+            <div class="form-group">
+                <label class="field-label">Lobby ID</label>
+                <input type="text" id="lobby-room-input" placeholder="e.g. 123-456-789" value="${esc(rc?.room_code || '')}">
+            </div>
+            <button class="btn-save" id="lobby-room-save" onclick="saveLobbyRoomCode()">Post Lobby ID</button>`;
+    } else {
+        extra.innerHTML = rc?.room_code
+            ? ''
+            : `<p style="color:var(--muted);font-size:0.85rem;margin:0.75rem 0 0">Your host hasn't posted the Lobby ID yet. Check back closer to race time, or watch your split's Discord channel.</p>`;
+    }
+
+    document.getElementById('card-lobby-room').style.display = '';
+
+    // Split is allocated → the driver can now post a live-stream link.
+    await renderStreamCard(driverId, ev.id, `R${ev.round} · ${ev.name}`);
+}
+
+// Populate + reveal the "Broadcast Your Stream" card for the current event.
+let _streamCtx = null; // { driverId, eventId }
+async function renderStreamCard(driverId, eventId, eventLabel) {
+    const card = document.getElementById('card-stream-link');
+    if (!card) return;
+    _streamCtx = { driverId, eventId };
+    const { data: existing } = await sb.from('driver_stream_links')
+        .select('url').eq('driver_id', driverId).eq('event_id', eventId).maybeSingle();
+    const input = document.getElementById('stream-link-input');
+    const removeBtn = document.getElementById('stream-link-remove');
+    const status = document.getElementById('stream-link-status');
+    input.value = existing?.url || '';
+    removeBtn.style.display = existing?.url ? '' : 'none';
+    status.textContent = existing?.url ? 'Live on the Media page.' : '';
+    status.style.color = existing?.url ? '#4ade80' : 'var(--muted)';
+    card.style.display = '';
+}
+
+async function saveStreamLink() {
+    if (!_streamCtx) return;
+    const input = document.getElementById('stream-link-input');
+    const btn = document.getElementById('stream-link-save');
+    const status = document.getElementById('stream-link-status');
+    let url = input.value.trim();
+    if (!url) { toast('Paste your stream link first.', 'error'); return; }
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;   // be forgiving of a pasted bare link
+    try { new URL(url); } catch (e) { toast('That doesn\'t look like a valid link.', 'error'); return; }
+    btn.disabled = true;
+    const { error } = await sb.from('driver_stream_links').upsert({
+        driver_id: _streamCtx.driverId,
+        event_id:  _streamCtx.eventId,
+        url,
+        updated_at: new Date().toISOString(),
+    }, { onConflict: 'driver_id,event_id' });
+    btn.disabled = false;
+    if (error) { toast('Could not post your stream. Please try again.', 'error'); return; }
+    input.value = url;
+    document.getElementById('stream-link-remove').style.display = '';
+    status.textContent = 'Live on the Media page.'; status.style.color = '#4ade80';
+    toast('Stream posted.', 'success');
+}
+
+async function removeStreamLink() {
+    if (!_streamCtx) return;
+    const { error } = await sb.from('driver_stream_links')
+        .delete().eq('driver_id', _streamCtx.driverId).eq('event_id', _streamCtx.eventId);
+    if (error) { toast('Could not remove. Please try again.', 'error'); return; }
+    document.getElementById('stream-link-input').value = '';
+    document.getElementById('stream-link-remove').style.display = 'none';
+    const status = document.getElementById('stream-link-status');
+    status.textContent = ''; status.style.color = 'var(--muted)';
+    toast('Stream removed.', 'success');
+}
+
+async function saveLobbyRoomCode() {
+    if (!_lobbyRoomCtx) return;
+    const input = document.getElementById('lobby-room-input');
+    const btn = document.getElementById('lobby-room-save');
+    const code = input.value.trim();
+    if (!code) { toast('Enter the Lobby ID first.', 'error'); return; }
+    btn.disabled = true;
+    const { data: { user } } = await sb.auth.getUser();
+    const { error } = await sb.from('lobby_room_codes').upsert({
+        event_id:     _lobbyRoomCtx.eventId,
+        lobby_number: _lobbyRoomCtx.lobbyNumber,
+        room_code:    code,
+        updated_by:   user?.id || null,
+        updated_at:   new Date().toISOString(),
+    }, { onConflict: 'event_id,lobby_number' });
+    btn.disabled = false;
+    if (error) { toast('Could not save. Please try again.', 'error'); return; }
+    toast('Lobby ID posted.', 'success');
+}
+
+// Split result screenshots — lists every split the driver has hosted in
+// the active season for events still 'scheduled' (awaiting results), each
+// with 4 upload slots (2 qualifying, 2 race results) for admin to use when
+// entering results. Once the admin marks the event completed (or it's
+// cancelled), the card drops that split off the host's profile.
+const HOST_SS_SLOTS = [
+    { column: 'quali_screenshot_1_url', slug: 'quali1', label: 'Quali 1' },
+    { column: 'quali_screenshot_2_url', slug: 'quali2', label: 'Quali 2' },
+    { column: 'race_screenshot_1_url',  slug: 'race1',  label: 'Race 1' },
+    { column: 'race_screenshot_2_url',  slug: 'race2',  label: 'Race 2' },
+];
+
+async function loadHostScreenshots(driverId) {
+    const card = document.getElementById('card-host-screenshots');
+    const list = document.getElementById('host-screenshots-list');
+
+    const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+    if (!season) { card.style.display = 'none'; return; }
+
+    const { data: rows } = await sb.from('entries')
+        .select('event_id, lobby_number, events!inner(id, name, round, starts_at, season_id, status)')
+        .eq('host_driver_id', driverId)
+        .eq('events.season_id', season.id)
+        .eq('events.status', 'scheduled')
+        .not('lobby_number', 'is', null);
+
+    if (!rows?.length) { card.style.display = 'none'; return; }
+
+    // De-dupe (a driver should only ever host one entry per split, but
+    // don't assume it) and cap to the 5 most recent hosted splits. Shows
+    // as soon as they're assigned as host — even before the race — and
+    // disappears once admin clears the split assignment or marks the event
+    // completed.
+    const seen = new Set();
+    const hosted = [];
+    rows.forEach(r => {
+        const key = `${r.event_id}:${r.lobby_number}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        hosted.push(r);
+    });
+    hosted.sort((a, b) => new Date(b.events.starts_at) - new Date(a.events.starts_at));
+    hosted.length = Math.min(hosted.length, 5);
+
+    const eventIds = hosted.map(r => r.event_id);
+    const { data: shots } = await sb.from('lobby_result_screenshots')
+        .select('*')
+        .in('event_id', eventIds);
+    const shotMap = new Map((shots || []).map(s => [`${s.event_id}:${s.lobby_number}`, s]));
+
+    list.innerHTML = hosted.map(r => {
+        const ev = r.events;
+        const shot = shotMap.get(`${r.event_id}:${r.lobby_number}`) || {};
+        const slotsHTML = HOST_SS_SLOTS.map(s => {
+            const url = shot[s.column];
+            return `
+                <div>
+                    <label class="host-ss-slot">
+                        <input type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSplitScreenshot(this,'${r.event_id}',${r.lobby_number},'${s.column}','${driverId}')">
+                        ${url ? `<img src="${esc(url)}" alt="${s.label}"><div class="overlay">Replace</div>` : `<div class="placeholder">+ ${s.label}</div>`}
+                    </label>
+                    <div class="host-ss-slot-label">${s.label}</div>
+                </div>`;
+        }).join('');
+        return `
+            <div class="host-ss-event">
+                <div class="host-ss-event-title">R${ev.round} — ${esc(ev.name)} · Split ${r.lobby_number}</div>
+                <div class="host-ss-event-meta">${fmtDate(ev.starts_at)}</div>
+                <div class="host-ss-slots">${slotsHTML}</div>
+            </div>`;
+    }).join('');
+
+    card.style.display = '';
+}
+
+async function uploadSplitScreenshot(input, eventId, lobbyNumber, column, driverId) {
+    const file = input.files[0]; input.value = '';
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toast('Image must be under 8 MB.', 'error'); return; }
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+    const slot = HOST_SS_SLOTS.find(s => s.column === column).slug;
+    const path = `${eventId}-${lobbyNumber}-${slot}.${ext}`;
+    const { error: upErr } = await sb.storage.from('gtec-split-screenshots').upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) { toast(upErr.message, 'error'); return; }
+    const { data: { publicUrl } } = sb.storage.from('gtec-split-screenshots').getPublicUrl(path);
+    const bustedUrl = `${publicUrl}?v=${Date.now()}`;
+    const { data: { user } } = await sb.auth.getUser();
+    const { error: upd } = await sb.from('lobby_result_screenshots').upsert({
+        event_id:     eventId,
+        lobby_number: lobbyNumber,
+        [column]:     bustedUrl,
+        updated_by:   user?.id || null,
+        updated_at:   new Date().toISOString(),
+    }, { onConflict: 'event_id,lobby_number' });
+    if (upd) { toast(upd.message, 'error'); return; }
+    toast('Screenshot uploaded.', 'success');
+    await loadHostScreenshots(driverId);
+}
+
+async function loadBadges(driverId) {
+    // Career counts + per-circuit completions in parallel. Circuit list
+    // is the distinct lower-cased events.circuit_name for any classified
+    // result_drivers row owned by this driver — the same source the
+    // public profile uses for the strip.
+    const [{ data: stats }, { data: circuitRows }, { data: seasons }, { data: allStandings }, { data: secretBadges }, { data: driverRow }, { count: hostCount }, { count: streamLinkCount }] = await Promise.all([
+        sb.from('driver_career_stats').select('starts, wins').eq('driver_id', driverId).maybeSingle(),
+        sb.from('result_drivers')
+            .select('status, results(events(circuit_name))')
+            .eq('driver_id', driverId),
+        sb.from('seasons').select('id, year, is_active'),
+        sb.from('driver_standings').select('driver_id, season_id, points, races'),
+        sb.rpc('driver_secret_badges', { p_driver_id: driverId }),
+        sb.from('drivers').select('manual_badges, willing_host').eq('id', driverId).maybeSingle(),
+        // Career-wide count of splits actually hosted, feeds the Community
+        // badge ladder (replaces the old "willing to host" flag check).
+        sb.from('entries').select('id', { count: 'exact', head: true }).eq('host_driver_id', driverId),
+        // Has this driver ever posted a stream link from their portal? Any row
+        // earns the Content Creator badge.
+        sb.from('driver_stream_links').select('id', { count: 'exact', head: true }).eq('driver_id', driverId),
+    ]);
+
+    const completedCircuits = Array.from(new Set(
+        (circuitRows || [])
+            .filter(r => (r.status || 'classified') === 'classified')
+            .map(r => (r.results?.events?.circuit_name || '').toLowerCase())
+            .filter(Boolean)
+    ));
+
+    // For each completed season, find this driver's finishing position
+    // by sorting all drivers' total points descending.
+    const seasonFinishes = [];
+    (seasons || []).filter(s => !s.is_active).forEach(s => {
+        const standings = (allStandings || [])
+            .filter(r => r.season_id === s.id && Number(r.points) > 0)
+            .sort((a, b) => Number(b.points) - Number(a.points));
+        const idx = standings.findIndex(r => r.driver_id === driverId);
+        if (idx >= 0) seasonFinishes.push(idx + 1);
+    });
+
+    // Founding Member — raced in Season 1 (earliest season by year).
+    const _firstSeasonId = (seasons || []).slice().sort((a, b) => (a.year || 0) - (b.year || 0))[0]?.id;
+    const foundingMember = !!_firstSeasonId && (allStandings || []).some(r => r.driver_id === driverId && r.season_id === _firstSeasonId && Number(r.races) > 0);
+
+    if (!window.renderBadgeGrid) return;
+    document.getElementById('badges-grid').innerHTML = window.renderBadgeGrid({
+        starts: Number(stats?.starts) || 0,
+        wins:   Number(stats?.wins)   || 0,
+        completedCircuits,
+        seasonFinishes,
+        secretBadges: secretBadges || {},
+        manualBadges: Array.isArray(driverRow?.manual_badges) ? driverRow.manual_badges : [],
+        hostCount: hostCount || 0,
+        foundingMember,
+        hasStreamLink: (streamLinkCount || 0) > 0,
+    });
+    document.getElementById('card-badges').style.display = '';
+}
+
+async function loadRecentResults(driverId) {
+    const { data: eds } = await sb.from('entry_drivers')
+        .select('entry_id')
+        .eq('driver_id', driverId);
+    if (!eds?.length) return;
+
+    const entryIds = eds.map(e => e.entry_id);
+    const { data: results } = await sb.from('results')
+        .select('finish_position, classified, points_awarded, entries(car_number, event_id, events(name, slug, starts_at, round))')
+        .in('entry_id', entryIds)
+        .order('entries(events(starts_at))', { ascending: false })
+        .limit(5);
+
+    if (!results?.length) return;
+    document.getElementById('card-results').style.display = '';
+
+    const posCls = pos => pos === 1 ? 'pos-1-c' : pos === 2 ? 'pos-2-c' : pos === 3 ? 'pos-3-c' : '';
+
+    document.getElementById('results-list').innerHTML = results.map(r => {
+        const ev = r.entries?.events;
+        const pos = r.finish_position;
+        const posDisplay = r.classified
+            ? `<span class="result-pos ${posCls(pos)}">${pos ?? '—'}</span>`
+            : `<span class="result-pos result-dnf">DNF</span>`;
+        const pts = r.points_awarded ? `<span class="result-pts">${r.points_awarded} pts</span>` : '';
+        const href = ev?.slug ? `/endurance/results/?slug=${encodeURIComponent(ev.slug)}` : '#';
+        return `
+        <a class="result-row" href="${esc(href)}">
+            ${posDisplay}
+            <div class="result-info">
+                <div class="result-name">${esc(ev?.name || '—')}</div>
+                <div class="result-meta">Round ${ev?.round ?? '—'} · ${fmtDate(ev?.starts_at)} · Car #${r.entries?.car_number ?? '—'}</div>
+            </div>
+            ${pts}
+        </a>`;
+    }).join('');
+}
+
+// ============================================================
+// Stewards & Incidents — file an on-track dispute, see its status.
+// Clips are links only (no upload); visibility is stewards-private, so
+// this only ever shows incidents THIS driver filed.
+// ============================================================
+const _incStatusLabels = { open: 'Open', under_review: 'Under review', resolved: 'Resolved', dismissed: 'Dismissed' };
+let _incEventLobby = {};   // event_id -> the driver's lobby_number that event
+let _incDriverId = null;
+
+async function loadIncidents(driverId) {
+    _incDriverId = driverId;
+    const card = document.getElementById('card-incidents');
+
+    // Events this driver actually entered (for the form dropdown) + their
+    // split each round, and the roster of other drivers to name.
+    const [{ data: eds }, { data: roster }, { data: mine }] = await Promise.all([
+        sb.from('entry_drivers')
+            .select('entries(event_id, lobby_number, events(name, round, starts_at, ends_at, status))')
+            .eq('driver_id', driverId),
+        sb.from('drivers').select('id, display_name, psn_id').order('display_name'),
+        // Exclude admin-hidden cases explicitly: RLS already hides them from
+        // regular drivers, but an admin viewing their own portal can still
+        // read every dispute, so filter here so the portal never shows one.
+        sb.from('dispute_overview').select('*').eq('complainant_driver_id', driverId).eq('hidden_from_portal', false).order('created_at', { ascending: false }),
+    ]);
+
+    // Build a de-duped, most-recent-first event list from the entries.
+    const evMap = new Map();
+    _incEventLobby = {};
+    (eds || []).forEach(ed => {
+        const en = ed.entries; const ev = en?.events;
+        if (!en?.event_id || !ev) return;
+        _incEventLobby[en.event_id] = en.lobby_number ?? null;
+        if (!evMap.has(en.event_id)) evMap.set(en.event_id, { id: en.event_id, name: ev.name, round: ev.round, starts_at: ev.starts_at, ends_at: ev.ends_at, status: ev.status });
+    });
+
+    // Reporting opens the moment a round has ENDED (its scheduled end time
+    // passes) and stays open for 48h, regardless of whether it's been marked
+    // completed or has results up yet, so drivers report while the incident
+    // is fresh and stewards can judge it before results are finalised.
+    // Cancelled rounds never open; after 48h the whole section disappears.
+    const WINDOW_MS = 48 * 60 * 60 * 1000;
+    const now = Date.now();
+    const events = [...evMap.values()]
+        .filter(e => {
+            if (e.status === 'cancelled' || !e.ends_at) return false;
+            const ended = new Date(e.ends_at).getTime();
+            return ended <= now && (now - ended) < WINDOW_MS;
+        })
+        .sort((a, b) => new Date(b.ends_at || 0) - new Date(a.ends_at || 0));
+
+    // Nothing inside the window right now -> hide the section entirely.
+    if (!events.length) { card.style.display = 'none'; return; }
+    card.style.display = '';
+
+    const evSel = document.getElementById('inc-event');
+    evSel.innerHTML = '<option value="">— select an event you raced —</option>' +
+        events.map(e => `<option value="${esc(e.id)}">Round ${e.round ?? '—'} · ${esc(e.name)}</option>`).join('');
+
+    const accSel = document.getElementById('inc-accused');
+    accSel.innerHTML = '<option value="">— pick a driver —</option>' +
+        (roster || []).filter(d => d.id !== driverId).map(d =>
+            `<option value="${esc(d.id)}">${esc(d.display_name)}${d.psn_id ? ' (' + esc(d.psn_id) + ')' : ''}</option>`).join('');
+
+    // Only the incidents filed for rounds still inside the 48h window; older
+    // ones vanish with their round's section (the verdict still lands in the inbox).
+    const openEventIds = new Set(events.map(e => e.id));
+    renderIncidentList((mine || []).filter(r => openEventIds.has(r.event_id)));
+}
+
+function renderIncidentList(rows) {
+    const wrap = document.getElementById('incident-list');
+    if (!rows.length) {
+        wrap.innerHTML = '<p class="empty-note">No incidents filed. Use the button above if you need the stewards to review something.</p>';
+        return;
+    }
+    wrap.innerHTML = rows.map(r => {
+        const st = r.status || 'open';
+        const clips = [r.clip_1_url, r.clip_2_url, r.clip_3_url, r.clip_4_url].filter(Boolean);
+        const clipHtml = clips.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:0.76rem;text-decoration:none;margin-right:0.6rem">▶ Clip ${i + 1}</a>`).join('');
+        const outcome = (st === 'resolved' || st === 'dismissed') && r.outcome
+            ? `<div class="inc-outcome"><div class="ol">Stewards' verdict</div>${esc(r.outcome)}</div>` : '';
+        // Only while untouched by stewards can the driver withdraw it.
+        const withdraw = st === 'open'
+            ? `<button type="button" class="inc-withdraw" onclick="withdrawIncident('${r.id}')">Withdraw</button>` : '';
+        return `
+        <div class="inc-row">
+            <div class="inc-row-top">
+                <span class="inc-ref">${esc(r.incident_ref || '—')}</span>
+                <span class="inc-parties">vs ${esc(r.accused_name || '—')}</span>
+                <span class="status-pill sp-${st}" style="margin-left:auto">${esc(_incStatusLabels[st] || st)}</span>
+            </div>
+            <div class="inc-meta">Round ${r.event_round ?? '—'} · ${esc(r.event_name || '—')} · filed ${fmtDate(r.created_at)}</div>
+            <div class="inc-meta" style="margin-top:0.4rem;color:#d7dde6">${esc(r.description || '')}</div>
+            <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap">${clipHtml}${withdraw}</div>
+            ${outcome}
+        </div>`;
+    }).join('');
+}
+
+async function withdrawIncident(id) {
+    if (!confirm('Withdraw this incident? It will be removed and the stewards won\'t see it. You can only do this before they\'ve started reviewing it.')) return;
+    const { error } = await sb.from('disputes').delete().eq('id', id);
+    if (error) { toast(error.message || 'Could not withdraw.', 'error'); return; }
+    toast('Incident withdrawn.', 'success');
+    await loadIncidents(_incDriverId);
+}
+
+function toggleIncidentForm(show) {
+    const form = document.getElementById('incident-form');
+    const open = show === undefined ? form.style.display === 'none' : show;
+    form.style.display = open ? '' : 'none';
+    if (!open) form.reset();
+}
+
+function onIncidentEventChange() {
+    // Nothing visible to change — the split is derived server-side from the
+    // driver's entry — but kept as a hook in case we surface it later.
+}
+
+async function submitIncident(e) {
+    e.preventDefault();
+    const eventId = document.getElementById('inc-event').value;
+    const accused = document.getElementById('inc-accused').value;
+    const desc    = document.getElementById('inc-desc').value.trim();
+    const clip1   = document.getElementById('inc-clip1').value.trim();
+    if (!eventId || !accused || !desc || !clip1) { toast('Event, driver, description and at least one clip are required.', 'error'); return; }
+
+    const btn = document.getElementById('btn-submit-incident');
+    const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Submitting…';
+
+    const { error } = await sb.from('disputes').insert({
+        event_id: eventId,
+        lobby_number: _incEventLobby[eventId] ?? null,
+        complainant_driver_id: _incDriverId,
+        accused_driver_id: accused,
+        description: desc,
+        clip_1_url: clip1,
+        clip_2_url: document.getElementById('inc-clip2').value.trim() || null,
+        clip_3_url: document.getElementById('inc-clip3').value.trim() || null,
+        clip_4_url: document.getElementById('inc-clip4').value.trim() || null,
+        status: 'open',
+    });
+
+    btn.disabled = false; btn.textContent = orig;
+    if (error) { toast(error.message || 'Could not submit.', 'error'); return; }
+    toast('Incident submitted to the stewards.', 'success');
+    toggleIncidentForm(false);
+    await loadIncidents(_incDriverId);
+}
+
+// Split Journey — same component and computation as the public driver
+// profile (endurance/drivers/index.html): which split this driver raced
+// in each round, with promotion/relegation indicators between stops.
+// Only shown once they've raced 2+ rounds. Sorted by round number
+// (always present) rather than starts_at (which may not be).
+async function loadSplitJourney(driverId) {
+    const { data: rows } = await sb.from('result_drivers')
+        .select('results(entries(lobby_number), events(round, name, circuit_name))')
+        .eq('driver_id', driverId);
+
+    const splitJourney = (rows || [])
+        .filter(r => r.results?.events?.round != null && r.results?.entries?.lobby_number != null)
+        .sort((a, b) => (a.results.events.round ?? 0) - (b.results.events.round ?? 0))
+        .map(r => ({
+            circuit: r.results.events.circuit_name || r.results.events.name || 'Round',
+            round:   r.results.events.round,
+            split:   r.results.entries.lobby_number,
+        }));
+
+    if (splitJourney.length < 2) return;
+
+    document.getElementById('split-journey-list').innerHTML = splitJourney.map((stop, i) => {
+        const prev = i > 0 ? splitJourney[i - 1].split : null;
+        let moveCls = 'move-new', moveTxt = 'START';
+        if (prev != null) {
+            if (stop.split < prev)      { moveCls = 'move-up';   moveTxt = `↑ ${prev - stop.split}`; }
+            else if (stop.split > prev) { moveCls = 'move-down'; moveTxt = `↓ ${stop.split - prev}`; }
+            else                        { moveCls = 'move-same'; moveTxt = '–'; }
+        }
+        return `<div class="split-stop">
+            <div class="split-stop-circuit">${esc(stop.circuit)}</div>
+            <div class="split-stop-split">S${stop.split}</div>
+            <div class="split-stop-move ${moveCls}">${moveTxt}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('card-split-journey').style.display = '';
+}
+
+// ── Main init ─────────────────────────────────────────────────
+async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.replace('./login/'); return; }
+
+    const { data: role } = await sb.from('user_roles')
+        .select('role').eq('user_id', session.user.id).eq('role', 'driver').maybeSingle();
+
+    if (!role) {
+        document.getElementById('auth-loading').innerHTML = `
+        <div style="text-align:center;max-width:380px;padding:2rem">
+            <p style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.35em;color:var(--muted);text-transform:uppercase;margin-bottom:1rem">No Driver Profile</p>
+            <p style="color:var(--muted);font-size:0.88rem;line-height:1.6;margin-bottom:1rem">Your account isn't linked to a driver profile yet. You need a claim link from an admin.</p>
+            <p style="color:var(--muted);font-size:0.8rem;line-height:1.6;margin-bottom:1.5rem;opacity:0.7">If you haven't received your link within 24 hours, contact a GTEC admin in the <strong style="color:var(--text)">GTEC section</strong> of the SparksTheory Discord.</p>
+            <a href="/endurance/" style="color:var(--gold);font-size:0.82rem">← GTEC</a>
+        </div>`;
+        return;
+    }
+
+    const { data: driver, error } = await sb.from('drivers')
+        .select('*, teams!current_team_id(name,slug,leader_driver_id), manufacturers(name,car_name,brand_color)')
+        .eq('user_id', session.user.id).single();
+
+    if (error || !driver) { document.getElementById('auth-loading').textContent = 'Could not load driver profile.'; return; }
+
+    driverId = driver.id;
+
+    // Nav
+    document.getElementById('nav-user').textContent = session.user.email;
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+        await sb.auth.signOut();
+        window.location.replace('/endurance/');
+    });
+
+    // Header
+    document.getElementById('driver-name').textContent = driver.display_name;
+    const initial = driver.display_name.charAt(0).toUpperCase();
+    const avatar = document.getElementById('avatar-el');
+    if (driver.photo_url) {
+        avatar.innerHTML = `<img src="${esc(driver.photo_url)}" alt="">`;
+    } else {
+        avatar.textContent = initial;
+    }
+    setPhotoUI(driver.photo_url || null, initial);
+
+    // Public profile link
+    if (driver.slug) {
+        const link = document.getElementById('public-link');
+        link.href = `/endurance/drivers/?slug=${encodeURIComponent(driver.slug)}`;
+        link.style.display = '';
+    }
+
+    // Stash a slim copy of the driver row for the share-card button so
+    // we don't refetch when the click handler fires.
+    _shareDriver = driver;
+
+    // Tags
+    const isTeamLeader = driver.teams?.leader_driver_id && driver.teams.leader_driver_id === driver.id;
+    const tagData = [
+        driver.career_number ? { text: `#${driver.career_number}`, key: 'num' } : null,
+        driver.nationality   ? { text: `${flag(driver.nationality)} ${driver.nationality}`, key: 'nat', attr: 'data-nat' } : null,
+        driver.teams?.name   ? { text: `${driver.teams.name}${isTeamLeader ? ' <span class="pill-leader-inline">★ Leader</span>' : ''}`, key: 'team', raw: true } : null,
+        driver.manufacturers?.name ? { text: driver.manufacturers.name + (driver.manufacturers.car_name ? ' — ' + driver.manufacturers.car_name : ''), key: 'mfr' } : null,
+    ].filter(Boolean);
+    document.getElementById('profile-tags').innerHTML = tagData.map(t =>
+        `<span class="tag" ${t.attr ? t.attr + '=""' : ''}>${t.raw ? t.text : esc(t.text)}</span>`
+    ).join('');
+
+    // Editable fields
+    document.getElementById('field-nationality').innerHTML = window.gtecCountryOptions(driver.nationality);
+    if (driver.bio)            document.getElementById('field-bio').value = driver.bio;
+    if (driver.psn_id)            document.getElementById('field-psn').value = driver.psn_id;
+    if (driver.discord_username)  document.getElementById('field-discord').value = driver.discord_username;
+    if (driver.date_of_birth)     document.getElementById('field-dob').value = driver.date_of_birth;
+    if (driver.career_number)     document.getElementById('field-career-num').value = driver.career_number;
+
+    // Show page
+    document.getElementById('auth-loading').style.display = 'none';
+    document.getElementById('page').style.display = '';
+
+    // Load async sections (don't block page display)
+    loadStanding(driver.id);
+    loadUpcoming(driver.id);
+    loadLobbyRoomCode(driver.id);
+    loadHostScreenshots(driver.id);
+    initPushUI(driver.id);
+    loadRecentResults(driver.id);
+    loadIncidents(driver.id);
+    loadSplitJourney(driver.id);
+    // Stamp "last seen" for the admin roster view (fire and forget).
+    sb.rpc('touch_last_seen').then(() => {});
+    loadInbox(driver.id);
+    loadBadges(driver.id);
+    loadTeamingSections(driver);
+    loadTeamCard(driver);
+    setupRealtimeSubscriptions(driver);
+}
+
+// Push notification opt-in — small bell icon next to Contact Admin.
+// Browsers without Push API support (most commonly iOS Safari unless the
+// site's been added to the Home Screen) get a muted, explained version
+// instead of the icon just vanishing — a silently-missing icon reads as
+// broken rather than unsupported.
+async function initPushUI(driverId) {
+    const btn = document.getElementById('push-toggle-btn');
+    btn.style.display = '';
+
+    if (!window.gtecPush || !window.gtecPush.isSupported()) {
+        btn.classList.add('unsupported');
+        btn.title = 'Push notifications aren\'t available here';
+        if (btn.dataset.armed !== '1') {
+            btn.dataset.armed = '1';
+            btn.addEventListener('click', () => {
+                const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+                toast(isIOS
+                    ? 'On iPhone: tap Share, then "Add to Home Screen" — then open GTEC from your home screen to turn on push notifications.'
+                    : 'Push notifications aren\'t supported in this browser.', 'error');
+            });
+        }
+        return;
+    }
+
+    async function refresh() {
+        const sub = await window.gtecPush.getSubscription();
+        btn.classList.toggle('active', !!sub);
+        btn.title = sub ? 'Push notifications on — click to disable' : 'Enable push notifications for split assignments';
+    }
+    await refresh();
+
+    if (btn.dataset.armed === '1') return;
+    btn.dataset.armed = '1';
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+            const sub = await window.gtecPush.getSubscription();
+            if (sub) {
+                await window.gtecPush.unsubscribe(sb);
+                toast('Push notifications disabled.', 'success');
+            } else {
+                await window.gtecPush.subscribe(sb, driverId);
+                toast('Push notifications enabled!', 'success');
+            }
+        } catch (err) {
+            toast(err.message || 'Could not update push notifications.', 'error');
+        }
+        btn.disabled = false;
+        await refresh();
+    });
+}
+
+let _editableTeam = null;
+let _shareDriver  = null;  // populated in init(), consumed by the share-card click handler
+let _shareStats   = { elo: null, tier: null, points: 0, wins: 0, podiums: 0, races: 0 };
+
+async function loadTeamCard(driver) {
+    if (!driver.current_team_id) return;
+    const { data: team } = await sb.from('teams')
+        .select('id, name, slug, bio, home_country, founded_on, leader_driver_id, banner_url, manufacturers(name, brand_color, logo_url, car_name)')
+        .eq('id', driver.current_team_id)
+        .maybeSingle();
+    if (!team) return;
+
+    const isLeader = team.leader_driver_id === driver.id;
+    _editableTeam = isLeader ? team : null;
+
+    const { data: roster } = await sb.from('drivers')
+        .select('id, display_name, slug, psn_id, career_number')
+        .eq('current_team_id', team.id)
+        .order('display_name');
+
+    document.getElementById('team-card-title').textContent = team.name;
+    if (isLeader) document.getElementById('team-leader-pill').style.display = '';
+
+    const mfr = team.manufacturers || null;
+    const country = team.home_country ? `${flag(team.home_country)} ${team.home_country}` : '—';
+    const founded = team.founded_on ? team.founded_on.slice(0, 4) : '—';
+
+    const rosterHTML = (roster || []).map(d => `
+        <div class="roster-row">
+            <a href="/endurance/drivers/?slug=${esc(d.slug)}">${esc(d.display_name)}</a>
+            ${d.career_number ? `<span class="pill pill-muted">#${d.career_number}</span>` : ''}
+            ${d.id === team.leader_driver_id ? '<span class="pill pill-gold">Leader</span>' : ''}
+        </div>`).join('');
+
+    document.getElementById('team-summary').innerHTML = `
+        ${team.banner_url ? `<img src="${esc(team.banner_url)}" alt="${esc(team.name)} banner" style="width:100%;aspect-ratio:3/1;object-fit:cover;border-radius:8px;border:1px solid var(--border);margin-bottom:1rem;display:block">` : ''}
+        <div class="team-summary-grid" style="margin-bottom:0.85rem">
+            <div class="team-info-item">
+                <div class="ti-label">Team</div>
+                <div class="ti-value"><a href="/endurance/teams/?slug=${esc(team.slug)}">${esc(team.name)}</a></div>
+            </div>
+            <div class="team-info-item">
+                <div class="ti-label">Manufacturer</div>
+                <div class="ti-value">${mfr?.name ? esc(mfr.name) + (mfr.car_name ? ' — ' + esc(mfr.car_name) : '') : '—'}</div>
+            </div>
+            <div class="team-info-item">
+                <div class="ti-label">Home</div>
+                <div class="ti-value">${country}</div>
+            </div>
+            <div class="team-info-item">
+                <div class="ti-label">Founded</div>
+                <div class="ti-value">${founded}</div>
+            </div>
+        </div>
+        ${team.bio ? `<div style="color:var(--muted);font-size:0.88rem;line-height:1.55;margin-bottom:0.25rem">${esc(team.bio)}</div>` : ''}
+        <div style="font-family:'Orbitron',sans-serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin:1rem 0 0.4rem">Roster</div>
+        <div class="team-roster">${rosterHTML || '<div style="color:var(--muted);font-size:0.85rem">No drivers yet.</div>'}</div>`;
+
+    if (isLeader) {
+        document.getElementById('team-edit').style.display = '';
+        document.getElementById('team-bio').value = team.bio || '';
+        document.getElementById('team-home-country').innerHTML = window.gtecCountryOptions(team.home_country);
+        document.getElementById('team-founded-on').value = team.founded_on ? team.founded_on.slice(0, 10) : '';
+        setBannerUI(team.banner_url);
+    }
+
+    const { data: windowOpen } = await sb.rpc('is_team_window_open');
+    if (windowOpen !== false) {
+        document.getElementById('team-leave-wrap').style.display = '';
+    }
+
+    document.getElementById('card-team').style.display = '';
+}
+
+async function leaveTeam() {
+    const isLeader = !!document.getElementById('team-leader-pill')?.style.display !== false
+        && document.getElementById('team-leader-pill')?.style.display !== 'none';
+    const msg = isLeader
+        ? 'Leave your team? As team leader, the next driver on the roster will be promoted automatically.'
+        : 'Leave your team? You will become a free agent.';
+    if (!confirm(msg)) return;
+
+    const { data, error } = await sb.rpc('leave_team');
+    if (error || data?.error) { toast(error?.message || data.error, 'error'); return; }
+
+    toast('You have left the team.', 'success');
+    // Reload both sections so team card hides and find-a-team shows
+    const d = await sb.from('drivers').select('*').eq('user_id', (await sb.auth.getUser()).data.user?.id).single();
+    if (d.data) {
+        _currentDriver = d.data;
+        document.getElementById('card-team').style.display = 'none';
+        document.getElementById('team-leave-wrap').style.display = 'none';
+        await loadTeamingSections(d.data);
+    }
+}
+
+async function saveTeamSettings() {
+    if (!_editableTeam) { toast('Only the team leader can edit team settings.', 'error'); return; }
+    const btn = document.getElementById('btn-save-team');
+    const bio    = document.getElementById('team-bio').value.trim();
+    const home   = document.getElementById('team-home-country').value || null;
+    const founded = document.getElementById('team-founded-on').value || null;
+    btn.disabled = true; btn.textContent = 'Saving…';
+    const { error } = await sb.from('teams').update({
+        bio: bio || null,
+        home_country: home,
+        founded_on: founded,
+    }).eq('id', _editableTeam.id);
+    btn.disabled = false; btn.textContent = 'Save Team';
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Team updated.', 'success');
+    await loadTeamCard(_currentDriver);
+}
+
+let _currentDriver = null;
+
+async function loadTeamingSections(driver) {
+    _currentDriver = driver;
+
+    // Check whether the team transfer window is open. Closed for the whole
+    // duration of any active season — fresh applications and approvals are
+    // blocked until the season ends (no active season). Admin can override.
+    const { data: windowOpen } = await sb.rpc('is_team_window_open');
+    const teamWindowOpen = windowOpen !== false;
+
+    // Outgoing requests (fetched early so pending team IDs can grey Apply buttons)
+    const { data: myReqs } = await sb.from('team_join_requests')
+        .select('id, team_id, status, message, created_at, teams(name, slug)')
+        .eq('driver_id', driver.id)
+        .is('dismissed_at', null)
+        .order('created_at', { ascending: false });
+    if (myReqs?.length) {
+        document.getElementById('card-my-requests').style.display = '';
+        const hasPending = myReqs.some(r => r.status === 'pending');
+        document.getElementById('btn-clear-all-requests').style.display = hasPending ? '' : 'none';
+        document.getElementById('my-requests-list').innerHTML = myReqs.map(r => {
+            const pill = r.status === 'pending' ? 'pill-gold' :
+                         r.status === 'approved' ? 'pill-green' : 'pill-muted';
+            const actionBtn = r.status === 'pending'
+                ? `<button class="btn-small danger" onclick="cancelMyRequest('${esc(r.id)}')">Cancel</button>`
+                : `<button class="btn-small" onclick="dismissMyRequest('${esc(r.id)}')" style="opacity:0.6">Dismiss</button>`;
+            return `<div class="req-row">
+                <div style="flex:1;min-width:0">
+                    <div class="open-team-name">${esc(r.teams?.name) || '—'}</div>
+                    <div class="open-team-meta">
+                        <span class="pill ${pill}">${esc(r.status)}</span>
+                        · ${new Date(r.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
+                        ${r.message ? '<br><em style="font-size:0.78rem">' + esc(r.message) + '</em>' : ''}
+                    </div>
+                </div>
+                ${actionBtn}
+            </div>`;
+        }).join('');
+    }
+
+    // If they don't have a team, show the find-a-team list
+    if (!driver.current_team_id) {
+        const card = document.getElementById('card-find-team');
+        const pendingTeamIds = new Set((myReqs || []).filter(r => r.status === 'pending').map(r => r.team_id));
+        if (!teamWindowOpen) {
+            document.getElementById('find-team-list').innerHTML = `
+                <div class="window-closed-msg">
+                    <strong>Team window closed.</strong>
+                    Driver transfers are locked for the duration of the current season and
+                    reopen once it ends. If you need to discuss a move in the meantime,
+                    contact an admin.
+                </div>`;
+            card.style.display = '';
+        } else {
+            const { data: teams } = await sb.from('team_open_seats')
+                .select('*')
+                .gt('open_seats', 0);
+            if (teams?.length) {
+                document.getElementById('find-team-list').innerHTML = teams.map(t => {
+                    const applied = pendingTeamIds.has(t.team_id);
+                    return `
+                    <div class="open-team-row">
+                        <div style="flex:1;min-width:0">
+                            <div class="open-team-name">
+                                <a href="/endurance/teams/?slug=${esc(t.team_slug)}" style="color:inherit;text-decoration:none">${esc(t.team_name)}</a>
+                                ${t.leader_name ? `<span style="font-size:0.72rem;color:var(--muted);margin-left:0.5rem">Led by ${esc(t.leader_name)}</span>` : ''}
+                            </div>
+                            <div class="open-team-meta">
+                                ${t.manufacturer_name ? esc(t.manufacturer_name) + ' · ' : ''}${t.driver_count}/${t.max_drivers} drivers · ${t.open_seats} seat${t.open_seats === 1 ? '' : 's'} open
+                            </div>
+                        </div>
+                        ${applied
+                            ? `<button class="btn-small" disabled style="opacity:0.45;cursor:default">Applied</button>`
+                            : `<button class="btn-small primary" onclick="applyToTeam('${esc(t.team_id)}','${esc(t.team_name)}')">Apply</button>`}
+                    </div>`;
+                }).join('');
+                card.style.display = '';
+            }
+        }
+    }
+
+    // Incoming requests if this driver leads a team
+    const { data: leadTeam } = await sb.from('teams')
+        .select('id, name')
+        .eq('leader_driver_id', driver.id)
+        .maybeSingle();
+    if (leadTeam) {
+        const { data: incoming } = await sb.from('team_join_requests')
+            .select('id, status, message, created_at, drivers(id, display_name, slug, psn_id, gt7_dr_rating, gt7_sr_rating)')
+            .eq('team_id', leadTeam.id)
+            .eq('status', 'pending')
+            .order('created_at');
+        if (incoming?.length) {
+            document.getElementById('card-team-requests').style.display = '';
+            const lockedNote = teamWindowOpen
+                ? ''
+                : `<div class="window-closed-msg" style="margin-bottom:0.75rem">
+                       <strong>Window closed.</strong> You can review applications, but approvals
+                       are locked until the season ends.
+                   </div>`;
+            const approveBtn = (id) => teamWindowOpen
+                ? `<button class="btn-small primary" onclick="approveRequest('${esc(id)}')">Approve</button>`
+                : `<button class="btn-small primary" disabled title="Team window closed for the season" style="opacity:0.4;cursor:not-allowed">Approve</button>`;
+            document.getElementById('team-requests-list').innerHTML = lockedNote + incoming.map(r => `
+                <div class="req-row" data-request-id="${esc(r.id)}">
+                    <div style="flex:1;min-width:0">
+                        <div class="open-team-name">
+                            ${r.drivers?.slug
+                                ? `<a href="/endurance/drivers/?slug=${esc(r.drivers.slug)}" style="color:inherit;text-decoration:none">${esc(r.drivers.display_name)}</a>`
+                                : esc(r.drivers?.display_name)}
+                        </div>
+                        <div class="open-team-meta">
+                            ${r.drivers?.psn_id ? esc(r.drivers.psn_id) + ' · ' : ''}
+                            ${r.drivers?.gt7_dr_rating ? 'DR ' + esc(r.drivers.gt7_dr_rating) + ' · ' : ''}
+                            ${r.drivers?.gt7_sr_rating ? 'SR ' + esc(r.drivers.gt7_sr_rating) + ' · ' : ''}
+                            ${new Date(r.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}
+                            ${r.message ? '<br><em style="font-size:0.8rem">' + esc(r.message) + '</em>' : ''}
+                        </div>
+                    </div>
+                    <div class="req-btns" style="display:flex;gap:0.4rem;align-items:center">
+                        ${approveBtn(r.id)}
+                        <button class="btn-small danger"  onclick="rejectRequest('${esc(r.id)}')">Reject</button>
+                    </div>
+                </div>`).join('');
+        }
+    }
+}
+
+async function applyToTeam(teamId, teamName) {
+    const message = prompt(`Message to the team leader of ${teamName} (optional):`, '');
+    if (message === null) return;
+    const { error } = await sb.from('team_join_requests').insert({
+        team_id: teamId,
+        driver_id: _currentDriver.id,
+        message: message.trim() || null,
+    });
+    if (error) {
+        toast(error.message.includes('duplicate') ? 'You already have a pending request for this team.' : error.message, 'error');
+        return;
+    }
+    toast(`Request sent to ${teamName}.`, 'success');
+    await loadTeamingSections(_currentDriver);
+}
+
+async function cancelMyRequest(requestId) {
+    if (!confirm('Cancel this application?')) return;
+    const { error } = await sb.from('team_join_requests').delete().eq('id', requestId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Request cancelled.', 'success');
+    await loadTeamingSections(_currentDriver);
+}
+
+async function dismissMyRequest(requestId) {
+    const { error } = await sb.from('team_join_requests')
+        .update({ dismissed_at: new Date().toISOString() })
+        .eq('id', requestId);
+    if (error) { toast(error.message, 'error'); return; }
+    await loadTeamingSections(_currentDriver);
+}
+
+async function clearAllMyRequests() {
+    if (!confirm('Cancel all pending applications?')) return;
+    const { error } = await sb.from('team_join_requests')
+        .delete()
+        .eq('driver_id', _currentDriver.id)
+        .eq('status', 'pending');
+    if (error) { toast(error.message, 'error'); return; }
+    toast('All pending applications cancelled.', 'success');
+    await loadTeamingSections(_currentDriver);
+}
+
+const _pendingApprovals = {};
+const APPROVAL_COOLDOWN = 60;
+
+async function approveRequest(requestId) {
+    if (_pendingApprovals[requestId]) return;
+    if (Object.keys(_pendingApprovals).length > 0) {
+        toast('One approval is already pending — undo or wait for it to confirm before approving another driver.', 'info');
+        return;
+    }
+    const row = document.querySelector(`[data-request-id="${requestId}"]`);
+    const btnWrap = row?.querySelector('.req-btns');
+    if (!btnWrap) return;
+
+    let remaining = APPROVAL_COOLDOWN;
+    btnWrap.innerHTML = `
+        <span style="font-size:0.75rem;color:var(--gold);font-weight:600">Approved</span>
+        <button class="btn-small" onclick="undoApproval('${requestId}')" style="min-width:88px">Undo (${remaining}s)</button>
+    `;
+
+    // Disable all action buttons on other pending rows (Approve and Reject)
+    document.querySelectorAll('.req-row').forEach(r => {
+        if (r.dataset.requestId === requestId) return;
+        r.querySelectorAll('.req-btns .btn-small').forEach(btn => {
+            btn.disabled = true; btn.style.opacity = '0.35'; btn.title = 'Undo or wait for the current approval first';
+        });
+    });
+
+    const tick = setInterval(() => {
+        remaining--;
+        const undoBtn = btnWrap.querySelector('button');
+        if (!undoBtn) return;
+        if (remaining <= 0) {
+            undoBtn.textContent = 'Confirming…';
+            undoBtn.disabled = true;
+        } else {
+            undoBtn.textContent = `Undo (${remaining}s)`;
+        }
+    }, 1000);
+
+    const timer = setTimeout(async () => {
+        clearInterval(tick);
+        delete _pendingApprovals[requestId];
+        const { data, error } = await sb.rpc('approve_team_join_request', { p_request_id: requestId });
+        if (error)     { toast(error.message, 'error'); await loadTeamingSections(_currentDriver); return; }
+        if (!data?.ok) { toast(data?.error || 'Could not approve.', 'error'); await loadTeamingSections(_currentDriver); return; }
+        toast('Driver approved and added to your team.', 'success');
+        await loadTeamingSections(_currentDriver);
+    }, APPROVAL_COOLDOWN * 1000);
+
+    _pendingApprovals[requestId] = { timer, tick };
+}
+
+function undoApproval(requestId) {
+    const pending = _pendingApprovals[requestId];
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    clearInterval(pending.tick);
+    delete _pendingApprovals[requestId];
+    toast('Approval cancelled.', 'info');
+    loadTeamingSections(_currentDriver);
+}
+
+async function rejectRequest(requestId) {
+    if (!confirm('Reject this application?')) return;
+    const { error } = await sb.from('team_join_requests').update({
+        status: 'rejected', decided_at: new Date().toISOString(),
+    }).eq('id', requestId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Application rejected.', 'success');
+    await loadTeamingSections(_currentDriver);
+}
+
+async function loadInbox(driverId) {
+    const { data: messages } = await sb.from('driver_contact_messages')
+        .select('id, subject, message, incident_url, status, created_at, admin_reply, replied_at, driver_read_reply_at, is_broadcast, is_direct, driver_reply, driver_replied_at, message_thread_posts(id, sender_type, content, created_at)')
+        .eq('driver_id', driverId)
+        .order('created_at', { ascending: false });
+    if (!messages?.length) return;
+
+    const card     = document.getElementById('card-inbox');
+    const list     = document.getElementById('inbox-list');
+    const pill     = document.getElementById('inbox-unread-pill');
+    const fmtWhen  = iso => new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+    const unreadIds = messages
+        .filter(m => {
+            if (m.is_broadcast) return !m.driver_read_reply_at;
+            const adminPosts = (m.message_thread_posts || []).filter(p => p.sender_type === 'admin');
+            if (!adminPosts.length) return false;
+            if (!m.driver_read_reply_at) return true;
+            return adminPosts.some(p => new Date(p.created_at) > new Date(m.driver_read_reply_at));
+        })
+        .map(m => m.id);
+
+    list.innerHTML = messages.map(m => {
+        if (m.is_direct) {
+            const posts = (m.message_thread_posts || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            const adminPosts = posts.filter(p => p.sender_type === 'admin');
+            const unread = adminPosts.length > 0 && (!m.driver_read_reply_at || adminPosts.some(p => new Date(p.created_at) > new Date(m.driver_read_reply_at)));
+
+            const postsHtml = posts.length
+                ? posts.map(p => {
+                    const isAdmin = p.sender_type === 'admin';
+                    return `<div style="display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-start' : 'flex-end'}">
+                        <div style="max-width:88%;padding:0.55rem 0.8rem;border-radius:6px;${isAdmin
+                            ? 'background:rgba(255,209,102,0.06);border:1px solid rgba(255,209,102,0.18);border-left:3px solid var(--gold)'
+                            : 'background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.18);border-right:3px solid #38bdf8;text-align:right'}">
+                            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${isAdmin ? 'var(--gold)' : '#38bdf8'};margin-bottom:0.2rem">${isAdmin ? '★ Admin' : 'You'} · ${fmtWhen(p.created_at)}</div>
+                            <div style="font-size:0.86rem;white-space:pre-wrap;line-height:1.55;color:var(--text)">${esc(p.content)}</div>
+                        </div>
+                    </div>`;
+                }).join('')
+                : `<div style="font-size:0.8rem;color:var(--muted);font-style:italic">No messages yet.</div>`;
+
+            return `<div class="inbox-thread ${unread ? 'unread' : ''}">
+                <div class="inbox-head">
+                    <div>
+                        <div class="inbox-subj"><span class="pill pill-gold" style="margin-right:0.4rem">★ Admin Thread</span>${esc(m.subject) || '<em>Admin message</em>'}</div>
+                        <div class="inbox-when">${fmtWhen(m.created_at)}${unread ? ' · NEW' : ''}</div>
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.5rem;margin:0.75rem 0;padding:0.65rem;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;max-height:300px;overflow-y:auto">
+                    ${postsHtml}
+                </div>
+                <form class="inbox-reply-form" onsubmit="event.preventDefault(); submitDriverReply('${m.id}', this)" style="margin-top:0.35rem">
+                    <textarea name="reply" rows="2" placeholder="Reply to admin…" required style="width:100%;background:var(--bg-1);border:1px solid var(--border);border-radius:6px;padding:0.6rem 0.75rem;color:var(--text);font-size:0.86rem;resize:vertical"></textarea>
+                    <div style="margin-top:0.4rem;text-align:right">
+                        <button type="submit" class="btn-sm" style="background:var(--gold);color:#1a1300;border:none;padding:0.4rem 0.9rem;border-radius:5px;font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer">Send Reply</button>
+                    </div>
+                </form>
+            </div>`;
+        }
+        if (m.is_broadcast) {
+            const unread = !m.driver_read_reply_at;
+            return `<div class="inbox-thread ${unread ? 'unread' : ''}">
+                <div class="inbox-head">
+                    <div>
+                        <div class="inbox-subj"><span class="pill pill-gold" style="margin-right:0.4rem">★ Announcement</span>${esc(m.subject) || '<em>Admin announcement</em>'}</div>
+                        <div class="inbox-when">${fmtWhen(m.created_at)}${unread ? ' · NEW' : ''}</div>
+                    </div>
+                </div>
+                <div class="inbox-body" style="color:var(--text);margin-top:0.5rem">${esc(m.message)}</div>
+            </div>`;
+        }
+        // Driver-initiated contact message — same thread view as admin-direct
+        const posts2 = (m.message_thread_posts || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const adminPosts2 = posts2.filter(p => p.sender_type === 'admin');
+        const unread2 = adminPosts2.length > 0 && (!m.driver_read_reply_at || adminPosts2.some(p => new Date(p.created_at) > new Date(m.driver_read_reply_at)));
+        const postsHtml2 = posts2.length
+            ? posts2.map(p => {
+                const isAdmin = p.sender_type === 'admin';
+                return `<div style="display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-start' : 'flex-end'}">
+                    <div style="max-width:88%;padding:0.55rem 0.8rem;border-radius:6px;${isAdmin
+                        ? 'background:rgba(255,209,102,0.06);border:1px solid rgba(255,209,102,0.18);border-left:3px solid var(--gold)'
+                        : 'background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.18);border-right:3px solid #38bdf8;text-align:right'}">
+                        <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${isAdmin ? 'var(--gold)' : '#38bdf8'};margin-bottom:0.2rem">${isAdmin ? '★ Admin' : 'You'} · ${fmtWhen(p.created_at)}</div>
+                        <div style="font-size:0.86rem;white-space:pre-wrap;line-height:1.55;color:var(--text)">${esc(p.content)}</div>
+                    </div>
+                </div>`;
+            }).join('')
+            : `<div style="font-size:0.8rem;color:var(--muted);font-style:italic">Awaiting admin reply…</div>`;
+        const incidentMeta = m.incident_url
+            ? `<div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.35rem">Incident: <a href="${esc(m.incident_url)}" target="_blank" rel="noopener" style="color:var(--gold)">${esc(m.incident_url)}</a></div>`
+            : '';
+        return `<div class="inbox-thread ${unread2 ? 'unread' : ''}">
+            <div class="inbox-head">
+                <div>
+                    <div class="inbox-subj">${esc(m.subject) || '<em>Your enquiry to admin</em>'} <span class="inbox-status ${esc(m.status)}" style="margin-left:0.35rem">${esc(m.status.replace('_',' '))}</span></div>
+                    <div class="inbox-when">${fmtWhen(m.created_at)}${unread2 ? ' · NEW' : ''}</div>
+                </div>
+            </div>
+            ${incidentMeta}
+            <div style="display:flex;flex-direction:column;gap:0.5rem;margin:0.5rem 0;padding:0.65rem;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;max-height:300px;overflow-y:auto">
+                ${postsHtml2}
+            </div>
+            <form class="inbox-reply-form" onsubmit="event.preventDefault(); submitDriverReply('${m.id}', this)" style="margin-top:0.35rem">
+                <textarea name="reply" rows="2" placeholder="Follow up with admin…" required style="width:100%;background:var(--bg-1);border:1px solid var(--border);border-radius:6px;padding:0.6rem 0.75rem;color:var(--text);font-size:0.86rem;resize:vertical"></textarea>
+                <div style="margin-top:0.4rem;text-align:right">
+                    <button type="submit" class="btn-sm" style="background:var(--gold);color:#1a1300;border:none;padding:0.4rem 0.9rem;border-radius:5px;font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer">Send</button>
+                </div>
+            </form>
+        </div>`;
+    }).join('');
+
+    if (unreadIds.length) {
+        pill.textContent = `${unreadIds.length} NEW`;
+        pill.style.display = '';
+        // Mark them read (best-effort, fire and forget).
+        sb.from('driver_contact_messages')
+            .update({ driver_read_reply_at: new Date().toISOString() })
+            .in('id', unreadIds)
+            .then(() => {});
+    } else {
+        pill.style.display = 'none';
+    }
+
+    card.style.display = '';
+}
+
+async function submitDriverReply(messageId, formEl) {
+    const reply = (formEl.reply.value || '').trim();
+    if (!reply) return;
+    const btn = formEl.querySelector('button[type="submit"]');
+    const orig = btn.textContent; btn.textContent = 'Sending…'; btn.disabled = true;
+    const { data, error } = await sb.rpc('reply_to_admin_message', { p_message_id: messageId, p_reply: reply });
+    btn.textContent = orig; btn.disabled = false;
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
+    toast('Reply sent.', 'success');
+    await loadInbox(_currentDriver.id);
+}
+
+let _realtimeChannels = [];
+function setupRealtimeSubscriptions(driver) {
+    _realtimeChannels.forEach(ch => sb.removeChannel(ch));
+    _realtimeChannels = [];
+
+    function debounced(fn, ms = 300) { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; }
+
+    const reloadInbox    = debounced(() => loadInbox(driver.id));
+    const reloadTeaming  = debounced(() => loadTeamingSections(driver));
+
+    // New/updated messages or admin thread replies (parent row updated by RPC)
+    _realtimeChannels.push(
+        sb.channel('inbox:' + driver.id)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_contact_messages', filter: `driver_id=eq.${driver.id}` }, reloadInbox)
+            .subscribe()
+    );
+
+    // Stewards moving one of this driver's incidents along (verdict etc.)
+    const reloadIncidents = debounced(() => loadIncidents(driver.id));
+    _realtimeChannels.push(
+        sb.channel('disputes:' + driver.id)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'disputes', filter: `complainant_driver_id=eq.${driver.id}` }, reloadIncidents)
+            .subscribe()
+    );
+
+    // Outgoing application status changes
+    _realtimeChannels.push(
+        sb.channel('my-reqs:' + driver.id)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'team_join_requests', filter: `driver_id=eq.${driver.id}` }, reloadTeaming)
+            .subscribe()
+    );
+
+    // Driver record: catches current_team_id change when approval fires
+    _realtimeChannels.push(
+        sb.channel('driver:' + driver.id)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'drivers', filter: `id=eq.${driver.id}` }, debounced(() => loadTeamCard(driver)))
+            .subscribe()
+    );
+
+    // Lobby room code — table is tiny (one row per split per event), so a
+    // single unfiltered subscription and a debounced re-fetch of this
+    // driver's own room code is simplest; no need to filter by event/split.
+    const reloadLobbyRoom = debounced(() => loadLobbyRoomCode(driver.id));
+    _realtimeChannels.push(
+        sb.channel('lobby-room:' + driver.id)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'lobby_room_codes' }, reloadLobbyRoom)
+            .subscribe()
+    );
+
+    // If they lead a team, subscribe to incoming requests for that team
+    sb.from('teams').select('id').eq('leader_driver_id', driver.id).maybeSingle().then(({ data: team }) => {
+        if (!team) return;
+        _realtimeChannels.push(
+            sb.channel('team-reqs:' + team.id)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'team_join_requests', filter: `team_id=eq.${team.id}` }, reloadTeaming)
+                .subscribe()
+        );
+    });
+}
+
+init();
+</script>
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>

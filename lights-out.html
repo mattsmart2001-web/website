@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="F1-style reaction-time tester for The 2026 Gran Turismo Nordschleife 24 Hours. Wait for the lights — then go.">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0ea5e9">
+    <title>Lights Out — Reaction Time | SparksTheory</title>
+    <link rel="icon" type="image/jpeg" href="sparks_logo.jpg">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;600;700;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { background: #060910; }
+        #canvas-container { pointer-events: none; }
+
+        .lights-hero {
+            background:
+                radial-gradient(ellipse at top, rgba(255,30,30,0.14), transparent 60%),
+                radial-gradient(ellipse at bottom, rgba(14,165,233,0.18), transparent 60%),
+                linear-gradient(180deg, #000 0%, #0a0e15 100%);
+            padding: 8rem 1.5rem 3rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .lights-hero .kicker {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(0.7rem, 1.4vw, 1rem);
+            letter-spacing: 0.5em;
+            text-transform: uppercase;
+            color: rgba(255,210,180,0.75);
+            text-indent: 0.5em;
+            margin-bottom: 0.85rem;
+        }
+        .lights-hero h1 {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2.4rem, 7vw, 5rem);
+            letter-spacing: 0.05em;
+            line-height: 1;
+            text-transform: uppercase;
+            background: linear-gradient(180deg,
+                #fff1a8 0%, #ffd166 22%, #ff9a3c 44%,
+                #ff6b6b 66%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            margin: 0 0 0.85rem;
+        }
+        .lights-hero .lead {
+            color: var(--color-text-muted);
+            max-width: 620px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .game-wrap {
+            background: linear-gradient(180deg, #0a0e15 0%, #060910 100%);
+            padding: 3rem 1.5rem 4rem;
+            position: relative;
+            z-index: 1;
+        }
+        .game-stage {
+            max-width: 760px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #11161f, #0a0e15);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 22px;
+            padding: 3rem 1.5rem 2.5rem;
+            text-align: center;
+            position: relative;
+            user-select: none;
+        }
+
+        /* Five lights */
+        .lights {
+            display: flex;
+            justify-content: center;
+            gap: clamp(0.6rem, 2vw, 1.25rem);
+            margin: 1rem auto 2.25rem;
+        }
+        .light {
+            width: clamp(54px, 11vw, 90px);
+            height: clamp(54px, 11vw, 90px);
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #2a0c0c 0%, #150505 70%, #000 100%);
+            border: 2px solid rgba(255,255,255,0.08);
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.6);
+            transition: background 0.06s ease-out, box-shadow 0.06s ease-out, transform 0.1s;
+        }
+        .light.on {
+            background: radial-gradient(circle at 35% 30%, #ffb0b0 0%, #ff2a2a 35%, #c40000 100%);
+            box-shadow:
+                0 0 30px rgba(255, 50, 50, 0.7),
+                inset 0 4px 12px rgba(255, 80, 80, 0.45);
+        }
+
+        .game-status {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(1.4rem, 3.5vw, 2.4rem);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.85);
+            margin: 0 0 0.5rem;
+            min-height: 1.2em;
+            text-indent: 0.18em;
+        }
+        .game-status.is-go {
+            background: linear-gradient(180deg, #d4ffce, #6bff5d 50%, #00b41c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+        .game-status.is-jump {
+            color: #ff5252;
+        }
+        .game-result {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2.4rem, 7vw, 4.2rem);
+            line-height: 1;
+            background: linear-gradient(180deg,
+                #fff1a8 0%, #ffd166 30%, #ff9a3c 60%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            margin: 0.5rem 0 0.25rem;
+            min-height: 1em;
+        }
+        .game-result-unit {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--color-text-muted);
+            margin-bottom: 1.25rem;
+            text-indent: 0.25em;
+            min-height: 1em;
+        }
+
+        .game-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .lights-btn {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            padding: 0.85rem 2rem;
+            border-radius: 999px;
+            cursor: pointer;
+            border: none;
+            transition: filter 0.15s, transform 0.1s;
+            text-indent: 0.2em;
+        }
+        .lights-btn.primary {
+            background: linear-gradient(135deg, #ff9a3c 0%, #ff6b6b 50%, #7c3aed 100%);
+            color: #fff;
+            box-shadow: 0 8px 24px -8px rgba(255,107,107,0.55);
+        }
+        .lights-btn.primary:hover { filter: brightness(1.1); }
+        .lights-btn.ghost {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--color-text);
+        }
+        .lights-btn.ghost:hover { background: rgba(255,255,255,0.12); }
+
+        /* Save-score form */
+        .save-form {
+            max-width: 380px;
+            margin: 1.25rem auto 0;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .save-form input {
+            flex: 1;
+            min-width: 160px;
+            padding: 0.75rem 1rem;
+            background: rgba(0,0,0,0.45);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            color: var(--color-text);
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+        .save-form input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(14,165,233,0.18);
+        }
+        .save-form button {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            padding: 0.75rem 1.1rem;
+            background: linear-gradient(135deg, var(--color-primary), #38bdf8);
+            color: #060910;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .save-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .save-confirm {
+            color: #6bff5d;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .game-hint {
+            margin-top: 1.5rem;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.4);
+        }
+        .game-hint kbd {
+            display: inline-block;
+            padding: 0.1em 0.4em;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78em;
+        }
+
+        /* Leaderboard */
+        .leaderboard-wrap {
+            background: #060910;
+            padding: 0 1.5rem 5rem;
+        }
+        .leaderboard {
+            max-width: 760px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 18px;
+            padding: 1.5rem 1.5rem 1.25rem;
+        }
+        .leaderboard h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--color-primary);
+            margin: 0 0 1rem;
+            text-indent: 0.3em;
+            text-align: center;
+        }
+        .leaderboard ol {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .lb-row {
+            display: grid;
+            grid-template-columns: 2.4em 1fr auto;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.55rem 0.85rem;
+            background: linear-gradient(180deg, #11161f, #0a0e15);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+        }
+        .lb-row.is-top {
+            border-color: rgba(255,209,102,0.5);
+            background:
+                radial-gradient(ellipse at left, rgba(255,209,102,0.12), transparent 60%),
+                linear-gradient(180deg, #11161f, #0a0e15);
+        }
+        .lb-rank {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: var(--color-text-muted);
+            text-align: center;
+        }
+        .lb-row.is-top .lb-rank {
+            background: linear-gradient(135deg, #ffd166, #ff9a3c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+        .lb-name {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--color-text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .lb-time {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--color-primary);
+        }
+        .leaderboard .lb-empty {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">SPARKS<span class="highlight">THEORY</span></a>
+        <div class="nav-links">
+            <a href="/#about">About</a>
+            <a href="/#tools">Tools</a>
+            <a href="/lights-out.html" style="color: var(--color-primary)">Lights Out</a>
+        </div>
+        <a class="live-button" id="liveButton"
+           href="https://www.youtube.com/@SparksTheory/live"
+           target="_blank" rel="noopener">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span class="live-label">YouTube</span>
+        </a>
+        <div class="nav-burger" id="navBurger">
+            <span></span><span></span><span></span>
+        </div>
+    </nav>
+
+    <!-- Floating event partner -->
+    <div class="sponsor-badges is-event-partner">
+        <span class="event-partner-label">Event Partner</span>
+        <a href="https://sim-lab.eu/?ref=SPARKSTHEORY" target="_blank" rel="noopener" class="sponsor-badge" title="Sim-Lab — Event Partner">
+            <img src="simlab.png" alt="Sim-Lab" />
+        </a>
+    </div>
+
+    <!-- Hidden form so Netlify detects it at build time -->
+    <form name="reaction-time-leaderboard" netlify netlify-honeypot="bot-field" hidden>
+        <input type="text" name="name">
+        <input type="text" name="time_ms">
+        <input type="text" name="bot-field">
+    </form>
+
+    <header class="lights-hero">
+        <div class="kicker">The 2026 Gran Turismo</div>
+        <h1>Lights Out</h1>
+        <p class="lead">
+            F1-style reaction tester. Five red lights illuminate, then disappear at random — react as fast as you can.
+            Beat the field on the leaderboard.
+        </p>
+    </header>
+
+    <section class="game-wrap">
+        <div class="game-stage" id="gameStage">
+            <div class="lights" id="lights">
+                <div class="light" data-i="0"></div>
+                <div class="light" data-i="1"></div>
+                <div class="light" data-i="2"></div>
+                <div class="light" data-i="3"></div>
+                <div class="light" data-i="4"></div>
+            </div>
+
+            <div class="game-status" id="gameStatus">Press start, then wait for lights out…</div>
+            <div class="game-result" id="gameResult"></div>
+            <div class="game-result-unit" id="gameResultUnit"></div>
+
+            <div class="game-actions">
+                <button class="lights-btn primary" id="startBtn">Start</button>
+                <button class="lights-btn ghost" id="resetBtn" hidden>Try again</button>
+            </div>
+
+            <form class="save-form" id="saveForm" hidden>
+                <input type="text" id="nameInput" maxlength="24" placeholder="Your name" required>
+                <button type="submit" id="saveBtn">Save to leaderboard</button>
+            </form>
+            <div class="save-confirm" id="saveConfirm" hidden></div>
+
+            <p class="game-hint">
+                <kbd>Space</kbd> to start and react
+            </p>
+        </div>
+    </section>
+
+    <section class="leaderboard-wrap">
+        <div class="leaderboard">
+            <h2>Top 10 Reactions</h2>
+            <ol id="leaderboardList"><li class="lb-empty">Loading leaderboard…</li></ol>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">SPARKS<span class="highlight">THEORY</span></div>
+                <div class="footer-links">
+                    <a href="/#about">About</a>
+                    <a href="/#tools">Tools</a>
+                    <a href="/lights-out.html">Lights Out</a>
+                    <a href="/#contact">Contact</a>
+                </div>
+                <div class="footer-social">
+                    <a href="https://www.youtube.com/@SparksTheory" target="_blank" title="YouTube">YT</a>
+                    <a href="https://twitter.com/SparksTheory" target="_blank" title="Twitter">X</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 sparkstheory. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile nav toggle
+        (function () {
+            const burger = document.getElementById('navBurger');
+            const links = document.querySelector('.nav-links');
+            if (burger && links) {
+                burger.addEventListener('click', () => {
+                    burger.classList.toggle('active');
+                    links.classList.toggle('active');
+                });
+            }
+        })();
+
+        // ===== Reaction-time game =====
+        (function () {
+            const lightsEl     = document.getElementById('lights');
+            const statusEl     = document.getElementById('gameStatus');
+            const resultEl     = document.getElementById('gameResult');
+            const unitEl       = document.getElementById('gameResultUnit');
+            const startBtn     = document.getElementById('startBtn');
+            const resetBtn     = document.getElementById('resetBtn');
+            const saveForm     = document.getElementById('saveForm');
+            const nameInput    = document.getElementById('nameInput');
+            const saveBtn      = document.getElementById('saveBtn');
+            const saveConfirm  = document.getElementById('saveConfirm');
+            const lbList       = document.getElementById('leaderboardList');
+            const lights       = lightsEl.querySelectorAll('.light');
+
+            const STATE = { IDLE: 0, LIGHTING: 1, HOLDING: 2, GO: 3, RESULT: 4, FALSE: 5 };
+            let state = STATE.IDLE;
+            let lightTimer = null;
+            let goTimer = null;
+            let goAt = 0;
+            let reactionMs = 0;
+
+            function clearTimers() {
+                if (lightTimer) { clearTimeout(lightTimer); lightTimer = null; }
+                if (goTimer)    { clearTimeout(goTimer);    goTimer    = null; }
+            }
+            function clearLights() {
+                lights.forEach((l) => l.classList.remove('on'));
+            }
+            function setStatus(text, cls) {
+                statusEl.textContent = text;
+                statusEl.className = 'game-status' + (cls ? ' ' + cls : '');
+            }
+            function setResult(text, unit) {
+                resultEl.textContent = text;
+                unitEl.textContent = unit || '';
+            }
+
+            function startSequence() {
+                if (state !== STATE.IDLE) return;
+                clearTimers();
+                clearLights();
+                setResult('', '');
+                saveForm.hidden = true;
+                saveConfirm.hidden = true;
+                startBtn.hidden = true;
+                resetBtn.hidden = true;
+                setStatus('Get ready…');
+                state = STATE.LIGHTING;
+
+                // Light each lamp in sequence (~900ms apart)
+                let i = 0;
+                function nextLamp() {
+                    if (i >= lights.length) {
+                        // All five on — hold for a random gap, then go.
+                        state = STATE.HOLDING;
+                        setStatus('Hold…');
+                        const hold = 700 + Math.random() * 2500;
+                        goTimer = setTimeout(go, hold);
+                        return;
+                    }
+                    lights[i].classList.add('on');
+                    i++;
+                    lightTimer = setTimeout(nextLamp, 900);
+                }
+                nextLamp();
+            }
+
+            function go() {
+                state = STATE.GO;
+                clearLights();
+                goAt = performance.now();
+                setStatus('GO!', 'is-go');
+            }
+
+            function reactNow() {
+                if (state === STATE.LIGHTING || state === STATE.HOLDING) {
+                    // Jump start
+                    clearTimers();
+                    clearLights();
+                    state = STATE.FALSE;
+                    setStatus('Jump start!', 'is-jump');
+                    setResult('—', 'False start');
+                    resetBtn.hidden = false;
+                    return;
+                }
+                if (state !== STATE.GO) return;
+                reactionMs = Math.max(0, Math.round(performance.now() - goAt));
+                state = STATE.RESULT;
+                setStatus('Your reaction', '');
+                setResult(reactionMs.toString(), 'milliseconds');
+                resetBtn.hidden = false;
+                // Show save form only for reasonable, non-trivial times
+                if (reactionMs >= 80 && reactionMs <= 2000) {
+                    saveForm.hidden = false;
+                    nameInput.focus();
+                }
+            }
+
+            function resetGame() {
+                clearTimers();
+                clearLights();
+                state = STATE.IDLE;
+                setStatus('Press start, then wait for lights out…');
+                setResult('', '');
+                startBtn.hidden = false;
+                resetBtn.hidden = true;
+                saveForm.hidden = true;
+                saveConfirm.hidden = true;
+            }
+
+            startBtn.addEventListener('click', startSequence);
+            resetBtn.addEventListener('click', resetGame);
+
+            document.addEventListener('keydown', (e) => {
+                if (e.code !== 'Space') return;
+                const t = e.target;
+                if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON')) return;
+                e.preventDefault();
+                if (state === STATE.IDLE)        startSequence();
+                else if (state === STATE.RESULT || state === STATE.FALSE) resetGame();
+                else                              reactNow();
+            });
+            // Tap on the game stage acts as the react input on touch devices
+            document.getElementById('gameStage').addEventListener('click', (e) => {
+                // Ignore clicks on the actual UI buttons / form
+                if (e.target.closest('button, input, label, a')) return;
+                if (state === STATE.LIGHTING || state === STATE.HOLDING || state === STATE.GO) {
+                    reactNow();
+                }
+            });
+
+            // ===== Save to leaderboard via Netlify Forms =====
+            function encodeForm(data) {
+                return Object.keys(data)
+                    .map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(data[k]))
+                    .join('&');
+            }
+
+            saveForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = (nameInput.value || '').trim().slice(0, 24);
+                if (!name || !reactionMs) return;
+                saveBtn.disabled = true;
+                try {
+                    await fetch('/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: encodeForm({
+                            'form-name': 'reaction-time-leaderboard',
+                            'name': name,
+                            'time_ms': String(reactionMs),
+                            'bot-field': '',
+                        }),
+                    });
+                    saveForm.hidden = true;
+                    saveConfirm.textContent = `Saved! ${name} · ${reactionMs} ms`;
+                    saveConfirm.hidden = false;
+                    // Refresh leaderboard a moment later (CDN cache window)
+                    setTimeout(loadLeaderboard, 1500);
+                } catch (err) {
+                    saveBtn.disabled = false;
+                    saveConfirm.textContent = "Couldn't save right now — try again in a moment.";
+                    saveConfirm.hidden = false;
+                }
+            });
+
+            // ===== Leaderboard rendering =====
+            function esc(s) {
+                return String(s).replace(/[&<>"']/g, (c) => ({
+                    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+                }[c]));
+            }
+            async function loadLeaderboard() {
+                try {
+                    const r = await fetch('/.netlify/functions/reaction-scores');
+                    if (!r.ok) throw new Error(r.status);
+                    const { scores } = await r.json();
+                    if (!scores || !scores.length) {
+                        lbList.innerHTML = '<li class="lb-empty">No reactions saved yet — be the first.</li>';
+                        return;
+                    }
+                    lbList.innerHTML = scores.slice(0, 10).map((s, i) => `
+                        <li class="lb-row${i < 3 ? ' is-top' : ''}">
+                            <span class="lb-rank">${i + 1}</span>
+                            <span class="lb-name">${esc(s.name)}</span>
+                            <span class="lb-time">${s.time_ms} ms</span>
+                        </li>
+                    `).join('');
+                } catch (err) {
+                    lbList.innerHTML = '<li class="lb-empty">Couldn’t load the leaderboard right now.</li>';
+                }
+            }
+            loadLeaderboard();
+        })();
+    </script>
+  <script defer src="/live-banner.js"></script>
+</body>
+</html>
