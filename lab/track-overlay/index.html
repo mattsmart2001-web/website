@@ -142,7 +142,9 @@
       <div class="hint" style="margin-top:0.4rem">A ball on a chain, swinging across the track ahead - persists and keeps swinging, no smash trigger. Time your pass and dodge it.</div>
       <button class="btn gold" id="btn-fireworks" style="margin-top:0.5rem">Fireworks (test)</button>
       <div class="hint" style="margin-top:0.4rem">A staggered burst of colourful fireworks far down the track, high enough to stay visible from a distance - a celebration trigger, not an obstacle.</div>
-      <div class="hint" style="margin-top:0.5rem">For a Stream Deck: add a <strong>Website</strong> action set to GET a trigger URL on the machine running the connector - <code id="wall-trigger-url">http://localhost:8767/trigger?type=wall</code> for the wall, <code>...?type=pins</code> for the pins, <code>...?type=wreckingball</code> for the wrecking ball, <code>...?type=fireworks</code> for fireworks. Only reaches this page while connected to live telemetry (Connect telemetry, above); the test buttons here always work.</div>
+      <button class="btn red" id="btn-clear-obstacles" style="margin-top:0.5rem">Clear ALL items (test)</button>
+      <div class="hint" style="margin-top:0.4rem">Removes every prop, wall, pin, wrecking ball and firework in one go - a full reset between takes. Leaves zones and calibration untouched.</div>
+      <div class="hint" style="margin-top:0.5rem">For a Stream Deck: add a <strong>Website</strong> action set to GET a trigger URL on the machine running the connector - <code id="wall-trigger-url">http://localhost:8767/trigger?type=wall</code> for the wall, <code>...?type=pins</code> for the pins, <code>...?type=wreckingball</code> for the wrecking ball, <code>...?type=fireworks</code> for fireworks, <code>...?type=clear</code> to clear everything. Only reaches this page while connected to live telemetry (Connect telemetry, above); the test buttons here always work.</div>
     </div>
 
     <div class="sec">
@@ -607,6 +609,11 @@ function spawnFireworkBurst(origin, color) {
   fireworks.push({ points, velocities, age: 0, life: 1.8 + Math.random()*0.4 });
 }
 
+// Bursts are staggered with setTimeout, independent of the render loop, so a
+// show already in progress has bursts still pending when "clear all" is
+// pressed - track their timer ids so clearAllObstacles can cancel the ones
+// that haven't fired yet, not just remove what's already on screen.
+let pendingFireworkTimeouts = [];
 function spawnFireworks(s) {
   if (!s) return;
   const yaw = roadYaw, cp = Math.cos(roadPitch);
@@ -616,13 +623,14 @@ function spawnFireworks(s) {
   const base = new THREE.Vector3(s.posX, s.posY, s.posZ);
   const bursts = 4;
   for (let i = 0; i < bursts; i++) {
-    setTimeout(() => {
+    const id = setTimeout(() => {
       const origin = base.clone()
         .addScaledVector(fwd, 160 + Math.random()*70)
         .addScaledVector(right, (Math.random()-0.5) * 60)
         .addScaledVector(worldUp, 45 + Math.random()*35);
       spawnFireworkBurst(origin, FIREWORK_COLORS[Math.floor(Math.random()*FIREWORK_COLORS.length)]);
     }, i * 250);
+    pendingFireworkTimeouts.push(id);
   }
 }
 
@@ -649,6 +657,35 @@ function updateFireworks(dt) {
   });
 }
 
+// Clears every spawned item (props, wall debris, pins, wrecking balls, any
+// in-flight fireworks) - a full reset for between takes. Deliberately leaves
+// zones and calibration alone; those are setup, not "items".
+function clearAllObstacles() {
+  props = [];
+  rebuildProps();
+  walls.forEach(w => {
+    wallGroup.remove(w.group);
+    w.bricks.forEach(b => b.mesh.material.dispose());
+  });
+  walls = [];
+  pinRacks.forEach(rack => pinsGroup.remove(rack.group));
+  pinRacks = [];
+  wreckingBalls.forEach(wb => {
+    wreckGroup.remove(wb.group);
+    wb.chain.geometry.dispose();
+    wb.chain.material.dispose();
+  });
+  wreckingBalls = [];
+  pendingFireworkTimeouts.forEach(id => clearTimeout(id));
+  pendingFireworkTimeouts = [];
+  fireworks.forEach(fw => {
+    fireworksGroup.remove(fw.points);
+    fw.points.geometry.dispose();
+    fw.points.material.dispose();
+  });
+  fireworks = [];
+}
+
 // Dispatches Stream Deck / chat-style trigger events (from the WS connector's
 // event channel) to the matching obstacle.
 function handleObstacleEvent(kind) {
@@ -656,6 +693,7 @@ function handleObstacleEvent(kind) {
   else if (kind === 'pins') spawnPins(currentSample());
   else if (kind === 'wreckingball') spawnWreckingBall(currentSample());
   else if (kind === 'fireworks') spawnFireworks(currentSample());
+  else if (kind === 'clear') clearAllObstacles();
 }
 
 // Drift smoke: automatic, not a button - billows from the outside of a
@@ -1226,6 +1264,7 @@ document.getElementById('btn-wall').addEventListener('click', () => spawnWall(cu
 document.getElementById('btn-pins').addEventListener('click', () => spawnPins(currentSample()));
 document.getElementById('btn-wreckingball').addEventListener('click', () => spawnWreckingBall(currentSample()));
 document.getElementById('btn-fireworks').addEventListener('click', () => spawnFireworks(currentSample()));
+document.getElementById('btn-clear-obstacles').addEventListener('click', () => clearAllObstacles());
 
 document.getElementById('btn-copy-tel').addEventListener('click', () => {
   const sample = rawDebug.slice(-12);
