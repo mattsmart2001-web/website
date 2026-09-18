@@ -681,7 +681,7 @@
         }
         .split-stop {
             min-width: 96px;
-            flex: 0 0 auto;
+            flex: 1 1 0;
             background: rgba(255,255,255,0.025);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -736,7 +736,7 @@
         .sj-chip-down .sj-chip-v { color: #f87171; }
         .sj-chip-same .sj-chip-v { color: var(--muted); }
         .sj-chart-wrap { overflow-x: auto; padding-bottom: 0.5rem; }
-        .sj-svg { display: block; }
+        .sj-svg { display: block; width: 100%; }
         .sj-grid { stroke: rgba(255,255,255,0.06); stroke-width: 1; }
         .sj-ylabel, .sj-xlabel { fill: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; }
         .sj-xlabel { opacity: 0; animation: sjFade 0.5s ease forwards; }
@@ -1852,18 +1852,30 @@ async function showProfile() {
         const splits = journey.map(s => s.split);
         const minS = Math.min(...splits), maxS = Math.max(...splits);
         const range = maxS - minS;
-        const padL = 46, padR = 30, padT = 30, padB = 40, stepX = 72, plotH = 140;
-        const W = padL + (n - 1) * stepX + padR;
+        const padT = 30, padB = 40, plotH = 140;
+        // colW mirrors .split-stop's min-width below, so the chart and the
+        // round cards hit their "not enough room, start scrolling" point at
+        // the same container width and stay lined up either side of it -
+        // width:100% (with this as a CSS min-width) stretches both evenly
+        // when there's room, same as the cards' flex:1 1 0 does. Dots span
+        // the FULL width in n equal columns (no reserved side margin) so
+        // they land centred above their card below; the S-level labels sit
+        // just inside the left edge instead of in a dedicated margin, which
+        // would otherwise eat into the width unevenly once stretched and
+        // throw the columns out of line with the cards.
+        const colW = 96;
+        const W = n * colW;
         const H = padT + plotH + padB;
         const baseY = padT + plotH;
-        const xFor = i => padL + i * stepX;
+        const segW = W / n;
+        const xFor = i => (i + 0.5) * segW;   // centred in its column, above the card below it
         const yFor = s => range === 0 ? padT + plotH / 2 : padT + ((s - minS) / range) * plotH;
 
         let grid = '';
         for (let s = minS; s <= maxS; s++) {
             const y = yFor(s);
-            grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${y.toFixed(1)}" class="sj-grid"/>`;
-            grid += `<text x="${padL - 10}" y="${(y + 3).toFixed(1)}" class="sj-ylabel" text-anchor="end">S${s}</text>`;
+            grid += `<line x1="0" y1="${y.toFixed(1)}" x2="${W.toFixed(1)}" y2="${y.toFixed(1)}" class="sj-grid"/>`;
+            grid += `<text x="4" y="${(y - 3).toFixed(1)}" class="sj-ylabel" text-anchor="start">S${s}</text>`;
         }
 
         const pts = journey.map((s, i) => ({ x: xFor(i), y: yFor(s.split), round: s.round, circuit: s.circuit, split: s.split }));
@@ -1890,7 +1902,7 @@ async function showProfile() {
             <span class="sj-chip sj-chip-${trend.c}"><span class="sj-chip-k">Trend</span><span class="sj-chip-v">${trend.a} ${trend.t}</span></span>
         </div>`;
 
-        return `${chips}<div class="sj-chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="sj-svg" role="img" aria-label="Split number by round">
+        return `${chips}<div class="sj-chart-wrap"><svg viewBox="0 0 ${W} ${H}" height="${H}" style="min-width:${W}px" preserveAspectRatio="none" class="sj-svg" role="img" aria-label="Split number by round">
             <defs>
                 <linearGradient id="sjLine" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stop-color="#ffd166"/><stop offset="100%" stop-color="#f59e0b"/>
