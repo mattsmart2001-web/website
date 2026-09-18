@@ -105,7 +105,8 @@
         return g;
     }
 
-    async function drawTradingCard(driver, stats) {
+    async function drawTradingCard(driver, stats, opts) {
+        const eyebrow = (opts && opts.eyebrow) || 'CAREER CARD';
         const canvas = document.createElement('canvas');
         canvas.width  = W;
         canvas.height = H;
@@ -181,7 +182,7 @@
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
         ctx.font = '700 16px "Orbitron", system-ui, sans-serif';
         setLS('0.2em');
-        ctx.fillText('CAREER CARD', innerX + 20, innerY + 64);
+        ctx.fillText(eyebrow, innerX + 20, innerY + 64);
         setLS('0px');
 
         const rarityText = tier.label.toUpperCase();
@@ -436,7 +437,7 @@
         return String(s || '').replace(/"/g, '&quot;');
     }
 
-    function openModal({ blob, fname, url, driver }) {
+    function openModal({ blob, fname, url, driver, title }) {
         injectModalStyles();
         const previewUrl = URL.createObjectURL(blob);
         const overlay = document.createElement('div');
@@ -448,7 +449,7 @@
         overlay.innerHTML = `
             <div class="gtec-tcard-modal" role="dialog" aria-label="Trading card">
                 <div class="gtec-tcard-head">
-                    <div class="gtec-tcard-title">Trading Card</div>
+                    <div class="gtec-tcard-title">${escAttr(title || 'Trading Card')}</div>
                     <button class="gtec-tcard-close" data-act="close" aria-label="Close">✕</button>
                 </div>
                 <div class="gtec-tcard-preview"><img src="${previewUrl}" alt="${escAttr(driver.display_name || 'Driver')} - GTEC career card"></div>
@@ -562,7 +563,10 @@
         });
     }
 
-    async function gtecTradingCard({ driver, stats, buttonEl }) {
+    // eyebrow/title/fnamePart let a locked season card (My Collection)
+    // reuse this same painter/modal with different labelling, e.g.
+    // eyebrow: "2026 SEASON" instead of the default live "CAREER CARD".
+    async function gtecTradingCard({ driver, stats, buttonEl, eyebrow, title, fnamePart }) {
         const restore = buttonEl ? buttonEl.innerHTML : null;
         const setBtn = (txt) => {
             if (!buttonEl) return;
@@ -578,15 +582,15 @@
         try {
             setBtn('Building card…');
             await ensureFonts();
-            const canvas = await drawTradingCard(driver, stats);
+            const canvas = await drawTradingCard(driver, stats, { eyebrow });
             const blob   = await canvasToBlob(canvas);
             if (!blob) throw new Error('Canvas blob failed');
 
             const url   = SITE_URL + (driver.slug ? `drivers/?slug=${encodeURIComponent(driver.slug)}` : '');
-            const fname = `${(driver.slug || driver.display_name || 'driver').replace(/[^a-z0-9-]/gi, '-').toLowerCase()}-gtec-card.png`;
+            const fname = `${(driver.slug || driver.display_name || 'driver').replace(/[^a-z0-9-]/gi, '-').toLowerCase()}-gtec-card${fnamePart ? '-' + fnamePart : ''}.png`;
 
             resetBtn();
-            openModal({ blob, fname, url, driver });
+            openModal({ blob, fname, url, driver, title });
         } catch (err) {
             console.error(err);
             setBtn('Card failed');

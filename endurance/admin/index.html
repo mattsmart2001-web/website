@@ -948,6 +948,7 @@
 <script src="../assets/countries.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="../assets/gtec-badges.js?v=22"></script>
+<script src="../assets/elo-tiers.js?v=3"></script>
 <script>
 'use strict';
 
@@ -1544,6 +1545,7 @@ async function renderSeasons() {
                 <td><div class="row-actions">
                     <button class="btn-icon" onclick="viewSeasonTeams('${s.id}','${esc(s.name)}')">Teams</button>
                     <button class="btn-icon" onclick="openPreSeasonModal('${s.id}','${esc(s.name)}')">Pre-Season</button>
+                    <button class="btn-icon" onclick="generateSeasonCards('${s.id}','${esc(s.name)}',${s.year})" title="Lock a Trading Card snapshot for every driver who raced this season">Cards</button>
                     <button class="btn-icon" onclick="editSeason('${s.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteSeason('${s.id}','${esc(s.name)}')">Delete</button>
                 </div></td>
@@ -1560,6 +1562,66 @@ async function renderSeasons() {
             </tr></thead><tbody>${rows}</tbody></table>
         </div>
         <div id="season-teams-panel"></div>`;
+}
+
+// Locks a Trading Card snapshot (tier, Elo, and season stats) for every
+// driver who actually raced this season, from driver_standings (season-
+// correct team/points/wins/podiums/races) and driver_ratings (Elo as of
+// their last event that season). Safe to re-run: upserts on
+// (driver_id, season_id), so a late results correction just overwrites
+// the existing snapshot rather than creating a duplicate.
+async function generateSeasonCards(seasonId, seasonName, seasonYear) {
+    if (!confirm(`Lock Trading Card snapshots for every driver who raced in "${seasonName}"? This overwrites any cards already generated for this season.`)) return;
+
+    const panel = document.getElementById('season-teams-panel');
+    panel.innerHTML = '<div class="loading-state">Generating season cards…</div>';
+
+    const [standingsRes, ratingsRes] = await Promise.all([
+        sb.from('driver_standings').select('*').eq('season_id', seasonId),
+        sb.from('driver_ratings')
+            .select('driver_id, rating_after, created_at, events!inner(season_id, starts_at)')
+            .eq('events.season_id', seasonId)
+            .order('created_at'),
+    ]);
+
+    if (standingsRes.error) { panel.innerHTML = ''; toast(standingsRes.error.message, 'error'); return; }
+
+    // Last rating_after per driver within this season (ratings arrive
+    // ordered by created_at, so the last write per driver wins).
+    const lastRatingByDriver = {};
+    (ratingsRes.data || []).forEach(r => { lastRatingByDriver[r.driver_id] = r.rating_after; });
+
+    const rows = (standingsRes.data || [])
+        .filter(s => Number(s.races) > 0) // skip drivers entered but who never actually raced
+        .map(s => {
+            const elo = lastRatingByDriver[s.driver_id];
+            const tier = elo != null && window.eloTier ? (window.eloTier(elo)?.name || null) : null;
+            return {
+                driver_id:          s.driver_id,
+                season_id:          seasonId,
+                season_year:        seasonYear,
+                tier,
+                elo:                elo != null ? Math.round(elo) : null,
+                points:             Number(s.points || 0),
+                wins:               Number(s.wins || 0),
+                podiums:            Number(s.podiums || 0),
+                races:              Number(s.races || 0),
+                poles:              Number(s.poles || 0),
+                career_number:      s.career_number,
+                nationality:        s.nationality,
+                team_name:          s.team_name,
+                team_slug:          s.team_slug,
+                manufacturer_name:  s.manufacturer_name,
+                manufacturer_color: s.brand_color,
+            };
+        });
+
+    if (!rows.length) { panel.innerHTML = ''; toast('No drivers with races found for that season.', 'error'); return; }
+
+    const { error } = await sb.from('driver_season_cards').upsert(rows, { onConflict: 'driver_id,season_id' });
+    panel.innerHTML = '';
+    if (error) { toast(error.message, 'error'); return; }
+    toast(`Locked ${rows.length} season card${rows.length === 1 ? '' : 's'} for ${seasonName}.`, 'success');
 }
 
 function seasonForm(s = {}) {

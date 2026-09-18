@@ -799,6 +799,25 @@
         .disc-title { font-weight: 600; font-size: 0.92rem; margin-bottom: 0.25rem; }
         .disc-body  { font-size: 0.84rem; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
 
+        /* My Collection - locked season trading cards, a horizontal shelf
+           of small tiles that open the full canvas card on click. */
+        .season-cards-row { display: flex; gap: 0.85rem; overflow-x: auto; padding-bottom: 0.35rem; }
+        .season-card-tile {
+            flex: 0 0 auto;
+            width: 128px;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.9rem 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.15s;
+        }
+        .season-card-tile:hover { border-color: rgba(255,209,102,0.45); transform: translateY(-2px); }
+        .sc-crest canvas { display: block; width: 40px; height: 40px; margin: 0 auto 0.6rem; }
+        .sc-year { font-family: 'Anton', sans-serif; font-size: 1.4rem; letter-spacing: 0.03em; margin-bottom: 0.5rem; }
+        .season-card-tile .elo-tier { margin-left: 0; }
+
         /* Table */
         .data-table {
             background: var(--bg-1);
@@ -1018,6 +1037,42 @@ function hydrateCrests() {
         if (!name || el.childElementCount) return;
         const size = Number(el.dataset.crestSize) || 24;
         el.appendChild(window.gtecRenderCrest(name, size));
+    });
+}
+
+// My Collection tiles carry their whole locked snapshot in data-*
+// attributes (see seasonCardsHTML in showProfile), so a click just
+// rebuilds the driver/stats objects gtecTradingCard needs - no re-fetch.
+function wireSeasonCardTiles() {
+    if (!window.gtecTradingCard) return;
+    document.querySelectorAll('.season-card-tile').forEach(tile => {
+        tile.addEventListener('click', () => {
+            const d = tile.dataset;
+            const rowD = tile.closest('.season-cards-row')?.dataset || {};
+            window.gtecTradingCard({
+                driver: {
+                    display_name:       rowD.driverName || '',
+                    slug:                rowD.driverSlug || null,
+                    career_number:       d.careerNumber || null,
+                    nationality:         d.nationality || null,
+                    photo_url:           rowD.photoUrl || null,
+                    team_name:           d.teamName || null,
+                    manufacturer_name:   d.manufacturerName || null,
+                    manufacturer_color:  d.manufacturerColor || null,
+                },
+                stats: {
+                    elo:     d.elo !== '' ? Number(d.elo) : null,
+                    tier:    d.tier || null,
+                    points:  d.points,
+                    wins:    Number(d.wins),
+                    podiums: Number(d.podiums),
+                    races:   Number(d.races),
+                },
+                eyebrow:   `${d.seasonYear} SEASON`,
+                title:     `${d.seasonYear} Season Card`,
+                fnamePart: d.seasonYear,
+            });
+        });
     });
 }
 
@@ -1625,7 +1680,7 @@ async function showProfile() {
     document.title = `${driver.display_name} | GTEC`;
 
     // Season career stats + rating history in parallel with race history
-    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes, hostCountRes, dedRes, streamLinkRes] = await Promise.all([
+    const [seasonsRes, ratingRes, currentRatingRes, historyRes, penaltiesRes, stewardRes, seasonStakes, hostCountRes, dedRes, streamLinkRes, seasonCardsRes] = await Promise.all([
         sb.from('driver_standings').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
         sb.from('driver_ratings').select('rating_before, rating_after, delta, event_id, events(round, name)').eq('driver_id', driver.id).order('created_at'),
         sb.from('driver_current_ratings').select('rating, peak_rating').eq('driver_id', driver.id).maybeSingle(),
@@ -1657,6 +1712,10 @@ async function showProfile() {
             .eq('penalty_type', 'points_deduction'),
         // Any stream link this driver's posted earns the Content Creator badge.
         sb.from('driver_stream_links').select('id', { count: 'exact', head: true }).eq('driver_id', driver.id),
+        // Locked Trading Card snapshots - one per season, frozen at whatever
+        // tier/stats the driver had when an admin generated them, powering
+        // the "My Collection" gallery below.
+        sb.from('driver_season_cards').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
     ]);
 
     // Make this driver its own indexable, shareable entity (per-driver title,
@@ -1823,6 +1882,36 @@ async function showProfile() {
         </div>` : '';
 
     // Career stats table
+    // My Collection - locked season Trading Cards. Each tile carries the
+    // full frozen snapshot in data-* attributes so the click handler can
+    // rebuild the exact driver/stats objects gtecTradingCard needs without
+    // a second fetch.
+    const seasonCards = seasonCardsRes.data || [];
+    const seasonCardsHTML = seasonCards.length ? `
+        <div class="section">
+            <div class="section-title">My Collection</div>
+            <div class="season-cards-row" data-driver-name="${esc(driver.display_name)}" data-driver-slug="${esc(driver.slug)}" data-photo-url="${esc(driver.photo_url || '')}">
+                ${seasonCards.map(s => `
+                    <div class="season-card-tile"
+                        data-season-year="${s.season_year}"
+                        data-tier="${esc(s.tier || '')}"
+                        data-elo="${s.elo ?? ''}"
+                        data-points="${s.points}"
+                        data-wins="${s.wins}"
+                        data-podiums="${s.podiums}"
+                        data-races="${s.races}"
+                        data-career-number="${s.career_number ?? ''}"
+                        data-nationality="${esc(s.nationality || '')}"
+                        data-team-name="${esc(s.team_name || '')}"
+                        data-manufacturer-name="${esc(s.manufacturer_name || '')}"
+                        data-manufacturer-color="${esc(s.manufacturer_color || '')}">
+                        <span class="crest-slot sc-crest" data-crest-name="${esc(s.team_name || 'GTEC')}" data-crest-size="40" aria-hidden="true"></span>
+                        <div class="sc-year">${s.season_year}</div>
+                        ${s.elo != null && window.eloTierBadge ? window.eloTierBadge(s.elo) : ''}
+                    </div>`).join('')}
+            </div>
+        </div>` : '';
+
     const seasonsHTML = (seasons || []).length ? `
         <div class="section">
             <div class="section-title">Career Stats</div>
@@ -2139,6 +2228,7 @@ async function showProfile() {
 
             ${driver.bio ? `<div class="section"><div class="section-title">Bio</div><div class="bio-text">${esc(driver.bio)}</div></div>` : ''}
 
+            ${seasonCardsHTML}
             ${seasonsHTML}
             ${splitJourneyHTML}
             ${historyHTML}
@@ -2148,6 +2238,7 @@ async function showProfile() {
         </div>`;
 
     hydrateCrests();
+    wireSeasonCardTiles();
     alignSplitJourney();
     // Re-run once webfonts (Anton/Orbitron) have actually swapped in - they
     // can shift each card's rendered width after the first measurement.
