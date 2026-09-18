@@ -53,6 +53,9 @@
 
         /* Profile header */
         .profile-header { display: flex; align-items: flex-start; gap: 1.75rem; margin-bottom: 2.5rem; flex-wrap: wrap; }
+        .birthday-banner { display: flex; align-items: center; gap: 0.7rem; background: linear-gradient(135deg, rgba(255,209,102,0.14), rgba(255,209,102,0.04)); border: 1px solid rgba(255,209,102,0.35); border-radius: 12px; padding: 0.85rem 1.1rem; margin-bottom: 1.5rem; font-size: 0.92rem; line-height: 1.5; }
+        .birthday-banner .emoji { font-size: 1.5rem; flex-shrink: 0; }
+        .birthday-banner strong { color: var(--gold); }
         .avatar { width: 88px; height: 88px; border-radius: 50%; border: 2px solid var(--border); background: var(--bg-2); flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-family: 'Anton', sans-serif; font-size: 2.2rem; color: var(--muted); }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .profile-meta { flex: 1; min-width: 200px; }
@@ -369,6 +372,11 @@
 </nav>
 
 <div class="page" id="page" style="display:none">
+
+    <div class="birthday-banner" id="birthday-banner" style="display:none">
+        <span class="emoji">🎂</span>
+        <span><strong>Happy birthday<span id="birthday-name"></span>!</strong> Wishing you a great one from everyone at GTEC. See you on track soon.</span>
+    </div>
 
     <!-- Profile header -->
     <div class="profile-header">
@@ -1816,6 +1824,20 @@ async function init() {
     if (driver.discord_username)  document.getElementById('field-discord').value = driver.discord_username;
     if (driver.date_of_birth)     document.getElementById('field-dob').value = driver.date_of_birth;
     if (driver.career_number)     document.getElementById('field-career-num').value = driver.career_number;
+
+    // Birthday banner: compares month/day only, parsed as local time (a bare
+    // "YYYY-MM-DD" string parses as UTC midnight, which can land on the
+    // wrong day for viewers behind UTC) against the viewer's own device
+    // clock, so it lines up with the driver's own local calendar day.
+    if (driver.date_of_birth) {
+        const dob = new Date(driver.date_of_birth + 'T00:00:00');
+        const today = new Date();
+        if (dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate()) {
+            const firstName = driver.display_name ? driver.display_name.split(' ')[0] : '';
+            document.getElementById('birthday-name').textContent = firstName ? `, ${firstName}` : '';
+            document.getElementById('birthday-banner').style.display = '';
+        }
+    }
 
     // Show page
     document.getElementById('auth-loading').style.display = 'none';
