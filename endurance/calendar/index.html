@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="GTEC Season 1 calendar: an eight-round Gran Turismo 7 endurance championship across Spa, Monza, Suzuka, Bathurst, Daytona, Interlagos, Nordschleife and Le Mans.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/calendar/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Open Graph / Twitter card -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Calendar">
+    <meta property="og:description" content="Schedule for the GTEC endurance championship season.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/calendar/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Calendar">
+    <meta name="twitter:description" content="Schedule for the GTEC endurance championship season.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --green: #22c55e;
+            --red: #ef4444;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Nav */
+        .gtec-nav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5,6,8,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--text);
+            text-decoration: none;
+            text-indent: 0.32em;
+        }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; }
+        .gtec-nav .nav-links a {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            padding: 0.45rem 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .gtec-nav .back:hover {
+            color: var(--text);
+            border-color: rgba(255,255,255,0.25);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 3.5rem 2rem 2rem;
+            max-width: 860px;
+            margin: 0 auto;
+        }
+        .hero-eyebrow {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.58rem;
+            letter-spacing: 0.45em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 0.75rem;
+            text-indent: 0.45em;
+        }
+        .hero-title {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        .hero-sub { color: var(--muted); font-size: 0.88rem; }
+
+        /* Content */
+        .content {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 4rem;
+        }
+
+        /* Event cards */
+        .event-list { display: flex; flex-direction: column; gap: 0.85rem; }
+
+        .event-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            overflow: hidden;
+            transition: border-color 0.2s, transform 0.15s;
+        }
+        .event-card:hover { border-color: rgba(255,209,102,0.2); transform: translateY(-1px); }
+        .event-card.status-completed  { border-left: 3px solid var(--green); }
+        .event-card.status-in_progress { border-left: 3px solid var(--gold); }
+        .event-card.status-cancelled  { opacity: 0.45; }
+
+        .event-round {
+            width: 76px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-2);
+            border-right: 1px solid var(--border);
+            padding: 1.25rem 0.75rem;
+        }
+        .event-round-label {
+            font-size: 0.5rem;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 0.25rem;
+        }
+        .event-round-num {
+            font-family: 'Anton', sans-serif;
+            font-size: 2.1rem;
+            line-height: 1;
+            color: var(--gold);
+        }
+
+        .event-body {
+            flex: 1;
+            padding: 1.1rem 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .event-info { flex: 1; min-width: 0; }
+        .event-name {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.25rem;
+        }
+        .event-circuit {
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin-bottom: 0.45rem;
+        }
+        .event-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem 1.1rem;
+            font-size: 0.76rem;
+            color: var(--muted);
+        }
+
+        .event-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.6rem;
+            flex-shrink: 0;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.22rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .badge-scheduled  { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .badge-in_progress { background: rgba(255,209,102,0.15); color: var(--gold); }
+        .badge-completed  { background: rgba(34,197,94,0.12); color: #4ade80; }
+        .badge-cancelled  { background: rgba(239,68,68,0.1); color: #fca5a5; }
+
+        .btn-results {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.45rem 0.9rem;
+            background: rgba(255,209,102,0.08);
+            border: 1px solid rgba(255,209,102,0.25);
+            border-radius: 6px;
+            color: var(--gold);
+            font-size: 0.73rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+        .btn-results:hover { background: rgba(255,209,102,0.16); }
+        button.btn-results { font-family: 'Orbitron', sans-serif; cursor: pointer; font-size: inherit; }
+
+        /* Grid modal */
+        .grid-overlay { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.78); padding: 1.5rem; align-items: center; justify-content: center; }
+        .grid-overlay.open { display: flex; }
+        .grid-modal { background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 920px; max-height: 90vh; display: flex; flex-direction: column; }
+        .grid-modal-head { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }
+        .grid-modal-title { font-family: 'Anton', sans-serif; font-size: 1.15rem; letter-spacing: 0.06em; text-transform: uppercase; }
+        .grid-modal-close { background: none; border: none; color: var(--muted); font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 0.5rem; }
+        .grid-modal-close:hover { color: var(--text); }
+        .grid-modal-body { padding: 1.25rem 1.5rem 1.5rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; }
+        .grid-loading { grid-column: 1 / -1; text-align: center; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.7rem; letter-spacing: 0.3em; text-transform: uppercase; padding: 2.5rem 0; }
+        .grid-lobby { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem 1rem; }
+        .grid-lobby-title { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: baseline; }
+        .grid-lobby-count { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 0.15em; color: var(--muted); font-weight: 700; }
+        /* Each driver gets its own boxed row — a shade darker than the
+           lobby card it sits in, so it reads as a distinct slot rather
+           than a line in a flat divided list. */
+        .grid-row {
+            display: grid; grid-template-columns: 42px 1fr auto; column-gap: 0.5rem;
+            align-items: center;
+            background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0) 50%), var(--bg-1);
+            border-left: 3px solid transparent;
+            border-radius: 8px;
+            padding: 0.5rem 0.7rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+        .grid-row + .grid-row { margin-top: 0.4rem; }
+        .grid-mfr-chip {
+            width: 30px; height: 30px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.06);
+            border-radius: 50%;
+        }
+        .grid-mfr-logo { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
+        .grid-car { font-family: 'Anton', sans-serif; color: var(--gold); font-size: 0.95rem; }
+        .grid-team a { color: inherit; text-decoration: none; font-weight: 600; }
+        .grid-team a:hover { color: var(--gold); }
+        .grid-mfr { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.12em; color: var(--muted); margin-left: 0.35rem; }
+        .grid-drivers { font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem; }
+        .grid-driver-name { font-weight: 600; font-size: 0.9rem; }
+        .grid-driver-name a:hover { color: var(--gold); }
+        .grid-driver-psn { font-size: 0.72rem; color: var(--muted); margin-top: 0.12rem; }
+        .grid-driver-psn .grid-psn-label { font-family: 'Orbitron', sans-serif; font-size: 0.56rem; letter-spacing: 0.12em; text-transform: uppercase; margin-right: 0.25rem; opacity: 0.8; }
+        .grid-driver-meta { font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem; }
+        .grid-driver-meta a { color: inherit; text-decoration: none; }
+        .grid-driver-meta a:hover { color: var(--gold); }
+        .grid-mfr-name { font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.1em; color: var(--muted); }
+        .grid-row.is-host {
+            background: linear-gradient(90deg, rgba(255,209,102,0.16), rgba(255,209,102,0.04));
+        }
+        .grid-host-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.22rem;
+            margin-left: 0.5rem;
+            padding: 0.08rem 0.5rem;
+            background: linear-gradient(135deg, rgba(255,209,102,0.3), rgba(255,209,102,0.1));
+            border: 1px solid rgba(255,209,102,0.55);
+            border-radius: 999px;
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* Race Details modal */
+        .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; }
+        .details-row { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 0.85rem; }
+        .details-key { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+        .details-val { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+        .details-briefing { margin-top: 0.85rem; background: var(--bg-2); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: 8px; padding: 0.85rem 1rem; }
+        .details-briefing-body { font-size: 0.9rem; line-height: 1.55; white-space: pre-wrap; color: var(--text); margin-top: 0.3rem; }
+        /* Tyre badges — each compound gets its real-world colourway, with
+           a white inner ring (the sidewall stripe) and a coloured fill. */
+        .details-tyre {
+            display: inline-block;
+            padding: 0.25rem 0.65rem;
+            margin-right: 0.3rem;
+            border-radius: 999px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.45);
+        }
+        .details-tyre.tyre-rs { background: #d62828; color: #fff; }            /* Racing Soft */
+        .details-tyre.tyre-rm { background: #f4c20d; color: #1a1300; }         /* Racing Medium */
+        .details-tyre.tyre-rh { background: #111;    color: #fff; }            /* Racing Hard */
+        .details-tyre.tyre-ri { background: #2563eb; color: #fff; }            /* Racing Inter */
+        .details-tyre.tyre-rw { background: #38bdf8; color: #08203a; }         /* Racing Wet */
+
+        .state-msg {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+        .state-msg h3 {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.3rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .state-msg p { color: var(--muted); font-size: 0.88rem; }
+        .loading {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--muted);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 580px) {
+            .nav { padding: 1rem; }
+            .hero { padding: 2rem 1rem 1.5rem; }
+            .content { padding: 1rem 1rem 3rem; }
+            .event-body { flex-wrap: wrap; gap: 0.75rem; }
+            /* Full-width so the action buttons wrap within the card instead
+               of overflowing off the right edge (the base rule pins
+               flex-shrink:0, which would otherwise let them spill over). */
+            .event-actions { width: 100%; align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+            .event-round { width: 64px; }
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/" class="active">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div class="hero">
+    <div class="hero-eyebrow">Race Schedule</div>
+    <div class="hero-title" id="season-title">Calendar</div>
+    <div class="hero-sub" id="season-sub">&nbsp;</div>
+</div>
+
+<div class="content">
+    <div class="event-list" id="event-list">
+        <div class="loading">Loading…</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+const _eventsById = {};
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data.session) { if (portal) portal.style.display = ''; }
+    else              { if (signin) signin.style.display = ''; }
+});
+
+const FLAGS = {
+    AD:'🇦🇩',AE:'🇦🇪',AT:'🇦🇹',AU:'🇦🇺',BE:'🇧🇪',BH:'🇧🇭',BR:'🇧🇷',
+    CA:'🇨🇦',CN:'🇨🇳',CZ:'🇨🇿',DE:'🇩🇪',ES:'🇪🇸',FR:'🇫🇷',GB:'🇬🇧',
+    HU:'🇭🇺',IT:'🇮🇹',JP:'🇯🇵',MX:'🇲🇽',NL:'🇳🇱',PL:'🇵🇱',PT:'🇵🇹',
+    SA:'🇸🇦',SE:'🇸🇪',SG:'🇸🇬',US:'🇺🇸',
+};
+
+// Flag emoji from any 2-letter ISO country code (regional indicators), so
+// every nationality renders — not just the hardcoded FLAGS subset above.
+function flag(code) {
+    const cc = (code || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', timeZone:'Europe/London' });
+}
+
+function fmtTime(iso) {
+    if (!iso) return '';
+    const dt = new Date(iso);
+    const time = dt.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/London' });
+    const tz = new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/London', timeZoneName:'short' })
+        .formatToParts(dt).find(p => p.type === 'timeZoneName')?.value || 'UK';
+    return `${time} ${tz}`;
+}
+
+async function load() {
+    const list = document.getElementById('event-list');
+
+    const { data: season } = await sb.from('seasons')
+        .select('id, name, year, starts_on, ends_on, description')
+        .eq('is_active', true)
+        .maybeSingle();
+
+    if (!season) {
+        document.getElementById('season-sub').textContent = 'No active season.';
+        list.innerHTML = `<div class="state-msg"><h3>Coming Soon</h3><p>The race calendar will appear here once the season is set up.</p></div>`;
+        return;
+    }
+
+    document.getElementById('season-title').textContent = season.name;
+
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    // Prefer first/last event dates over the manually entered season fields
+    // so the display stays accurate without needing to update the season record.
+    const { data: events, error } = await sb.from('events')
+        .select('*')
+        .eq('season_id', season.id)
+        .order('round');
+
+    if (error || !events?.length) {
+        list.innerHTML = `<div class="state-msg"><h3>No Events Yet</h3><p>Events will appear here once they're scheduled.</p></div>`;
+        return;
+    }
+
+    const startDt = events[0].starts_at ? new Date(events[0].starts_at) : (season.starts_on ? new Date(season.starts_on) : null);
+    const endDt   = events[events.length - 1].starts_at ? new Date(events[events.length - 1].starts_at) : (season.ends_on ? new Date(season.ends_on) : null);
+    const upcoming = startDt && startDt > today;
+
+    const range = startDt && endDt
+        ? `${startDt.toLocaleDateString('en-GB', { day:'numeric', month:'short' })} – ${endDt.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}`
+        : `${season.year} Season`;
+
+    const subEl = document.getElementById('season-sub');
+    if (upcoming) {
+        // Count calendar days, not exact hours — startDt carries the race's
+        // actual kickoff time (e.g. 13:00 BST), which skewed Math.ceil into
+        // rounding up an extra day versus the real date-to-date difference.
+        const startDay = new Date(startDt.getFullYear(), startDt.getMonth(), startDt.getDate());
+        const days = Math.round((startDay - today) / 86400000);
+        subEl.innerHTML = `<span style="color:var(--gold);font-weight:600">Starts ${startDt.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</span> · ${range} · ${days} day${days===1?'':'s'} to go`;
+    } else {
+        subEl.textContent = `${range} · Race Calendar`;
+    }
+
+    if (season.description) {
+        const descEl = document.createElement('p');
+        descEl.style.cssText = 'color:var(--muted);font-size:0.9rem;line-height:1.6;margin-top:0.85rem;max-width:680px';
+        descEl.textContent = season.description;
+        subEl.insertAdjacentElement('afterend', descEl);
+    }
+
+    const statusLabel = { scheduled: 'Scheduled', in_progress: 'Live', completed: 'Completed', cancelled: 'Cancelled' };
+
+    list.innerHTML = events.map(e => {
+        const f = flag(e.circuit_country);
+        const circuitLine = [f, esc(e.circuit_name), e.circuit_country ? `· ${esc(e.circuit_country)}` : ''].filter(Boolean).join(' ');
+        const resultsBtn = e.status === 'completed'
+            ? `<a class="btn-results" href="/endurance/results/?slug=${esc(e.slug)}">Results →</a>`
+            : '';
+        const replayBtn = e.replay_url
+            ? `<a class="btn-results" href="${esc(e.replay_url)}" target="_blank" rel="noopener">▶ Replay</a>`
+            : '';
+        const gridBtn = e.status !== 'cancelled'
+            ? `<button class="btn-results" onclick="openGrid('${esc(e.id)}','${esc(e.name)}')">Grid</button>`
+            : '';
+        const hasDetails = e.tyre_wear || e.fuel_consumption || e.time_multiplier || e.weather || e.time_of_day ||
+                           e.starting_procedure || e.mandatory_pit_stops != null || e.race_details ||
+                           e.bop_enabled != null || e.damage_level ||
+                           e.refuel_rate_lps != null || e.slipstream ||
+                           e.grip_reduction_off_track || e.nitrous || e.engine_swap ||
+                           e.race_start || e.autodrive || e.settings_allowed || e.initial_fuel ||
+                           (Array.isArray(e.required_tyres) && e.required_tyres.length) ||
+                           e.quali_same_as_race != null || e.quali_notes ||
+                           e.equal_conditions_mode != null || e.shortcut_penalty != null ||
+                           e.wall_collision_penalty != null || e.car_collision_penalty != null ||
+                           e.correct_vehicle_course != null || e.flag_rules != null ||
+                           e.ghosting != null || e.pit_lane_cutting_penalty != null;
+        const detailsBtn = hasDetails
+            ? `<button class="btn-results" onclick="openRaceDetails('${esc(e.id)}','${esc(e.name)}')">Race Details</button>`
+            : '';
+        _eventsById[e.id] = e;
+        return `
+        <div class="event-card status-${esc(e.status)}">
+            <div class="event-round">
+                <div class="event-round-label">Round</div>
+                <div class="event-round-num">${e.round}</div>
+            </div>
+            <div class="event-body">
+                <div class="event-info">
+                    <div class="event-name">${esc(e.name)}</div>
+                    <div class="event-circuit">${circuitLine}</div>
+                    <div class="event-meta">
+                        <span>📅 ${fmtDate(e.starts_at)}</span>
+                        <span>🕐 ${fmtTime(e.starts_at)}</span>
+                        <span>⏱ ${e.duration_hours}h</span>
+                        ${e.circuit_length_km ? `<span>📏 ${e.circuit_length_km} km</span>` : ''}
+                    </div>
+                </div>
+                <div class="event-actions">
+                    <span class="badge badge-${esc(e.status)}">${esc(statusLabel[e.status] || e.status)}</span>
+                    ${gridBtn}${detailsBtn}${resultsBtn}${replayBtn}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ─── Grid modal ─────────────────────────────────────────────────
+async function openGrid(eventId, eventName) {
+    const overlay = document.getElementById('grid-overlay');
+    document.getElementById('grid-title').textContent = `${eventName}: Grid`;
+    document.getElementById('grid-body').innerHTML = '<div class="grid-loading">Loading…</div>';
+    overlay.classList.add('open');
+
+    const { data: entries, error } = await sb.from('entries')
+        .select('id, car_number, car_model, lobby_number, status, host_driver_id, teams(name, slug), manufacturers(name, brand_color, car_name, logo_url), entry_drivers(stint_role, drivers(id, display_name, slug, career_number, psn_id))')
+        .eq('event_id', eventId)
+        .in('status', ['confirmed']);
+
+    if (error) {
+        document.getElementById('grid-body').innerHTML = `<div class="grid-loading">${esc(error.message)}</div>`;
+        return;
+    }
+    if (!entries?.length) {
+        document.getElementById('grid-body').innerHTML = `<div class="grid-loading">No confirmed entries for this event yet.</div>`;
+        return;
+    }
+
+    // Flatten to one row per driver. Two team-mates sharing an entry
+    // become two grid rows; solo entries become one row.
+    const driverRows = [];
+    entries.forEach(en => {
+        const drvs = (en.entry_drivers || []).map(ed => ed.drivers).filter(Boolean);
+        if (drvs.length === 0) {
+            driverRows.push({ entry: en, driver: null });
+        } else {
+            drvs.forEach(d => driverRows.push({ entry: en, driver: d }));
+        }
+    });
+
+    const groups = {};
+    driverRows.forEach(row => {
+        const key = row.entry.lobby_number ?? 0;
+        (groups[key] = groups[key] || []).push(row);
+    });
+    const keys = Object.keys(groups).map(Number).sort((a, b) => {
+        if (a === 0) return 1; if (b === 0) return -1; return a - b;
+    });
+
+    document.getElementById('grid-body').innerHTML = keys.map(n => {
+        const title = n === 0 ? 'Race 1 Roster: No Splits Assigned Yet' : `Split ${n}`;
+        const sorted = groups[n].slice().sort((a, b) => {
+            const aCar = a.driver?.career_number ?? a.entry.car_number ?? 999;
+            const bCar = b.driver?.career_number ?? b.entry.car_number ?? 999;
+            return aCar - bCar;
+        });
+        const rows = sorted.map(({ entry: en, driver: d }) => {
+            const teamCell = en.teams?.slug
+                ? `<a href="/endurance/teams/?slug=${esc(en.teams.slug)}">${esc(en.teams.name)}</a>`
+                : (en.teams?.name ? esc(en.teams.name) : '<em>Solo</em>');
+            const mfrName = en.manufacturers?.name || '';
+            const number  = d?.career_number ?? en.car_number;
+            const isHost = d?.id && en.host_driver_id === d.id;
+            // Manufacturer brand color, not a hash of the team name — so the
+            // accent actually means something (cars group by manufacturer)
+            // instead of an arbitrary rainbow.
+            const mfrColor = en.manufacturers?.brand_color || null;
+            const driverName = d?.display_name
+                ? (d.slug ? `<a href="/endurance/drivers/?slug=${esc(d.slug)}" style="color:inherit;text-decoration:none">${esc(d.display_name)}</a>` : esc(d.display_name))
+                : '<em>No driver</em>';
+            const hostBadge = isHost
+                ? `<span class="grid-host-badge" title="Lobby host for this split">🎛️ Host</span>`
+                : '';
+            const logoUrl = en.manufacturers?.logo_url;
+            const logoHtml = `<div class="grid-mfr-chip">${logoUrl ? `<img class="grid-mfr-logo" src="${esc(logoUrl)}" alt="${esc(mfrName)}" loading="lazy">` : ''}</div>`;
+            return `<div class="grid-row${isHost ? ' is-host' : ''}"${mfrColor ? ` style="border-left-color:${esc(mfrColor)}"` : ''}>
+                <span class="grid-car">${number != null ? '#' + number : '—'}</span>
+                <div class="grid-info">
+                    <div class="grid-driver-name">${driverName}${hostBadge}</div>
+                    ${d?.psn_id ? `<div class="grid-driver-psn"><span class="grid-psn-label">PSN</span>${esc(d.psn_id)}</div>` : ''}
+                    <div class="grid-driver-meta">${teamCell}</div>
+                </div>
+                ${logoHtml}
+            </div>`;
+        }).join('');
+        return `<div class="grid-lobby">
+            <div class="grid-lobby-title">${title} <span class="grid-lobby-count">${sorted.length} driver${sorted.length === 1 ? '' : 's'}</span></div>
+            ${rows}
+        </div>`;
+    }).join('');
+}
+
+function closeGrid() {
+    document.getElementById('grid-overlay').classList.remove('open');
+}
+
+// ─── Race Details modal ─────────────────────────────────────────
+function openRaceDetails(eventId, eventName) {
+    const e = _eventsById[eventId];
+    if (!e) return;
+    document.getElementById('details-title').textContent = `${eventName}: Race Details`;
+    const tyrePills = Array.isArray(e.required_tyres) && e.required_tyres.length
+        ? e.required_tyres.map(t => `<span class="details-tyre tyre-${esc(String(t).toLowerCase())}">${esc(t)}</span>`).join(' ')
+        : null;
+    const rows = [
+        ['Tyre Wear',          e.tyre_wear],
+        ['Fuel Consumption',   e.fuel_consumption],
+        ['Time Multiplier',    e.time_multiplier],
+        ['Weather',            e.weather],
+        ['Time of Day',        e.time_of_day],
+        ['Starting Procedure', e.starting_procedure],
+        ['Mandatory Pit Stops', e.mandatory_pit_stops != null ? String(e.mandatory_pit_stops) : null],
+        ['BoP',                e.bop_enabled == null ? null : (e.bop_enabled ? 'On' : 'Off')],
+        ['Damage',             e.damage_level ? e.damage_level.charAt(0).toUpperCase() + e.damage_level.slice(1) : null],
+        ['Refuel Rate',        e.refuel_rate_lps != null ? `${e.refuel_rate_lps} L/s` : null],
+        ['Slipstream',         e.slipstream ? e.slipstream.charAt(0).toUpperCase() + e.slipstream.slice(1) : null],
+        ['Grip Reduction Off Track', e.grip_reduction_off_track ? (e.grip_reduction_off_track === 'real' ? 'Real' : 'Low') : null],
+        ['Nitrous',            e.nitrous ? (e.nitrous === 'allowed' ? 'Allowed' : 'Prohibited') : null],
+        ['Engine Swap',        e.engine_swap ? (e.engine_swap === 'allowed' ? 'Allowed' : 'Prohibited') : null],
+        ['Race Start',         e.race_start ? { grid_start_fsc: 'Grid Start with False Start Check', grid_start: 'Grid Start', rolling_start: 'Rolling Start' }[e.race_start] || e.race_start : null],
+        ['AutoDrive',          e.autodrive ? (e.autodrive === 'allowed' ? 'Allowed' : 'Prohibited') : null],
+        ['Settings Allowed',   e.settings_allowed ? (e.settings_allowed === 'brake_balance_only' ? 'Brake Balance Only' : 'None') : null],
+        ['Initial Fuel',       e.initial_fuel ? (e.initial_fuel === '50l' ? '50L' : 'Default') : null],
+        ['Required Tyres',     tyrePills],
+        ['Equal Conditions Mode',    e.equal_conditions_mode == null ? null : (e.equal_conditions_mode ? 'On' : 'Off')],
+        ['Shortcut Penalty',         e.shortcut_penalty == null ? null : (e.shortcut_penalty ? 'On - Weak' : 'Off')],
+        ['Wall Collision Penalty',   e.wall_collision_penalty == null ? null : (e.wall_collision_penalty ? 'On - Weak' : 'Off')],
+        ['Car Collision Penalty',    e.car_collision_penalty == null ? null : (e.car_collision_penalty ? 'On' : 'Off')],
+        ['Correct Vehicle Course',   e.correct_vehicle_course == null ? null : (e.correct_vehicle_course ? 'On' : 'Off')],
+        ['Flag Rules',               e.flag_rules == null ? null : (e.flag_rules ? 'On' : 'Off')],
+        ['Ghosting',                 e.ghosting == null ? null : (e.ghosting ? 'On' : 'Off')],
+        ['Pit Lane Cutting Penalty', e.pit_lane_cutting_penalty == null ? null : (e.pit_lane_cutting_penalty ? 'On' : 'Off')],
+    ].filter(([, v]) => v && String(v).trim());
+    const fieldHTML = rows.length
+        ? `<div class="details-grid">${rows.map(([k, v]) => `
+              <div class="details-row">
+                  <div class="details-key">${k}</div>
+                  <div class="details-val">${k === 'Required Tyres' ? v : esc(v)}</div>
+              </div>`).join('')}</div>`
+        : '';
+    const briefingHTML = e.race_details
+        ? `<div class="details-briefing"><div class="details-key">Briefing</div><div class="details-briefing-body">${esc(e.race_details)}</div></div>`
+        : '';
+
+    // Qualifying section
+    let qualiHTML = '';
+    if (e.quali_same_as_race != null || e.quali_notes) {
+        const qualiBody = e.quali_same_as_race !== false
+            ? `<div class="details-val" style="color:var(--muted);font-size:0.85rem">Same settings as the race. No changes to the lobby required between sessions.</div>`
+            : (e.quali_notes
+                ? `<div class="details-briefing-body">${esc(e.quali_notes)}</div>`
+                : `<div class="details-val" style="color:var(--muted);font-size:0.85rem">See briefing for qualifying details.</div>`);
+        qualiHTML = `<div class="details-briefing" style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+            <div class="details-key" style="margin-bottom:0.4rem">Qualifying</div>
+            ${qualiBody}
+        </div>`;
+    }
+
+    document.getElementById('details-body').innerHTML = (fieldHTML + qualiHTML + briefingHTML) || '<div class="grid-loading">No race details have been published for this event yet.</div>';
+    document.getElementById('details-overlay').classList.add('open');
+}
+function closeRaceDetails() {
+    document.getElementById('details-overlay').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeGrid(); closeRaceDetails(); } });
+
+load();
+</script>
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+
+<!-- Grid modal -->
+<div class="grid-overlay" id="grid-overlay" onclick="if (event.target === this) closeGrid()">
+    <div class="grid-modal">
+        <div class="grid-modal-head">
+            <div class="grid-modal-title" id="grid-title">Grid</div>
+            <button class="grid-modal-close" onclick="closeGrid()" aria-label="Close">×</button>
+        </div>
+        <div class="grid-modal-body" id="grid-body"></div>
+    </div>
+</div>
+
+<!-- Race Details modal -->
+<div class="grid-overlay" id="details-overlay" onclick="if (event.target === this) closeRaceDetails()">
+    <div class="grid-modal">
+        <div class="grid-modal-head">
+            <div class="grid-modal-title" id="details-title">Race Details</div>
+            <button class="grid-modal-close" onclick="closeRaceDetails()" aria-label="Close">×</button>
+        </div>
+        <div class="grid-modal-body" id="details-body" style="display:block"></div>
+    </div>
+</div>
+</body>
+</html>

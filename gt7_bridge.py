@@ -49,7 +49,8 @@ GT7_PORT       = 33740   # GT7 sends telemetry to this port
 SEND_PORT      = 33739   # We send heartbeat to PS5 on this port
 WS_PORT        = 8765    # WebSocket port the web app connects to
 WS_HOST        = "0.0.0.0"  # Listen on all interfaces
-HEARTBEAT_INT  = 10      # Send heartbeat to PS5 every N seconds
+HEARTBEAT_INT  = 1.5     # GT7 stops streaming ~1-2s after the last heartbeat, so re-ping often
+HEARTBEAT_EVERY = 100    # also re-ping every N received packets to keep the stream alive
 LOG_INTERVAL   = 60      # Log a status line every N packets
 
 logging.basicConfig(
@@ -447,6 +448,11 @@ async def gt7_receiver(ps5_ip: Optional[str] = None, ps5_ip_ref: Optional[list] 
             continue
         last_packet_id = pkt.packet_id
         packet_count  += 1
+
+        # Keep the console streaming: GT7 sends ~100 packets per heartbeat, then
+        # stops. Re-ping every HEARTBEAT_EVERY packets so the feed never stalls.
+        if pkt.packet_id % HEARTBEAT_EVERY == 0:
+            _send_hb((ps5_ip_ref[0] if ps5_ip_ref else None) or detected_ip or '255.255.255.255')
 
         # Log status periodically
         if packet_count % LOG_INTERVAL == 0:

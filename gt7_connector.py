@@ -10,13 +10,16 @@ Right-click the tray icon to quit.
 """
 
 import asyncio
+import http.server
 import json
+import os
 import socket
 import struct
 import sys
 import time
 import threading
 import logging
+import urllib.parse
 from typing import Optional
 
 # ── Silence logging to not flash a console window ──
@@ -45,38 +48,40 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
+VERSION       = "2.6"   # shown in the tray so you can confirm which build is running
 GT7_PORT      = 33740
 SEND_PORT     = 33739
 WS_PORT       = 8765
 WS_HOST       = "0.0.0.0"
-HEARTBEAT_INT = 10
+TRIGGER_PORT  = 8767    # Stream Deck (or anything else) hits this to drop overlay obstacles
+HEARTBEAT_INT = 1.5    # GT7 stops streaming ~1-2s after the last heartbeat, so re-ping often
+HEARTBEAT_EVERY = 100  # also re-ping every N received packets to keep the stream alive
 
 # ═══════════════════════════════════════════════════════════════
 #  DECRYPTION
 # ═══════════════════════════════════════════════════════════════
-_KEY = (b'\x52\xC3\x33\x99\x65\x92\x87\xA4\x3C\xBF\xFE\x22\x51\x31\x22\x10'
-        b'\x5A\x0A\x53\xE7\xFB\x80\x81\x70\xFA\x3B\x3B\x6D\x12\xFD\x11\xAA')
+# GT7 telemetry is Salsa20-encrypted. The key is the ASCII marker string
+# (first 32 bytes). The 8-byte nonce is built from a 32-bit seed stored at
+# offset 0x40: nonce = (seed ^ 0xDEADBEAF) little-endian, then seed
+# little-endian. Decrypted packets begin with the magic b'G7S0'.
+_KEY = b'Simulator Interface Packet GT7 ver 0.0'[:32]
 
 def decrypt_packet(data: bytes) -> Optional[bytes]:
     if len(data) < 0x128:
         return None
-    iv = data[0x40:0x48]
+    seed = int.from_bytes(data[0x40:0x44], 'little')
+    nonce = (seed ^ 0xDEADBEAF).to_bytes(4, 'little') + seed.to_bytes(4, 'little')
     if HAS_SALSA:
         try:
-            dec = _S20.new(key=_KEY, nonce=iv).decrypt(data)
-            if dec[0:4] == b'G7S0':
+            dec = _S20.new(key=_KEY, nonce=nonce).decrypt(data)
+            # Magic 'G7S0' is stored little-endian, so the decoded bytes are
+            # 30 53 37 47 -> int 0x47375330. (Comparing to b'G7S0' directly
+            # checks the reverse byte order and wrongly rejects valid packets.)
+            if int.from_bytes(dec[0:4], 'little') == 0x47375330:
                 return dec
         except Exception:
             pass
-    try:
-        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
-        enc = Cipher(algorithms.ChaCha20(_KEY, bytes(4) + iv), mode=None).encryptor()
-        dec = enc.update(data)
-        if dec[0:4] == b'G7S0':
-            return dec
-    except Exception:
-        pass
-    return None  # decryption failed — drop packet rather than send garbage
+    return None  # decryption failed, drop packet rather than send garbage
 
 # ═══════════════════════════════════════════════════════════════
 #  PACKET PARSER
@@ -140,6 +145,11 @@ class GT7Packet:
         self.angvel_x    = self._f(0x28)
         self.angvel_z    = self._f(0x30)
         self.rot_yaw     = self._f(0x20)
+        # Pitch (0x1C) and roll (0x24) sit either side of yaw; sent so the
+        # track-overlay lab can sit graphics flat on slopes and banking.
+        # VERIFY these two offsets against a real capture.
+        self.rot_pitch   = self._f(0x1C)
+        self.rot_roll    = self._f(0x24)
         self.pos_x       = self._f(0x04)
         self.pos_y       = self._f(0x08)
         self.pos_z       = self._f(0x0C)
@@ -192,33 +202,144 @@ class GT7Packet:
             "posY":       round(self.pos_y, 2),
             "posZ":       round(self.pos_z, 2),
             "rotYaw":     round(self.rot_yaw, 4),
+            "rotPitch":   round(self.rot_pitch, 4),
+            "rotRoll":    round(self.rot_roll, 4),
         }
 
 
 # ═══════════════════════════════════════════════════════════════
 #  WEBSOCKET SERVER
 # ═══════════════════════════════════════════════════════════════
-_clients = set()
+_clients = {}   # ws -> {"tel": Queue(maxsize=1) latest-frame-only, "evt": Queue small, never coalesced}
+# Live status so the web page (and tray tooltip) can tell whether the console
+# is actually sending telemetry, not just whether the bridge is up.
+_stats = {"packets": 0, "raw": 0, "ps5": None, "last": 0.0, "debug": None}
+
+def _capture_debug(raw):
+    """One-shot capture of the first datagram so undecodable formats can be
+    diagnosed: length, header bytes, and what the standard decrypt yields."""
+    info = {"len": len(raw), "head": raw[:min(len(raw), 0x48)].hex()}
+    try:
+        if HAS_SALSA and len(raw) >= 0x44:
+            seed = int.from_bytes(raw[0x40:0x44], 'little')
+            nonce = (seed ^ 0xDEADBEAF).to_bytes(4, 'little') + seed.to_bytes(4, 'little')
+            info["dec"] = _S20.new(key=_KEY, nonce=nonce).decrypt(raw)[:8].hex()
+        else:
+            info["dec"] = "n/a"
+    except Exception:
+        info["dec"] = "err"
+    _stats["debug"] = info
+
+def _status_msg():
+    return json.dumps({
+        "type": "status",
+        "packets": _stats["packets"],   # valid, decoded telemetry packets
+        "raw": _stats["raw"],           # raw UDP datagrams received (before decode)
+        "ps5": _stats["ps5"],
+        "debug": _stats["debug"],
+        "listening": True,
+    })
+
+async def _client_sender(ws, tel_q, evt_q):
+    # One task per client, the ONLY place that awaits ws.send. Services both
+    # queues concurrently: the telemetry queue (maxsize=1, _broadcast keeps
+    # overwriting it, so a slow client just skips stale frames and catches up
+    # on the freshest one) and the event queue (small, never coalesced - a
+    # Stream Deck trigger must never get silently dropped behind a busy
+    # telemetry stream). The receive loop is never blocked by any of this.
+    # websockets' own keepalive closes a truly dead connection, which ends
+    # this task and cleans the client up.
+    tel_task = asyncio.ensure_future(tel_q.get())
+    evt_task = asyncio.ensure_future(evt_q.get())
+    try:
+        while True:
+            done, _ = await asyncio.wait({tel_task, evt_task}, return_when=asyncio.FIRST_COMPLETED)
+            if evt_task in done:
+                await ws.send(evt_task.result())
+                evt_task = asyncio.ensure_future(evt_q.get())
+            if tel_task in done:
+                await ws.send(tel_task.result())
+                tel_task = asyncio.ensure_future(tel_q.get())
+    except Exception:
+        pass
+    finally:
+        tel_task.cancel(); evt_task.cancel()
+        _clients.pop(ws, None)
 
 async def _ws_handler(ws):
-    _clients.add(ws)
+    # Handshake messages go out directly and in order, before the frame queue
+    # (which coalesces to a single latest frame) is wired up.
     try:
         await ws.send(json.dumps({"type":"connected","message":"GT7 Live Connector ready"}))
+        await ws.send(_status_msg())          # tell a fresh page what we're seeing right away
+    except Exception:
+        return
+    tel_q = asyncio.Queue(maxsize=1)
+    evt_q = asyncio.Queue(maxsize=20)
+    _clients[ws] = {"tel": tel_q, "evt": evt_q}
+    sender = asyncio.create_task(_client_sender(ws, tel_q, evt_q))
+    try:
         async for _ in ws:
             pass
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
-        _clients.discard(ws)
+        _clients.pop(ws, None)
+        sender.cancel()
 
-async def _broadcast(msg: str):
-    dead = set()
-    for ws in _clients:
+def _broadcast(msg: str):
+    # Non-blocking fan-out: drop any older unsent frame and enqueue the newest
+    # for each client. Runs to completion without awaiting, so a slow client can
+    # never stall the receive loop with backpressure; it just loses intermediate
+    # frames. Kept synchronous on purpose so callers cannot accidentally block.
+    for ws, ch in list(_clients.items()):
         try:
-            await ws.send(msg)
+            q = ch["tel"]
+            if q.full():
+                q.get_nowait()      # discard the stale frame the client hasn't sent yet
+            q.put_nowait(msg)
         except Exception:
-            dead.add(ws)
-    _clients.difference_update(dead)
+            pass
+
+def _broadcast_event(kind: str):
+    # Discrete, non-coalesced events (Stream Deck obstacle triggers). Small
+    # queue per client so a burst of button presses still all arrive.
+    msg = json.dumps({"type": "event", "event": kind})
+    for ws, ch in list(_clients.items()):
+        try:
+            ch["evt"].put_nowait(msg)
+        except Exception:
+            pass   # queue full (20 unsent events) - drop rather than block
+
+# ═══════════════════════════════════════════════════════════════
+#  TRIGGER SERVER (Stream Deck -> overlay obstacles)
+# ═══════════════════════════════════════════════════════════════
+# A tiny, separate plain-HTTP server on its own thread/port, stdlib only, so
+# a Stream Deck "Website" action can fire a GET request without touching the
+# telemetry WebSocket server, its dependencies, or its event loop directly.
+# _loop is the asyncio loop _run_bridge already creates; call_soon_threadsafe
+# hands the trigger back into it safely from this server's own thread.
+class _TriggerHandler(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass   # keep the console/tray quiet
+
+    def do_GET(self):
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        kind = (qs.get('type') or ['wall'])[0]
+        if _loop is not None:
+            _loop.call_soon_threadsafe(_broadcast_event, kind)
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(b'ok')
+
+def _start_trigger_server():
+    try:
+        srv = http.server.ThreadingHTTPServer(('0.0.0.0', TRIGGER_PORT), _TriggerHandler)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+    except Exception:
+        pass   # optional feature - never take the telemetry bridge down over this
 
 # ═══════════════════════════════════════════════════════════════
 #  UDP RECEIVER + HEARTBEAT
@@ -232,11 +353,45 @@ def _hb(ip):
     except Exception:
         pass
 
+def _local_subnet_bcast():
+    """Best-effort subnet broadcast address (e.g. 192.168.1.255) for the
+    interface that reaches the internet. Directed broadcast reaches consoles
+    that the limited 255.255.255.255 broadcast misses on many home networks."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))          # no packet sent; just picks the interface
+        ip = s.getsockname()[0]
+        s.close()
+        parts = ip.split('.')
+        if len(parts) == 4:
+            parts[3] = '255'
+            return '.'.join(parts)
+    except Exception:
+        pass
+    return None
+
 async def _heartbeat(ip_ref):
-    _hb('255.255.255.255')
+    sub = _local_subnet_bcast()
+    def ping():
+        tgt = ip_ref[0]
+        if tgt:
+            _hb(tgt)                         # known/configured console: unicast straight to it
+        else:
+            _hb('255.255.255.255')           # limited broadcast
+            if sub:
+                _hb(sub)                     # subnet-directed broadcast (reaches more networks)
+    ping()
     while True:
         await asyncio.sleep(HEARTBEAT_INT)
-        _hb(ip_ref[0] or '255.255.255.255')
+        ping()
+
+async def _status_loop():
+    # Push a heartbeat of our own state to any connected page every 2s, so the
+    # dashboard can show "listening, no telemetry yet" vs "receiving".
+    while True:
+        await asyncio.sleep(2)
+        if _clients:
+            _broadcast(_status_msg())
 
 async def _receiver(ps5_ip, ip_ref):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -261,11 +416,16 @@ async def _receiver(ps5_ip, ip_ref):
             await asyncio.sleep(0.01)
             continue
 
+        _stats["raw"] += 1                # a datagram arrived (before any decode)
+        if _stats["raw"] == 1:
+            _capture_debug(raw)           # snapshot the first packet for diagnosis
+
         if detected is None:
             detected = addr[0]
             ip_ref[0] = detected
+            _stats["ps5"] = detected
             _hb(detected)
-            await _broadcast(json.dumps({"type":"gt7_detected","ip":detected}))
+            _broadcast(json.dumps({"type":"gt7_detected","ip":detected}))
 
         dec = decrypt_packet(raw)
         if dec is None:
@@ -274,8 +434,14 @@ async def _receiver(ps5_ip, ip_ref):
         if not pkt.valid or pkt.packet_id == last_id:
             continue
         last_id = pkt.packet_id
+        _stats["packets"] += 1
+        _stats["last"] = time.time()
+        # Keep the console streaming: GT7 sends ~100 packets per heartbeat, then
+        # stops. Re-ping every HEARTBEAT_EVERY packets so the feed never stalls.
+        if pkt.packet_id % HEARTBEAT_EVERY == 0:
+            _hb(ip_ref[0] or detected or '255.255.255.255')
         if _clients:
-            await _broadcast(json.dumps(pkt.to_dict()))
+            _broadcast(json.dumps(pkt.to_dict()))
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -286,10 +452,14 @@ _loop = None
 async def _async_main(ps5_ip):
     ip_ref = [ps5_ip]
     server = await websockets.serve(_ws_handler, WS_HOST, WS_PORT)
+    _start_trigger_server()
+    if ps5_ip:
+        _stats["ps5"] = ps5_ip
     await asyncio.gather(
         server.wait_closed(),
         _receiver(ps5_ip, ip_ref),
         _heartbeat(ip_ref),
+        _status_loop(),
     )
 
 def _run_bridge(ps5_ip):
@@ -322,8 +492,59 @@ def _quit(icon, _item):
     sys.exit(0)
 
 
+def _resolve_ps5_ip():
+    """Where to send the heartbeat. Broadcast is tried by default, but on
+    networks that block broadcast (or a console on another subnet) you can
+    point the connector straight at the console: pass the IP as an argument,
+    set the GT7_PS5_IP environment variable, or drop a `gt7-console-ip.txt`
+    file (one line, the console's IP) next to the app or in your home folder."""
+    if len(sys.argv) > 1 and sys.argv[1].strip():
+        return sys.argv[1].strip()
+    env = os.environ.get("GT7_PS5_IP", "").strip()
+    if env:
+        return env
+    # Look for gt7-console-ip.txt in several sensible places: next to the
+    # executable, the current directory, and the user's home folder (the home
+    # folder matters on macOS, where the .app bundle hides the "next to it" spot).
+    candidates = []
+    try:
+        candidates.append(os.path.dirname(sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__)))
+    except Exception:
+        pass
+    candidates.append(os.getcwd())
+    candidates.append(os.path.expanduser("~"))
+    for base in candidates:
+        try:
+            cfg = os.path.join(base, "gt7-console-ip.txt")
+            if os.path.exists(cfg):
+                with open(cfg, "r", encoding="utf-8") as fh:
+                    ip = fh.readline().strip()
+                    if ip:
+                        return ip
+        except Exception:
+            pass
+    return None
+
+def _tray_status(icon):
+    while True:
+        time.sleep(2)
+        ip = _stats["ps5"] or "searching…"
+        p = _stats["packets"]
+        raw = _stats["raw"]
+        if p > 0:
+            state = "receiving"
+        elif raw > 0:
+            d = _stats.get("debug") or {}
+            state = f"undecoded len={d.get('len')} dec={d.get('dec')}"
+        else:
+            state = "nothing from console, is GT7 on track?"
+        try:
+            icon.title = f"GT7 Live Connector v{VERSION}\nConsole: {ip}\nRaw: {raw}  Decoded: {p}\n{state}"
+        except Exception:
+            pass
+
 def main():
-    ps5_ip = sys.argv[1] if len(sys.argv) > 1 else None
+    ps5_ip = _resolve_ps5_ip()
 
     # Start bridge in background thread
     t = threading.Thread(target=_run_bridge, args=(ps5_ip,), daemon=True)
@@ -333,14 +554,16 @@ def main():
         icon = pystray.Icon(
             name="GT7 Live Connector",
             icon=_make_icon(),
-            title="GT7 Live Connector — Running\nws://localhost:8765",
+            title="GT7 Live Connector: Running\nws://localhost:8765",
             menu=pystray.Menu(
-                pystray.MenuItem("GT7 Live Connector — Running", None, enabled=False),
+                pystray.MenuItem("GT7 Live Connector: Running", None, enabled=False),
                 pystray.MenuItem("Port: 8765", None, enabled=False),
+                pystray.MenuItem(f"Stream Deck trigger: {TRIGGER_PORT}", None, enabled=False),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Quit", _quit),
             )
         )
+        threading.Thread(target=_tray_status, args=(icon,), daemon=True).start()
         icon.run()
     else:
         # Fallback: no tray, just keep main thread alive

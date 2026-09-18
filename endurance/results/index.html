@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="Race-by-race results from GTEC, the Gran Turismo 7 endurance championship. Splits, podiums, pole positions, fastest laps and full classifications for every round.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/results/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Open Graph / Twitter card -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Results">
+    <meta property="og:description" content="Race-by-race results and stewarding decisions from the GTEC endurance championship.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/results/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Results">
+    <meta name="twitter:description" content="Race-by-race results from the GTEC endurance championship.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --green: #22c55e;
+            --red: #ef4444;
+            --silver: #c0c0c0;
+            --bronze: #cd7f32;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .gtec-nav { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 2rem; background: rgba(5,6,8,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; transition: color 0.2s, border-color 0.2s; }
+        .gtec-nav .back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Page */
+        .page-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 5rem; }
+        .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.82rem; text-decoration: none; margin-bottom: 1.75rem; transition: color 0.15s; }
+        .back-link:hover { color: var(--text); }
+
+        /* Event header */
+        .event-header { background: var(--bg-1); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem 2rem; margin-bottom: 2rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+        .event-header-left {}
+        .event-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
+        .event-name { font-family: 'Anton', sans-serif; font-size: clamp(1.5rem, 4vw, 2.5rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.5rem; }
+        .event-meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: 0.82rem; color: var(--muted); }
+        .badge { display: inline-flex; align-items: center; padding: 0.22rem 0.6rem; border-radius: 4px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+        .badge-completed { background: rgba(34,197,94,0.12); color: #4ade80; }
+        .badge-in_progress { background: rgba(255,209,102,0.15); color: var(--gold); }
+
+        /* Section heading */
+        .section-heading { font-family: 'Anton', sans-serif; font-size: 1.1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+        .section-subheading { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.32em; text-transform: uppercase; color: var(--muted); margin: 1.5rem 0 0.6rem; }
+        .lobby-section { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 2px solid rgba(255,209,102,0.18); }
+        .lobby-section:first-of-type { margin-top: 2rem; }
+        .lobby-section-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap; }
+        .lobby-section-title { font-family: 'Anton', sans-serif; font-size: clamp(1.4rem, 3vw, 1.8rem); letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); }
+        .lobby-section-count { font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.2em; color: var(--muted); }
+
+        /* Collapsible split panels */
+        .split-acc { margin-top: 1.1rem; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg-1); }
+        .split-acc:first-of-type { margin-top: 1.75rem; }
+        .split-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; background: none; border: none; border-left: 3px solid var(--gold); cursor: pointer; text-align: left; color: inherit; font: inherit; transition: background 0.12s; }
+        .split-head:hover { background: rgba(255,255,255,0.025); }
+        .split-acc.collapsed .split-head { border-left-color: rgba(255,209,102,0.25); }
+        .split-head-main { display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap; min-width: 0; }
+        .split-title { font-family: 'Anton', sans-serif; font-size: clamp(1.2rem, 2.6vw, 1.6rem); letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); }
+        .split-count { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.2em; color: var(--muted); }
+        .split-head-right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+        .split-winner { font-size: 0.85rem; color: var(--text); font-weight: 600; white-space: nowrap; }
+        .split-winner .sw-tag { color: var(--gold); margin-right: 0.35rem; }
+        .split-chev { width: 18px; height: 18px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+        .split-acc.collapsed .split-chev { transform: rotate(-90deg); }
+        .split-body { padding: 0.25rem 1.25rem 1.4rem; }
+        .split-acc.collapsed .split-body { display: none; }
+        @media (max-width: 560px) { .split-winner { display: none; } }
+
+        /* Lobby grid */
+        .lobbies-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.85rem; }
+        .lobby-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem 1rem; }
+        .lobby-title { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.6rem; display: flex; justify-content: space-between; align-items: baseline; }
+        .lobby-count { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 0.15em; color: var(--muted); font-weight: 700; }
+        .lobby-row { display: grid; grid-template-columns: 38px 1fr; column-gap: 0.5rem; padding: 0.4rem 0; font-size: 0.85rem; border-top: 1px solid var(--border); }
+        .lobby-row:first-of-type { border-top: none; padding-top: 0; }
+        .lobby-car { font-family: 'Anton', sans-serif; color: var(--gold); }
+        .lobby-team { font-weight: 600; }
+        .lobby-drivers { grid-column: 2; font-size: 0.74rem; color: var(--muted); margin-top: 0.1rem; }
+
+        /* Podium */
+        .podium { display: flex; align-items: flex-end; justify-content: center; gap: 0.5rem; margin-bottom: 2.5rem; }
+        .podium-step { flex: 1; max-width: 280px; display: flex; flex-direction: column; align-items: center; }
+        .podium-card { width: 100%; background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1rem 0.75rem; text-align: center; margin-bottom: 0; }
+        .podium-step.p1 .podium-card { border-color: rgba(255,209,102,0.4); background: rgba(255,209,102,0.04); }
+        .podium-step.p2 .podium-card { border-color: rgba(192,192,192,0.3); }
+        .podium-step.p3 .podium-card { border-color: rgba(205,127,50,0.3); }
+        .podium-pos { font-family: 'Anton', sans-serif; font-size: 0.6rem; letter-spacing: 0.4em; text-transform: uppercase; margin-bottom: 0.35rem; }
+        .podium-step.p1 .podium-pos { color: var(--gold); }
+        .podium-step.p2 .podium-pos { color: var(--silver); }
+        .podium-step.p3 .podium-pos { color: var(--bronze); }
+        .podium-car-num { font-family: 'Anton', sans-serif; font-size: 2.2rem; line-height: 1; margin-bottom: 0.3rem; }
+        .podium-step.p1 .podium-car-num { color: var(--gold); }
+        .podium-team { font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .podium-drivers { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.35rem; }
+        .podium-gap { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+        .podium-step.p1 .podium-gap { color: var(--gold); font-weight: 700; }
+        .podium-plinth { width: 100%; display: flex; align-items: center; justify-content: center; border-radius: 0 0 8px 8px; font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.15em; }
+        .podium-step.p1 .podium-plinth { background: rgba(255,209,102,0.15); color: var(--gold); height: 64px; }
+        .podium-step.p2 .podium-plinth { background: rgba(192,192,192,0.1); color: var(--silver); height: 46px; }
+        .podium-step.p3 .podium-plinth { background: rgba(205,127,50,0.1); color: var(--bronze); height: 32px; }
+
+        /* Results table */
+        .table-wrap {
+            overflow-x: auto;
+            background: linear-gradient(180deg, var(--bg-1) 0%, rgba(10,14,21,0.6) 100%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.86rem; }
+        thead th {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+            color: var(--muted);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            padding: 0.9rem 1rem;
+            text-align: left;
+            white-space: nowrap;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        thead th:first-child { border-top-left-radius: 11px; }
+        thead th:last-child  { border-top-right-radius: 11px; }
+        tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.12s; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: rgba(255,209,102,0.025); }
+        tbody td { padding: 0.85rem 1rem; vertical-align: middle; }
+        .td-muted { color: var(--muted); }
+        .td-center { text-align: center; }
+        .td-num {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.04em;
+            color: var(--text);
+            background: rgba(255,255,255,0.04);
+            display: inline-block;
+            min-width: 2.4rem;
+            text-align: center;
+            padding: 0.18rem 0.45rem;
+            border-radius: 5px;
+            line-height: 1.1;
+        }
+
+        /* Position cells */
+        .pos-cell {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.5rem;
+            line-height: 1;
+            width: 56px;
+            text-align: center;
+            color: var(--muted);
+            letter-spacing: 0.02em;
+        }
+        .pos-cell.pos-1 { color: var(--gold); text-shadow: 0 0 18px rgba(255,209,102,0.45); }
+        .pos-cell.pos-2 { color: var(--silver); text-shadow: 0 0 14px rgba(199,201,201,0.3); }
+        .pos-cell.pos-3 { color: var(--bronze); text-shadow: 0 0 14px rgba(205,127,50,0.3); }
+        tbody tr.row-pos-1 td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+        tbody tr.row-pos-2 td:first-child { box-shadow: inset 3px 0 0 var(--silver); }
+        tbody tr.row-pos-3 td:first-child { box-shadow: inset 3px 0 0 var(--bronze); }
+        .pos-dnf {
+            color: #fca5a5;
+            background: rgba(239,68,68,0.12);
+            font-size: 0.65rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        /* Car color dot / manufacturer logo */
+        .mfr-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 0.45rem; vertical-align: middle; box-shadow: 0 0 6px rgba(0,0,0,0.4); }
+        .mfr-logo-sm { width: 19px; height: 19px; object-fit: contain; margin-right: 0.5rem; vertical-align: middle; }
+        /* Quiet placeholder for empty cells so they recede. */
+        .dash { color: rgba(148,163,184,0.32); }
+        /* Podium row emphasis + gentle striping for scanability. */
+        tbody tr.row-pos-1 { background: linear-gradient(90deg, rgba(255,209,102,0.07), transparent 55%); }
+        tbody tr.row-pos-2 { background: linear-gradient(90deg, rgba(199,201,201,0.055), transparent 55%); }
+        tbody tr.row-pos-3 { background: linear-gradient(90deg, rgba(205,127,50,0.05), transparent 55%); }
+        tbody tr.row-dnf { background: rgba(239,68,68,0.028); }
+        tbody tr:nth-child(even):not(.row-pos-1):not(.row-pos-2):not(.row-pos-3):not(.row-dnf) { background: rgba(255,255,255,0.014); }
+        .driver-list { font-size: 0.78rem; color: var(--muted); }
+        .driver-list a { color: inherit; text-decoration: none; }
+        .driver-list a:hover { color: var(--text); }
+
+        /* All driver / team links inherit text colour and only underline on
+           hover — matches the standings page so the page reads as one set. */
+        .entity-link { color: inherit; text-decoration: none; }
+        .entity-link:hover { text-decoration: underline; }
+        .results-table a, .steward-card a, table a { color: inherit; text-decoration: none; }
+        .results-table a:hover, .steward-card a:hover, table a:hover { text-decoration: underline; }
+
+        /* FL highlight */
+        .fl-time { color: #c4b5fd; font-weight: 600; font-family: 'Orbitron', sans-serif; font-size: 0.85rem; letter-spacing: 0.02em; }
+        .fl-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(167,139,250,0.25), rgba(139,92,246,0.18));
+            color: #c4b5fd;
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            padding: 0.15rem 0.45rem;
+            border-radius: 3px;
+            margin-left: 0.4rem;
+            border: 1px solid rgba(167,139,250,0.3);
+            vertical-align: middle;
+        }
+        tr.row-fl-holder { background: linear-gradient(90deg, rgba(167,139,250,0.06), transparent 70%); }
+
+        /* DNF row */
+        tr.row-dnf { opacity: 0.5; }
+        tr.row-dnf:hover { opacity: 0.7; }
+        tr.row-dnf td:first-child { box-shadow: inset 3px 0 0 rgba(239,68,68,0.4); }
+
+        /* Pts cell */
+        .pts-net { font-family: 'Anton', sans-serif; font-size: 1.25rem; line-height: 1; letter-spacing: 0.02em; color: var(--gold); }
+        .pts-deduct { font-size: 0.62rem; color: #f87171; font-weight: 700; font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; margin-top: 0.2rem; }
+        .pts-bonus { font-size: 0.62rem; color: #4ade80; font-weight: 700; font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; margin-top: 0.2rem; }
+
+        /* Qualifying, penalties */
+        .q-table th, .q-table td { padding: 0.6rem 0.75rem; }
+
+        /* Steward decisions */
+        .steward-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .steward-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem 1.25rem; border-left: 3px solid var(--muted); }
+        .steward-card.ruling-reprimand { border-left-color: var(--gold); }
+        .steward-card.ruling-penalty   { border-left-color: var(--red); }
+        .steward-card.ruling-dsq       { border-left-color: var(--red); background: rgba(239,68,68,0.04); }
+        .steward-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+        .steward-head-left { flex: 1; min-width: 0; }
+        .steward-no { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; letter-spacing: 0.35em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.25rem; }
+        .steward-title { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.2; }
+        .steward-meta { font-size: 0.76rem; color: var(--muted); margin-top: 0.35rem; }
+        .steward-meta a { color: inherit; text-decoration: none; }
+        .steward-meta a:hover { color: var(--text); }
+        .steward-content { font-size: 0.86rem; line-height: 1.65; color: var(--text); white-space: pre-wrap; }
+        .ruling-pill { display: inline-flex; align-items: center; padding: 0.25rem 0.65rem; border-radius: 4px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; }
+        .ruling-no_action { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .ruling-reprimand-pill { background: rgba(255,209,102,0.15); color: var(--gold); }
+        .ruling-penalty-pill   { background: rgba(239,68,68,0.12); color: #fca5a5; }
+        .ruling-dsq-pill       { background: rgba(239,68,68,0.2); color: #fca5a5; }
+
+        /* Fastest lap callout */
+        .fl-callout { background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.2); border-radius: 10px; padding: 1rem 1.25rem; display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+        .fl-callout-label { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; letter-spacing: 0.35em; text-transform: uppercase; color: #a78bfa; margin-bottom: 0.2rem; }
+        .fl-callout-time { font-family: 'Anton', sans-serif; font-size: 1.4rem; color: #a78bfa; }
+        .fl-callout-car { font-size: 0.82rem; color: var(--muted); }
+
+        /* Index listing */
+        .results-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .results-item { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; text-decoration: none; color: var(--text); transition: border-color 0.15s, transform 0.1s; }
+        .results-item:hover { border-color: rgba(255,209,102,0.25); transform: translateX(2px); }
+        .results-item-round { font-family: 'Anton', sans-serif; font-size: 1.6rem; color: var(--gold); line-height: 1; min-width: 2ch; text-align: center; }
+        .results-item-info { flex: 1; min-width: 0; }
+        .results-item-name { font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.04em; text-transform: uppercase; }
+        .results-item-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+        .results-item-arrow { color: var(--muted); }
+
+        /* States */
+        .state-msg { text-align: center; padding: 5rem 2rem; }
+        .state-msg h3 { font-family: 'Anton', sans-serif; font-size: 1.3rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .state-msg p { color: var(--muted); font-size: 0.88rem; }
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+
+        @media (max-width: 700px) {
+            .gtec-nav { padding: 1rem; }
+            .page-wrap { padding: 1.5rem 1rem 3rem; }
+            .podium { gap: 0.25rem; }
+            .podium-car-num { font-size: 1.6rem; }
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/" class="active">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div id="app"><div class="loading">Loading…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data.session) { if (portal) portal.style.display = ''; }
+    else              { if (signin) signin.style.display = ''; }
+});
+const app = document.getElementById('app');
+
+const FLAGS = {
+    AD:'🇦🇩',AE:'🇦🇪',AT:'🇦🇹',AU:'🇦🇺',BE:'🇧🇪',BH:'🇧🇭',BR:'🇧🇷',
+    CA:'🇨🇦',CN:'🇨🇳',CZ:'🇨🇿',DE:'🇩🇪',ES:'🇪🇸',FR:'🇫🇷',GB:'🇬🇧',
+    HU:'🇭🇺',IT:'🇮🇹',JP:'🇯🇵',MX:'🇲🇽',NL:'🇳🇱',PL:'🇵🇱',PT:'🇵🇹',
+    SA:'🇸🇦',SE:'🇸🇪',SG:'🇸🇬',US:'🇺🇸',
+};
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+// Flag emoji from any 2-letter ISO country code (regional indicators), so
+// every nationality renders — not just the hardcoded FLAGS subset above.
+function flag(c) {
+    const cc = (c || '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(cc)) return '';
+    return String.fromCodePoint(...[...cc].map(ch => 127397 + ch.charCodeAt(0)));
+}
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+}
+function fmtMs(ms) {
+    if (ms == null) return '—';
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const ms3 = String(ms % 1000).padStart(3,'0');
+    const ss = String(s).padStart(2,'0');
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${ss}.${ms3}`;
+    return `${m}:${ss}.${ms3}`;
+}
+function fmtGap(gapMs, leaderLaps, myLaps) {
+    if (!gapMs && gapMs !== 0) return '—';
+    if (gapMs === 0) return 'Leader';
+    const lapDiff = (leaderLaps || 0) - (myLaps || 0);
+    if (lapDiff >= 1) return `+${lapDiff} Lap${lapDiff > 1 ? 's' : ''}`;
+    return `+${(gapMs / 1000).toFixed(3)}s`;
+}
+
+const slug = new URLSearchParams(location.search).get('slug');
+slug ? loadResults(slug) : loadIndex();
+
+// ── Index: list all completed events ─────────────────────────
+async function loadIndex() {
+    const { data: events, error } = await sb.from('events')
+        .select('id, name, slug, circuit_name, circuit_country, starts_at, status, round, seasons(name, year)')
+        .neq('status', 'cancelled')
+        .order('starts_at', { ascending: false });
+
+    if (error) { app.innerHTML = errMsg(error.message); return; }
+
+    if (!events?.length) {
+        app.innerHTML = `
+        <div class="page-wrap">
+            <div class="state-msg"><h3>No Events Yet</h3><p>Race results will appear here once events are scheduled.</p></div>
+        </div>`;
+        return;
+    }
+
+    // Only show events that have at least one result row, OR are completed.
+    const eventIds = events.map(e => e.id);
+    const { data: resultEvents } = await sb.from('results')
+        .select('event_id')
+        .in('event_id', eventIds);
+    const withResults = new Set((resultEvents || []).map(r => r.event_id));
+
+    const visible = events.filter(e => e.status === 'completed' || withResults.has(e.id));
+
+    if (!visible.length) {
+        app.innerHTML = `
+        <div class="page-wrap">
+            <div class="state-msg"><h3>No Results Yet</h3><p>Race results will appear here once an event has its first results saved.</p></div>
+        </div>`;
+        return;
+    }
+
+    const statusLabel = { completed:'Completed', in_progress:'Live', scheduled:'Scheduled' };
+
+    const items = visible.map(e => `
+        <a class="results-item" href="/endurance/results/?slug=${encodeURIComponent(e.slug)}">
+            <div class="results-item-round">${e.round}</div>
+            <div class="results-item-info">
+                <div class="results-item-name">${esc(e.name)} <span class="badge badge-${esc(e.status)}" style="margin-left:0.5rem;font-size:0.65rem">${esc(statusLabel[e.status] || e.status)}</span></div>
+                <div class="results-item-meta">${flag(e.circuit_country)} ${esc(e.circuit_name)} · ${fmtDate(e.starts_at)} · ${esc(e.seasons?.name)}</div>
+            </div>
+            <div class="results-item-arrow">→</div>
+        </a>`).join('');
+
+    app.innerHTML = `
+    <div class="page-wrap">
+        <div style="margin-bottom:2rem">
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.55rem;letter-spacing:0.4em;text-transform:uppercase;color:var(--gold);margin-bottom:0.6rem">Season Results</div>
+            <div style="font-family:'Anton',sans-serif;font-size:clamp(2rem,5vw,3rem);letter-spacing:0.04em;text-transform:uppercase">Results</div>
+        </div>
+        <div class="results-list">${items}</div>
+    </div>`;
+}
+
+// ── Single event results ──────────────────────────────────────
+async function loadResults(slug) {
+    const { data: event } = await sb.from('events')
+        .select('*, seasons(name, year)')
+        .eq('slug', slug).maybeSingle();
+    if (!event) { app.innerHTML = `<div class="page-wrap">${errMsg('Event not found.')}</div>`; return; }
+    document.title = `${event.name} Results | GTEC`;
+
+    const [entriesRes, rRes, qRes, pRes, sdRes] = await Promise.all([
+        sb.from('entries')
+            .select('id, car_number, car_model, lobby_number, teams(name, slug), manufacturers(name, brand_color, logo_url), entry_drivers(stint_role, drivers(id, display_name, slug, nationality, career_number))')
+            .eq('event_id', event.id)
+            .in('status', ['confirmed']),
+        sb.from('results').select('*').eq('event_id', event.id),
+        sb.from('qualifying_results').select('*').eq('event_id', event.id),
+        sb.from('penalties').select('*, entries(car_number, teams(name), entry_drivers(driver_id)), drivers(display_name, slug)').eq('event_id', event.id),
+        sb.from('steward_decisions')
+            .select('*, entries(car_number, teams(name)), drivers(display_name, slug)')
+            .eq('event_id', event.id)
+            .order('issued_at'),
+    ]);
+
+    const entries  = entriesRes.data || [];
+    const results  = rRes.data || [];
+    const qualy    = qRes.data || [];
+    const pens     = pRes.data || [];
+    const steward  = sdRes.data || [];
+
+    const resultsById = Object.fromEntries(results.map(r => [r.id, r]));
+    const resultByEntry = Object.fromEntries(results.map(r => [r.entry_id, r]));
+
+    // Per-driver results
+    const resultIds = results.map(r => r.id);
+    let rdRows = [];
+    if (resultIds.length) {
+        const { data: rds } = await sb.from('result_drivers')
+            .select('result_id, driver_id, finish_position, classified, status, laps_driven, points_awarded, pole_point, fastest_lap_point, fastest_lap_ms')
+            .in('result_id', resultIds);
+        rdRows = rds || [];
+    }
+    const rdMap = {};
+    rdRows.forEach(rd => { rdMap[`${rd.result_id}|${rd.driver_id}`] = rd; });
+
+    // Per-driver qualifying
+    const qMap = {};
+    qualy.forEach(q => { qMap[`${q.entry_id}|${q.driver_id || ''}`] = q; });
+
+    // Aggregate signed points adjustments per driver for this event: a
+    // deduction is negative, a bonus positive. Driver-specific → that driver;
+    // whole-team (driver_id NULL) → every entry_driver on that entry.
+    const adjustByDriverEntry = {};
+    pens.forEach(p => {
+        if (!p.points_amount || (p.penalty_type !== 'points_deduction' && p.penalty_type !== 'points_bonus')) return;
+        const delta = p.penalty_type === 'points_bonus' ? p.points_amount : -p.points_amount;
+        if (p.driver_id) {
+            const k = `${p.entry_id}|${p.driver_id}`;
+            adjustByDriverEntry[k] = (adjustByDriverEntry[k] || 0) + delta;
+        } else {
+            const en = entries.find(e => e.id === p.entry_id);
+            (en?.entry_drivers || []).forEach(ed => {
+                if (!ed.drivers) return;
+                const k = `${p.entry_id}|${ed.drivers.id}`;
+                adjustByDriverEntry[k] = (adjustByDriverEntry[k] || 0) + delta;
+            });
+        }
+    });
+
+    // Flatten every confirmed entry into one record per driver
+    const driverRows = [];
+    entries.forEach(en => {
+        const drvs = (en.entry_drivers || [])
+            .map(ed => ({ stint_role: ed.stint_role, driver: ed.drivers }))
+            .filter(x => x.driver);
+        const result = resultByEntry[en.id] || null;
+        if (!drvs.length) {
+            driverRows.push({ entry: en, driver: null, stint_role: null, result, rd: null, quali: null, adjust: 0 });
+            return;
+        }
+        drvs.forEach(({ stint_role, driver }) => {
+            const rd = result ? rdMap[`${result.id}|${driver.id}`] || null : null;
+            const quali = qMap[`${en.id}|${driver.id}`] || qMap[`${en.id}|`] || null;
+            const adjust = adjustByDriverEntry[`${en.id}|${driver.id}`] || 0;
+            driverRows.push({ entry: en, driver, stint_role, result, rd, quali, adjust });
+        });
+    });
+
+    // Group by lobby
+    const groups = {};
+    driverRows.forEach(row => {
+        const key = row.entry.lobby_number ?? 0;
+        (groups[key] = groups[key] || []).push(row);
+    });
+    const lobbyKeys = Object.keys(groups).map(Number).sort((a, b) => {
+        if (a === 0) return 1; if (b === 0) return -1; return a - b;
+    });
+
+    const anyResults = driverRows.some(r => r.rd?.finish_position != null || r.rd?.status);
+    const statusLabel = { completed:'Completed', in_progress:'Live', scheduled:'Scheduled' };
+
+    // Splits render as collapsible panels. Default: first split open; but a
+    // remembered per-event state (localStorage) or a ?split=N deep-link wins.
+    window._resultsEventId = event.id;
+    const savedOpen = loadSplitState();
+    const wantSplit = new URLSearchParams(location.search).get('split');
+    const lobbySections = lobbyKeys.map((k, i) => {
+        const title = k === 0 ? 'Unassigned' : `Split ${k}`;
+        const key = String(k);
+        let open;
+        if (wantSplit != null && wantSplit !== '') open = (key === String(wantSplit));
+        else if (savedOpen) open = savedOpen.has(key);
+        else open = (i === 0);
+        return renderLobbySection(title, groups[k], key, open);
+    }).join('');
+
+    app.innerHTML = `
+    <div class="page-wrap">
+        <a class="back-link" href="/endurance/results/">← All Results</a>
+
+        <div class="event-header">
+            <div class="event-header-left">
+                <div class="event-eyebrow">${esc(event.seasons?.name)} · Round ${event.round}</div>
+                <div class="event-name">${esc(event.name)}</div>
+                <div class="event-meta">
+                    <span>${flag(event.circuit_country)} ${esc(event.circuit_name)}${event.circuit_country ? ` · ${esc(event.circuit_country)}` : ''}</span>
+                    <span>📅 ${fmtDate(event.starts_at)}</span>
+                    <span>⏱ ${event.duration_hours}h</span>
+                    ${event.circuit_length_km ? `<span>📏 ${event.circuit_length_km} km</span>` : ''}
+                </div>
+            </div>
+            <span class="badge badge-${esc(event.status)}">${esc(statusLabel[event.status] || event.status)}</span>
+        </div>
+
+        ${!anyResults && driverRows.length === 0 ? `
+            <div class="state-msg"><h3>No Entries Yet</h3><p>Entries will appear here once admins register teams for the event.</p></div>
+        ` : ''}
+
+        ${lobbySections}
+
+        ${pens.length ? `
+            <div class="section-heading">Penalties & Adjustments</div>
+            <div class="table-wrap">
+                ${renderPenaltiesTable(pens)}
+            </div>` : ''}
+
+        ${steward.length ? `
+            <div class="section-heading">Steward Decisions</div>
+            <div class="steward-list">
+                ${renderStewardList(steward)}
+            </div>` : ''}
+    </div>`;
+
+    // A ?split=N deep-link scrolls that split into view once rendered.
+    if (wantSplit != null && wantSplit !== '') {
+        const el = document.querySelector(`.split-acc[data-split="${CSS.escape(String(wantSplit))}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function renderLobbySection(title, rows, key, open) {
+    const classified = rows.filter(r => r.rd?.finish_position != null && (r.rd?.status === 'classified' || r.rd?.classified !== false))
+        .sort((a, b) => (a.rd.finish_position || 999) - (b.rd.finish_position || 999));
+    // Non-classified drivers, ordered DNF first, then DNS, then DSQ / withdrawn.
+    const UNCL_RANK = { dnf: 0, dns: 1, dsq: 2, withdrawn: 3 };
+    const unclassified = rows.filter(r => r.rd && (r.rd.classified === false || (r.rd.status && r.rd.status !== 'classified')))
+        .sort((a, b) => {
+            const ra = UNCL_RANK[a.rd.status] ?? 9;
+            const rb = UNCL_RANK[b.rd.status] ?? 9;
+            if (ra !== rb) return ra - rb;
+            return (a.entry.car_number ?? 999) - (b.entry.car_number ?? 999);
+        });
+    const qualifying = rows.filter(r => r.quali?.position != null || r.quali?.best_lap_ms != null)
+        .sort((a, b) => {
+            const ap = a.quali.position ?? 999;
+            const bp = b.quali.position ?? 999;
+            if (ap !== bp) return ap - bp;
+            return (a.quali.best_lap_ms ?? Infinity) - (b.quali.best_lap_ms ?? Infinity);
+        });
+
+    const flRow = rows.find(r => r.rd?.fastest_lap_point);
+    const poleRow = qualifying[0] || rows.find(r => r.rd?.pole_point);
+
+    const driverCount = rows.length;
+
+    // Winner chip for the collapsed header, so every split's winner is visible
+    // at a glance without expanding.
+    const winner = classified[0]?.driver;
+    const winnerChip = winner
+        ? `<span class="split-winner"><span class="sw-tag">🏆</span>${winner.nationality ? flag(winner.nationality) + ' ' : ''}${esc(winner.display_name)}</span>`
+        : '';
+
+    const body = `
+            ${classified.length >= 3 ? renderPodium(classified) : ''}
+            ${flRow ? renderFLCallout(flRow) : ''}
+
+            ${classified.length || unclassified.length ? `
+                <div class="section-subheading">Race Classification</div>
+                <div class="table-wrap">
+                    ${renderResultsTable(classified, unclassified, flRow)}
+                </div>
+            ` : ''}
+
+            ${qualifying.length ? `
+                <div class="section-subheading">Qualifying</div>
+                <div class="table-wrap">
+                    ${renderQualyTable(qualifying, poleRow)}
+                </div>
+            ` : ''}
+
+            ${!classified.length && !unclassified.length && !qualifying.length ? `
+                <div class="state-msg" style="padding:2rem"><p style="color:var(--muted)">No results recorded for this split yet.</p></div>
+            ` : ''}`;
+
+    return `
+        <div class="split-acc ${open ? '' : 'collapsed'}" data-split="${esc(String(key))}">
+            <button class="split-head" onclick="toggleSplit(this)" aria-expanded="${open ? 'true' : 'false'}">
+                <div class="split-head-main">
+                    <span class="split-title">${esc(title)}</span>
+                    <span class="split-count">${driverCount} driver${driverCount === 1 ? '' : 's'}</span>
+                </div>
+                <div class="split-head-right">
+                    ${winnerChip}
+                    <svg class="split-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </button>
+            <div class="split-body">${body}</div>
+        </div>`;
+}
+
+function toggleSplit(btn) {
+    const acc = btn.closest('.split-acc');
+    if (!acc) return;
+    const collapsed = acc.classList.toggle('collapsed');
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    saveSplitState();
+}
+function splitStateKey() { return 'gtec_results_splits_' + (window._resultsEventId || ''); }
+function saveSplitState() {
+    try {
+        const open = [...document.querySelectorAll('.split-acc:not(.collapsed)')].map(a => a.dataset.split);
+        localStorage.setItem(splitStateKey(), JSON.stringify(open));
+    } catch (e) {}
+}
+function loadSplitState() {
+    try { const v = localStorage.getItem(splitStateKey()); return v ? new Set(JSON.parse(v)) : null; } catch (e) { return null; }
+}
+
+function renderLobbiesGrid(entries) {
+    const assigned = (entries || []).filter(en => en.lobby_number != null);
+    if (!assigned.length) return '';
+    const groups = {};
+    assigned.forEach(en => {
+        (groups[en.lobby_number] = groups[en.lobby_number] || []).push(en);
+    });
+    const nums = Object.keys(groups).map(Number).sort((a, b) => a - b);
+    const cards = nums.map(n => {
+        const rows = groups[n]
+            .sort((a, b) => (a.car_number ?? 999) - (b.car_number ?? 999))
+            .map(en => {
+                const driverNames = (en.entry_drivers || [])
+                    .map(ed => ed.drivers?.display_name).filter(Boolean).join(' / ');
+                const teamSlug = en.teams?.slug;
+                const teamName = en.teams?.name || '—';
+                const teamCell = teamSlug
+                    ? `<a href="/endurance/teams/?slug=${esc(teamSlug)}" style="color:inherit;text-decoration:none">${esc(teamName)}</a>`
+                    : esc(teamName);
+                return `<div class="lobby-row">
+                    <span class="lobby-car">${en.car_number != null ? '#' + en.car_number : '—'}</span>
+                    <span class="lobby-team">${teamCell}</span>
+                    <span class="lobby-drivers">${esc(driverNames)}</span>
+                </div>`;
+            }).join('');
+        return `<div class="lobby-card">
+            <div class="lobby-title">Split ${n} <span class="lobby-count">${groups[n].length} ${groups[n].length === 1 ? 'entry' : 'entries'}</span></div>
+            ${rows}
+        </div>`;
+    }).join('');
+    return `<div class="section-heading">Split Allocations</div>
+        <div class="lobbies-grid">${cards}</div>`;
+}
+
+function driverCell(r) {
+    const d = r.driver;
+    if (!d) return '<em class="td-muted">No driver</em>';
+    const flagPart = d.nationality ? flag(d.nationality) + ' ' : '';
+    const nameLink = d.slug
+        ? `<a class="entity-link" href="/endurance/drivers/?slug=${encodeURIComponent(d.slug)}">${esc(d.display_name)}</a>`
+        : esc(d.display_name);
+    const teamPart = r.entry.teams?.slug
+        ? `<a class="entity-link" href="/endurance/teams/?slug=${encodeURIComponent(r.entry.teams.slug)}">${esc(r.entry.teams.name)}</a>`
+        : (r.entry.teams?.name ? esc(r.entry.teams.name) : '<em>Solo</em>');
+    return `${flagPart}<strong>${nameLink}</strong><div style="font-size:0.72rem;color:var(--muted)">${teamPart}</div>`;
+}
+
+function renderPodium(classified) {
+    const [p1, p2, p3] = classified;
+    const stepHTML = (row, cls, posLabel) => {
+        const d = row.driver;
+        const teamName = row.entry.teams?.name ? esc(row.entry.teams.name) : '<em>Solo</em>';
+        return `
+        <div class="podium-step ${cls}">
+            <div class="podium-card">
+                <div class="podium-pos">${posLabel}</div>
+                <div class="podium-car-num">#${d?.career_number ?? row.entry.car_number ?? '—'}</div>
+                <div class="podium-team">${d ? esc(d.display_name) : '—'}</div>
+                <div class="podium-drivers">${teamName}</div>
+                <div class="podium-gap">${row.rd?.points_awarded ?? 0} pts</div>
+            </div>
+            <div class="podium-plinth">${posLabel}</div>
+        </div>`;
+    };
+    return `
+    <div class="podium">
+        ${stepHTML(p2,'p2','P2')}
+        ${stepHTML(p1,'p1','P1')}
+        ${stepHTML(p3,'p3','P3')}
+    </div>`;
+}
+
+function renderFLCallout(row) {
+    const d = row.driver;
+    const time = row.rd?.fastest_lap_ms ? fmtMs(row.rd.fastest_lap_ms) : '—';
+    return `
+    <div class="fl-callout">
+        <div>
+            <div class="fl-callout-label">Fastest Lap</div>
+            <div class="fl-callout-time">${time}</div>
+        </div>
+        <div>
+            <div style="font-weight:600">${d ? esc(d.display_name) : '—'}</div>
+            <div class="fl-callout-car">${row.entry.teams?.name ? esc(row.entry.teams.name) : 'Solo'}${row.entry.car_model ? ' · ' + esc(row.entry.car_model) : ''}</div>
+        </div>
+    </div>`;
+}
+
+function renderResultsTable(classified, unclassified, flRow) {
+    const rowHTML = (row, posDisplay, posClass, rowClass, isDNF) => {
+        const rd = row.rd || {};
+        const isFL = flRow && row.driver && row.rd?.fastest_lap_point;
+        const isPole = row.rd?.pole_point;
+        const carNum = row.driver?.career_number ?? row.entry.car_number;
+        const mfr = row.entry.manufacturers;
+        const color = mfr?.brand_color;
+        // Manufacturer logo where available, else the brand-colour dot.
+        const mark = mfr?.logo_url
+            ? `<img class="mfr-logo-sm" src="${esc(mfr.logo_url)}" alt="${esc(mfr.name || '')}">`
+            : (color ? `<span class="mfr-dot" style="background:${esc(color)}"></span>` : '');
+        const teamName = row.entry.teams?.name
+            ? (row.entry.teams.slug
+                ? `<a class="entity-link" href="/endurance/teams/?slug=${encodeURIComponent(row.entry.teams.slug)}">${esc(row.entry.teams.name)}</a>`
+                : esc(row.entry.teams.name))
+            : '<em class="td-muted">Solo</em>';
+        const teamCell = `${mark}<strong>${teamName}</strong>`;
+        const flTime = rd.fastest_lap_ms
+            ? `<span class="${isFL ? 'fl-time' : 'td-muted'}">${fmtMs(rd.fastest_lap_ms)}${isFL ? '<span class="fl-badge">FL</span>' : ''}</span>`
+            : (isFL ? '<span class="fl-badge">FL</span>' : '<span class="dash">—</span>');
+        const earned = rd.points_awarded;
+        const adjust = row.adjust || 0;
+        let ptsCell;
+        if (earned == null && !adjust) {
+            ptsCell = '<span class="dash">—</span>';
+        } else {
+            const net = (earned || 0) + adjust;
+            ptsCell = `<div class="pts-net">${net}</div>`;
+            if (adjust < 0) {
+                ptsCell += `<div class="pts-deduct" title="${earned} earned − ${-adjust} deducted">−${-adjust}</div>`;
+            } else if (adjust > 0) {
+                ptsCell += `<div class="pts-bonus" title="${earned} earned + ${adjust} bonus">+${adjust}</div>`;
+            }
+        }
+        const classes = [rowClass, isDNF ? 'row-dnf' : '', isFL ? 'row-fl-holder' : ''].filter(Boolean).join(' ');
+        return `
+        <tr class="${classes}">
+            <td class="pos-cell ${posClass}">${posDisplay}</td>
+            <td><span class="td-num">${carNum != null ? '#' + carNum : '—'}</span></td>
+            <td>${driverCell(row)}</td>
+            <td>${teamCell}${row.entry.car_model ? `<div style="font-size:0.72rem;color:var(--muted)">${esc(row.entry.car_model)}</div>` : ''}</td>
+            <td class="td-muted td-center">${rd.laps_driven != null ? rd.laps_driven : '<span class="dash">—</span>'}</td>
+            <td>${flTime}</td>
+            <td class="td-center" style="font-size:1rem">${isPole ? '<span style="color:var(--gold)">★</span>' : '<span class="dash">—</span>'}</td>
+            <td class="td-center">${ptsCell}</td>
+        </tr>`;
+    };
+
+    const rows = classified.map(row => {
+        const pos = row.rd.finish_position;
+        const cls = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
+        const rowCls = pos === 1 ? 'row-pos-1' : pos === 2 ? 'row-pos-2' : pos === 3 ? 'row-pos-3' : '';
+        return rowHTML(row, pos, cls, rowCls, false);
+    });
+    const dnfRows = unclassified.map(row => {
+        const status = (row.rd?.status || 'DNF').toUpperCase();
+        return rowHTML(row, `<span class="pos-dnf">${esc(status)}</span>`, '', '', true);
+    });
+
+    return `
+    <table>
+        <thead><tr>
+            <th>Pos</th><th>Car</th><th>Driver</th><th>Team / Car</th>
+            <th class="td-center">Laps</th><th>Best Lap</th><th class="td-center">Pole</th><th class="td-center">Pts</th>
+        </tr></thead>
+        <tbody>${[...rows, ...dnfRows].join('')}</tbody>
+    </table>`;
+}
+
+function renderQualyTable(qualifying, poleRow) {
+    const fastest = qualifying.reduce((a, b) => {
+        if (a == null) return b;
+        return (b.quali.best_lap_ms || Infinity) < (a.quali.best_lap_ms || Infinity) ? b : a;
+    }, null);
+    const fastestMs = fastest?.quali.best_lap_ms;
+
+    const rows = qualifying.map(row => {
+        const q = row.quali;
+        const isFastest = q.best_lap_ms != null && q.best_lap_ms === fastestMs;
+        const gap = (!isFastest && q.best_lap_ms != null && fastestMs)
+            ? `+${((q.best_lap_ms - fastestMs)/1000).toFixed(3)}s`
+            : (isFastest ? '—' : '—');
+        const posCls = q.position === 1 ? 'pos-1' : q.position === 2 ? 'pos-2' : q.position === 3 ? 'pos-3' : '';
+        const carNum = row.driver?.career_number ?? row.entry.car_number;
+        return `<tr>
+            <td class="pos-cell ${posCls}">${q.position ?? '—'}</td>
+            <td class="td-num">${carNum != null ? '#' + carNum : '—'}</td>
+            <td>${driverCell(row)}</td>
+            <td class="td-muted ${isFastest ? 'fl-time' : ''}">${q.best_lap_ms ? fmtMs(q.best_lap_ms) : '—'}</td>
+            <td class="td-muted">${gap}</td>
+        </tr>`;
+    }).join('');
+    return `<table class="q-table"><thead><tr><th>Pos</th><th>Car</th><th>Driver</th><th>Best Lap</th><th>Gap</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderStewardList(decisions) {
+    const labels = { no_action:'No Action', reprimand:'Reprimand', penalty:'Penalty', dsq:'Disqualified' };
+    const pillCls = { no_action:'ruling-no_action', reprimand:'ruling-reprimand-pill', penalty:'ruling-penalty-pill', dsq:'ruling-dsq-pill' };
+    return decisions.map(d => {
+        const subject = d.entries
+            ? `#${d.entries.car_number} ${esc(d.entries.teams?.name || '')}`
+            : '';
+        const driver = d.drivers?.slug
+            ? `<a class="entity-link" href="/endurance/drivers/?slug=${encodeURIComponent(d.drivers.slug)}">${esc(d.drivers.display_name)}</a>`
+            : (d.drivers?.display_name ? esc(d.drivers.display_name) : '');
+        const metaParts = [subject, driver].filter(Boolean);
+        return `
+        <div class="steward-card ruling-${esc(d.ruling)}">
+            <div class="steward-head">
+                <div class="steward-head-left">
+                    ${d.decision_no ? `<div class="steward-no">Decision ${esc(d.decision_no)}</div>` : ''}
+                    <div class="steward-title">${esc(d.title)}</div>
+                    ${metaParts.length ? `<div class="steward-meta">${metaParts.join(' · ')}</div>` : ''}
+                </div>
+                <span class="ruling-pill ${pillCls[d.ruling] || 'ruling-no_action'}">${labels[d.ruling] || esc(d.ruling)}</span>
+            </div>
+            <div class="steward-content">${esc(d.content)}</div>
+        </div>`;
+    }).join('');
+}
+
+function renderPenaltiesTable(pens) {
+    const rows = pens.map(p => {
+        const drv = p.drivers?.slug
+            ? `<a class="entity-link" href="/endurance/drivers/?slug=${encodeURIComponent(p.drivers.slug)}">${esc(p.drivers.display_name)}</a>`
+            : (p.drivers?.display_name ? esc(p.drivers.display_name) : '<span class="td-muted">Whole team</span>');
+        // A whole-team points deduction is recorded per driver, so its team
+        // impact is the amount times the number of drivers on the entry.
+        let valueCell;
+        const isBonus = p.penalty_type === 'points_bonus';
+        const sign = isBonus ? '+' : '-';
+        const isWholeTeamAmt = (p.penalty_type === 'points_deduction' || isBonus) && !p.driver_id && p.points_amount != null;
+        if (isWholeTeamAmt) {
+            const n = (p.entries?.entry_drivers || []).length || 1;
+            const total = p.points_amount * n;
+            valueCell = n > 1
+                ? `${sign}${total} pts <span class="td-muted" style="font-weight:400;font-size:0.75rem">(${sign}${p.points_amount} each)</span>`
+                : `${sign}${total} pts`;
+        } else {
+            valueCell = p.penalty_value ? esc(p.penalty_value) : '—';
+        }
+        return `<tr>
+            <td class="td-num">${p.entries?.car_number != null ? '#' + esc(p.entries.car_number) : '—'}</td>
+            <td>${esc(p.entries?.teams?.name) || '<em>Solo</em>'}</td>
+            <td>${drv}</td>
+            <td class="td-muted">${esc(p.penalty_type?.replace(/_/g,' '))}</td>
+            <td style="color:${isBonus ? '#4ade80' : 'var(--red)'};font-weight:600">${valueCell}</td>
+            <td class="td-muted">${esc(p.reason) || '—'}</td>
+        </tr>`;
+    }).join('');
+    return `<table><thead><tr><th>Car</th><th>Team</th><th>Driver</th><th>Penalty</th><th>Value</th><th>Reason</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function errMsg(msg) {
+    return `<div class="state-msg"><h3>Error</h3><p>${esc(msg)}</p></div>`;
+}
+</script>
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>

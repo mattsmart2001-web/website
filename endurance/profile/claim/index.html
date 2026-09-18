@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Claim Your Driver Profile | GTEC</title>
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --red: #ef4444;
+            --green: #22c55e;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+        }
+        .logo {
+            font-family: 'Anton', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 0.3rem;
+        }
+        .logo span { color: var(--gold); }
+        .logo .brand-logo { height: 22px; width: auto; vertical-align: middle; margin-left: 0.45em; }
+        .subtitle {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 2rem;
+            text-indent: 0.4em;
+        }
+        .driver-banner {
+            background: rgba(255,209,102,0.06);
+            border: 1px solid rgba(255,209,102,0.25);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.75rem;
+            text-align: center;
+        }
+        .driver-banner .label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 0.35rem;
+        }
+        .driver-banner .name {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.5rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--gold);
+        }
+        .tabs {
+            display: flex;
+            gap: 0;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        .tab {
+            flex: 1;
+            padding: 0.6rem;
+            text-align: center;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            transition: background 0.15s, color 0.15s;
+        }
+        .tab.active { background: rgba(255,209,102,0.1); color: var(--gold); }
+        label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 0.4rem;
+        }
+        input {
+            display: block;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 1.1rem;
+        }
+        input:focus { border-color: rgba(255,209,102,0.5); }
+        input::placeholder { color: var(--muted); opacity: 0.6; }
+        .btn {
+            width: 100%;
+            padding: 0.85rem;
+            background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+            color: #1a1300;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: filter 0.2s;
+            margin-top: 0.35rem;
+        }
+        .btn:hover { filter: brightness(1.08); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .alert {
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            font-size: 0.85rem;
+            margin-bottom: 1.25rem;
+        }
+        .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.35); color: #fca5a5; }
+        .alert-success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.35); color: #86efac; }
+        .back { display: block; text-align: center; margin-top: 1.5rem; font-size: 0.78rem; color: var(--muted); text-decoration: none; }
+        .back:hover { color: var(--text); }
+        #loading-state { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 1rem 0; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">Gran Turismo<img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></div>
+    <div class="subtitle">Driver Portal</div>
+
+    <div id="loading-state">Verifying link…</div>
+    <div id="main-content" style="display:none"></div>
+
+    <a class="back" href="/endurance/">← GTEC</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+
+const token = new URLSearchParams(location.search).get('token');
+const content = document.getElementById('main-content');
+const loadingEl = document.getElementById('loading-state');
+
+let mode = 'signup'; // or 'signin'
+let driverName = '';
+let prefillEmail = '';
+
+function showContent(html) {
+    loadingEl.style.display = 'none';
+    content.style.display = '';
+    content.innerHTML = html;
+}
+
+function alert(msg, type = 'error') {
+    return `<div class="alert alert-${type}">${msg}</div>`;
+}
+
+function renderForm() {
+    const isSignup = mode === 'signup';
+    content.innerHTML = `
+        <div class="driver-banner">
+            <div class="label">Claiming profile for</div>
+            <div class="name">${driverName}</div>
+        </div>
+        <div class="tabs">
+            <button class="tab ${isSignup ? 'active' : ''}" onclick="setMode('signup')">Create account</button>
+            <button class="tab ${!isSignup ? 'active' : ''}" onclick="setMode('signin')">Sign in</button>
+        </div>
+        <div id="form-error"></div>
+        <form id="claim-form" onsubmit="submitClaim(event)">
+            <label>Email</label>
+            <input type="email" name="email" placeholder="your@email.com" required autocomplete="email" value="${prefillEmail}">
+            <label>Password</label>
+            <input type="password" name="password" placeholder="••••••••" required autocomplete="${isSignup ? 'new-password' : 'current-password'}" minlength="6">
+            <button type="submit" class="btn" id="submit-btn">${isSignup ? 'Create Account & Claim' : 'Sign In & Claim'}</button>
+        </form>
+        ${!isSignup ? `<p style="text-align:center;margin-top:0.85rem;font-size:0.78rem">
+            <a href="#" onclick="forgotPassword(event)" style="color:var(--muted);text-decoration:none" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Forgot password?</a>
+        </p>` : ''}`;
+}
+
+function setMode(m) {
+    mode = m;
+    renderForm();
+}
+
+async function forgotPassword(e) {
+    e.preventDefault();
+    const email = document.querySelector('#claim-form input[name="email"]')?.value.trim();
+    if (!email) {
+        document.getElementById('form-error').innerHTML = `<div class="alert alert-error">Enter your email address above first.</div>`;
+        return;
+    }
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: `${location.origin}/endurance/profile/`,
+    });
+    if (error) {
+        document.getElementById('form-error').innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+        return;
+    }
+    document.getElementById('form-error').innerHTML = `<div class="alert alert-success">Password reset email sent to <strong>${email}</strong>. Check your inbox.</div>`;
+}
+
+async function submitClaim(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const errEl = document.getElementById('form-error');
+    const email = e.target.email.value.trim();
+    const password = e.target.password.value;
+
+    btn.disabled = true;
+    btn.textContent = 'Working…';
+    errEl.innerHTML = '';
+
+    try {
+        // Sign up or sign in
+        let authError;
+        if (mode === 'signup') {
+            const { data: signUpData, error } = await sb.auth.signUp({ email, password });
+            authError = error;
+            if (!error && !signUpData?.session) {
+                // Email confirmation is enabled — not authenticated yet.
+                // Ask the driver to confirm their email then come back to sign in.
+                prefillEmail = email;
+                errEl.innerHTML = `<div class="alert alert-success">
+                    Account created! Check your email for a confirmation link, then return to this page and <strong>Sign in</strong> to complete claiming your profile.
+                </div>`;
+                btn.disabled = false;
+                btn.textContent = 'Create Account & Claim';
+                setMode('signin');
+                return;
+            }
+        } else {
+            const { error } = await sb.auth.signInWithPassword({ email, password });
+            authError = error;
+        }
+        if (authError) {
+            // Supabase blocks a second sign-up for an existing email. Switch
+            // to sign-in automatically so the driver can continue with their
+            // existing credentials rather than hitting a dead end.
+            if (mode === 'signup' && /already registered|already exists/i.test(authError.message || '')) {
+                prefillEmail = email;
+                mode = 'signin';
+                renderForm();
+                document.getElementById('form-error').innerHTML = `<div class="alert alert-error">
+                    An account with this email already exists. Enter your password below to sign in and complete the claim.
+                </div>`;
+                document.getElementById('submit-btn').disabled = false;
+                return;
+            }
+            throw authError;
+        }
+
+        // Call the claim RPC
+        const { data, error: rpcError } = await sb.rpc('claim_driver_profile', { p_token: token });
+        if (rpcError) throw rpcError;
+        if (data?.error) throw new Error(data.error);
+
+        // Success
+        content.innerHTML = `
+            <div class="alert alert-success">
+                ✓ Profile claimed! Your account is now linked to <strong>${driverName}</strong>.
+            </div>
+            <a href="/endurance/profile/" style="display:block;text-align:center;margin-top:1rem;color:var(--gold);font-size:0.85rem;font-weight:600">
+                Go to your driver portal →
+            </a>`;
+    } catch (err) {
+        errEl.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+        btn.disabled = false;
+        btn.textContent = mode === 'signup' ? 'Create Account & Claim' : 'Sign In & Claim';
+    }
+}
+
+async function init() {
+    if (!token) {
+        loadingEl.textContent = '';
+        showContent(`<div class="alert alert-error">No claim token found in this link. Please ask your team admin for a new one.</div>`);
+        return;
+    }
+
+    const { data, error } = await sb.rpc('get_claim_info', { p_token: token });
+    if (error || !data?.valid) {
+        loadingEl.textContent = '';
+        showContent(`<div class="alert alert-error">This link is invalid or has expired. Ask your admin to generate a new one.</div>`);
+        return;
+    }
+
+    driverName = data.driver_name;
+    loadingEl.style.display = 'none';
+    content.style.display = '';
+    renderForm();
+}
+
+init();
+</script>
+</body>
+</html>

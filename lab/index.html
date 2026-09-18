@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>SparksTheory Lab</title>
+<style>
+  :root { --bg:#07090d; --card:#11161f; --border:rgba(255,255,255,0.09); --text:#f1f5f9; --muted:#94a3b8; --gold:#ffd166; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:Inter,system-ui,sans-serif; padding:3rem 1.5rem; }
+  .wrap { max-width:760px; margin:0 auto; }
+  .kick { font:700 0.62rem/1 'Orbitron',monospace; letter-spacing:0.35em; text-transform:uppercase; color:var(--gold); margin-bottom:0.6rem; }
+  h1 { font-family:'Anton',Impact,sans-serif; font-size:2.4rem; letter-spacing:0.02em; margin:0 0 0.4rem; }
+  p.lead { color:var(--muted); line-height:1.6; margin:0 0 2rem; }
+  a.tool { display:block; text-decoration:none; color:inherit; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1.1rem 1.3rem; margin-bottom:0.85rem; transition:border-color .15s, transform .1s; }
+  a.tool:hover { border-color:rgba(255,209,102,0.4); transform:translateY(-1px); }
+  a.tool h3 { margin:0 0 0.25rem; font-size:1.05rem; }
+  a.tool span { color:var(--muted); font-size:0.85rem; }
+  .note { color:var(--muted); font-size:0.78rem; margin-top:2rem; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kick">SparksTheory</div>
+  <h1>Lab</h1>
+  <p class="lead">Experiments and prototypes. Unlisted and not indexed - things here are works in progress, not finished features.</p>
+
+  <a class="tool" href="/lab/track-overlay/">
+    <h3>Track Overlay</h3>
+    <span>Project no-go / penalty zones onto a GT7 bumper-cam replay from telemetry. Calibration spike.</span>
+  </a>
+
+  <p class="note">These tools read telemetry logs captured with the recorder in <code>commentary-poc/</code>. Nothing here is linked from the main site.</p>
+</div>
+</body>
+</html>

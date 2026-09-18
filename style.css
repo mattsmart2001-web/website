@@ -133,6 +133,68 @@ body {
     position: relative;
 }
 
+/* ===== LIVE STATUS BUTTON ===== */
+.live-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 0.95rem;
+    margin-left: 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-family: var(--font-display, 'Orbitron', sans-serif);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+    white-space: nowrap;
+    z-index: 1001;
+}
+.live-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-text);
+    transform: translateY(-1px);
+}
+.live-button .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #6b7280;
+    flex-shrink: 0;
+}
+.live-button.is-live {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.55);
+    color: #ef4444;
+}
+.live-button.is-live:hover {
+    background: rgba(239, 68, 68, 0.22);
+    color: #fca5a5;
+}
+.live-button.is-live .live-dot {
+    background: #ef4444;
+    animation: live-button-pulse 1.6s ease-out infinite;
+}
+@keyframes live-button-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    100% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+@media (max-width: 640px) {
+    .live-button {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.65rem;
+        letter-spacing: 0.14em;
+        margin-left: 0.5rem;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .live-button.is-live .live-dot { animation: none; }
+}
+
 .nav-burger span {
     width: 25px;
     height: 2px;
@@ -593,18 +655,6 @@ body {
     object-fit: contain;
 }
 
-.sponsor-logo-yfood img {
-    filter: invert(1);
-}
-
-.sponsor-card:hover .sponsor-logo-yfood {
-    filter: drop-shadow(0 0 20px rgba(14, 165, 233, 0.5));
-}
-
-.sponsor-card:hover .sponsor-logo-yfood img {
-    filter: invert(1) brightness(1.1);
-}
-
 /* ===== FLOATING SPONSOR BADGES ===== */
 .sponsor-badges {
     position: fixed;
@@ -674,12 +724,39 @@ body {
     filter: brightness(1.2) drop-shadow(0 0 10px rgba(14, 165, 233, 0.5));
 }
 
-.sponsor-badge-yfood img {
-    filter: invert(1) brightness(0.9);
+/* "Event Partner" label that sits above a floating Sim-Lab badge on the
+   event-specific pages (signup, drivers, lights-out). */
+.event-partner-label {
+    font-family: var(--font-display, 'Orbitron', sans-serif);
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+    text-align: center;
+    background: rgba(10, 14, 18, 0.9);
+    padding: 0.32rem 0.6rem 0.3rem;
+    border-radius: 999px;
+    border: 1px solid rgba(14, 165, 233, 0.35);
+    backdrop-filter: blur(10px);
+    text-indent: 0.3em;
+    margin-bottom: -0.5rem;
 }
 
-.sponsor-badge-yfood:hover img {
-    filter: invert(1) brightness(1.1) drop-shadow(0 0 10px rgba(14, 165, 233, 0.5));
+/* Event-partner variant — single big floating badge on event pages
+   (signup, drivers, lights-out). Doesn't affect the sponsor trio
+   already in place on index.html. */
+.sponsor-badges.is-event-partner .sponsor-badge {
+    width: 130px;
+    height: 130px;
+    padding: 1.4rem;
+    border-width: 2.5px;
+}
+.sponsor-badges.is-event-partner .event-partner-label {
+    font-size: 0.78rem;
+    padding: 0.5rem 1rem 0.45rem;
+    letter-spacing: 0.35em;
+    margin-bottom: -0.65rem;
 }
 
 /* ===== ABOUT SECTION ===== */

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="Photos, streams and highlight clips from GTEC, the Gran Turismo 7 endurance championship.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/media/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Open Graph / Twitter card -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Media">
+    <meta property="og:description" content="Race photography, highlight reels and onboards from the GTEC endurance championship.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/media/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Media">
+    <meta name="twitter:description" content="Race photography, highlights and onboards from the GTEC endurance championship.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .gtec-nav {
+            position: sticky; top: 0; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5,6,8,0.85); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; transition: color 0.2s, border-color 0.2s; }
+        .gtec-nav .back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Page */
+        .page-wrap { max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem 5rem; }
+        .page-hero { margin-bottom: 2.5rem; }
+        .eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; text-indent: 0.45em; }
+        .page-title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: 0.04em; text-transform: uppercase; }
+
+        /* Live streams — drivers broadcasting the current race */
+        .streams-wrap { margin-bottom: 2.5rem; }
+        .streams-head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+        .streams-title { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .streams-live-dot { width: 9px; height: 9px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 0 rgba(239,68,68,0.7); animation: streamPulse 1.8s infinite; }
+        @keyframes streamPulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); } 70% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
+        .streams-sub { font-size: 0.8rem; color: var(--muted); }
+        .stream-split { margin-bottom: 1.1rem; }
+        .stream-split:last-child { margin-bottom: 0; }
+        .stream-split-label { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.55rem; display: flex; align-items: center; gap: 0.5rem; }
+        .stream-split-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+        .streams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.75rem; }
+        .stream-card { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 0.85rem; background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; text-decoration: none; color: var(--text); transition: border-color 0.15s, transform 0.15s, background 0.15s; }
+        .stream-card:hover { border-color: rgba(255,209,102,0.4); transform: translateY(-2px); background: var(--bg-2); }
+        .stream-av { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--bg-2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: 'Anton', sans-serif; color: var(--muted); font-size: 0.95rem; overflow: hidden; }
+        .stream-av img { width: 100%; height: 100%; object-fit: cover; }
+        .stream-meta { min-width: 0; flex: 1; }
+        .stream-name { font-weight: 600; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stream-plat { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; }
+        .stream-watch { flex-shrink: 0; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #111; background: var(--gold); padding: 0.4rem 0.7rem; border-radius: 999px; }
+
+        /* Season stream archive (collapsible) */
+        .stream-archive-wrap { margin-bottom: 2.5rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-1); overflow: hidden; }
+        .archive-toggle { width: 100%; display: flex; align-items: center; gap: 0.65rem; padding: 0.9rem 1.1rem; background: none; border: none; color: var(--text); cursor: pointer; text-align: left; }
+        .archive-toggle-title { font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+        .archive-toggle-count { font-size: 0.78rem; color: var(--muted); }
+        .archive-chev { width: 18px; height: 18px; margin-left: auto; color: var(--muted); transition: transform 0.2s; }
+        .stream-archive-wrap.open .archive-chev { transform: rotate(180deg); }
+        .archive-body { display: none; padding: 0 1.1rem 1.1rem; }
+        .stream-archive-wrap.open .archive-body { display: block; }
+        .archive-round { margin-top: 1.1rem; }
+        .archive-round-head { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+        .archive-round-count { font-size: 0.68rem; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
+
+        /* Category filter chips */
+        .media-filters {
+            display: flex; flex-wrap: wrap; gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .media-filter {
+            padding: 0.4rem 0.85rem;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s, background 0.15s;
+        }
+        .media-filter:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .media-filter.active { background: var(--gold); color: #1a1300; border-color: var(--gold); }
+        .media-filter-count { margin-left: 0.35rem; opacity: 0.6; }
+
+        /* Masonry grid */
+        .media-grid { columns: 4 200px; gap: 1rem; }
+        .media-item {
+            position: relative;
+            break-inside: avoid;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg-1);
+            transition: border-color 0.2s, transform 0.15s;
+        }
+        .media-item:hover { border-color: rgba(255,209,102,0.3); transform: scale(1.01); }
+        .media-item img { width: 100%; display: block; }
+        .media-item-info { padding: 0.5rem 0.65rem 0.65rem; }
+        .media-item-title { font-size: 0.78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .media-item-caption { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .media-item-event { font-size: 0.68rem; color: var(--gold); margin-top: 0.2rem; }
+        .media-item-cat {
+            display: inline-block; margin-top: 0.25rem;
+            font-family: 'Orbitron', sans-serif; font-size: 0.55rem;
+            letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+        }
+        /* Play overlay for video tiles */
+        .media-item-play {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(to top, rgba(0,0,0,0.35), rgba(0,0,0,0));
+            pointer-events: none;
+        }
+        .media-item-play svg { width: 56px; height: 56px; color: rgba(255,255,255,0.95); filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)); }
+        .media-item-badge {
+            position: absolute; top: 0.45rem; left: 0.45rem;
+            padding: 0.15rem 0.5rem;
+            background: rgba(0,0,0,0.78);
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem; font-weight: 700; letter-spacing: 0.15em;
+            text-transform: uppercase; color: var(--gold);
+        }
+        .media-video-tile {
+            aspect-ratio: 16/9;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg,#1a1300,#0a0a0a);
+            color: var(--gold);
+        }
+
+        /* Lightbox */
+        .lightbox {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.93); z-index: 999;
+            align-items: center; justify-content: center; padding: 2rem;
+            cursor: zoom-out;
+        }
+        .lightbox.open { display: flex; }
+        .lightbox-img { max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; pointer-events: none; }
+        .lightbox-embed { width: min(90vw, 1280px); aspect-ratio: 16/9; max-height: 90vh; border: 0; border-radius: 8px; background: #000; pointer-events: auto; }
+        .lightbox-caption { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.82rem; color: var(--muted); white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+        .lightbox-close { position: fixed; top: 1rem; right: 1rem; width: 36px; height: 36px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; color: var(--text); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; z-index: 2; }
+        .lightbox-close:hover { background: rgba(255,255,255,0.2); }
+        .lightbox-nav {
+            position: fixed; top: 50%; transform: translateY(-50%);
+            width: 48px; height: 48px;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+            color: var(--text); border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; transition: background 0.15s; z-index: 2;
+        }
+        .lightbox-nav:hover { background: rgba(255,255,255,0.18); }
+        .lightbox-prev { left: 1rem; }
+        .lightbox-next { right: 1rem; }
+
+        /* States */
+        .state-msg { text-align: center; padding: 5rem 2rem; }
+        .state-msg h3 { font-family: 'Anton', sans-serif; font-size: 1.3rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .state-msg p { color: var(--muted); font-size: 0.88rem; }
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+
+        @media (max-width: 580px) {
+            .gtec-nav { padding: 1rem; }
+            .page-wrap { padding: 1.5rem 1rem 3rem; }
+            .media-grid { columns: 2 140px; }
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/" class="active">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div class="page-wrap">
+    <div class="page-hero">
+        <div class="eyebrow">Championship</div>
+        <div class="page-title">Media</div>
+    </div>
+    <div class="streams-wrap" id="streams-wrap" style="display:none">
+        <div class="streams-head">
+            <span class="streams-title"><span class="streams-live-dot"></span>Watch Live</span>
+            <span class="streams-sub" id="streams-sub"></span>
+        </div>
+        <div id="streams-grid"></div>
+    </div>
+    <div class="stream-archive-wrap" id="stream-archive-wrap" style="display:none">
+        <button class="archive-toggle" onclick="toggleStreamArchive()" aria-label="Toggle stream archive">
+            <span class="archive-toggle-title">Stream Archive</span>
+            <span class="archive-toggle-count" id="stream-archive-count"></span>
+            <svg class="archive-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="archive-body" id="stream-archive-body"></div>
+    </div>
+    <div class="media-filters" id="media-filters"></div>
+    <div id="media-grid"><div class="loading">Loading…</div></div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="if (event.target === this) closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <button class="lightbox-nav lightbox-prev" onclick="navLightbox(-1)" aria-label="Previous">‹</button>
+    <button class="lightbox-nav lightbox-next" onclick="navLightbox(1)" aria-label="Next">›</button>
+    <div id="lightbox-content"></div>
+    <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data.session) { if (portal) portal.style.display = ''; }
+    else              { if (signin) signin.style.display = ''; }
+});
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+const CATEGORIES = [
+    { value: 'race_highlights',    label: 'Race Highlights' },
+    { value: 'podiums',            label: 'Podiums' },
+    { value: 'liveries',           label: 'Liveries' },
+    { value: 'onboards',           label: 'Onboards' },
+    { value: 'behind_the_scenes',  label: 'Behind the Scenes' },
+    { value: 'stewarding',         label: 'Stewarding' },
+];
+function catLabel(v) {
+    const c = CATEGORIES.find(x => x.value === v);
+    return c ? c.label : v;
+}
+
+// Embed helpers — pull out the video id from common URL shapes so we
+// can render a thumb + iframe ourselves rather than relying on oEmbed.
+function ytId(url) {
+    const m = (url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/);
+    return m ? m[1] : null;
+}
+function vimeoId(url) {
+    const m = (url || '').match(/vimeo\.com\/(?:video\/)?(\d{6,})/);
+    return m ? m[1] : null;
+}
+function twitchEmbed(url) {
+    // Channel page → live channel embed; video / clip URLs → embedded player.
+    if (!url) return null;
+    const parentParam = '&parent=' + encodeURIComponent(location.hostname);
+    let m = url.match(/twitch\.tv\/videos\/(\d+)/);
+    if (m) return `https://player.twitch.tv/?video=v${m[1]}${parentParam}`;
+    m = url.match(/clips\.twitch\.tv\/([A-Za-z0-9_-]+)/) || url.match(/twitch\.tv\/[^/]+\/clip\/([A-Za-z0-9_-]+)/);
+    if (m) return `https://clips.twitch.tv/embed?clip=${m[1]}${parentParam}`;
+    m = url.match(/twitch\.tv\/([^/?#]+)/);
+    if (m) return `https://player.twitch.tv/?channel=${m[1]}${parentParam}`;
+    return null;
+}
+function embedThumb(m) {
+    if (m.embed_provider === 'youtube') {
+        const id = ytId(m.url);
+        if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+    }
+    return null;
+}
+function embedIframeSrc(m) {
+    if (m.embed_provider === 'youtube') {
+        const id = ytId(m.url);
+        return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : null;
+    }
+    if (m.embed_provider === 'vimeo') {
+        const id = vimeoId(m.url);
+        return id ? `https://player.vimeo.com/video/${id}?autoplay=1` : null;
+    }
+    if (m.embed_provider === 'twitch') {
+        return twitchEmbed(m.url);
+    }
+    return null;
+}
+
+let _items   = [];   // all media rows (unfiltered)
+let _view    = [];   // currently filtered list (drives the lightbox nav)
+let _activeCat = 'all';
+let _lbIndex = 0;
+
+// Which streaming platform a link points at, for a coloured label.
+function streamPlatform(url) {
+    const u = (url || '').toLowerCase();
+    if (u.includes('youtube.com') || u.includes('youtu.be')) return { name: 'YouTube', color: '#ff4d4d' };
+    if (u.includes('twitch.tv')) return { name: 'Twitch', color: '#a970ff' };
+    if (u.includes('kick.com')) return { name: 'Kick', color: '#53fc18' };
+    if (u.includes('facebook.com') || u.includes('fb.gg')) return { name: 'Facebook', color: '#4c8bf5' };
+    return { name: 'Live', color: '#38bdf8' };
+}
+
+// One stream card (a link that opens the broadcast).
+function streamCard(s, watchLabel) {
+    const d = s.drivers || {};
+    const p = streamPlatform(s.url);
+    const av = d.photo_url
+        ? `<img src="${esc(d.photo_url)}" alt="" loading="lazy">`
+        : esc((d.display_name || '?').trim().charAt(0).toUpperCase());
+    return `<a class="stream-card" href="${esc(s.url)}" target="_blank" rel="noopener nofollow">
+        <span class="stream-av">${av}</span>
+        <span class="stream-meta">
+            <span class="stream-name">${esc(d.display_name || 'Driver')}</span>
+            <span class="stream-plat" style="color:${p.color}">● ${p.name}</span>
+        </span>
+        <span class="stream-watch">${watchLabel || 'Watch'}</span>
+    </a>`;
+}
+
+// Group a list of streams into Split 1, Split 2, … sections (top split first);
+// anyone without a known split falls into a trailing "Unassigned" group.
+function renderSplitGroups(streams, splitByDriver, watchLabel) {
+    const groups = new Map();
+    streams.forEach(s => { const ln = splitByDriver[s.driver_id]; const key = ln != null ? ln : Infinity; (groups.get(key) || groups.set(key, []).get(key)).push(s); });
+    return [...groups.keys()].sort((a, b) => a - b).map(k => `
+        <div class="stream-split">
+            <div class="stream-split-label">${k === Infinity ? 'Unassigned' : 'Split ' + k}</div>
+            <div class="streams-grid">${groups.get(k).map(s => streamCard(s, watchLabel)).join('')}</div>
+        </div>`).join('');
+}
+
+// Split map for one or more events: event_id -> { driver_id -> lobby_number }.
+async function fetchSplitMap(eventIds) {
+    const map = {};
+    if (!eventIds.length) return map;
+    const { data: rows } = await sb.from('entry_drivers')
+        .select('driver_id, entries!inner(event_id, lobby_number)')
+        .in('entries.event_id', eventIds);
+    (rows || []).forEach(r => {
+        const ev = r.entries?.event_id, ln = r.entries?.lobby_number;
+        if (ev == null) return;
+        (map[ev] = map[ev] || {});
+        if (ln != null) map[ev][r.driver_id] = ln;
+    });
+    return map;
+}
+
+// Driver streams for the current race: the in-progress event if there is one,
+// otherwise the next scheduled event in the active season. Hidden when none.
+async function loadStreams() {
+    const wrap = document.getElementById('streams-wrap');
+    try {
+        const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+        if (!season) return;
+        const { data: evs } = await sb.from('events')
+            .select('id, name, round, status, starts_at')
+            .eq('season_id', season.id)
+            .in('status', ['in_progress', 'scheduled'])
+            .order('starts_at', { ascending: true });
+        if (!evs?.length) return;
+        const ev = evs.find(e => e.status === 'in_progress') || evs[0];
+
+        const { data: streams } = await sb.from('driver_stream_links')
+            .select('url, updated_at, driver_id, drivers(display_name, slug, photo_url)')
+            .eq('event_id', ev.id)
+            .order('updated_at', { ascending: true });
+        if (!streams?.length) return;
+
+        const splitMap = await fetchSplitMap([ev.id]);
+        document.getElementById('streams-sub').textContent = `${streams.length} driver${streams.length === 1 ? '' : 's'} streaming R${ev.round} · ${ev.name}`;
+        document.getElementById('streams-grid').innerHTML = renderSplitGroups(streams, splitMap[ev.id] || {});
+        wrap.style.display = '';
+    } catch (e) { /* streams are a nice-to-have; never block the media grid */ }
+}
+
+// Season stream archive: every completed round's streams, kept as a record
+// (and replay list — most streams stay up as VODs). Collapsed by default.
+async function loadStreamArchive() {
+    const wrap = document.getElementById('stream-archive-wrap');
+    try {
+        const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+        if (!season) return;
+        const { data: streams } = await sb.from('driver_stream_links')
+            .select('url, driver_id, event_id, drivers(display_name, slug, photo_url), events!inner(id, name, round, status, starts_at, season_id)')
+            .eq('events.season_id', season.id)
+            .eq('events.status', 'completed');
+        if (!streams?.length) return;
+
+        const eventIds = [...new Set(streams.map(s => s.event_id))];
+        const splitMap = await fetchSplitMap(eventIds);
+
+        // Group by event, most-recent round first.
+        const byEvent = new Map();
+        streams.forEach(s => { (byEvent.get(s.event_id) || byEvent.set(s.event_id, { ev: s.events, list: [] }).get(s.event_id)).list.push(s); });
+        const rounds = [...byEvent.values()].sort((a, b) => new Date(b.ev.starts_at) - new Date(a.ev.starts_at));
+
+        document.getElementById('stream-archive-count').textContent = `${streams.length} across ${rounds.length} round${rounds.length === 1 ? '' : 's'}`;
+        document.getElementById('stream-archive-body').innerHTML = rounds.map(r => `
+            <div class="archive-round">
+                <div class="archive-round-head">R${r.ev.round} · ${esc(r.ev.name)}<span class="archive-round-count">${r.list.length} stream${r.list.length === 1 ? '' : 's'}</span></div>
+                ${renderSplitGroups(r.list, splitMap[r.ev.id] || {}, 'Replay')}
+            </div>`).join('');
+        wrap.style.display = '';
+    } catch (e) { /* archive is a nice-to-have; never block the page */ }
+}
+
+function toggleStreamArchive() {
+    document.getElementById('stream-archive-wrap').classList.toggle('open');
+}
+
+async function load() {
+    loadStreams();
+    loadStreamArchive();
+    const grid = document.getElementById('media-grid');
+    const { data, error } = await sb.from('media_items')
+        .select('*, events(name)')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        grid.innerHTML = `<div class="state-msg"><h3>Error</h3><p>${esc(error.message)}</p></div>`;
+        return;
+    }
+
+    if (!data?.length) {
+        grid.innerHTML = `<div class="state-msg"><h3>Nothing here yet</h3><p>Race photos, highlights and videos will appear here as the season unfolds.</p></div>`;
+        return;
+    }
+
+    _items = data;
+    renderFilters();
+    renderGrid();
+}
+
+function renderFilters() {
+    const counts = { all: _items.length };
+    _items.forEach(m => { if (m.category) counts[m.category] = (counts[m.category] || 0) + 1; });
+    const visibleCats = CATEGORIES.filter(c => counts[c.value]);
+    const chips = [{ value: 'all', label: 'All' }, ...visibleCats];
+    const html = chips.map(c => `
+        <button class="media-filter ${_activeCat === c.value ? 'active' : ''}"
+                onclick="setCategory('${c.value}')">
+            ${esc(c.label)}<span class="media-filter-count">${counts[c.value] || 0}</span>
+        </button>`).join('');
+    document.getElementById('media-filters').innerHTML = html;
+}
+
+function setCategory(c) {
+    _activeCat = c;
+    renderFilters();
+    renderGrid();
+}
+
+function renderGrid() {
+    const grid = document.getElementById('media-grid');
+    _view = _activeCat === 'all' ? _items : _items.filter(m => m.category === _activeCat);
+
+    if (!_view.length) {
+        grid.className = '';
+        grid.innerHTML = `<div class="state-msg"><h3>Nothing in this category yet</h3><p>Pick another tab or check back later.</p></div>`;
+        return;
+    }
+
+    grid.className = 'media-grid';
+    grid.innerHTML = _view.map((m, i) => {
+        const isEmbed = !!m.embed_provider;
+        const thumb = embedThumb(m);
+        const visual = isEmbed
+            ? (thumb
+                ? `<img src="${esc(thumb)}" alt="${esc(m.title || '')}" loading="lazy">
+                   <div class="media-item-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="7,4 21,12 7,20"/></svg></div>`
+                : `<div class="media-video-tile"><svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor"><polygon points="7,4 21,12 7,20"/></svg></div>`)
+            : `<img src="${esc(m.url)}" alt="${esc(m.title || '')}" loading="lazy">`;
+        const info = (m.title || m.caption || m.events?.name || m.category)
+            ? `<div class="media-item-info">
+                  ${m.title ? `<div class="media-item-title">${esc(m.title)}</div>` : ''}
+                  ${m.caption ? `<div class="media-item-caption">${esc(m.caption)}</div>` : ''}
+                  ${m.events?.name ? `<div class="media-item-event">${esc(m.events.name)}</div>` : ''}
+                  ${m.category ? `<div class="media-item-cat">${esc(catLabel(m.category))}</div>` : ''}
+               </div>`
+            : '';
+        const badge = isEmbed ? `<span class="media-item-badge">${esc(m.embed_provider)}</span>` : '';
+        return `<div class="media-item" onclick="openLightbox(${i})">${badge}${visual}${info}</div>`;
+    }).join('');
+}
+
+function openLightbox(index) {
+    _lbIndex = index;
+    showLightbox();
+    document.getElementById('lightbox').classList.add('open');
+}
+
+function navLightbox(delta) {
+    if (!_view.length) return;
+    _lbIndex = (_lbIndex + delta + _view.length) % _view.length;
+    showLightbox();
+}
+
+function showLightbox() {
+    const m = _view[_lbIndex];
+    if (!m) return;
+    const content = document.getElementById('lightbox-content');
+    if (m.embed_provider) {
+        const src = embedIframeSrc(m);
+        content.innerHTML = src
+            ? `<iframe class="lightbox-embed" src="${esc(src)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`
+            : `<div style="color:var(--muted)">Could not embed this video.</div>`;
+    } else {
+        content.innerHTML = `<img class="lightbox-img" src="${esc(m.url)}" alt="${esc(m.title || '')}">`;
+    }
+    const cap = [m.title, m.caption, m.events?.name].filter(Boolean).join(' · ');
+    const capEl = document.getElementById('lightbox-caption');
+    capEl.textContent = cap;
+    capEl.style.display = cap ? '' : 'none';
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+    // Stop any playing video by detaching its iframe.
+    document.getElementById('lightbox-content').innerHTML = '';
+}
+
+document.addEventListener('keydown', e => {
+    if (!document.getElementById('lightbox').classList.contains('open')) return;
+    if (e.key === 'Escape')     closeLightbox();
+    if (e.key === 'ArrowLeft')  navLightbox(-1);
+    if (e.key === 'ArrowRight') navLightbox(1);
+});
+
+load();
+</script>
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GTEC is the team-based Gran Turismo 7 (GT7) endurance racing league and championship: multi-split racing across the world's greatest circuits (Spa, Monza, Suzuka, Bathurst, Daytona, Interlagos, Nordschleife, Le Mans) with full stewarding, live championship standings, driver ratings and race reports. Join the GT7 endurance league. Season launches July 2026.">
+    <meta name="keywords" content="GT7 league, GT7 racing league, Gran Turismo 7 league, GT7 endurance league, GTEC, GT7 endurance championship, Gran Turismo 7 endurance championship, GT7 racing series, sim racing league">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="theme-color" content="#0a0e15">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/">
+
+    <title>GTEC: GT7 Endurance Racing League &amp; Championship | Gran Turismo 7</title>
+
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Open Graph / Twitter card: uses /endurance/assets/og-card.png
+         (currently a copy of the GTEC logo as placeholder; overwrite the
+         file with a proper 1200×630 card when ready). -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC: GT7 Endurance Racing League &amp; Championship">
+    <meta property="og:description" content="The team-based Gran Turismo 7 endurance championship. Multi-split racing on the world's greatest circuits with full stewarding, live standings and driver ratings. Season 1 launches July 2026.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC: GT7 Endurance Racing League &amp; Championship">
+    <meta name="twitter:description" content="The team-based Gran Turismo 7 endurance championship. Season 1 launches July 2026.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+
+    <!-- Structured data: helps Google understand GTEC is a real organisation
+         with a real championship, and lets it parse the inaugural event. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SportsOrganization",
+          "@id": "https://sparkstheory.co.uk/endurance/#org",
+          "name": "GTEC",
+          "alternateName": ["Gran Turismo 7 Endurance Championship", "GT7 Endurance Championship", "GT7 Endurance League", "GT7 Racing League", "Gran Turismo 7 League"],
+          "url": "https://sparkstheory.co.uk/endurance/",
+          "logo": "https://sparkstheory.co.uk/endurance/assets/gtec-logo.png",
+          "sport": "Sim Racing",
+          "description": "GTEC is a team-based endurance championship for Gran Turismo 7 (GT7), built around real endurance circuits with full stewarding, live championship standings and driver ratings.",
+          "parentOrganization": {
+            "@type": "Organization",
+            "name": "SparksTheory",
+            "url": "https://sparkstheory.co.uk/"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://sparkstheory.co.uk/endurance/#site",
+          "name": "GTEC",
+          "alternateName": ["GT7 Endurance Championship", "GT7 Endurance League"],
+          "url": "https://sparkstheory.co.uk/endurance/",
+          "publisher": { "@id": "https://sparkstheory.co.uk/endurance/#org" }
+        },
+        {
+          "@type": "SportsEvent",
+          "name": "GTEC Season 1",
+          "description": "The inaugural GTEC season: an eight-round Gran Turismo 7 endurance championship across Spa, Monza, Suzuka, Bathurst, Daytona, Interlagos, Nordschleife and Le Mans.",
+          "startDate": "2026-07-25",
+          "sport": "Sim Racing",
+          "organizer": { "@id": "https://sparkstheory.co.uk/endurance/#org" },
+          "eventStatus": "https://schema.org/EventScheduled",
+          "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+          "url": "https://sparkstheory.co.uk/endurance/calendar/",
+          "location": {
+            "@type": "VirtualLocation",
+            "url": "https://sparkstheory.co.uk/endurance/"
+          }
+        }
+      ]
+    }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;600;700;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --cyan: #0ea5e9;
+            --crimson: #e94e7b;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+
+        /* ---------- Starfield ---------- */
+        #gtec-stars {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ---------- Minimal nav ---------- */
+        .gtec-nav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5, 6, 8, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--text);
+            text-decoration: none;
+            text-indent: 0.32em;
+        }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .back {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            padding: 0.45rem 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .gtec-nav .back:hover {
+            color: var(--text);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+        .gtec-nav .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .gtec-nav .nav-links a {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .apply {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: #111;
+            background: var(--gold);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 2px 10px rgba(255,209,102,0.35);
+        }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+
+        /* ---------- Hero ---------- */
+        .gtec-hero {
+            min-height: calc(100vh - 70px);
+            padding: 4rem 1.5rem 5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            background:
+                radial-gradient(ellipse at top, rgba(255, 209, 102, 0.08), transparent 60%),
+                radial-gradient(ellipse at bottom, rgba(14, 165, 233, 0.08), transparent 60%);
+            overflow: hidden;
+        }
+        .gtec-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(
+                    180deg,
+                    transparent 0,
+                    transparent 80px,
+                    rgba(255, 255, 255, 0.018) 80px,
+                    rgba(255, 255, 255, 0.018) 81px
+                );
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+            pointer-events: none;
+        }
+        .hero-presented {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            color: var(--muted);
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            text-indent: 0.35em;
+            padding: 0.5rem 0.95rem 0.5rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.02);
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .hero-presented img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .hero-presented:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.18); }
+        .gtec-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: var(--gold);
+            padding: 0.5rem 1.1rem;
+            border: 1px solid rgba(255, 209, 102, 0.45);
+            border-radius: 999px;
+            background: rgba(255, 209, 102, 0.06);
+            margin-bottom: 2rem;
+            text-indent: 0.35em;
+        }
+        .gtec-status::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--gold);
+            box-shadow: 0 0 12px rgba(255, 209, 102, 0.7);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1;   transform: scale(1); }
+            50%       { opacity: 0.5; transform: scale(0.8); }
+        }
+        .gtec-kicker {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(0.7rem, 1.4vw, 0.95rem);
+            font-weight: 700;
+            letter-spacing: 0.5em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 1.5rem;
+            text-indent: 0.5em;
+        }
+        .gtec-title-h1 {
+            margin: 0;
+            padding: 0;
+            line-height: 1;
+            font-weight: inherit;
+            font-size: inherit;
+            text-align: center;
+        }
+        .gtec-title {
+            display: block;
+            width: clamp(260px, 70vw, 720px);
+            height: auto;
+            max-width: 100%;
+            margin: 0 auto 0.5rem;
+            filter: drop-shadow(0 8px 24px rgba(0,0,0,0.45));
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            white-space: nowrap;
+            border: 0;
+        }
+        .gtec-tagline {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(0.85rem, 1.7vw, 1.15rem);
+            letter-spacing: 0.45em;
+            text-transform: uppercase;
+            color: var(--text);
+            margin-top: 1.5rem;
+            text-indent: 0.45em;
+        }
+        .gtec-lead {
+            color: var(--muted);
+            max-width: 640px;
+            margin: 2rem auto 0;
+            font-size: 1.05rem;
+            line-height: 1.7;
+            text-align: left;
+        }
+        .gtec-lead p { margin: 0 0 1rem; }
+        .gtec-lead p:last-child { margin-bottom: 0; }
+        .gtec-stinger {
+            list-style: none;
+            padding: 1rem 0 0.5rem;
+            margin: 1.25rem 0;
+            border-top: 1px solid rgba(255,209,102,0.18);
+            border-bottom: 1px solid rgba(255,209,102,0.18);
+            text-align: center;
+        }
+        .gtec-stinger li {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--gold);
+            padding: 0.35rem 0;
+        }
+        .gtec-welcome {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.6rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text);
+            text-align: center;
+            margin-top: 1.25rem !important;
+        }
+        .gtec-runby {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: rgba(148, 163, 184, 0.75);
+            text-align: center;
+            margin-top: 0.5rem !important;
+        }
+        .gtec-runby a {
+            color: var(--gold);
+            text-decoration: none;
+            transition: color 0.15s ease;
+        }
+        .gtec-runby a:hover { color: #fff; }
+
+        /* ---------- Countdown ---------- */
+        .gtec-countdown {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-top: 3rem;
+            flex-wrap: wrap;
+        }
+        .cd-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .cd-value {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2.2rem, 5vw, 3.5rem);
+            line-height: 1;
+            min-width: 2.2ch;
+            text-align: center;
+            background: linear-gradient(180deg, #fff, var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+        .cd-sep {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2rem, 4.5vw, 3rem);
+            color: var(--gold-deep);
+            line-height: 1;
+            align-self: flex-start;
+            padding-top: 0.1rem;
+        }
+        .cd-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-indent: 0.3em;
+        }
+        .cd-caption {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--gold);
+            text-align: center;
+            margin-bottom: 0.75rem;
+            text-indent: 0.25em;
+        }
+        .cd-launched {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            letter-spacing: 0.25em;
+            color: var(--gold);
+            text-transform: uppercase;
+            margin-top: 3rem;
+        }
+
+        /* ---------- Scroll-reveal ---------- */
+        .reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: none;
+        }
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+        .reveal-delay-4 { transition-delay: 0.4s; }
+
+        /* ---------- Section frame ---------- */
+        .gtec-section {
+            padding: 5rem 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        .gtec-section.alt {
+            background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg) 100%);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .gtec-eyebrow {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.45em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 0.85rem;
+            text-indent: 0.45em;
+        }
+        .gtec-h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(1.8rem, 4.5vw, 3rem);
+            line-height: 1.05;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin: 0 0 1rem;
+            color: var(--text);
+        }
+        .gtec-section-lead {
+            color: var(--muted);
+            max-width: 620px;
+            line-height: 1.65;
+            margin-bottom: 3rem;
+        }
+
+        /* ---------- Format pillars ---------- */
+        .format-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+        }
+        .pillar {
+            background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.75rem 1.5rem 1.5rem;
+            transition: border-color 0.25s, transform 0.25s;
+        }
+        .pillar:hover {
+            border-color: rgba(255, 209, 102, 0.4);
+            transform: translateY(-3px);
+        }
+        .pillar-num {
+            font-family: 'Anton', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 400;
+            letter-spacing: 0.3em;
+            color: var(--gold-deep);
+            margin-bottom: 0.85rem;
+            text-indent: 0.3em;
+        }
+        .pillar-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.5rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin: 0 0 0.6rem;
+        }
+        .pillar-desc {
+            color: var(--muted);
+            font-size: 0.92rem;
+            line-height: 1.55;
+        }
+
+        /* ---------- Calendar teaser ---------- */
+        .rounds {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+            margin-top: 2rem;
+            list-style: none;
+            padding: 0;
+        }
+        .round {
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            align-items: center;
+            gap: 1.25rem;
+            padding: 1.4rem 1.5rem;
+            background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition: border-color 0.25s, transform 0.2s;
+        }
+        .round:hover {
+            border-color: rgba(255, 209, 102, 0.4);
+            transform: translateX(4px);
+        }
+        .round-num {
+            font-family: 'Anton', sans-serif;
+            font-size: 2.2rem;
+            line-height: 1;
+            color: var(--gold);
+            letter-spacing: 0.04em;
+            text-align: center;
+            border-right: 1px solid var(--border);
+            padding-right: 1rem;
+        }
+        .round-info { min-width: 0; }
+        .round-name {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.45rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            line-height: 1.1;
+            margin-bottom: 0.25rem;
+        }
+        .round-meta {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .round-flag { font-size: 1.1rem; line-height: 1; }
+        .round-duration {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.6rem;
+            color: var(--text);
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+        }
+        .round-duration small {
+            font-size: 0.55em;
+            color: var(--muted);
+            display: block;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            font-family: 'Orbitron', sans-serif;
+            margin-top: 0.15rem;
+        }
+        @media (max-width: 540px) {
+            .round { grid-template-columns: 56px 1fr; row-gap: 0.5rem; padding: 1rem 1.1rem; }
+            .round-num { font-size: 1.7rem; padding-right: 0.7rem; }
+            .round-name { font-size: 1.15rem; }
+            .round-duration { grid-column: 2; font-size: 1.2rem; text-align: left; }
+        }
+
+        /* ---------- Stat strip ---------- */
+        .stat-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 2.5rem;
+        }
+        .stat-cell {
+            text-align: center;
+            padding: 1.25rem 0.75rem;
+            background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005));
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+        .stat-num {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            line-height: 1;
+            background: linear-gradient(180deg, #fff, var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.35rem;
+        }
+        .stat-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-indent: 0.25em;
+        }
+        @media (max-width: 640px) {
+            .stat-strip { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ---------- Coming-soon list ---------- */
+        .coming-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.85rem;
+            margin-top: 2rem;
+        }
+        .coming-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition: border-color 0.25s, background 0.25s;
+        }
+        .coming-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 209, 102, 0.25);
+        }
+        .coming-icon {
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+            border-radius: 8px;
+            background: rgba(255, 209, 102, 0.12);
+            border: 1px solid rgba(255, 209, 102, 0.3);
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .coming-icon svg { width: 18px; height: 18px; }
+        .coming-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: var(--text);
+        }
+
+
+        /* ---------- Stay-in-the-loop CTA ---------- */
+        .cta-section {
+            text-align: center;
+            padding: 5rem 1.5rem 6rem;
+            background: linear-gradient(180deg, var(--bg-1) 0%, #000 100%);
+            position: relative;
+            z-index: 1;
+        }
+        .cta-btns {
+            display: flex;
+            gap: 0.85rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            text-decoration: none;
+            padding: 0.95rem 1.6rem;
+            border-radius: 999px;
+            transition: filter 0.2s, transform 0.2s, background 0.2s;
+        }
+        .cta-btn.gold {
+            background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+            color: #1a1300;
+            border: none;
+            box-shadow: 0 10px 28px -10px rgba(255, 209, 102, 0.45);
+        }
+        .cta-btn.gold:hover { filter: brightness(1.08); transform: translateY(-2px); }
+        .cta-btn.ghost {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .cta-btn.ghost:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.25); }
+        .cta-btn svg { width: 16px; height: 16px; }
+        /* ---------- Footer ---------- */
+        .gtec-footer {
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+            position: relative;
+            z-index: 1;
+        }
+        .gtec-footer .presented {
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            text-indent: 0.25em;
+            margin-bottom: 0.55rem;
+        }
+        .gtec-footer .presented a {
+            color: var(--cyan);
+            text-decoration: none;
+        }
+        .gtec-footer .presented a:hover { text-decoration: underline; }
+        .gtec-footer .sparks-mark {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin-bottom: 0.85rem;
+            color: var(--muted);
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            text-indent: 0.32em;
+            transition: opacity 0.2s;
+        }
+        .gtec-footer .sparks-mark:hover { opacity: 0.85; }
+        .gtec-footer .partner-link { margin-top: 1rem; }
+        .gtec-footer .partner-link a { display: inline-flex; align-items: center; gap: 0.45em; padding: 0.55rem 1.1rem; border-radius: 999px; border: 1px solid rgba(255, 209, 102, 0.4); background: rgba(255, 209, 102, 0.08); color: #ffd166; text-decoration: none; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; transition: background 0.15s, border-color 0.15s; }
+        .gtec-footer .partner-link a:hover { background: rgba(255, 209, 102, 0.16); border-color: rgba(255, 209, 102, 0.7); }
+        .gtec-footer .sparks-mark img {
+            width: 38px;
+            height: 38px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.04);
+            padding: 4px;
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<canvas id="gtec-stars"></canvas>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a id="nav-signin" href="/endurance/profile/login/" style="display:none">Sign In</a>
+        <a id="nav-portal" href="/endurance/profile/" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<header class="gtec-hero">
+    <a class="hero-presented" href="/" aria-label="SparksTheory">
+        <img src="/endurance/assets/Sparks_logo_small.png" alt="SparksTheory">
+        <span>Presented by SparksTheory</span>
+    </a>
+
+    <div class="gtec-status">Applications Open</div>
+    <div class="gtec-kicker">Gran Turismo 7</div>
+    <h1 class="gtec-title-h1">
+        <img class="gtec-title" src="/endurance/assets/gtec-logo.png" alt="GTEC: Gran Turismo 7 (GT7) endurance racing league">
+        <span class="sr-only">GTEC: the Gran Turismo 7 (GT7) endurance racing league &amp; championship</span>
+    </h1>
+    <div class="gtec-tagline">Endurance racing, properly</div>
+    <div class="gtec-lead">
+        <p><strong style="color:var(--text)">GTEC isn't just an endurance championship.</strong></p>
+
+        <p>It's a complete competitive ecosystem, a full GT7 endurance racing league, built specifically for Gran Turismo 7.</p>
+
+        <p>Every team commits to a manufacturer for the season. Every driver competes for both individual and team honours. Every result contributes to a bespoke driver rating system designed to measure performance beyond a single championship.</p>
+
+        <p>With full stewarding across every split, integrated driver communications and a championship structure designed around long-term competition, GTEC rewards consistency, teamwork and commitment over an entire season.</p>
+
+        <p>This isn't about turning up for a race.</p>
+
+        <p><em style="color:var(--text)">It's about building a campaign.</em></p>
+
+        <ul class="gtec-stinger">
+            <li>Every point matters.</li>
+            <li>Every result matters.</li>
+            <li>Every decision matters.</li>
+        </ul>
+
+        <p class="gtec-welcome">Welcome to GTEC.</p>
+        <p class="gtec-runby">Run by <a href="/">SparksTheory</a></p>
+    </div>
+
+    <div id="countdown-block">
+        <div class="cd-caption" id="cd-caption"></div>
+        <div class="gtec-countdown" id="countdown">
+            <div class="cd-unit">
+                <span class="cd-value" id="cd-days">--</span>
+                <span class="cd-label">Days</span>
+            </div>
+            <span class="cd-sep">:</span>
+            <div class="cd-unit">
+                <span class="cd-value" id="cd-hours">--</span>
+                <span class="cd-label">Hours</span>
+            </div>
+            <span class="cd-sep">:</span>
+            <div class="cd-unit">
+                <span class="cd-value" id="cd-mins">--</span>
+                <span class="cd-label">Mins</span>
+            </div>
+            <span class="cd-sep">:</span>
+            <div class="cd-unit">
+                <span class="cd-value" id="cd-secs">--</span>
+                <span class="cd-label">Secs</span>
+            </div>
+        </div>
+    </div>
+    <div class="cd-launched" id="cd-launched" style="display:none">Season complete. See you next year.</div>
+</header>
+
+<section class="gtec-section">
+    <div class="gtec-wrap">
+        <div class="gtec-eyebrow reveal">The Format</div>
+        <h2 class="gtec-h2 reveal reveal-delay-1">Built like a real championship.</h2>
+        <p class="gtec-section-lead reveal reveal-delay-2">
+            One class. Locked manufacturers. Real strategy. The format is
+            simple by design, but every decision a team makes in the off-season
+            shapes the season ahead.
+        </p>
+
+        <div class="format-grid">
+            <div class="pillar reveal reveal-delay-1">
+                <div class="pillar-num">01</div>
+                <h3 class="pillar-title">Gr.3 Only</h3>
+                <p class="pillar-desc">One class of car, no balance-of-performance arguments. Drivers and teams choose their weapon, then live with it.</p>
+            </div>
+            <div class="pillar reveal reveal-delay-2">
+                <div class="pillar-num">02</div>
+                <h3 class="pillar-title">Teams of 2</h3>
+                <p class="pillar-desc">Two-driver line-ups for every race. Stints, fatigue, and strategy all count.</p>
+            </div>
+            <div class="pillar reveal reveal-delay-3">
+                <div class="pillar-num">03</div>
+                <h3 class="pillar-title">Locked Manufacturer</h3>
+                <p class="pillar-desc">Each team registers a manufacturer for the season. Pick wisely. It sticks until the next championship.</p>
+            </div>
+            <div class="pillar reveal reveal-delay-4">
+                <div class="pillar-num">04</div>
+                <h3 class="pillar-title">Six Hours Minimum</h3>
+                <p class="pillar-desc">Every round is real endurance. From six-hour sprints to the full 8 Hours of Le Mans on the calendar finale.</p>
+            </div>
+        </div>
+
+        <div class="stat-strip reveal">
+            <div class="stat-cell"><div class="stat-num" data-count="8">8</div><div class="stat-label">Rounds</div></div>
+            <div class="stat-cell"><div class="stat-num" data-count="52" data-suffix="h">52h</div><div class="stat-label">Of Racing</div></div>
+            <div class="stat-cell"><div class="stat-num">Gr.3</div><div class="stat-label">Class</div></div>
+            <div class="stat-cell"><div class="stat-num" data-count="27" data-suffix=" Pts">27 Pts</div><div class="stat-label">Max / Race</div></div>
+        </div>
+    </div>
+</section>
+
+<section class="gtec-section alt">
+    <div class="gtec-wrap">
+        <div class="gtec-eyebrow reveal">2026 Inaugural Season</div>
+        <h2 class="gtec-h2 reveal reveal-delay-1">Eight rounds. Eight legendary venues.</h2>
+        <p class="gtec-section-lead reveal reveal-delay-2">
+            The first GTEC season visits eight of the most demanding circuits
+            in motorsport, across four continents. Calendar provisional,
+            subject to confirmation.
+        </p>
+
+        <ol class="rounds">
+            <li class="round reveal reveal-delay-1">
+                <span class="round-num">01</span>
+                <div class="round-info">
+                    <div class="round-name">Spa 6 Hours</div>
+                    <div class="round-meta"><span class="round-flag">🇧🇪</span> Circuit de Spa-Francorchamps · Belgium</div>
+                </div>
+                <div class="round-duration">6<small>Hours</small></div>
+            </li>
+            <li class="round reveal reveal-delay-2">
+                <span class="round-num">02</span>
+                <div class="round-info">
+                    <div class="round-name">Monza 6 Hours</div>
+                    <div class="round-meta"><span class="round-flag">🇮🇹</span> Autodromo Nazionale Monza · Italy</div>
+                </div>
+                <div class="round-duration">6<small>Hours</small></div>
+            </li>
+            <li class="round reveal reveal-delay-3">
+                <span class="round-num">03</span>
+                <div class="round-info">
+                    <div class="round-name">Suzuka 6 Hours</div>
+                    <div class="round-meta"><span class="round-flag">🇯🇵</span> Suzuka International Racing Course · Japan</div>
+                </div>
+                <div class="round-duration">6<small>Hours</small></div>
+            </li>
+            <li class="round reveal">
+                <span class="round-num">04</span>
+                <div class="round-info">
+                    <div class="round-name">Bathurst 8 Hours</div>
+                    <div class="round-meta"><span class="round-flag">🇦🇺</span> Mount Panorama Circuit · Australia</div>
+                </div>
+                <div class="round-duration">8<small>Hours</small></div>
+            </li>
+            <li class="round reveal reveal-delay-1">
+                <span class="round-num">05</span>
+                <div class="round-info">
+                    <div class="round-name">Daytona 6 Hours</div>
+                    <div class="round-meta"><span class="round-flag">🇺🇸</span> Daytona International Speedway · USA</div>
+                </div>
+                <div class="round-duration">6<small>Hours</small></div>
+            </li>
+            <li class="round reveal reveal-delay-2">
+                <span class="round-num">06</span>
+                <div class="round-info">
+                    <div class="round-name">Interlagos 6 Hours</div>
+                    <div class="round-meta"><span class="round-flag">🇧🇷</span> Autódromo José Carlos Pace · Brazil</div>
+                </div>
+                <div class="round-duration">6<small>Hours</small></div>
+            </li>
+            <li class="round reveal reveal-delay-3">
+                <span class="round-num">07</span>
+                <div class="round-info">
+                    <div class="round-name">Nürburgring 6 Hours</div>
+                    <div class="round-meta"><span class="round-flag">🇩🇪</span> Nordschleife · Germany</div>
+                </div>
+                <div class="round-duration">6<small>Hours</small></div>
+            </li>
+            <li class="round reveal reveal-delay-4">
+                <span class="round-num">08</span>
+                <div class="round-info">
+                    <div class="round-name">Le Mans 8 Hours</div>
+                    <div class="round-meta"><span class="round-flag">🇫🇷</span> Circuit de la Sarthe · France</div>
+                </div>
+                <div class="round-duration">8<small>Hours</small></div>
+            </li>
+        </ol>
+    </div>
+</section>
+
+<section class="gtec-section">
+    <div class="gtec-wrap">
+        <div class="gtec-eyebrow reveal">The Platform</div>
+        <h2 class="gtec-h2 reveal reveal-delay-1">Everything live. Nothing to wait for.</h2>
+        <p class="gtec-section-lead reveal reveal-delay-2">
+            The full GTEC platform is ready from day one: live standings,
+            driver profiles, championship records and race results, all
+            tracking every season the championship runs.
+        </p>
+
+        <div class="coming-grid">
+            <a class="coming-item reveal reveal-delay-1" href="/endurance/standings/" style="text-decoration:none">
+                <span class="coming-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L3 7v6c0 5 3.5 8.5 9 9 5.5-.5 9-4 9-9V7z"/></svg></span>
+                <span class="coming-name">Live Championship Standings</span>
+            </a>
+            <a class="coming-item reveal reveal-delay-2" href="/endurance/drivers/" style="text-decoration:none">
+                <span class="coming-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span>
+                <span class="coming-name">Driver &amp; Team Profiles</span>
+            </a>
+            <a class="coming-item reveal reveal-delay-3" href="/endurance/drivers/" style="text-decoration:none">
+                <span class="coming-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="21 14 21 7 14 7"/></svg></span>
+                <span class="coming-name">Elo-Based Driver Ratings</span>
+            </a>
+            <a class="coming-item reveal" href="/endurance/calendar/" style="text-decoration:none">
+                <span class="coming-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+                <span class="coming-name">Full Race Calendar</span>
+            </a>
+            <a class="coming-item reveal reveal-delay-1" href="/endurance/results/" style="text-decoration:none">
+                <span class="coming-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="3" y="9" width="18" height="11" rx="2"/></svg></span>
+                <span class="coming-name">Results &amp; Steward Decisions</span>
+            </a>
+            <a class="coming-item reveal reveal-delay-2" href="/endurance/stats/" style="text-decoration:none">
+                <span class="coming-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V13"/><path d="M12 17V9"/><path d="M16 17v-4"/></svg></span>
+                <span class="coming-name">Career Stats &amp; Records</span>
+            </a>
+            <a class="coming-item reveal reveal-delay-3" href="/endurance/media/" style="text-decoration:none">
+                <span class="coming-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+                <span class="coming-name">Media Gallery</span>
+            </a>
+            <a class="coming-item reveal" href="/endurance/rules/" style="text-decoration:none">
+                <span class="coming-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+                <span class="coming-name">Sporting Regulations</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="cta-section">
+    <div class="gtec-eyebrow">Applications Open</div>
+    <h2 class="gtec-h2">Be on the grid.</h2>
+    <p class="gtec-section-lead" style="margin: 1.25rem auto 0">
+        Driver and team applications are open now for Season 1.
+        Spaces are limited. Submit your application and secure your place on the grid.
+    </p>
+
+    <div class="cta-btns">
+        <a class="cta-btn gold" href="/endurance/apply/">
+            Apply Now
+        </a>
+        <a class="cta-btn ghost" href="https://discord.gg/rMRNYNXnZx" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+            Join the Discord
+        </a>
+    </div>
+</section>
+
+<footer class="gtec-footer">
+    <a class="sparks-mark" href="/">
+        <img src="/endurance/assets/Sparks_logo_small.png" alt="SparksTheory">
+        Presented by SparksTheory
+    </a>
+    <div>&copy; 2026 SparksTheory.</div>
+    <div class="partner-link"><a href="/endurance/partners/">🤝 Partner with GTEC</a></div>
+</footer>
+
+<script>
+    /* ---- Starfield ---- */
+    (function () {
+        const canvas = document.getElementById('gtec-stars');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+
+        function resize() {
+            canvas.width  = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function init() {
+            resize();
+            stars = Array.from({ length: 180 }, () => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                r: Math.random() * 1.2 + 0.2,
+                a: Math.random() * 0.55 + 0.1,
+                speed: Math.random() * 0.3 + 0.05,
+                drift: (Math.random() - 0.5) * 0.08,
+            }));
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const s of stars) {
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255,220,120,${s.a})`;
+                ctx.fill();
+                s.y += s.speed;
+                s.x += s.drift;
+                if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
+                if (s.x < 0 || s.x > canvas.width) { s.x = Math.random() * canvas.width; }
+            }
+            requestAnimationFrame(draw);
+        }
+
+        window.addEventListener('resize', () => { resize(); });
+        init();
+        draw();
+    })();
+
+    /* Countdown target is fetched dynamically from Supabase (see post-config script below) */
+
+    /* ---- Scroll reveal + stat counters ---- */
+    (function () {
+        function animateCount(el) {
+            const target = parseInt(el.dataset.count, 10);
+            const suffix = el.dataset.suffix || '';
+            if (isNaN(target)) return;
+            const duration = 1200;
+            const start = performance.now();
+            function step(now) {
+                const progress = Math.min((now - start) / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(ease * target) + suffix;
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+        const obs = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('visible');
+                    e.target.querySelectorAll('[data-count]').forEach(animateCount);
+                    obs.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.12 });
+        document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+    })();
+
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/gtec-config.js"></script>
+<script>
+    (function () {
+        if (!window.supabase || !window.GTEC_CONFIG) return;
+        const sb = window.supabase.createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+
+        // Auth: show portal or sign-in link
+        sb.auth.getSession().then(({ data }) => {
+            const portal = document.getElementById('nav-portal');
+            const signin = document.getElementById('nav-signin');
+            if (data.session) { if (portal) portal.style.display = ''; }
+            else              { if (signin) signin.style.display = ''; }
+        });
+
+        // Dynamic countdown: targets whichever event in the active season
+        // hasn't started yet, so it keeps counting down round to round all
+        // season long instead of going dark after Round 1.
+        (async function () {
+            const cdBlock    = document.getElementById('countdown-block');
+            const cdWrap     = document.getElementById('countdown');
+            const cdCaption  = document.getElementById('cd-caption');
+            const cdLaunched = document.getElementById('cd-launched');
+            if (!cdWrap) return;
+
+            const { data: season } = await sb.from('seasons')
+                .select('id')
+                .eq('is_active', true)
+                .maybeSingle();
+
+            if (!season) { cdBlock.style.display = 'none'; return; }
+
+            const { data: events } = await sb.from('events')
+                .select('round, name, circuit_name, starts_at, status')
+                .eq('season_id', season.id)
+                .order('round');
+
+            const next = (events || [])
+                .filter(e => e.starts_at && e.status !== 'cancelled' && new Date(e.starts_at).getTime() > Date.now())
+                .sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))[0];
+
+            if (!next) {
+                cdBlock.style.display = 'none';
+                if (cdLaunched && events?.length) cdLaunched.style.display = 'block';
+                return;
+            }
+
+            if (cdCaption) cdCaption.textContent = `Round ${next.round}: ${next.circuit_name || next.name} in`;
+
+            const TARGET = new Date(next.starts_at).getTime();
+
+            const els = {
+                days:  document.getElementById('cd-days'),
+                hours: document.getElementById('cd-hours'),
+                mins:  document.getElementById('cd-mins'),
+                secs:  document.getElementById('cd-secs'),
+            };
+
+            function pad(n) { return String(n).padStart(2, '0'); }
+
+            function tick() {
+                const diff = TARGET - Date.now();
+                if (diff <= 0) {
+                    cdBlock.style.display = 'none';
+                    return;
+                }
+                const d = Math.floor(diff / 86400000);
+                const h = Math.floor((diff % 86400000) / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                els.days.textContent  = d;
+                els.hours.textContent = pad(h);
+                els.mins.textContent  = pad(m);
+                els.secs.textContent  = pad(s);
+            }
+
+            tick();
+            setInterval(tick, 1000);
+        })();
+    })();
+</script>
+
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>

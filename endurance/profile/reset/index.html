@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Reset Password | GTEC</title>
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+        }
+        .logo {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 0.4rem;
+        }
+        .logo span { color: var(--gold); }
+        .logo .brand-logo { height: 22px; width: auto; vertical-align: middle; margin-left: 0.45em; }
+        .subtitle {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 2rem;
+            text-indent: 0.4em;
+        }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 0.45rem;
+        }
+        input {
+            display: block;
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 1.25rem;
+        }
+        input:focus { border-color: rgba(255,209,102,0.5); }
+        .hint { font-size: 0.78rem; color: var(--muted); margin-top: -1rem; margin-bottom: 1.25rem; }
+        .btn {
+            width: 100%;
+            padding: 0.9rem;
+            background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+            color: #1a1300;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: filter 0.2s;
+            margin-top: 0.5rem;
+        }
+        .btn:hover { filter: brightness(1.08); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+        .error {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.4);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #fca5a5;
+            margin-bottom: 1.25rem;
+            display: none;
+        }
+        .info {
+            background: rgba(34,197,94,0.08);
+            border: 1px solid rgba(34,197,94,0.35);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #86efac;
+            margin-bottom: 1.25rem;
+            display: none;
+        }
+        .back {
+            display: block;
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+            text-decoration: none;
+        }
+        .back:hover { color: var(--text); }
+        .loading { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 1rem 0; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">Gran Turismo<img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></div>
+    <div class="subtitle">Reset Password</div>
+
+    <div class="error" id="error"></div>
+    <div class="info"  id="info"></div>
+
+    <div id="loading" class="loading">Verifying reset link…</div>
+
+    <form id="reset-form" style="display:none">
+        <label for="password">New Password</label>
+        <input type="password" id="password" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password">
+
+        <label for="confirm">Confirm Password</label>
+        <input type="password" id="confirm" placeholder="Re-enter password" required minlength="8" autocomplete="new-password">
+
+        <button class="btn" type="submit" id="submit-btn">Update Password</button>
+    </form>
+
+    <a class="back" href="/endurance/profile/login/">← Back to sign in</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../../assets/gtec-config.js"></script>
+<script>
+    'use strict';
+    const { createClient } = window.supabase;
+    const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+
+    const loadingEl = document.getElementById('loading');
+    const formEl    = document.getElementById('reset-form');
+    const errEl     = document.getElementById('error');
+    const infoEl    = document.getElementById('info');
+
+    function showError(msg) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+        infoEl.style.display = 'none';
+    }
+    function showInfo(msg) {
+        infoEl.textContent = msg;
+        infoEl.style.display = 'block';
+        errEl.style.display = 'none';
+    }
+
+    // Supabase auto-processes the recovery token from the URL hash on load.
+    // Listen for the PASSWORD_RECOVERY event to know we have a usable session.
+    let recoveryReady = false;
+    sb.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+            recoveryReady = true;
+            loadingEl.style.display = 'none';
+            formEl.style.display = '';
+        }
+    });
+
+    // Fallback: if no auth event fires after a short delay, check the session
+    // directly and show an error if there isn't one.
+    setTimeout(async () => {
+        if (recoveryReady) return;
+        const { data } = await sb.auth.getSession();
+        if (data.session) {
+            loadingEl.style.display = 'none';
+            formEl.style.display = '';
+        } else {
+            loadingEl.style.display = 'none';
+            showError('This reset link is invalid or has expired. Request a new one from the sign-in page.');
+        }
+    }, 1500);
+
+    formEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn      = document.getElementById('submit-btn');
+        const password = document.getElementById('password').value;
+        const confirm  = document.getElementById('confirm').value;
+
+        if (password !== confirm) { showError('Passwords do not match.'); return; }
+        if (password.length < 8)  { showError('Password must be at least 8 characters.'); return; }
+
+        btn.disabled = true;
+        btn.textContent = 'Updating…';
+
+        try {
+            const { error } = await sb.auth.updateUser({ password });
+            if (error) throw error;
+            showInfo('Password updated. Redirecting to your profile…');
+            setTimeout(() => window.location.replace('../'), 1200);
+        } catch (err) {
+            showError(err.message);
+            btn.disabled = false;
+            btn.textContent = 'Update Password';
+        }
+    });
+</script>
+</body>
+</html>
