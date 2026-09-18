@@ -20,15 +20,27 @@
     const H = 1440;
     const SITE_URL = 'https://sparkstheory.co.uk/endurance/';
 
+    // Mirrors the ten Elo tiers in elo-tiers.js (bronze through legend),
+    // same colour families, so the card's foil border always matches the
+    // tier badge shown everywhere else on the site. "steel" is the only
+    // tier not in elo-tiers.js - the placeholder for a provisional /
+    // unrated driver, who has no tier yet.
     const TIERS = {
-        gold:   { label: 'Gold Tier',   stops: ['#fff3c4', '#ffd166', '#b8860b'], glow: 'rgba(255,209,102,0.5)' },
-        silver: { label: 'Silver Tier', stops: ['#f5f5f5', '#c0c0c0', '#71797e'], glow: 'rgba(192,192,192,0.4)' },
-        bronze: { label: 'Bronze Tier', stops: ['#f0c090', '#cd7f32', '#6e3d10'], glow: 'rgba(205,127,50,0.45)' },
-        steel:  { label: 'Rookie',      stops: ['#aab4c2', '#4b5563', '#1f2937'], glow: 'rgba(148,163,184,0.3)' },
+        bronze:       { label: 'Bronze Tier',       stops: ['#f0c090', '#cd7f32', '#6e3d10'], glow: 'rgba(205,127,50,0.45)' },
+        silver:       { label: 'Silver Tier',       stops: ['#ffffff', '#c0c0c0', '#71797e'], glow: 'rgba(192,192,192,0.4)' },
+        gold:         { label: 'Gold Tier',         stops: ['#fff3c4', '#ffd700', '#b8860b'], glow: 'rgba(255,215,0,0.5)' },
+        platinum:     { label: 'Platinum Tier',     stops: ['#f5f5f0', '#e5e4e2', '#8a9bab'], glow: 'rgba(176,196,222,0.45)' },
+        diamond:      { label: 'Diamond Tier',      stops: ['#e8fbff', '#b9f2ff', '#2f9fc4'], glow: 'rgba(93,211,255,0.5)' },
+        elite:        { label: 'Elite Tier',        stops: ['#6ee7b7', '#10b981', '#047857'], glow: 'rgba(16,185,129,0.45)' },
+        master:       { label: 'Master Tier',       stops: ['#ffb347', '#ff4500', '#c23600'], glow: 'rgba(255,69,0,0.45)' },
+        champion:     { label: 'Champion Tier',     stops: ['#f87171', '#dc2626', '#7f1d1d'], glow: 'rgba(220,38,38,0.45)' },
+        hall_of_fame: { label: 'Hall of Fame Tier', stops: ['#c4b5fd', '#8b5cf6', '#4c1d95'], glow: 'rgba(139,92,246,0.5)' },
+        legend:       { label: 'Legend Tier',       stops: ['#ff9ed8', '#ff0080', '#8b00ff'], glow: 'rgba(255,0,128,0.55)' },
+        steel:        { label: 'Rookie',            stops: ['#aab4c2', '#4b5563', '#1f2937'], glow: 'rgba(148,163,184,0.3)' },
     };
 
     function tierKey(tier) {
-        const t = (tier || '').toLowerCase();
+        const t = (tier || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
         return TIERS[t] ? t : 'steel';
     }
 
