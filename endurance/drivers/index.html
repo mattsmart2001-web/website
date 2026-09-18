@@ -587,6 +587,9 @@
             font-size: 0.76rem; color: var(--muted);
         }
         .profile-tag .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+        .tag-crest canvas { display: block; width: 18px; height: 18px; flex-shrink: 0; }
+        .profile-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.85rem; }
+        .profile-actions .share-btn { margin-top: 0; }
         .profile-tag .tag-link { color: inherit; text-decoration: none; transition: color 0.15s; }
         .profile-tag .tag-link:hover { color: var(--gold); text-decoration: underline; }
         .pill-leader {
@@ -929,6 +932,8 @@
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
 <script src="/endurance/assets/gtec-badges.js?v=22"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
+<script src="/endurance/assets/gtec-crest.js"></script>
+<script src="/endurance/assets/gtec-trading-card.js"></script>
 <script>
 'use strict';
 const { createClient } = window.supabase;
@@ -1001,6 +1006,19 @@ function mfrBadge(logoUrl, brandColor, name, opts = {}) {
     }
     if (brandColor) return `<span class="swatch" style="background:${esc(brandColor)}"></span>`;
     return '';
+}
+
+// Team crests are generated client-side (window.gtecRenderCrest), so we
+// paint them into placeholder slots after the markup lands rather than
+// trying to serialize a canvas into an HTML string.
+function hydrateCrests() {
+    if (!window.gtecRenderCrest) return;
+    document.querySelectorAll('.crest-slot').forEach(el => {
+        const name = el.dataset.crestName;
+        if (!name || el.childElementCount) return;
+        const size = Number(el.dataset.crestSize) || 24;
+        el.appendChild(window.gtecRenderCrest(name, size));
+    });
 }
 
 // ============================================================
@@ -1752,6 +1770,7 @@ async function showProfile() {
     if (driver.nationality) tags.push(`${flag(driver.nationality)} ${esc(driver.nationality)}`);
     if (driver.psn_id)      tags.push(`PSN: ${esc(driver.psn_id)}`);
     if (driver.teams?.name) {
+        const crest = `<span class="crest-slot tag-crest" data-crest-name="${esc(driver.teams.name)}" data-crest-size="18" aria-hidden="true"></span>`;
         const badge = mfrBadge(driver.manufacturers?.logo_url, driver.manufacturers?.brand_color, driver.manufacturers?.name);
         const leaderPill = driver.teams.leader_driver_id === driver.id
             ? ' <span class="pill-leader" title="Team Leader">★ Leader</span>'
@@ -1759,7 +1778,7 @@ async function showProfile() {
         const teamName = driver.teams.slug
             ? `<a class="tag-link" href="/endurance/teams/?slug=${esc(driver.teams.slug)}">${esc(driver.teams.name)}</a>`
             : esc(driver.teams.name);
-        tags.push(`${badge}${teamName}${leaderPill}`);
+        tags.push(`${crest}${badge}${teamName}${leaderPill}`);
     }
     if (driver.manufacturers?.name && !driver.teams?.name) {
         const mfr = driver.manufacturers;
@@ -2086,14 +2105,23 @@ async function showProfile() {
                     <div class="profile-name">${esc(driver.display_name)}</div>
                     <div class="profile-tags">${tagsHTML}</div>
                     ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [], hostCount, foundingMember, hasStreamLink: (streamLinkRes?.count || 0) > 0 }) : ''}
-                    <button class="share-btn" id="share-profile-btn" type="button">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                            <polyline points="16 6 12 2 8 6"/>
-                            <line x1="12" y1="2" x2="12" y2="15"/>
-                        </svg>
-                        <span>Share Driver Card</span>
-                    </button>
+                    <div class="profile-actions">
+                        <button class="share-btn" id="share-profile-btn" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                                <polyline points="16 6 12 2 8 6"/>
+                                <line x1="12" y1="2" x2="12" y2="15"/>
+                            </svg>
+                            <span>Share Driver Card</span>
+                        </button>
+                        <button class="share-btn" id="trading-card-btn" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="2" y="6" width="14" height="18" rx="2" transform="rotate(-8 9 15)"/>
+                                <rect x="8" y="3" width="14" height="18" rx="2"/>
+                            </svg>
+                            <span>Trading Card</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -2119,36 +2147,50 @@ async function showProfile() {
             ${!seasons.length && !history.length && !discItems.length ? `<div class="empty-msg" style="margin-top:1rem">No race history yet — check back after the first event.</div>` : ''}
         </div>`;
 
+    hydrateCrests();
     alignSplitJourney();
     // Re-run once webfonts (Anton/Orbitron) have actually swapped in - they
     // can shift each card's rendered width after the first measurement.
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(alignSplitJourney);
 
-    // Share-card button — needs closure access to the freshly-computed
-    // driver + totals so the painter doesn't have to re-fetch anything.
+    // Share-card + trading-card buttons - both need closure access to the
+    // freshly-computed driver + totals so the painters don't have to
+    // re-fetch anything, and both paint from the same card data.
+    const cardTier = window.eloTier ? (window.eloTier(currentRating)?.name || null) : null;
+    const cardDriver = {
+        display_name:       driver.display_name,
+        slug:               driver.slug,
+        career_number:      driver.career_number,
+        nationality:        driver.nationality,
+        photo_url:          driver.photo_url,
+        team_name:          driver.teams?.name || null,
+        manufacturer_name:  driver.manufacturers?.name || null,
+        manufacturer_color: driver.manufacturers?.brand_color || null,
+    };
+    const cardStats = {
+        elo:     Number.isFinite(currentRating) ? currentRating : null,
+        tier:    isProvisional ? null : cardTier,
+        points:  Number(totals.points || 0).toFixed(totals.points % 1 === 0 ? 0 : 1),
+        wins:    totals.wins,
+        podiums: totals.podiums,
+        races:   totals.races,
+    };
+
     const shareBtn = document.getElementById('share-profile-btn');
     if (shareBtn && window.gtecShareCard) {
-        const tier = window.eloTier ? (window.eloTier(currentRating)?.name || null) : null;
         shareBtn.addEventListener('click', () => window.gtecShareCard({
-            driver: {
-                display_name:       driver.display_name,
-                slug:               driver.slug,
-                career_number:      driver.career_number,
-                nationality:        driver.nationality,
-                photo_url:          driver.photo_url,
-                team_name:          driver.teams?.name || null,
-                manufacturer_name:  driver.manufacturers?.name || null,
-                manufacturer_color: driver.manufacturers?.brand_color || null,
-            },
-            stats: {
-                elo:     Number.isFinite(currentRating) ? currentRating : null,
-                tier:    isProvisional ? null : tier,
-                points:  Number(totals.points || 0).toFixed(totals.points % 1 === 0 ? 0 : 1),
-                wins:    totals.wins,
-                podiums: totals.podiums,
-                races:   totals.races,
-            },
+            driver: cardDriver,
+            stats:  cardStats,
             buttonEl: shareBtn,
+        }));
+    }
+
+    const tradingCardBtn = document.getElementById('trading-card-btn');
+    if (tradingCardBtn && window.gtecTradingCard) {
+        tradingCardBtn.addEventListener('click', () => window.gtecTradingCard({
+            driver: cardDriver,
+            stats:  cardStats,
+            buttonEl: tradingCardBtn,
         }));
     }
 }

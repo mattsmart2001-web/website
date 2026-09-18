@@ -168,6 +168,8 @@
         .team-card:hover .team-card-logo-bg { opacity: 0.13; }
         .team-card-mfr { display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; color: var(--muted); }
         .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0; }
+        .team-card-name-row { display: flex; align-items: center; gap: 0.55rem; }
+        .team-card-crest canvas { display: block; width: 34px; height: 34px; flex-shrink: 0; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.45)); }
         .team-card-name { font-family: 'Anton', sans-serif; font-size: 1.35rem; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; }
         .team-card-meta { font-size: 0.76rem; color: var(--muted); }
         .team-card-drivers { display: flex; flex-wrap: wrap; gap: 0.4rem; padding-top: 0.65rem; margin-top: 0.35rem; border-top: 1px solid rgba(255,255,255,0.07); }
@@ -190,7 +192,10 @@
         /* ===== PROFILE ===== */
         .profile-header { margin-bottom: 1.75rem; }
         .profile-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem; }
+        .profile-name-row { display: flex; align-items: center; gap: 1rem; }
+        .profile-crest canvas { display: block; width: 72px; height: 72px; flex-shrink: 0; filter: drop-shadow(0 3px 9px rgba(0,0,0,0.5)); }
         .profile-name { font-family: 'Anton', sans-serif; font-size: clamp(2.2rem, 6vw, 3.5rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.75rem; }
+        .profile-name-row .profile-name { margin-bottom: 0; }
         .profile-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
         .profile-tag { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.75rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; font-size: 0.76rem; color: var(--muted); }
         .leader-pill { display: inline-block; padding: 0.1rem 0.45rem; background: rgba(255,209,102,0.15); color: var(--gold); border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; margin-right: 0.25rem; }
@@ -321,6 +326,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
+<script src="../assets/gtec-crest.js"></script>
 <script>
 'use strict';
 const { createClient } = window.supabase;
@@ -413,7 +419,10 @@ async function showListing() {
             ${t.banner_url ? `<img class="team-card-banner" src="${esc(t.banner_url)}" alt="">` : ''}
             ${mfr?.logo_url ? `<img class="team-card-logo-bg" src="${esc(mfr.logo_url)}" alt="" aria-hidden="true">` : ''}
             ${mfr ? `<div class="team-card-mfr">${mfrBadge(mfr.logo_url, mfr.brand_color, mfr.name)}${esc(mfr.name)}${mfr.car_name ? '<span style="color:var(--muted);font-size:0.8em"> — ' + esc(mfr.car_name) + '</span>' : ''}</div>` : ''}
-            <div class="team-card-name">${esc(t.name)}</div>
+            <div class="team-card-name-row">
+                <span class="crest-slot team-card-crest" data-crest-name="${esc(t.name)}" data-crest-size="34" aria-hidden="true"></span>
+                <div class="team-card-name">${esc(t.name)}</div>
+            </div>
             <div class="team-card-meta">
                 ${t.home_country ? flag(t.home_country) + ' ' + esc(t.home_country) + ' &nbsp;·&nbsp; ' : ''}
                 ${dCount} driver${dCount !== 1 ? 's' : ''}
@@ -447,6 +456,20 @@ async function showListing() {
                 <div class="empty-msg" id="teams-empty" style="display:none">No teams match your search.</div>
             ` : `<div class="empty-msg">No teams registered yet.</div>`}
         </div>`;
+    hydrateCrests();
+}
+
+// Team crests are generated client-side (window.gtecRenderCrest), so we
+// paint them into placeholder slots after the markup lands rather than
+// trying to serialize a canvas into an HTML string.
+function hydrateCrests() {
+    if (!window.gtecRenderCrest) return;
+    document.querySelectorAll('.crest-slot').forEach(el => {
+        const name = el.dataset.crestName;
+        if (!name) return;
+        const size = Number(el.dataset.crestSize) || 48;
+        el.appendChild(window.gtecRenderCrest(name, size));
+    });
 }
 
 function filterCards(input, cardClass, countId, singular, plural) {
@@ -675,7 +698,10 @@ async function showProfile() {
             ${team.banner_url ? `<img class="team-profile-banner" src="${esc(team.banner_url)}" alt="${esc(team.name)} banner">` : ''}
 
             <div class="profile-header">
-                <div class="profile-name">${esc(team.name)}</div>
+                <div class="profile-name-row">
+                    <span class="crest-slot profile-crest" data-crest-name="${esc(team.name)}" data-crest-size="72" aria-hidden="true"></span>
+                    <div class="profile-name">${esc(team.name)}</div>
+                </div>
                 <div class="profile-tags">${tags.map(t => `<span class="profile-tag">${t}</span>`).join('')}</div>
             </div>
 
@@ -698,6 +724,7 @@ async function showProfile() {
 
             ${!standings.length && !drivers.length ? `<div class="empty-msg">No data yet — check back after the first race.</div>` : ''}
         </div>`;
+    hydrateCrests();
 }
 
 // ============================================================

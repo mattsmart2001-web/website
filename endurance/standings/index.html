@@ -356,6 +356,8 @@
             font-size: 0.92rem;
         }
         .driver-row .name { font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.03em; }
+        .team-name-row { display: flex; align-items: center; gap: 0.5rem; }
+        .standings-crest canvas { display: block; width: 24px; height: 24px; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); }
         .meta-line {
             font-size: 0.74rem;
             color: var(--muted);
@@ -480,6 +482,9 @@
         .podium-sub { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 0.04em; color: var(--muted); margin-top: 0.15rem; }
         .pod-av-init { font-family: 'Anton', sans-serif; color: var(--muted); }
         .podium-name { font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.02em; line-height: 1.1; }
+        .podium-name-row { display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+        .podium-crest canvas { display: block; width: 22px; height: 22px; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); }
+        .spot-1 .podium-crest canvas { width: 26px; height: 26px; }
         .podium-pts { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
         .podium-step { width: 100%; border-radius: 10px 10px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 0.5rem; border: 1px solid var(--border); border-bottom: none; }
         .podium-rank { font-family: 'Anton', sans-serif; line-height: 1; }
@@ -674,6 +679,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
+<script src="../assets/gtec-crest.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
 <script src="/endurance/assets/countries.js"></script>
 <script>
@@ -842,7 +848,7 @@ function teamPodiumSpot(t, place, leaderPts) {
     return `<div class="podium-spot spot-${place}">
         <a class="podium-driver" href="/endurance/teams/?slug=${esc(t.team_slug)}">
             <div class="pod-av-wrap">${crown}<span class="pod-halo"></span>${av}</div>
-            <div class="podium-name">${esc(t.team_name)}</div>
+            <div class="podium-name-row"><span class="crest-slot podium-crest" data-crest-name="${esc(t.team_name)}" data-crest-size="22" aria-hidden="true"></span><div class="podium-name">${esc(t.team_name)}</div></div>
             ${sub}
             <div class="podium-pts"><span class="pod-pts-num" data-pts="${pts}">${pts.toFixed(pts % 1 === 0 ? 0 : 1)}</span> pts</div>
             ${gap}
@@ -1027,7 +1033,7 @@ function renderTeams(panel) {
                 <div class="pos-stack"><span>${pos}</span></div>
             </td>
             <td>
-                <div class="name"><a href="/endurance/teams/?slug=${esc(t.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(t.team_name)}</a>${leaderTag}</div>
+                <div class="name team-name-row"><span class="crest-slot standings-crest" data-crest-name="${esc(t.team_name)}" data-crest-size="24" aria-hidden="true"></span><a href="/endurance/teams/?slug=${esc(t.team_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(t.team_name)}</a>${leaderTag}</div>
                 ${mfrLine}
             </td>
             <td class="lighter center hide-mob">${t.races}</td>
@@ -1062,6 +1068,20 @@ function renderTeams(panel) {
             </table>
         </div>`;
     animatePodium();
+    hydrateCrests();
+}
+
+// Team crests are generated client-side (window.gtecRenderCrest), so we
+// paint them into placeholder slots after the markup lands rather than
+// trying to serialize a canvas into an HTML string.
+function hydrateCrests() {
+    if (!window.gtecRenderCrest) return;
+    document.querySelectorAll('.crest-slot').forEach(el => {
+        const name = el.dataset.crestName;
+        if (!name || el.childElementCount) return;
+        const size = Number(el.dataset.crestSize) || 24;
+        el.appendChild(window.gtecRenderCrest(name, size));
+    });
 }
 
 function renderManufacturers(panel) {
