@@ -382,7 +382,7 @@ function renderWrapped(d) {
         `<div class="slide s-intro active" data-slide>
             ${d.isFinal ? '<div class="final-badge">Final</div>' : ''}
             <div class="eyebrow">GTEC · ${d.targetSeasonYear} Season</div>
-            <div class="big huge">${esc(d.driver.display_name.toUpperCase())}</div>
+            <div class="big huge fit-line" data-fit-min="18">${esc(d.driver.display_name.toUpperCase())}</div>
             <div class="sub">${d.isFinal ? 'Your season, wrapped up.' : 'Your season, so far.'} Tap to begin.</div>
             <button class="start-btn" id="startBtn">▶ Start</button>
         </div>`,
@@ -451,7 +451,7 @@ function renderWrapped(d) {
         // Finale
         `<div class="slide s-finale" data-slide>
             <div class="eyebrow">${esc(seasonLabel)}</div>
-            <div class="big med">${esc(d.driver.display_name.toUpperCase())}</div>
+            <div class="big med fit-line" data-fit-min="16">${esc(d.driver.display_name.toUpperCase())}</div>
             <div class="finale-card">
                 <div class="finale-row"><span class="k">Points</span><span class="v">${h.points}</span></div>
                 <div class="finale-row"><span class="k">Wins</span><span class="v">${h.wins}</span></div>
@@ -477,8 +477,13 @@ function renderWrapped(d) {
     </div>`;
 
     hydrateWrappedCrests();
+    fitAllOneLiners();
     wireStory();
     wireSaveCard(d);
+
+    // Fonts (Anton in particular) can shift measured text width once they
+    // actually swap in, so re-fit after they're ready too.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAllOneLiners);
 }
 
 function hydrateWrappedCrests() {
@@ -488,6 +493,36 @@ function hydrateWrappedCrests() {
         if (!name || el.childElementCount) return;
         el.appendChild(window.gtecRenderCrest(name, Number(el.dataset.crestSize) || 64));
     });
+}
+
+// Keeps a name on one line by shrinking its font-size to fit the slide's
+// content width, rather than letting it wrap to a second line - measured
+// against the real rendered width, so it works for any name length.
+function fitAllOneLiners() {
+    document.querySelectorAll('.fit-line').forEach(fitTextToOneLine);
+}
+function fitTextToOneLine(el) {
+    if (!el) return;
+    const slide = el.closest('.slide');
+    if (!slide) return;
+    const cs = getComputedStyle(slide);
+    const available = slide.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+    el.style.whiteSpace = 'nowrap';
+    // Belt-and-braces: even after shrinking as far as the legibility floor
+    // allows, an extreme name could still be wider than the slide - clip
+    // it with an ellipsis rather than letting it spill past the frame.
+    el.style.overflow = 'hidden';
+    el.style.textOverflow = 'ellipsis';
+    el.style.maxWidth = available + 'px';
+    el.style.fontSize = '';
+    let fontSize = parseFloat(getComputedStyle(el).fontSize);
+    const minSize = Number(el.dataset.fitMin) || 16;
+    let guard = 0;
+    while (el.scrollWidth > available && fontSize > minSize && guard < 60) {
+        fontSize -= 1;
+        el.style.fontSize = fontSize + 'px';
+        guard++;
+    }
 }
 
 function wireSaveCard(d) {
