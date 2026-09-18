@@ -681,7 +681,7 @@
         }
         .split-stop {
             min-width: 96px;
-            flex: 1 1 0;
+            flex: 0 0 auto;
             background: rgba(255,255,255,0.025);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -736,7 +736,7 @@
         .sj-chip-down .sj-chip-v { color: #f87171; }
         .sj-chip-same .sj-chip-v { color: var(--muted); }
         .sj-chart-wrap { overflow-x: auto; padding-bottom: 0.5rem; }
-        .sj-svg { display: block; width: 100%; }
+        .sj-svg { display: block; }
         .sj-grid { stroke: rgba(255,255,255,0.06); stroke-width: 1; }
         .sj-ylabel, .sj-xlabel { fill: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; }
         .sj-xlabel { opacity: 0; animation: sjFade 0.5s ease forwards; }
@@ -1853,16 +1853,15 @@ async function showProfile() {
         const minS = Math.min(...splits), maxS = Math.max(...splits);
         const range = maxS - minS;
         const padT = 30, padB = 40, plotH = 140;
-        // colW mirrors .split-stop's min-width below, so the chart and the
-        // round cards hit their "not enough room, start scrolling" point at
-        // the same container width and stay lined up either side of it -
-        // width:100% (with this as a CSS min-width) stretches both evenly
-        // when there's room, same as the cards' flex:1 1 0 does. Dots span
-        // the FULL width in n equal columns (no reserved side margin) so
-        // they land centred above their card below; the S-level labels sit
-        // just inside the left edge instead of in a dedicated margin, which
-        // would otherwise eat into the width unevenly once stretched and
-        // throw the columns out of line with the cards.
+        // This lays out a reasonable approximate chart server-side (n equal
+        // columns, no reserved left margin for the S-level labels, which
+        // would otherwise throw the columns out of true if stretched). The
+        // real alignment happens in alignSplitJourney() right after this
+        // markup and the round cards are both in the DOM: it measures each
+        // card's actual rendered centre (whatever width it naturally ends up
+        // - long circuit names, viewport size, webfont metrics, all of it)
+        // and snaps the chart's points and width to match exactly, rather
+        // than trying to predict card width in CSS/JS ahead of time.
         const colW = 96;
         const W = n * colW;
         const H = padT + plotH + padB;
@@ -1902,7 +1901,7 @@ async function showProfile() {
             <span class="sj-chip sj-chip-${trend.c}"><span class="sj-chip-k">Trend</span><span class="sj-chip-v">${trend.a} ${trend.t}</span></span>
         </div>`;
 
-        return `${chips}<div class="sj-chart-wrap"><svg viewBox="0 0 ${W} ${H}" height="${H}" style="min-width:${W}px" preserveAspectRatio="none" class="sj-svg" role="img" aria-label="Split number by round">
+        return `${chips}<div class="sj-chart-wrap"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" data-base-y="${baseY}" class="sj-svg" role="img" aria-label="Split number by round">
             <defs>
                 <linearGradient id="sjLine" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stop-color="#ffd166"/><stop offset="100%" stop-color="#f59e0b"/>
@@ -1916,6 +1915,59 @@ async function showProfile() {
             <path d="${linePath}" class="sj-line"/>
             ${nodes}
         </svg></div>`;
+    }
+
+    // Snaps the split-journey chart's points onto the round cards' actual
+    // rendered positions. The server-side render above only gets an
+    // approximate width right (it can't know how wide "MONZA GP" renders,
+    // or the viewport, or whether webfonts have swapped in yet), so this
+    // measures the real DOM after both are inserted and overwrites the
+    // chart's width/points/paths to match exactly - keeps the cards at
+    // their natural, left-aligned size (no full-width stretching) while
+    // still lining the chart up above them pixel for pixel.
+    function alignSplitJourney() {
+        const svg = document.querySelector('.sj-svg');
+        const timeline = document.querySelector('.split-timeline');
+        if (!svg || !timeline) return;
+        const stops = timeline.querySelectorAll('.split-stop');
+        const dots = svg.querySelectorAll('.sj-dot');
+        const labels = svg.querySelectorAll('.sj-xlabel');
+        if (!stops.length || stops.length !== dots.length) return;
+
+        const timelineRect = timeline.getBoundingClientRect();
+        const vb = svg.getAttribute('viewBox').split(' ');
+        const H = parseFloat(vb[3]);
+        const baseY = parseFloat(svg.dataset.baseY);
+
+        const centers = Array.from(stops).map(el => {
+            const r = el.getBoundingClientRect();
+            return r.left - timelineRect.left + r.width / 2;
+        });
+        // .split-timeline is a flex container that itself fills the available
+        // width (its scrollWidth reflects that box, not its content), while
+        // the cards inside stay their natural compact size - so the chart's
+        // width has to come from the last card's own right edge, not the
+        // row's box, or it'd stretch the chart out to the empty space too.
+        const lastStopRect = stops[stops.length - 1].getBoundingClientRect();
+        const totalW = lastStopRect.right - timelineRect.left;
+        if (!totalW || !Number.isFinite(baseY)) return;
+
+        svg.setAttribute('viewBox', `0 0 ${totalW} ${H}`);
+        svg.setAttribute('width', totalW);
+
+        const ys = Array.from(dots).map(d => d.getAttribute('cy'));
+        dots.forEach((d, i) => d.setAttribute('cx', centers[i].toFixed(1)));
+        labels.forEach((t, i) => t.setAttribute('x', centers[i].toFixed(1)));
+
+        const line = svg.querySelector('.sj-line');
+        const area = svg.querySelector('.sj-area');
+        const linePath = centers.map((x, i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${ys[i]}`).join(' ');
+        const areaPath = `M${centers[0].toFixed(1)},${baseY} ` +
+            centers.map((x, i) => `L${x.toFixed(1)},${ys[i]}`).join(' ') +
+            ` L${centers[centers.length - 1].toFixed(1)},${baseY} Z`;
+        if (line) line.setAttribute('d', linePath);
+        if (area) area.setAttribute('d', areaPath);
+        svg.querySelectorAll('.sj-grid').forEach(g => g.setAttribute('x2', totalW.toFixed(1)));
     }
 
     const splitJourneyHTML = splitJourney.length >= 2 ? `
@@ -2066,6 +2118,11 @@ async function showProfile() {
 
             ${!seasons.length && !history.length && !discItems.length ? `<div class="empty-msg" style="margin-top:1rem">No race history yet — check back after the first event.</div>` : ''}
         </div>`;
+
+    alignSplitJourney();
+    // Re-run once webfonts (Anton/Orbitron) have actually swapped in - they
+    // can shift each card's rendered width after the first measurement.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(alignSplitJourney);
 
     // Share-card button — needs closure access to the freshly-computed
     // driver + totals so the painter doesn't have to re-fetch anything.
