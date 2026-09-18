@@ -395,6 +395,13 @@
                     </svg>
                     <span>Share Driver Card</span>
                 </button>
+                <button class="profile-share-btn" id="trading-card-btn" type="button" style="display:none">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
+                        <rect x="2" y="6" width="14" height="18" rx="2" transform="rotate(-8 9 15)"/>
+                        <rect x="8" y="3" width="14" height="18" rx="2"/>
+                    </svg>
+                    <span>Trading Card</span>
+                </button>
                 <button class="profile-share-btn" id="obs-widget-btn" type="button" style="display:none" title="Copy a link to your OBS streaming overlay">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
                         <rect x="3" y="4" width="18" height="14" rx="2"/>
@@ -738,6 +745,8 @@
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
 <script src="/endurance/assets/gtec-badges.js?v=22"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
+<script src="/endurance/assets/gtec-crest.js"></script>
+<script src="/endurance/assets/gtec-trading-card.js"></script>
 <script src="/endurance/assets/gtec-push.js"></script>
 <script src="../assets/countries.js"></script>
 <script>
@@ -1115,6 +1124,7 @@ async function loadStanding(driverId) {
     // Now that we have driver + stats wired, reveal the Share Card button
     // (was hidden in markup until the data was loaded).
     armShareButton();
+    armTradingCardButton();
     armObsWidgetButton();
 
     card.style.display = '';
@@ -1148,16 +1158,32 @@ function armShareButton() {
     btn.dataset.armed = '1';
     btn.style.display = '';
     btn.addEventListener('click', () => window.gtecShareCard({
-        driver: {
-            display_name:      _shareDriver.display_name,
-            slug:              _shareDriver.slug,
-            career_number:     _shareDriver.career_number,
-            nationality:       _shareDriver.nationality,
-            photo_url:         _shareDriver.photo_url,
-            team_name:          _shareDriver.teams?.name || null,
-            manufacturer_name:  _shareDriver.manufacturers?.name || null,
-            manufacturer_color: _shareDriver.manufacturers?.brand_color || null,
-        },
+        driver: shareCardDriver(),
+        stats: _shareStats,
+        buttonEl: btn,
+    }));
+}
+
+function shareCardDriver() {
+    return {
+        display_name:       _shareDriver.display_name,
+        slug:                _shareDriver.slug,
+        career_number:       _shareDriver.career_number,
+        nationality:         _shareDriver.nationality,
+        photo_url:           _shareDriver.photo_url,
+        team_name:           _shareDriver.teams?.name || null,
+        manufacturer_name:   _shareDriver.manufacturers?.name || null,
+        manufacturer_color:  _shareDriver.manufacturers?.brand_color || null,
+    };
+}
+
+function armTradingCardButton() {
+    const btn = document.getElementById('trading-card-btn');
+    if (!btn || btn.dataset.armed === '1' || !_shareDriver || !window.gtecTradingCard) return;
+    btn.dataset.armed = '1';
+    btn.style.display = '';
+    btn.addEventListener('click', () => window.gtecTradingCard({
+        driver: shareCardDriver(),
         stats: _shareStats,
         buttonEl: btn,
     }));
