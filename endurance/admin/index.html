@@ -1546,6 +1546,7 @@ async function renderSeasons() {
                     <button class="btn-icon" onclick="viewSeasonTeams('${s.id}','${esc(s.name)}')">Teams</button>
                     <button class="btn-icon" onclick="openPreSeasonModal('${s.id}','${esc(s.name)}')">Pre-Season</button>
                     <button class="btn-icon" onclick="generateSeasonCards('${s.id}','${esc(s.name)}',${s.year})" title="Lock a Trading Card snapshot for every driver who raced this season">Cards</button>
+                    <button class="btn-icon danger" onclick="clearSeasonCards('${s.id}','${esc(s.name)}')" title="Unlock - deletes this season's locked cards, so My Collection and Season Wrapped fall back to live &quot;so far&quot; data">Unlock Cards</button>
                     <button class="btn-icon" onclick="editSeason('${s.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteSeason('${s.id}','${esc(s.name)}')">Delete</button>
                 </div></td>
@@ -1622,6 +1623,17 @@ async function generateSeasonCards(seasonId, seasonName, seasonYear) {
     panel.innerHTML = '';
     if (error) { toast(error.message, 'error'); return; }
     toast(`Locked ${rows.length} season card${rows.length === 1 ? '' : 's'} for ${seasonName}.`, 'success');
+}
+
+// Deletes every locked card for this season, which un-freezes it: My
+// Collection drops the tile, and Season Wrapped falls back to its live
+// "so far" framing for anyone whose target season was this one.
+async function clearSeasonCards(seasonId, seasonName) {
+    if (!confirm(`Unlock "${seasonName}"? This deletes its locked Trading Cards. My Collection and Season Wrapped will fall back to live "so far" data until you generate cards again.`)) return;
+
+    const { error, count } = await sb.from('driver_season_cards').delete({ count: 'exact' }).eq('season_id', seasonId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(count ? `Unlocked ${count} season card${count === 1 ? '' : 's'} for ${seasonName}.` : `${seasonName} had no locked cards.`, 'success');
 }
 
 function seasonForm(s = {}) {
