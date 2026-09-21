@@ -1373,6 +1373,10 @@ async function renderDashboard() {
                 <div style="font-size:0.85rem;color:var(--muted)">Rebuild Hall of Fame records from current career stats.</div>
                 <button class="btn btn-primary" onclick="refreshHallOfFame()">Refresh Hall of Fame</button>
             </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:0.85rem 0;border-bottom:1px solid var(--border)">
+                <div style="font-size:0.85rem;color:var(--muted)">Correct every team entry's car number, across every event, to match each team's car-number override (or its leader, if no override is set).</div>
+                <button class="btn btn-primary" onclick="fixTeamCarNumbers()">Fix Team Car Numbers</button>
+            </div>
             ${isOwner() ? `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding-top:0.85rem">
                 <div style="font-size:0.85rem;color:#fca5a5">Delete all race data — entries, results, qualifying, ratings, penalties, steward decisions, Hall of Fame. Events, drivers, teams, manufacturers and seasons are kept.</div>
@@ -1853,14 +1857,14 @@ async function removeTeamSeason(id) {
 // ============================================================
 async function renderTeams() {
     const { data, error } = await sb.from('teams')
-        .select('*, manufacturers(name,brand_color), leader:drivers!leader_driver_id(id, display_name)')
+        .select('*, manufacturers(name,brand_color), leader:drivers!leader_driver_id(id, display_name), car_number_driver:drivers!car_number_driver_id(id, display_name, career_number)')
         .order('name');
     if (error) { toast(error.message, 'error'); return; }
 
     // Fetch every current-team driver in one go so we can show leader status
     // and offer the leader-picker for teams without one.
     const { data: allDrivers } = await sb.from('drivers')
-        .select('id, display_name, current_team_id')
+        .select('id, display_name, career_number, current_team_id')
         .not('current_team_id', 'is', null);
     const byTeam = new Map();
     (allDrivers || []).forEach(d => {
@@ -1869,7 +1873,7 @@ async function renderTeams() {
         byTeam.set(d.current_team_id, list);
     });
 
-    const rows = data.length === 0 ? `<tr><td colspan="6"><div class="empty-state">No teams yet.</div></td></tr>` :
+    const rows = data.length === 0 ? `<tr><td colspan="7"><div class="empty-state">No teams yet.</div></td></tr>` :
         data.map(t => {
             const driversOnTeam = byTeam.get(t.id) || [];
             let leaderCell;
@@ -1887,6 +1891,25 @@ async function renderTeams() {
                     </select>
                     <button class="btn-icon" style="margin-left:0.4rem" onclick="setTeamLeader('${t.id}','${jsStr(t.name)}')">Set Leader</button>`;
             }
+
+            // Car number: which driver's own career number the team's car
+            // uses. Defaults to the leader (handled in the auto-assignment
+            // JS) unless explicitly overridden here.
+            let carNumberCell;
+            if (t.car_number_driver) {
+                carNumberCell = `<span class="badge badge-gold">${t.car_number_driver.career_number != null ? '#' + esc(t.car_number_driver.career_number) + ' ' : ''}${esc(t.car_number_driver.display_name)}</span>
+                    <button class="btn-icon" style="margin-left:0.4rem" onclick="clearTeamCarNumberDriver('${t.id}','${jsStr(t.name)}')">Clear</button>`;
+            } else if (driversOnTeam.length === 0) {
+                carNumberCell = '<span class="td-muted">No drivers yet</span>';
+            } else {
+                const numOpts = driversOnTeam
+                    .map(d => `<option value="${esc(d.id)}">${d.career_number != null ? '#' + esc(d.career_number) + ' ' : ''}${esc(d.display_name)}</option>`)
+                    .join('');
+                carNumberCell = `<select id="carnum-${t.id}" style="padding:0.35rem 0.55rem;font-size:0.78rem;background:var(--bg-2);border:1px solid var(--border);border-radius:5px;color:var(--text)">
+                        <option value="">— defaults to leader —</option>${numOpts}
+                    </select>
+                    <button class="btn-icon" style="margin-left:0.4rem" onclick="setTeamCarNumberDriver('${t.id}','${jsStr(t.name)}')">Set</button>`;
+            }
             return `
             <tr>
                 <td><strong>${esc(t.name)}</strong></td>
@@ -1897,6 +1920,7 @@ async function renderTeams() {
                 </td>
                 <td class="td-muted">${esc(t.home_country) || '—'}</td>
                 <td>${leaderCell}</td>
+                <td>${carNumberCell}</td>
                 <td><div class="row-actions">
                     <button class="btn-icon" onclick="editTeam('${t.id}')">Edit</button>
                     <button class="btn-icon danger" onclick="deleteTeam('${t.id}','${jsStr(t.name)}')">Delete</button>
@@ -1915,7 +1939,7 @@ async function renderTeams() {
                 <th class="th-sort" onclick="thSort(this,'teams-table')">Slug</th>
                 <th class="th-sort" onclick="thSort(this,'teams-table')">Manufacturer</th>
                 <th class="th-sort" onclick="thSort(this,'teams-table')">Country</th>
-                <th>Leader</th><th></th>
+                <th>Leader</th><th>Car #</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
 }
@@ -1935,6 +1959,28 @@ async function clearTeamLeader(teamId, teamName) {
     const { error } = await sb.from('teams').update({ leader_driver_id: null }).eq('id', teamId);
     if (error) { toast(error.message, 'error'); return; }
     toast(`Leader cleared for ${teamName}.`, 'success');
+    await renderTeams();
+}
+
+// Explicit override for which driver's number the team's car uses -
+// otherwise auto-assignment defaults to the leader. Doesn't touch
+// existing entries; run "Fix Team Car Numbers" in Maintenance to apply
+// it retroactively.
+async function setTeamCarNumberDriver(teamId, teamName) {
+    const sel = document.getElementById('carnum-' + teamId);
+    const driverId = sel?.value;
+    if (!driverId) { toast('Pick a driver first.', 'error'); return; }
+    const { error } = await sb.from('teams').update({ car_number_driver_id: driverId }).eq('id', teamId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(`Car number set for ${teamName}.`, 'success');
+    await renderTeams();
+}
+
+async function clearTeamCarNumberDriver(teamId, teamName) {
+    if (!confirm(`Clear the car number override for "${teamName}"? It will default back to the team leader's number.`)) return;
+    const { error } = await sb.from('teams').update({ car_number_driver_id: null }).eq('id', teamId);
+    if (error) { toast(error.message, 'error'); return; }
+    toast(`Car number override cleared for ${teamName}.`, 'success');
     await renderTeams();
 }
 
@@ -3415,7 +3461,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
         if (newTeamIds.length) {
             const [{ data: teamDrivers }, { data: teamLeaders }] = await Promise.all([
                 sb.from('drivers').select('id, current_team_id, career_number').in('current_team_id', newTeamIds),
-                sb.from('teams').select('id, leader_driver_id').in('id', newTeamIds),
+                sb.from('teams').select('id, leader_driver_id, car_number_driver_id').in('id', newTeamIds),
             ]);
             const byTeam = new Map();
             (teamDrivers || []).forEach(d => {
@@ -3423,7 +3469,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
                 list.push(d);
                 byTeam.set(d.current_team_id, list);
             });
-            const leaderByTeam = new Map((teamLeaders || []).map(t => [t.id, t.leader_driver_id]));
+            const teamById = new Map((teamLeaders || []).map(t => [t.id, t]));
 
             const driverLinks = [];
             const carNumberUpdates = [];
@@ -3433,13 +3479,14 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
                     driverLinks.push({ entry_id: en.id, driver_id: d.id, stint_role: 'starting' });
                 });
                 totalTeamDrivers += drivers.length;
-                // Car number defaults to the team leader's own racing number
-                // (the real-world convention - a car carries one number for
-                // the whole crew), falling back to any other numbered
-                // driver only if the leader has none set.
-                const leaderId = leaderByTeam.get(en.team_id);
-                const leaderDriver = leaderId ? drivers.find(d => d.id === leaderId && d.career_number != null) : null;
-                const firstWithNum = leaderDriver || drivers.find(d => d.career_number != null);
+                // Car number: explicit override first, then the team
+                // leader's own racing number (the real-world convention - a
+                // car carries one number for the whole crew), falling back
+                // to any other numbered driver only if neither has one set.
+                const team = teamById.get(en.team_id);
+                const overrideDriver = team?.car_number_driver_id ? drivers.find(d => d.id === team.car_number_driver_id && d.career_number != null) : null;
+                const leaderDriver = team?.leader_driver_id ? drivers.find(d => d.id === team.leader_driver_id && d.career_number != null) : null;
+                const firstWithNum = overrideDriver || leaderDriver || drivers.find(d => d.career_number != null);
                 if (firstWithNum) {
                     carNumberUpdates.push({ id: en.id, car_number: firstWithNum.career_number });
                 }
@@ -3460,7 +3507,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
         const teamIds = [...new Set(emptyTeamEntries.map(en => en.team_id))];
         const [{ data: existingTeamDrivers }, { data: teamLeaders2 }] = await Promise.all([
             sb.from('drivers').select('id, current_team_id, career_number').in('current_team_id', teamIds),
-            sb.from('teams').select('id, leader_driver_id').in('id', teamIds),
+            sb.from('teams').select('id, leader_driver_id, car_number_driver_id').in('id', teamIds),
         ]);
         const byTeam2 = new Map();
         (existingTeamDrivers || []).forEach(d => {
@@ -3468,7 +3515,7 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
             list.push(d);
             byTeam2.set(d.current_team_id, list);
         });
-        const leaderByTeam2 = new Map((teamLeaders2 || []).map(t => [t.id, t.leader_driver_id]));
+        const teamById2 = new Map((teamLeaders2 || []).map(t => [t.id, t]));
         const links2 = [];
         const carUpdates2 = [];
         for (const en of emptyTeamEntries) {
@@ -3476,9 +3523,10 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
             drivers.forEach(d => links2.push({ entry_id: en.id, driver_id: d.id, stint_role: 'starting' }));
             backfilledDrivers += drivers.length;
             if (en.car_number == null) {
-                const leaderId2 = leaderByTeam2.get(en.team_id);
-                const leaderDriver2 = leaderId2 ? drivers.find(d => d.id === leaderId2 && d.career_number != null) : null;
-                const firstWithNum = leaderDriver2 || drivers.find(d => d.career_number != null);
+                const team2 = teamById2.get(en.team_id);
+                const overrideDriver2 = team2?.car_number_driver_id ? drivers.find(d => d.id === team2.car_number_driver_id && d.career_number != null) : null;
+                const leaderDriver2 = team2?.leader_driver_id ? drivers.find(d => d.id === team2.leader_driver_id && d.career_number != null) : null;
+                const firstWithNum = overrideDriver2 || leaderDriver2 || drivers.find(d => d.career_number != null);
                 if (firstWithNum) carUpdates2.push({ id: en.id, car_number: firstWithNum.career_number });
             }
         }
@@ -3707,18 +3755,20 @@ async function saveEntryDriver(entryId, eventId, eventName, seasonId) {
     });
     if (error) { toast(error.message, 'error'); return; }
 
-    // If the entry has no car number yet, adopt the team leader's career
-    // number (a car carries one number for the whole crew, and the leader's
-    // own number is the real-world convention), falling back to the driver
-    // just added if the leader has no number set.
+    // If the entry has no car number yet, adopt the team's car-number
+    // override if one's set, else the team leader's career number (a car
+    // carries one number for the whole crew, and the leader's own number
+    // is the real-world convention), falling back to the driver just added
+    // if neither has a number set.
     const { data: entry } = await sb.from('entries').select('car_number, team_id').eq('id', entryId).single();
     if (entry && entry.car_number == null) {
         let carNumber = null;
         if (entry.team_id) {
-            const { data: team } = await sb.from('teams').select('leader_driver_id').eq('id', entry.team_id).maybeSingle();
-            if (team?.leader_driver_id) {
-                const { data: leaderDrv } = await sb.from('drivers').select('career_number').eq('id', team.leader_driver_id).maybeSingle();
-                carNumber = leaderDrv?.career_number ?? null;
+            const { data: team } = await sb.from('teams').select('leader_driver_id, car_number_driver_id').eq('id', entry.team_id).maybeSingle();
+            const preferredId = team?.car_number_driver_id || team?.leader_driver_id;
+            if (preferredId) {
+                const { data: preferredDrv } = await sb.from('drivers').select('career_number').eq('id', preferredId).maybeSingle();
+                carNumber = preferredDrv?.career_number ?? null;
             }
         }
         if (carNumber == null) {
@@ -4037,7 +4087,7 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const lobbySize = Math.max(2, Math.min(32, parseInt(sizeInput?.value, 10) || 16));
 
     const { data: entries } = await sb.from('entries')
-        .select(`id, car_number, team_id, teams(leader_driver_id), entry_drivers(driver_id, drivers(id, career_number, gt7_dr_rating, gt7_sr_rating, willing_host, display_name, nationality))`)
+        .select(`id, car_number, team_id, teams(leader_driver_id, car_number_driver_id), entry_drivers(driver_id, drivers(id, career_number, gt7_dr_rating, gt7_sr_rating, willing_host, display_name, nationality))`)
         .eq('event_id', eventId)
         .neq('status', 'withdrawn');
     if (!entries?.length) { toast('No entries to allocate.', 'error'); return; }
@@ -4127,12 +4177,15 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
 
         const payload = { lobby_number: currentLobby, host_driver_id: null };
         if (en.car_number == null) {
-            // Prefer the team leader's own number - a car carries one number
-            // for the whole crew, and defaulting to the leader's matches the
-            // real-world convention instead of whichever driver loaded first.
+            // Explicit override first, then the team leader's own number -
+            // a car carries one number for the whole crew, and defaulting
+            // to the leader matches the real-world convention instead of
+            // whichever driver loaded first.
+            const overrideId = en.teams?.car_number_driver_id;
+            const overrideDriver = overrideId ? (en.entry_drivers || []).find(ed => ed.drivers?.id === overrideId && ed.drivers?.career_number != null) : null;
             const leaderId = en.teams?.leader_driver_id;
             const leaderDriver = leaderId ? (en.entry_drivers || []).find(ed => ed.drivers?.id === leaderId && ed.drivers?.career_number != null) : null;
-            const firstDriver = leaderDriver || (en.entry_drivers || []).find(ed => ed.drivers?.career_number != null);
+            const firstDriver = overrideDriver || leaderDriver || (en.entry_drivers || []).find(ed => ed.drivers?.career_number != null);
             if (firstDriver) payload.car_number = firstDriver.drivers.career_number;
         }
         const { error } = await sb.from('entries').update(payload).eq('id', en.id);
@@ -5063,6 +5116,52 @@ async function refreshHallOfFame() {
     if (error) { toast(error.message, 'error'); return; }
     if (data?.error) { toast(data.error, 'error'); return; }
     toast(`Hall of Fame refreshed — ${data.records_inserted} record${data.records_inserted !== 1 ? 's' : ''}.`, 'success');
+}
+
+// One-off correction for the history predating the leader-preference fix:
+// every team entry's car number, across every event, now matches that
+// team's explicit car-number override if one's set, else its CURRENT
+// leader's own career number - a car carries one number for the whole
+// crew (same convention as Le Mans/WEC/IMSA), not whichever driver
+// happened to load first when the entry was created. Skips entries whose
+// team has neither an override nor a leader with a career number set.
+async function fixTeamCarNumbers() {
+    if (!confirm(`Correct every team entry's car number, across every event, to match that team's car-number override (or its leader, if no override is set)?\n\nOnly entries that don't already match are changed. Solo entries are untouched.`)) return;
+
+    const { data: entries, error } = await sb.from('entries')
+        .select('id, car_number, team_id, teams(leader_driver_id, car_number_driver_id), events(name)')
+        .not('team_id', 'is', null);
+    if (error) { toast(error.message, 'error'); return; }
+
+    const preferredIds = [...new Set((entries || [])
+        .map(en => en.teams?.car_number_driver_id || en.teams?.leader_driver_id)
+        .filter(Boolean))];
+    if (!preferredIds.length) { toast('No teams with a leader or car-number override set - nothing to fix.', 'error'); return; }
+
+    const { data: preferredDrivers, error: ldErr } = await sb.from('drivers').select('id, career_number').in('id', preferredIds);
+    if (ldErr) { toast(ldErr.message, 'error'); return; }
+    const numberByDriver = new Map((preferredDrivers || []).map(d => [d.id, d.career_number]));
+    const preferredIdFor = en => en.teams?.car_number_driver_id || en.teams?.leader_driver_id || null;
+
+    const toFix = (entries || []).filter(en => {
+        const pid = preferredIdFor(en);
+        const num = pid ? numberByDriver.get(pid) : null;
+        return num != null && num !== en.car_number;
+    });
+
+    if (!toFix.length) { toast('Every team entry already matches its leader or car-number override.', 'success'); return; }
+
+    let failures = 0;
+    for (const en of toFix) {
+        const num = numberByDriver.get(preferredIdFor(en));
+        const { error: updErr } = await sb.from('entries').update({ car_number: num }).eq('id', en.id);
+        if (updErr) failures++;
+    }
+
+    toast(failures
+        ? `Fixed ${toFix.length - failures} entr${toFix.length - failures === 1 ? 'y' : 'ies'}, ${failures} failed.`
+        : `Fixed ${toFix.length} entr${toFix.length === 1 ? 'y' : 'ies'} to match their team's car number.`,
+        failures ? 'error' : 'success');
 }
 
 async function resetEventStats(eventId, eventName) {
