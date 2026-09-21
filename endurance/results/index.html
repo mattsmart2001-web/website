@@ -259,6 +259,40 @@
         /* Qualifying, penalties */
         .q-table th, .q-table td { padding: 0.6rem 0.75rem; }
 
+        /* Race / Qualifying tabs */
+        .tab-bar { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .tab-bar::-webkit-scrollbar { display: none; }
+        .tab {
+            flex: 0 0 auto; white-space: nowrap;
+            padding: 0.8rem 1.3rem;
+            background: transparent; border: none;
+            color: var(--muted);
+            font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+        /* Qualifying tab: search + split filters, reusing the site's shared
+           search / pill treatment (Teams, Drivers listings). */
+        .quali-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem; margin-bottom: 1.5rem; }
+        .gtec-search-wrap { position: relative; flex: 1 1 260px; max-width: 380px; }
+        .gtec-search-icon { position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+        .gtec-search-input { width: 100%; padding: 0.6rem 1rem 0.6rem 2.4rem; background: var(--bg-1); border: 1px solid var(--border); border-radius: 999px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+        .gtec-search-input::placeholder { color: var(--muted); }
+        .gtec-search-input:focus { border-color: rgba(255,209,102,0.55); box-shadow: 0 0 0 3px rgba(255,209,102,0.12); }
+        .sort-pills { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+        .sort-label { font-size: 0.72rem; color: var(--muted); margin-right: 0.15rem; }
+        .sort-btn { background: transparent; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; padding: 0.28rem 0.85rem; cursor: pointer; transition: border-color 0.15s, color 0.15s; font-family: inherit; }
+        .sort-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+        .sort-btn.sort-btn-active { border-color: var(--gold); color: var(--gold); }
+        .q-split-badge { display: inline-block; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 4px; padding: 0.12rem 0.5rem; font-size: 0.7rem; }
+        .q-split-block { margin-top: 2rem; }
+        .q-split-block:first-of-type { margin-top: 0; }
+        .q-empty-msg { padding: 1.25rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
+
         /* Steward decisions */
         .steward-list { display: flex; flex-direction: column; gap: 0.75rem; }
         .steward-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem 1.25rem; border-left: 3px solid var(--muted); }
@@ -555,6 +589,7 @@ async function loadResults(slug) {
     window._resultsEventId = event.id;
     const savedOpen = loadSplitState();
     const wantSplit = new URLSearchParams(location.search).get('split');
+    const wantTab = new URLSearchParams(location.search).get('tab') === 'quali' ? 'quali' : 'race';
     const lobbySections = lobbyKeys.map((k, i) => {
         const title = k === 0 ? 'Unassigned' : `Split ${k}`;
         const key = String(k);
@@ -564,6 +599,8 @@ async function loadResults(slug) {
         else open = (i === 0);
         return renderLobbySection(title, groups[k], key, open);
     }).join('');
+
+    const qualiHTML = buildQualifyingTab(driverRows, lobbyKeys, groups);
 
     app.innerHTML = `
     <div class="page-wrap">
@@ -583,11 +620,21 @@ async function loadResults(slug) {
             <span class="badge badge-${esc(event.status)}">${esc(statusLabel[event.status] || event.status)}</span>
         </div>
 
-        ${!anyResults && driverRows.length === 0 ? `
-            <div class="state-msg"><h3>No Entries Yet</h3><p>Entries will appear here once admins register teams for the event.</p></div>
-        ` : ''}
+        <div class="tab-bar">
+            <button class="tab ${wantTab === 'race' ? 'active' : ''}" data-tab="race" onclick="setResultsTab('race')">Race</button>
+            <button class="tab ${wantTab === 'quali' ? 'active' : ''}" data-tab="quali" onclick="setResultsTab('quali')">Qualifying</button>
+        </div>
 
-        ${lobbySections}
+        <div class="tab-panel" id="tab-race" ${wantTab === 'race' ? '' : 'hidden'}>
+            ${!anyResults && driverRows.length === 0 ? `
+                <div class="state-msg"><h3>No Entries Yet</h3><p>Entries will appear here once admins register teams for the event.</p></div>
+            ` : ''}
+            ${lobbySections}
+        </div>
+
+        <div class="tab-panel" id="tab-quali" ${wantTab === 'quali' ? '' : 'hidden'}>
+            ${qualiHTML}
+        </div>
 
         ${pens.length ? `
             <div class="section-heading">Penalties & Adjustments</div>
@@ -602,11 +649,26 @@ async function loadResults(slug) {
             </div>` : ''}
     </div>`;
 
-    // A ?split=N deep-link scrolls that split into view once rendered.
-    if (wantSplit != null && wantSplit !== '') {
+    // A ?split=N deep-link scrolls that split into view once rendered (Race
+    // tab only - the Qualifying tab uses its own split pills, not sections
+    // keyed for scroll-into-view).
+    if (wantTab === 'race' && wantSplit != null && wantSplit !== '') {
         const el = document.querySelector(`.split-acc[data-split="${CSS.escape(String(wantSplit))}"]`);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+}
+
+function setResultsTab(t) {
+    document.querySelectorAll('.tab-bar .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+    const race = document.getElementById('tab-race');
+    const quali = document.getElementById('tab-quali');
+    if (race) race.hidden = t !== 'race';
+    if (quali) quali.hidden = t !== 'quali';
+    try {
+        const url = new URL(location.href);
+        if (t === 'quali') url.searchParams.set('tab', 'quali'); else url.searchParams.delete('tab');
+        history.replaceState(null, '', url);
+    } catch (e) {}
 }
 
 function renderLobbySection(title, rows, key, open) {
@@ -621,16 +683,7 @@ function renderLobbySection(title, rows, key, open) {
             if (ra !== rb) return ra - rb;
             return (a.entry.car_number ?? 999) - (b.entry.car_number ?? 999);
         });
-    const qualifying = rows.filter(r => r.quali?.position != null || r.quali?.best_lap_ms != null)
-        .sort((a, b) => {
-            const ap = a.quali.position ?? 999;
-            const bp = b.quali.position ?? 999;
-            if (ap !== bp) return ap - bp;
-            return (a.quali.best_lap_ms ?? Infinity) - (b.quali.best_lap_ms ?? Infinity);
-        });
-
     const flRow = rows.find(r => r.rd?.fastest_lap_point);
-    const poleRow = qualifying[0] || rows.find(r => r.rd?.pole_point);
 
     const driverCount = rows.length;
 
@@ -652,15 +705,8 @@ function renderLobbySection(title, rows, key, open) {
                 </div>
             ` : ''}
 
-            ${qualifying.length ? `
-                <div class="section-subheading">Qualifying</div>
-                <div class="table-wrap">
-                    ${renderQualyTable(qualifying, poleRow)}
-                </div>
-            ` : ''}
-
-            ${!classified.length && !unclassified.length && !qualifying.length ? `
-                <div class="state-msg" style="padding:2rem"><p style="color:var(--muted)">No results recorded for this split yet.</p></div>
+            ${!classified.length && !unclassified.length ? `
+                <div class="state-msg" style="padding:2rem"><p style="color:var(--muted)">No race results recorded for this split yet.</p></div>
             ` : ''}`;
 
     return `
@@ -855,30 +901,136 @@ function renderResultsTable(classified, unclassified, flRow) {
     </table>`;
 }
 
-function renderQualyTable(qualifying, poleRow) {
-    const fastest = qualifying.reduce((a, b) => {
-        if (a == null) return b;
-        return (b.quali.best_lap_ms || Infinity) < (a.quali.best_lap_ms || Infinity) ? b : a;
-    }, null);
-    const fastestMs = fastest?.quali.best_lap_ms;
+// ── Qualifying tab: every split's quali flattened, so a driver can see
+// their lap in relation to the whole field, not just their own split ─
+function searchBagFor(row) {
+    return [
+        row.driver?.display_name,
+        row.driver?.nationality,
+        row.entry.teams?.name,
+        row.entry.car_model,
+    ].filter(Boolean).join(' ').toLowerCase();
+}
 
-    const rows = qualifying.map(row => {
+function buildQualifyingTab(driverRows, lobbyKeys, groups) {
+    const allQ = driverRows.filter(r => r.quali?.position != null || r.quali?.best_lap_ms != null);
+    if (!allQ.length) {
+        return `<div class="state-msg" style="padding:3rem 2rem"><h3>No Qualifying Yet</h3><p>Qualifying times will appear here once they're recorded for this event.</p></div>`;
+    }
+
+    // Global ranking by best lap time, fastest first - object identity is
+    // stable across driverRows / groups since both reference the same row
+    // objects, so a Map keyed on the row works fine.
+    const ranked = [...allQ].sort((a, b) => (a.quali.best_lap_ms ?? Infinity) - (b.quali.best_lap_ms ?? Infinity));
+    const overallRank = new Map();
+    ranked.forEach((r, i) => overallRank.set(r, i + 1));
+    const fastestMs = ranked[0]?.quali.best_lap_ms;
+
+    const splitPills = lobbyKeys.map(k => {
+        const title = k === 0 ? 'Unassigned' : `Split ${k}`;
+        return `<button class="sort-btn" data-qsplit="${esc(String(k))}" onclick="filterQualiSplit(this)">${esc(title)}</button>`;
+    }).join('');
+
+    const sections = lobbyKeys.map(k => {
+        const qualifying = (groups[k] || [])
+            .filter(r => r.quali?.position != null || r.quali?.best_lap_ms != null)
+            .sort((a, b) => {
+                const ap = a.quali.position ?? 999, bp = b.quali.position ?? 999;
+                if (ap !== bp) return ap - bp;
+                return (a.quali.best_lap_ms ?? Infinity) - (b.quali.best_lap_ms ?? Infinity);
+            });
+        if (!qualifying.length) return '';
+        const title = k === 0 ? 'Unassigned' : `Split ${k}`;
+        return `
+        <div class="q-split-block" data-qsplit="${esc(String(k))}">
+            <div class="section-subheading">${esc(title)} <span class="split-count">${qualifying.length} driver${qualifying.length === 1 ? '' : 's'}</span></div>
+            <div class="table-wrap">${renderQualyTable(qualifying, overallRank, fastestMs)}</div>
+        </div>`;
+    }).join('');
+
+    return `
+        <div class="quali-filters">
+            <div class="gtec-search-wrap">
+                <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input class="gtec-search-input" id="quali-search" type="search" autocomplete="off" placeholder="Search driver, team or country" oninput="filterQualiRows(this.value)">
+            </div>
+            <div class="sort-pills" id="quali-split-pills">
+                <span class="sort-label">Split:</span>
+                <button class="sort-btn sort-btn-active" data-qsplit="all" onclick="filterQualiSplit(this)">All</button>
+                ${splitPills}
+            </div>
+        </div>
+
+        <div class="section-subheading">Fastest Overall</div>
+        <div class="table-wrap">${renderOverallQualyTable(ranked.slice(0, Math.min(8, ranked.length)))}</div>
+
+        <div id="quali-sections">${sections}</div>`;
+}
+
+function renderOverallQualyTable(top) {
+    const fastestMs = top[0]?.quali.best_lap_ms;
+    const rows = top.map((row, i) => {
         const q = row.quali;
-        const isFastest = q.best_lap_ms != null && q.best_lap_ms === fastestMs;
-        const gap = (!isFastest && q.best_lap_ms != null && fastestMs)
-            ? `+${((q.best_lap_ms - fastestMs)/1000).toFixed(3)}s`
-            : (isFastest ? '—' : '—');
-        const posCls = q.position === 1 ? 'pos-1' : q.position === 2 ? 'pos-2' : q.position === 3 ? 'pos-3' : '';
+        const gap = (i === 0 || q.best_lap_ms == null || fastestMs == null) ? '—' : `+${((q.best_lap_ms - fastestMs) / 1000).toFixed(3)}s`;
+        const splitLabel = (row.entry.lobby_number ?? 0) === 0 ? 'Unassigned' : `Split ${row.entry.lobby_number}`;
+        const posCls = i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : '';
         const carNum = row.driver?.career_number ?? row.entry.car_number;
-        return `<tr>
-            <td class="pos-cell ${posCls}">${q.position ?? '—'}</td>
+        return `<tr data-search="${esc(searchBagFor(row))}">
+            <td class="pos-cell ${posCls}">${i + 1}</td>
             <td class="td-num">${carNum != null ? '#' + carNum : '—'}</td>
             <td>${driverCell(row)}</td>
-            <td class="td-muted ${isFastest ? 'fl-time' : ''}">${q.best_lap_ms ? fmtMs(q.best_lap_ms) : '—'}</td>
+            <td class="td-muted"><span class="q-split-badge">${esc(splitLabel)}</span></td>
+            <td class="td-muted ${i === 0 ? 'fl-time' : ''}">${q.best_lap_ms ? fmtMs(q.best_lap_ms) : '—'}</td>
             <td class="td-muted">${gap}</td>
         </tr>`;
     }).join('');
-    return `<table class="q-table"><thead><tr><th>Pos</th><th>Car</th><th>Driver</th><th>Best Lap</th><th>Gap</th></tr></thead><tbody>${rows}</tbody></table>`;
+    return `<table class="q-table"><thead><tr><th>Pos</th><th>Car</th><th>Driver</th><th>Split</th><th>Best Lap</th><th>Gap</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderQualyTable(qualifying, overallRank, fastestMs) {
+    const localFastestMs = qualifying.reduce((best, r) => {
+        const t = r.quali.best_lap_ms;
+        return (t != null && (best == null || t < best)) ? t : best;
+    }, null);
+
+    const rows = qualifying.map(row => {
+        const q = row.quali;
+        const isLocalFastest = q.best_lap_ms != null && q.best_lap_ms === localFastestMs;
+        const isOverallFastest = q.best_lap_ms != null && fastestMs != null && q.best_lap_ms === fastestMs;
+        const gap = (q.best_lap_ms != null && fastestMs != null)
+            ? (isOverallFastest ? '—' : `+${((q.best_lap_ms - fastestMs) / 1000).toFixed(3)}s`)
+            : '—';
+        const posCls = q.position === 1 ? 'pos-1' : q.position === 2 ? 'pos-2' : q.position === 3 ? 'pos-3' : '';
+        const carNum = row.driver?.career_number ?? row.entry.car_number;
+        const oRank = overallRank.get(row);
+        return `<tr data-search="${esc(searchBagFor(row))}">
+            <td class="pos-cell ${posCls}">${q.position ?? '—'}</td>
+            <td class="td-muted td-center">${oRank ?? '—'}</td>
+            <td class="td-num">${carNum != null ? '#' + carNum : '—'}</td>
+            <td>${driverCell(row)}</td>
+            <td class="td-muted ${isLocalFastest ? 'fl-time' : ''}">${q.best_lap_ms ? fmtMs(q.best_lap_ms) : '—'}${isOverallFastest ? '<span class="fl-badge" title="Fastest overall">TOP</span>' : ''}</td>
+            <td class="td-muted">${gap}</td>
+        </tr>`;
+    }).join('');
+    return `<table class="q-table"><thead><tr><th>Split Pos</th><th>Overall</th><th>Car</th><th>Driver</th><th>Best Lap</th><th>Gap to Fastest</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function filterQualiRows(query) {
+    const q = (query || '').toLowerCase().trim();
+    document.querySelectorAll('#tab-quali tbody tr[data-search]').forEach(tr => {
+        const bag = tr.getAttribute('data-search') || '';
+        tr.style.display = (!q || bag.includes(q)) ? '' : 'none';
+    });
+}
+
+function filterQualiSplit(btn) {
+    document.querySelectorAll('#quali-split-pills .sort-btn').forEach(b => b.classList.toggle('sort-btn-active', b === btn));
+    const want = btn.dataset.qsplit;
+    document.querySelectorAll('.q-split-block').forEach(block => {
+        block.style.display = (want === 'all' || block.dataset.qsplit === want) ? '' : 'none';
+    });
 }
 
 function renderStewardList(decisions) {
