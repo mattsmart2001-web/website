@@ -266,6 +266,33 @@
         tbody tr.rank-3 td:first-child { box-shadow: inset 4px 0 0 0 var(--bronze); }
         tbody tr.rank-3:hover td { background-color: rgba(205,127,50,0.035); }
 
+        /* "That's you" row - a distinct accent from the podium colours so it
+           never gets mistaken for a rank-1/2/3 highlight. */
+        tbody tr.driver-row-me td { background-image: linear-gradient(90deg, rgba(56,189,248,0.1) 0%, rgba(56,189,248,0.03) 45%, rgba(255,255,255,0) 100%); }
+        tbody tr.driver-row-me td:first-child { box-shadow: inset 4px 0 0 0 #38bdf8; }
+        tbody tr.driver-row-me:hover td { background-color: rgba(56,189,248,0.05); }
+        tbody tr.driver-row-me.row-flash td { animation: rowFlash 1.4s ease-out; }
+        @keyframes rowFlash { 0%, 35% { background-color: rgba(56,189,248,0.22); } 100% { background-color: transparent; } }
+        .me-tag { display: inline-block; padding: 0.1rem 0.45rem; background: rgba(56,189,248,0.16); color: #38bdf8; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; margin-right: 0.25rem; }
+        .find-me-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            margin-bottom: 1rem;
+            padding: 0.45rem 0.9rem;
+            background: rgba(56,189,248,0.1);
+            border: 1px solid rgba(56,189,248,0.4);
+            border-radius: 999px;
+            color: #38bdf8;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .find-me-btn:hover { background: rgba(56,189,248,0.18); transform: translateY(-1px); }
+        .find-me-btn svg { width: 13px; height: 13px; }
+
         /* "Lighter" stats — small numeric columns get less visual weight
            so the driver / team name + points are the loudest cells, but
            still big and bright enough to read at a glance. */
@@ -816,6 +843,20 @@ function renderPodium(list) {
 }
 
 // Count the podium points up on render (skipped when reduced motion is on).
+// Scrolls the signed-in driver's own row into view (centred) and gives it
+// a brief highlight flash, so the drivers directly above/below are visible
+// without hunting through the full standings.
+function scrollToMe() {
+    if (!_btMyId) return;
+    const row = document.querySelector(`tr[data-driver-id="${CSS.escape(String(_btMyId))}"]`);
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.remove('row-flash');
+    void row.offsetWidth;
+    row.classList.add('row-flash');
+    setTimeout(() => row.classList.remove('row-flash'), 1500);
+}
+
 function animatePodium() {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     document.querySelectorAll('.pod-pts-num[data-pts]').forEach(el => {
@@ -947,6 +988,8 @@ function renderDrivers(panel) {
         const leaderTag = pos === 1
             ? `<span class="leader-tag">★ Leader</span>`
             : '';
+        const isMe = d.driver_id === _btMyId;
+        const meTag = isMe ? `<span class="me-tag">You</span>` : '';
         const ratingInfo = _ratingByDriver[d.driver_id];
         const eloHTML = ratingInfo
             ? `<div class="elo-cell">
@@ -958,7 +1001,7 @@ function renderDrivers(panel) {
         const gap = pos === 1
             ? `<span class="leader-pip">LEADER</span>`
             : `<span class="points-gap">−${(leaderPoints - points).toFixed(points % 1 === 0 && leaderPoints % 1 === 0 ? 0 : 1)}</span>${battleFlag(points, _drivers[i - 1])}`;
-        return `<tr class="driver-row ${rankCls(pos)}">
+        return `<tr class="driver-row ${rankCls(pos)}${isMe ? ' driver-row-me' : ''}" data-driver-id="${esc(d.driver_id)}">
             <td class="${posCls(pos)}" style="${d.brand_color ? `border-left:3px solid ${esc(d.brand_color)}` : 'border-left:3px solid transparent'}">
                 <div class="pos-stack">
                     <span>${pos}</span>
@@ -969,7 +1012,7 @@ function renderDrivers(panel) {
                 <div class="driver-cell">
                     ${driverAvatar(_rInfo?.photo, d.driver_name)}
                     <div class="driver-cell-text">
-                        <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${leaderTag}</div>
+                        <div class="name">${num}${d.nationality ? `<span class="driver-flag" title="${esc(d.nationality)}">${flag(d.nationality)}</span> ` : ''}<a href="/endurance/drivers/?slug=${esc(d.driver_slug)}" style="color:inherit;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${esc(d.driver_name)}</a>${meTag}${leaderTag}</div>
                         ${teamLine}
                     </div>
                 </div>
@@ -990,7 +1033,14 @@ function renderDrivers(panel) {
         </tr>`;
     }).join('');
 
+    const findMeBtn = (_btMyId && _drivers.some(d => d.driver_id === _btMyId)) ? `
+        <button class="find-me-btn" type="button" onclick="scrollToMe()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            Find Me
+        </button>` : '';
+
     panel.innerHTML = `
+        ${findMeBtn}
         ${renderPodium(_drivers)}
         <div class="standings">
             <table>
