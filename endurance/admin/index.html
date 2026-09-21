@@ -3413,15 +3413,17 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
 
         const newTeamIds = (createdTeamEntries || []).map(e => e.team_id).filter(Boolean);
         if (newTeamIds.length) {
-            const { data: teamDrivers } = await sb.from('drivers')
-                .select('id, current_team_id, career_number')
-                .in('current_team_id', newTeamIds);
+            const [{ data: teamDrivers }, { data: teamLeaders }] = await Promise.all([
+                sb.from('drivers').select('id, current_team_id, career_number').in('current_team_id', newTeamIds),
+                sb.from('teams').select('id, leader_driver_id').in('id', newTeamIds),
+            ]);
             const byTeam = new Map();
             (teamDrivers || []).forEach(d => {
                 const list = byTeam.get(d.current_team_id) || [];
                 list.push(d);
                 byTeam.set(d.current_team_id, list);
             });
+            const leaderByTeam = new Map((teamLeaders || []).map(t => [t.id, t.leader_driver_id]));
 
             const driverLinks = [];
             const carNumberUpdates = [];
@@ -3431,7 +3433,13 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
                     driverLinks.push({ entry_id: en.id, driver_id: d.id, stint_role: 'starting' });
                 });
                 totalTeamDrivers += drivers.length;
-                const firstWithNum = drivers.find(d => d.career_number != null);
+                // Car number defaults to the team leader's own racing number
+                // (the real-world convention - a car carries one number for
+                // the whole crew), falling back to any other numbered
+                // driver only if the leader has none set.
+                const leaderId = leaderByTeam.get(en.team_id);
+                const leaderDriver = leaderId ? drivers.find(d => d.id === leaderId && d.career_number != null) : null;
+                const firstWithNum = leaderDriver || drivers.find(d => d.career_number != null);
                 if (firstWithNum) {
                     carNumberUpdates.push({ id: en.id, car_number: firstWithNum.career_number });
                 }
@@ -3450,15 +3458,17 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
     let backfilledDrivers = 0;
     if (emptyTeamEntries.length) {
         const teamIds = [...new Set(emptyTeamEntries.map(en => en.team_id))];
-        const { data: existingTeamDrivers } = await sb.from('drivers')
-            .select('id, current_team_id, career_number')
-            .in('current_team_id', teamIds);
+        const [{ data: existingTeamDrivers }, { data: teamLeaders2 }] = await Promise.all([
+            sb.from('drivers').select('id, current_team_id, career_number').in('current_team_id', teamIds),
+            sb.from('teams').select('id, leader_driver_id').in('id', teamIds),
+        ]);
         const byTeam2 = new Map();
         (existingTeamDrivers || []).forEach(d => {
             const list = byTeam2.get(d.current_team_id) || [];
             list.push(d);
             byTeam2.set(d.current_team_id, list);
         });
+        const leaderByTeam2 = new Map((teamLeaders2 || []).map(t => [t.id, t.leader_driver_id]));
         const links2 = [];
         const carUpdates2 = [];
         for (const en of emptyTeamEntries) {
@@ -3466,7 +3476,9 @@ async function registerAllSeasonTeams(eventId, eventName, seasonId) {
             drivers.forEach(d => links2.push({ entry_id: en.id, driver_id: d.id, stint_role: 'starting' }));
             backfilledDrivers += drivers.length;
             if (en.car_number == null) {
-                const firstWithNum = drivers.find(d => d.career_number != null);
+                const leaderId2 = leaderByTeam2.get(en.team_id);
+                const leaderDriver2 = leaderId2 ? drivers.find(d => d.id === leaderId2 && d.career_number != null) : null;
+                const firstWithNum = leaderDriver2 || drivers.find(d => d.career_number != null);
                 if (firstWithNum) carUpdates2.push({ id: en.id, car_number: firstWithNum.career_number });
             }
         }
@@ -3695,13 +3707,26 @@ async function saveEntryDriver(entryId, eventId, eventName, seasonId) {
     });
     if (error) { toast(error.message, 'error'); return; }
 
-    // If this is the entry's first driver and the entry has no car number yet,
-    // adopt the driver's career number as the car number.
-    const { data: entry } = await sb.from('entries').select('car_number').eq('id', entryId).single();
+    // If the entry has no car number yet, adopt the team leader's career
+    // number (a car carries one number for the whole crew, and the leader's
+    // own number is the real-world convention), falling back to the driver
+    // just added if the leader has no number set.
+    const { data: entry } = await sb.from('entries').select('car_number, team_id').eq('id', entryId).single();
     if (entry && entry.car_number == null) {
-        const { data: drv } = await sb.from('drivers').select('career_number').eq('id', d.driver_id).single();
-        if (drv?.career_number) {
-            await sb.from('entries').update({ car_number: drv.career_number }).eq('id', entryId);
+        let carNumber = null;
+        if (entry.team_id) {
+            const { data: team } = await sb.from('teams').select('leader_driver_id').eq('id', entry.team_id).maybeSingle();
+            if (team?.leader_driver_id) {
+                const { data: leaderDrv } = await sb.from('drivers').select('career_number').eq('id', team.leader_driver_id).maybeSingle();
+                carNumber = leaderDrv?.career_number ?? null;
+            }
+        }
+        if (carNumber == null) {
+            const { data: drv } = await sb.from('drivers').select('career_number').eq('id', d.driver_id).single();
+            carNumber = drv?.career_number ?? null;
+        }
+        if (carNumber != null) {
+            await sb.from('entries').update({ car_number: carNumber }).eq('id', entryId);
         }
     }
 
@@ -4012,7 +4037,7 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const lobbySize = Math.max(2, Math.min(32, parseInt(sizeInput?.value, 10) || 16));
 
     const { data: entries } = await sb.from('entries')
-        .select(`id, car_number, entry_drivers(driver_id, drivers(id, career_number, gt7_dr_rating, gt7_sr_rating, willing_host, display_name, nationality))`)
+        .select(`id, car_number, team_id, teams(leader_driver_id), entry_drivers(driver_id, drivers(id, career_number, gt7_dr_rating, gt7_sr_rating, willing_host, display_name, nationality))`)
         .eq('event_id', eventId)
         .neq('status', 'withdrawn');
     if (!entries?.length) { toast('No entries to allocate.', 'error'); return; }
@@ -4102,7 +4127,12 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
 
         const payload = { lobby_number: currentLobby, host_driver_id: null };
         if (en.car_number == null) {
-            const firstDriver = (en.entry_drivers || []).find(ed => ed.drivers?.career_number != null);
+            // Prefer the team leader's own number - a car carries one number
+            // for the whole crew, and defaulting to the leader's matches the
+            // real-world convention instead of whichever driver loaded first.
+            const leaderId = en.teams?.leader_driver_id;
+            const leaderDriver = leaderId ? (en.entry_drivers || []).find(ed => ed.drivers?.id === leaderId && ed.drivers?.career_number != null) : null;
+            const firstDriver = leaderDriver || (en.entry_drivers || []).find(ed => ed.drivers?.career_number != null);
             if (firstDriver) payload.car_number = firstDriver.drivers.career_number;
         }
         const { error } = await sb.from('entries').update(payload).eq('id', en.id);
