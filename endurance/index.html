@@ -107,14 +107,6 @@
             line-height: 1.6;
         }
 
-        /* ---------- Starfield ---------- */
-        #gtec-stars {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-        }
-
         /* ---------- Minimal nav ---------- */
         .gtec-nav {
             position: sticky;
@@ -434,6 +426,37 @@
             color: var(--gold);
             text-transform: uppercase;
             margin-top: 3rem;
+        }
+
+        /* ---------- Next Round ---------- */
+        .next-round {
+            position: relative;
+            max-width: 1300px; margin: 0 auto; padding: 0 2rem;
+            display: grid; grid-template-columns: 1fr; min-height: 560px;
+            overflow: hidden;
+        }
+        .next-round-copy { position: relative; z-index: 2; padding-top: 3.5rem; max-width: 30ch; }
+        .next-round-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; text-indent: 0.4em; }
+        .next-round-title { font-family: 'Anton', sans-serif; font-size: clamp(2.6rem, 7vw, 4.4rem); letter-spacing: 0.02em; text-transform: uppercase; line-height: 0.95; margin-bottom: 0.75rem; }
+        .next-round-meta { font-size: 0.92rem; color: var(--muted); line-height: 1.6; }
+        .next-round-stage { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+        .next-round-glow {
+            position: absolute; left: 50%; top: 60%; width: 900px; height: 520px; transform: translate(-50%, -50%);
+            background: radial-gradient(ellipse 50% 45% at 50% 50%, rgba(199,154,58,0.16) 0%, rgba(199,154,58,0) 70%);
+        }
+        .next-round-perspective {
+            position: absolute; left: 50%; top: -4%; width: 600px; perspective: 1500px; perspective-origin: 50% 0%;
+            transform: translateX(-50%);
+        }
+        .next-round-perspective img {
+            display: block; width: 100%; height: auto;
+            transform: rotateX(50deg); transform-origin: 50% 0%;
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 88%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 88%, transparent 100%);
+        }
+        @media (max-width: 900px) {
+            .next-round { min-height: 460px; }
+            .next-round-perspective { width: 420px; }
         }
 
         /* ---------- Scroll-reveal ---------- */
@@ -786,8 +809,6 @@
 </head>
 <body>
 
-<canvas id="gtec-stars"></canvas>
-
 <nav class="gtec-nav">
     <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
     <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
@@ -874,6 +895,26 @@
     </div>
     <div class="cd-launched" id="cd-launched" style="display:none">Season complete. See you next year.</div>
 </header>
+
+<!-- Next Round: a static 3D "flyover" render of the upcoming circuit,
+     embossed from a traced track map (real per-pixel lighting via SVG
+     filters, tilted with a CSS 3D perspective transform) — one baked
+     image, no animation, no WebGL. Only shown when the next event's
+     circuit has traced artwork in TRACK_ART (see script below); hidden
+     otherwise so an untraced track doesn't leave an empty section. -->
+<section class="next-round" id="next-round" style="display:none">
+    <div class="next-round-stage">
+        <div class="next-round-glow"></div>
+        <div class="next-round-perspective">
+            <img id="next-round-img" src="" alt="">
+        </div>
+    </div>
+    <div class="next-round-copy">
+        <div class="next-round-eyebrow" id="next-round-eyebrow">Next Round</div>
+        <div class="next-round-title" id="next-round-title"></div>
+        <div class="next-round-meta" id="next-round-meta"></div>
+    </div>
+</section>
 
 <section class="gtec-section">
     <div class="gtec-wrap">
@@ -1071,50 +1112,9 @@
     <div class="partner-link"><a href="/endurance/partners/">🤝 Partner with GTEC</a></div>
 </footer>
 
+<script src="/endurance/assets/gtec-backdrop.js" defer></script>
+
 <script>
-    /* ---- Starfield ---- */
-    (function () {
-        const canvas = document.getElementById('gtec-stars');
-        const ctx = canvas.getContext('2d');
-        let stars = [];
-
-        function resize() {
-            canvas.width  = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-
-        function init() {
-            resize();
-            stars = Array.from({ length: 180 }, () => ({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 1.2 + 0.2,
-                a: Math.random() * 0.55 + 0.1,
-                speed: Math.random() * 0.3 + 0.05,
-                drift: (Math.random() - 0.5) * 0.08,
-            }));
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const s of stars) {
-                ctx.beginPath();
-                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255,220,120,${s.a})`;
-                ctx.fill();
-                s.y += s.speed;
-                s.x += s.drift;
-                if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
-                if (s.x < 0 || s.x > canvas.width) { s.x = Math.random() * canvas.width; }
-            }
-            requestAnimationFrame(draw);
-        }
-
-        window.addEventListener('resize', () => { resize(); });
-        init();
-        draw();
-    })();
-
     /* Countdown target is fetched dynamically from Supabase (see post-config script below) */
 
     /* ---- Scroll reveal + stat counters ---- */
@@ -1195,6 +1195,27 @@
             }
 
             if (cdCaption) cdCaption.textContent = `Round ${next.round}: ${next.circuit_name || next.name} in`;
+
+            // Next Round hero: only shown when the upcoming circuit has
+            // traced artwork here. Add an entry as each track map is
+            // turned into an embossed render.
+            const TRACK_ART = {
+                daytona: '/endurance/assets/tracks/daytona-emboss.png',
+            };
+            const nrSection = document.getElementById('next-round');
+            if (nrSection) {
+                const trackKey = (next.circuit_name || next.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+                const artKey = Object.keys(TRACK_ART).find(k => trackKey.includes(k));
+                if (artKey) {
+                    const dateStr = new Date(next.starts_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+                    document.getElementById('next-round-img').src = TRACK_ART[artKey];
+                    document.getElementById('next-round-img').alt = `${next.circuit_name || next.name} circuit`;
+                    document.getElementById('next-round-title').textContent = next.circuit_name || next.name;
+                    document.getElementById('next-round-eyebrow').textContent = `Next Round · Round ${next.round}`;
+                    document.getElementById('next-round-meta').textContent = `${dateStr}. Static 3D render, no per-frame animation.`;
+                    nrSection.style.display = '';
+                }
+            }
 
             const TARGET = new Date(next.starts_at).getTime();
 
