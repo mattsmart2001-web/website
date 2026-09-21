@@ -5152,14 +5152,15 @@ async function fixTeamCarNumbers() {
     if (!toFix.length) { toast('Every team entry already matches its leader or car-number override.', 'success'); return; }
 
     let failures = 0;
+    let firstFailureMsg = null;
     for (const en of toFix) {
         const num = numberByDriver.get(preferredIdFor(en));
         const { error: updErr } = await sb.from('entries').update({ car_number: num }).eq('id', en.id);
-        if (updErr) failures++;
+        if (updErr) { failures++; if (!firstFailureMsg) firstFailureMsg = updErr.message; }
     }
 
     toast(failures
-        ? `Fixed ${toFix.length - failures} entr${toFix.length - failures === 1 ? 'y' : 'ies'}, ${failures} failed.`
+        ? `Fixed ${toFix.length - failures} entr${toFix.length - failures === 1 ? 'y' : 'ies'}, ${failures} failed: ${firstFailureMsg}`
         : `Fixed ${toFix.length} entr${toFix.length === 1 ? 'y' : 'ies'} to match their team's car number.`,
         failures ? 'error' : 'success');
 }
