@@ -432,20 +432,20 @@
         .next-round {
             position: relative;
             max-width: 1300px; margin: 0 auto; padding: 0 2rem;
-            display: grid; grid-template-columns: 1fr; min-height: 560px;
+            display: grid; grid-template-columns: 1fr; min-height: 420px;
             overflow: hidden;
         }
-        .next-round-copy { position: relative; z-index: 2; padding-top: 3.5rem; max-width: 30ch; }
+        .next-round-copy { position: relative; z-index: 2; padding-top: 3rem; max-width: 26ch; }
         .next-round-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; text-indent: 0.4em; }
-        .next-round-title { font-family: 'Anton', sans-serif; font-size: clamp(2.6rem, 7vw, 4.4rem); letter-spacing: 0.02em; text-transform: uppercase; line-height: 0.95; margin-bottom: 0.75rem; }
+        .next-round-title { font-family: 'Anton', sans-serif; font-size: clamp(1.6rem, 3.4vw, 2.6rem); letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.05; margin-bottom: 0.6rem; }
         .next-round-meta { font-size: 0.92rem; color: var(--muted); line-height: 1.6; }
         .next-round-stage { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
         .next-round-glow {
-            position: absolute; left: 50%; top: 60%; width: 900px; height: 520px; transform: translate(-50%, -50%);
+            position: absolute; left: 50%; top: 58%; width: 620px; height: 380px; transform: translate(-50%, -50%);
             background: radial-gradient(ellipse 50% 45% at 50% 50%, rgba(199,154,58,0.16) 0%, rgba(199,154,58,0) 70%);
         }
         .next-round-perspective {
-            position: absolute; left: 50%; top: -4%; width: 600px; perspective: 1500px; perspective-origin: 50% 0%;
+            position: absolute; left: 50%; top: 2%; width: 440px; perspective: 1500px; perspective-origin: 50% 0%;
             transform: translateX(-50%);
         }
         .next-round-perspective img {
@@ -455,8 +455,9 @@
             mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 88%, transparent 100%);
         }
         @media (max-width: 900px) {
-            .next-round { min-height: 460px; }
-            .next-round-perspective { width: 420px; }
+            .next-round { min-height: 360px; }
+            .next-round-perspective { width: 300px; }
+            .next-round-glow { width: 460px; height: 280px; }
         }
 
         /* ---------- Scroll-reveal ---------- */
