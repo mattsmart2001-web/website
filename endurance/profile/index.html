@@ -52,7 +52,7 @@
         .page { max-width: 860px; margin: 0 auto; padding: 2.5rem 2rem 5rem; }
 
         /* Profile header */
-        .profile-header { display: flex; align-items: flex-start; gap: 1.75rem; margin-bottom: 2.5rem; flex-wrap: wrap; }
+        .profile-header { display: flex; align-items: flex-start; gap: 1.75rem; margin-bottom: 1.3rem; flex-wrap: wrap; }
         .birthday-banner { display: flex; align-items: center; gap: 0.7rem; background: linear-gradient(135deg, rgba(255,209,102,0.14), rgba(255,209,102,0.04)); border: 1px solid rgba(255,209,102,0.35); border-radius: 12px; padding: 0.85rem 1.1rem; margin-bottom: 1.5rem; font-size: 0.92rem; line-height: 1.5; }
         .birthday-banner .emoji { font-size: 1.5rem; flex-shrink: 0; }
         .birthday-banner strong { color: var(--gold); }
@@ -60,32 +60,38 @@
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .profile-meta { flex: 1; min-width: 200px; }
         .profile-meta h1 { font-family: 'Anton', sans-serif; font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.05; margin-bottom: 0.4rem; }
-        .profile-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; margin-bottom: 0.6rem; transition: color 0.15s; }
+        .profile-link { font-size: 0.78rem; color: var(--muted); text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; transition: color 0.15s; }
+        .profile-link:hover { color: var(--gold); }
+        /* Who the driver is sits under the name; what they can make sits
+           below that, quiet until hovered, so four tools no longer read as
+           four competing gold buttons. */
+        .profile-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.55rem 0 0.6rem; }
+        .profile-tools { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 1.5rem; }
         .profile-share-btn {
-            display: inline-flex; align-items: center; gap: 0.4rem;
-            margin-bottom: 0.6rem;
+            display: inline-flex; align-items: center; gap: 0.38rem;
             text-decoration: none;
-            padding: 0.4rem 0.85rem;
-            background: linear-gradient(135deg, rgba(255,209,102,0.18), rgba(255,209,102,0.05));
-            border: 1px solid rgba(255,209,102,0.45);
+            padding: 0.34rem 0.7rem;
+            background: transparent;
+            border: 1px solid var(--border);
             border-radius: 999px;
-            color: var(--gold);
+            color: var(--muted);
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.58rem;
+            font-size: 0.55rem;
             font-weight: 700;
-            letter-spacing: 0.2em;
+            letter-spacing: 0.13em;
             text-transform: uppercase;
             cursor: pointer;
-            transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+            transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
         }
+        .profile-share-btn svg { opacity: 0.75; transition: opacity 0.15s ease; }
         .profile-share-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, rgba(255,209,102,0.3), rgba(255,209,102,0.1));
-            transform: translateY(-1px);
-            box-shadow: 0 4px 10px rgba(255,209,102,0.15);
+            color: var(--gold);
+            border-color: rgba(255,209,102,0.45);
+            background: rgba(255,209,102,0.07);
         }
+        .profile-share-btn:hover:not(:disabled) svg { opacity: 1; }
+        .profile-share-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
         .profile-share-btn:disabled { opacity: 0.7; cursor: progress; }
-        .profile-link:hover { color: var(--gold); }
-        .profile-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
         .pill-leader-inline {
             display: inline-block;
             margin-left: 0.35rem;
@@ -483,41 +489,8 @@
         <div class="avatar" id="avatar-el">?</div>
         <div class="profile-meta">
             <h1 id="driver-name">—</h1>
-            <div>
-                <a class="profile-link" id="public-link" href="#">View public profile →</a>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:0.5rem 0.75rem;align-items:center">
-                <button class="profile-share-btn" id="share-profile-btn" type="button" style="display:none">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
-                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                        <polyline points="16 6 12 2 8 6"/>
-                        <line x1="12" y1="2" x2="12" y2="15"/>
-                    </svg>
-                    <span>Share Driver Card</span>
-                </button>
-                <button class="profile-share-btn" id="trading-card-btn" type="button" style="display:none">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
-                        <rect x="2" y="6" width="14" height="18" rx="2" transform="rotate(-8 9 15)"/>
-                        <rect x="8" y="3" width="14" height="18" rx="2"/>
-                    </svg>
-                    <span>Trading Card</span>
-                </button>
-                <a class="profile-share-btn" id="wrapped-link" href="#" style="display:none">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
-                        <path d="M13 2 4 14h6l-1 8 9-12h-6z"/>
-                    </svg>
-                    <span>Season Wrapped</span>
-                </a>
-                <button class="profile-share-btn" id="obs-widget-btn" type="button" style="display:none" title="Copy a link to your OBS streaming overlay">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
-                        <rect x="3" y="4" width="18" height="14" rx="2"/>
-                        <line x1="8" y1="21" x2="16" y2="21"/>
-                        <line x1="12" y1="18" x2="12" y2="21"/>
-                    </svg>
-                    <span>OBS Widget</span>
-                </button>
-            </div>
             <div class="profile-tags" id="profile-tags"></div>
+            <a class="profile-link" id="public-link" href="#">View public profile →</a>
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem">
             <button class="header-icon-btn" id="ticker-link-btn" type="button" title="Copy the OBS standings ticker link">
@@ -532,6 +505,41 @@
             </button>
         </div>
     </div>
+
+    <!-- Driver tools. A full-width band so the left column stays
+         identity only: avatar, name, tags, public link. -->
+    <div class="profile-tools">
+        <button class="profile-share-btn" id="share-profile-btn" type="button" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                <polyline points="16 6 12 2 8 6"/>
+                <line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+            <span>Share Driver Card</span>
+        </button>
+        <button class="profile-share-btn" id="trading-card-btn" type="button" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
+                <rect x="2" y="6" width="14" height="18" rx="2" transform="rotate(-8 9 15)"/>
+                <rect x="8" y="3" width="14" height="18" rx="2"/>
+            </svg>
+            <span>Trading Card</span>
+        </button>
+        <a class="profile-share-btn" id="wrapped-link" href="#" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
+                <path d="M13 2 4 14h6l-1 8 9-12h-6z"/>
+            </svg>
+            <span>Season Wrapped</span>
+        </a>
+        <button class="profile-share-btn" id="obs-widget-btn" type="button" style="display:none" title="Copy a link to your OBS streaming overlay">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:13px;height:13px">
+                <rect x="3" y="4" width="18" height="14" rx="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="18" x2="12" y2="21"/>
+            </svg>
+            <span>OBS Widget</span>
+        </button>
+    </div>
+
 
     <!-- Contact admin modal -->
     <div class="contact-overlay" id="contact-overlay" onclick="if (event.target === this) closeContactModal()">
