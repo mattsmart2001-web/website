@@ -298,6 +298,9 @@
         .upcoming-absent-toggle { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; flex-shrink: 0; cursor: pointer; }
         .upcoming-absent-toggle input[type=checkbox] { width: 16px; height: 16px; accent-color: #ef4444; cursor: pointer; }
         .upcoming-absent-toggle span { font-size: 0.65rem; color: var(--muted); white-space: nowrap; }
+        .upcoming-absent-toggle.locked { cursor: default; }
+        .upcoming-absent-toggle.locked input[type=checkbox] { cursor: default; }
+        .upcoming-absent-toggle.locked span { color: #f87171; }
 
         /* Edit form */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -1348,15 +1351,29 @@ async function loadUpcoming(driverId) {
     if (!events?.length) return;
 
     const eventIds = events.map(e => e.id);
+    // A row with a reason on it was put there by an admin, not by the
+    // driver. It is theirs to lift, not the driver's, so the toggle locks
+    // rather than pretending to be a self-flag. The reason itself stays
+    // internal and is never rendered here.
     const { data: absenceRows } = await sb.from('driver_event_absences')
-        .select('event_id')
+        .select('event_id, reason')
         .eq('driver_id', driverId)
         .in('event_id', eventIds);
-    const absentSet = new Set((absenceRows || []).map(r => r.event_id));
+    const absentMap = new Map((absenceRows || []).map(r => [r.event_id, r.reason]));
 
     document.getElementById('card-upcoming').style.display = '';
     document.getElementById('upcoming-list').innerHTML = events.map(e => {
-        const isAbsent = absentSet.has(e.id);
+        const isAbsent = absentMap.has(e.id);
+        const byAdmin  = isAbsent && absentMap.get(e.id) != null;
+        const toggle = byAdmin
+            ? `<span class="upcoming-absent-toggle locked" title="An admin has marked you unavailable for this round. Contact admin if you think this is wrong.">
+                   <input type="checkbox" checked disabled aria-label="Marked unavailable by admin">
+                   <span>Admin set</span>
+               </span>`
+            : `<label class="upcoming-absent-toggle" title="Flag yourself as unable to attend this event">
+                   <input type="checkbox" ${isAbsent ? 'checked' : ''} onchange="toggleAbsence('${e.id}','${driverId}',this)">
+                   <span>Can't attend</span>
+               </label>`;
         return `
         <div class="upcoming-row${isAbsent ? ' absent' : ''}" id="upcoming-row-${e.id}">
             <div class="upcoming-round">${e.round}</div>
@@ -1364,10 +1381,7 @@ async function loadUpcoming(driverId) {
                 <div class="upcoming-name">${esc(e.name)}</div>
                 <div class="upcoming-meta">${flag(e.circuit_country)} ${esc(e.circuit_name)} · ${fmtDate(e.starts_at)} · ${e.duration_hours}h</div>
             </div>
-            <label class="upcoming-absent-toggle" title="Flag yourself as unable to attend this event">
-                <input type="checkbox" ${isAbsent ? 'checked' : ''} onchange="toggleAbsence('${e.id}','${driverId}',this)">
-                <span>Can't attend</span>
-            </label>
+            ${toggle}
         </div>`;
     }).join('');
 }
@@ -1377,8 +1391,19 @@ async function toggleAbsence(eventId, driverId, checkbox) {
         const { error } = await sb.from('driver_event_absences').upsert({ driver_id: driverId, event_id: eventId }, { onConflict: 'driver_id,event_id' });
         if (error) { toast('Could not save — please try again.', 'error'); checkbox.checked = false; return; }
     } else {
-        const { error } = await sb.from('driver_event_absences').delete().eq('driver_id', driverId).eq('event_id', eventId);
+        // `reason IS NULL` keeps this to the driver's own flag. RLS enforces
+        // the same thing, so an admin row survives either way, but matching
+        // it here means the count below can tell the driver what happened
+        // instead of silently leaving the box unticked.
+        const { data, error } = await sb.from('driver_event_absences').delete()
+            .eq('driver_id', driverId).eq('event_id', eventId).is('reason', null)
+            .select('event_id');
         if (error) { toast('Could not save — please try again.', 'error'); checkbox.checked = true; return; }
+        if (!data?.length) {
+            toast('An admin has marked you unavailable for this round. Contact admin if you think this is wrong.', 'error');
+            checkbox.checked = true;
+            return;
+        }
     }
     const row = document.getElementById(`upcoming-row-${eventId}`);
     if (row) row.classList.toggle('absent', checkbox.checked);
