@@ -398,13 +398,26 @@
         rungs.forEach((b, i) => { if (badgeIsEarned(cat, b, stats)) { top = b; pos = i + 1; } });
         if (!top) return '';
         const pips = rungs.map((b, i) => `<span class="gtec-cab-pip${i < pos ? ' on' : ''}"></span>`).join('');
+        // The pips carry position on the ladder; the line underneath is
+        // for what the driver has actually done and what it takes to move
+        // up. A bare "1 of 6" reads as a score and hides the racing: three
+        // races in, it said 1 while the number worth showing was 3.
+        // Next rung comes off the badge shown rather than the raw stat, so
+        // a hand-granted badge still points at the right target, and the
+        // count never reads lower than the rung already reached.
+        const nextRung = rungs.find(b => b.threshold > top.threshold) || null;
+        const done = Math.max(Number(stats[cat.stat]) || 0, top.threshold);
+        const note = nextRung
+            ? `${done} / ${nextRung.threshold} ${cat.statLabel} to ${nextRung.name}`
+            : 'Top of the ladder';
         return `
             <div class="gtec-cab-ladder" title="${top.name} — ${top.blurb || ''}">
                 <span class="gtec-cab-ladder-icon">${iconMarkup(top.icon)}</span>
                 <span class="gtec-cab-ladder-body">
                     <span class="gtec-cab-ladder-cat">${label}</span>
                     <span class="gtec-cab-ladder-name">${top.name}</span>
-                    <span class="gtec-cab-pips">${pips}<span class="gtec-cab-pip-text">${pos} of ${rungs.length}</span></span>
+                    <span class="gtec-cab-pips">${pips}</span>
+                    <span class="gtec-cab-note">${note}</span>
                 </span>
             </div>`;
     }
@@ -513,7 +526,7 @@
                 font-family: 'Orbitron', sans-serif; font-size: 0.56rem; font-weight: 700;
                 letter-spacing: 0.12em; color: var(--gold-deep, #c79a3a); font-variant-numeric: tabular-nums;
             }
-            .gtec-cab-ladders { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; }
+            .gtec-cab-ladders { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 0.75rem; }
             .gtec-cab-ladder {
                 display: flex; align-items: center; gap: 0.75rem;
                 background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
@@ -533,9 +546,10 @@
             .gtec-cab-pips { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.35rem; }
             .gtec-cab-pip { width: 12px; height: 3.5px; border-radius: 2px; background: rgba(255,255,255,0.14); }
             .gtec-cab-pip.on { background: var(--gold, #ffd166); }
-            .gtec-cab-pip-text {
+            .gtec-cab-note {
                 font-family: 'Orbitron', sans-serif; font-size: 0.48rem; font-weight: 700;
-                letter-spacing: 0.1em; color: var(--muted, #94a3b8); margin-left: 0.3rem; font-variant-numeric: tabular-nums;
+                letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #94a3b8);
+                margin-top: 0.3rem; font-variant-numeric: tabular-nums; line-height: 1.35;
             }
             .gtec-cab-set { display: flex; flex-wrap: wrap; gap: 0.5rem; }
             .gtec-cab-track { width: 64px; display: flex; flex-direction: column; align-items: center; gap: 0.28rem; text-align: center; }
