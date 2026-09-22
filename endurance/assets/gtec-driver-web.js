@@ -61,7 +61,7 @@
     var crews = [];
     var manuGroups = {};
     var rand = mulberry32(20260922);
-    var camZ = 0, t = 0, running = false;
+    var camZ = 0, t = 0, running = false, rafId = 0, lastFrame = 0;
 
     // Put a crew somewhere across the field. A crew keeps its depth but
     // takes a new lateral spot each time it loops round, because a crew
@@ -172,8 +172,6 @@
     }
 
     function draw() {
-        if (!reduceMotion) { camZ += SPEED; t += 0.0016; }
-
         var camX = Math.sin(t) * 190;
         var camY = Math.sin(t * 0.67 + 1.1) * 130;
 
@@ -273,15 +271,37 @@
             }
         }
 
-        if (running) requestAnimationFrame(draw);
+    }
+
+    function frame(now) {
+        rafId = 0;
+        // Advance by elapsed time rather than per frame, so the flight
+        // runs at the same pace on a 120Hz screen as on a 60Hz one. The
+        // clamp keeps a tab that has been in the background from lurching
+        // forward on its first frame back.
+        var dt = lastFrame ? Math.min(50, now - lastFrame) : 16.7;
+        lastFrame = now;
+        var step = dt / 16.7;
+        if (!reduceMotion) { camZ += SPEED * step; t += 0.0016 * step; }
+        draw();
+        if (running) rafId = requestAnimationFrame(frame);
     }
 
     function start() {
         if (running) return;
         running = true;
-        requestAnimationFrame(draw);
+        lastFrame = 0;
+        if (!rafId) rafId = requestAnimationFrame(frame);
     }
-    function stop() { running = false; }
+    // Cancel the queued frame outright rather than just clearing the
+    // flag. A callback left sitting in the queue resumes alongside the
+    // one the next start() schedules, and then two loops are both
+    // advancing the camera: the flight got faster every time the tab was
+    // left and came back to.
+    function stop() {
+        running = false;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    }
 
     // No point burning frames on a tab nobody is looking at.
     document.addEventListener('visibilitychange', function () {
