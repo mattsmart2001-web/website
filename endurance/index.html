@@ -101,11 +101,15 @@
         html, body {
             margin: 0;
             padding: 0;
-            background: var(--bg);
             color: var(--text);
             font-family: 'Inter', sans-serif;
             line-height: 1.6;
         }
+        /* The dark ground sits on <html> so the fixed driver-web canvas,
+           which sits behind all page content, shows through the body
+           instead of being painted over by it. */
+        html { background: var(--bg); }
+        body { background: transparent; }
 
         /* ---------- Minimal nav ---------- */
         .gtec-nav {
@@ -1113,7 +1117,7 @@
     <div class="partner-link"><a href="/endurance/partners/">🤝 Partner with GTEC</a></div>
 </footer>
 
-<script src="/endurance/assets/gtec-backdrop.js" defer></script>
+<script src="/endurance/assets/gtec-driver-web.js" defer></script>
 
 <script>
     /* Countdown target is fetched dynamically from Supabase (see post-config script below) */
