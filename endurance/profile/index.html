@@ -340,6 +340,23 @@
             .form-group.full { grid-column: 1; }
             .standing-grid { grid-template-columns: repeat(3, 1fr); }
         }
+
+        /* Portal tabs */
+        .portal-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0 0 1.5rem; border-bottom: 1px solid var(--border); }
+        .portal-tab { display: inline-flex; align-items: center; gap: 0.45rem; appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 0.75rem 1.1rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer; transition: color 0.15s ease, border-color 0.15s ease; }
+        .portal-tab:hover { color: var(--text); }
+        .portal-tab[aria-selected="true"] { color: var(--gold); border-bottom-color: var(--gold); }
+        .portal-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; border-radius: 4px; }
+        .portal-tab-count { padding: 0.1rem 0.42rem; background: var(--gold); color: #1a1300; border-radius: 999px; font-size: 0.58rem; letter-spacing: 0.06em; line-height: 1.6; }
+        .portal-panel:focus { outline: none; }
+        .portal-empty { padding: 2rem 0 1rem; color: var(--muted); font-size: 0.9rem; text-align: center; }
+        @media (max-width: 640px) {
+            /* Five tabs still fit on one row at phone width once the tracking
+               and padding come in; a wrapped second row reads as an orphan. */
+            .portal-tabs { gap: 0; justify-content: space-between; }
+            .portal-tab { padding: 0.65rem 0.35rem; gap: 0.3rem; font-size: 0.56rem; letter-spacing: 0.04em; }
+            .portal-tab-count { padding: 0.08rem 0.32rem; font-size: 0.54rem; }
+        }
     </style>
     <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
 </head>
@@ -461,17 +478,52 @@
         </div>
     </div>
 
-    <!-- Season standing + Elo -->
-    <div class="card" id="card-standing" style="display:none">
-        <div class="card-title" id="standing-season-label">Current Season</div>
-        <div class="standing-grid" id="standing-grid"></div>
-        <div class="elo-bar-wrap">
-            <div class="elo-label">Elo Rating</div>
-            <div class="elo-value" id="elo-value">—</div>
-            <div id="elo-tier-el"></div>
-            <div id="elo-delta-el"></div>
-        </div>
+    <!-- Portal tabs — the portal is grouped into five panels so a driver
+         lands on what matters that day rather than one long column. -->
+    <div class="portal-tabs" id="portal-tablist" role="tablist" aria-label="Driver portal sections">
+        <button class="portal-tab" type="button" role="tab" data-tab="raceday" id="tab-raceday" aria-controls="panel-raceday" aria-selected="false" tabindex="-1"><span>Race day</span></button>
+        <button class="portal-tab" type="button" role="tab" data-tab="inbox" id="tab-inbox" aria-controls="panel-inbox" aria-selected="false" tabindex="-1"><span>Inbox</span><span class="portal-tab-count" id="tab-count-inbox" hidden>0</span></button>
+        <button class="portal-tab" type="button" role="tab" data-tab="career" id="tab-career" aria-controls="panel-career" aria-selected="false" tabindex="-1"><span>Career</span></button>
+        <button class="portal-tab" type="button" role="tab" data-tab="team" id="tab-team" aria-controls="panel-team" aria-selected="false" tabindex="-1"><span>Team</span><span class="portal-tab-count" id="tab-count-team" hidden>0</span></button>
+        <button class="portal-tab" type="button" role="tab" data-tab="account" id="tab-account" aria-controls="panel-account" aria-selected="false" tabindex="-1"><span>Account</span></button>
     </div>
+
+    <div class="portal-panel" id="panel-raceday" role="tabpanel" aria-labelledby="tab-raceday" tabindex="0" hidden>
+        <p class="portal-empty" id="empty-raceday" hidden>Nothing live at the moment. Lobby IDs, stewarding and result screenshots appear here on a race weekend.</p>
+
+    <!-- Upcoming events -->
+    <div class="card" id="card-upcoming" style="display:none">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap">
+            Upcoming Events
+            <a href="webcal://sparkstheory.co.uk/endurance/calendar.ics" style="font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;text-transform:none;letter-spacing:normal;color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem" title="Subscribe in your phone or desktop calendar app">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Subscribe to Calendar
+            </a>
+        </div>
+        <div class="upcoming-list" id="upcoming-list"></div>
+    </div>
+
+
+    <!-- Race lobby — current event, split, and lobby ID -->
+    <div class="card" id="card-lobby-room" style="display:none">
+        <div class="card-title">Race Lobby</div>
+        <div class="standing-grid">
+            <div class="standing-item">
+                <div class="si-label">Current Event</div>
+                <div class="si-value" id="lobby-room-event" style="font-size:1rem">—</div>
+            </div>
+            <div class="standing-item">
+                <div class="si-label">Split</div>
+                <div class="si-value" id="lobby-room-split">—</div>
+            </div>
+            <div class="standing-item">
+                <div class="si-label">Lobby ID</div>
+                <div class="si-value" id="lobby-room-id" style="font-size:1.3rem">—</div>
+            </div>
+        </div>
+        <div id="lobby-room-extra"></div>
+    </div>
+
 
     <!-- Report an incident — file an on-track dispute to the stewards -->
     <div class="card" id="card-incidents" style="display:none">
@@ -513,49 +565,6 @@
         <div id="incident-list"></div>
     </div>
 
-    <!-- Inbox -->
-    <div class="card" id="card-inbox" style="display:none">
-        <div class="card-title">Inbox <span id="inbox-unread-pill" style="display:none;margin-left:0.5rem;padding:0.18rem 0.55rem;background:var(--gold);color:#1a1300;border-radius:999px;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.15em">0 NEW</span></div>
-        <div class="inbox-list" id="inbox-list"></div>
-    </div>
-
-    <!-- Career badges -->
-    <div class="card" id="card-badges" style="display:none">
-        <div class="card-title">Career Badges</div>
-        <div id="badges-grid"></div>
-    </div>
-
-    <!-- Upcoming events -->
-    <div class="card" id="card-upcoming" style="display:none">
-        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap">
-            Upcoming Events
-            <a href="webcal://sparkstheory.co.uk/endurance/calendar.ics" style="font-family:'Inter',sans-serif;font-size:0.7rem;font-weight:600;text-transform:none;letter-spacing:normal;color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem" title="Subscribe in your phone or desktop calendar app">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                Subscribe to Calendar
-            </a>
-        </div>
-        <div class="upcoming-list" id="upcoming-list"></div>
-    </div>
-
-    <!-- Race lobby — current event, split, and lobby ID -->
-    <div class="card" id="card-lobby-room" style="display:none">
-        <div class="card-title">Race Lobby</div>
-        <div class="standing-grid">
-            <div class="standing-item">
-                <div class="si-label">Current Event</div>
-                <div class="si-value" id="lobby-room-event" style="font-size:1rem">—</div>
-            </div>
-            <div class="standing-item">
-                <div class="si-label">Split</div>
-                <div class="si-value" id="lobby-room-split">—</div>
-            </div>
-            <div class="standing-item">
-                <div class="si-label">Lobby ID</div>
-                <div class="si-value" id="lobby-room-id" style="font-size:1.3rem">—</div>
-            </div>
-        </div>
-        <div id="lobby-room-extra"></div>
-    </div>
 
     <!-- Broadcast your stream — once the split is allocated, a driver can post
          a live-stream link that shows up on the public Media page. -->
@@ -573,6 +582,7 @@
         </div>
     </div>
 
+
     <!-- Split result screenshots — hosts of recently-run splits upload
          their 2 qualifying + 2 race results screenshots here for admin. -->
     <div class="card" id="card-host-screenshots" style="display:none">
@@ -580,6 +590,39 @@
         <p style="color:var(--muted);font-size:0.85rem;margin:0 0 0.85rem">Splits you've hosted recently. Upload the qualifying and race results screens so admin can enter results.</p>
         <div id="host-screenshots-list"></div>
     </div>
+    </div>
+
+    <div class="portal-panel" id="panel-inbox" role="tabpanel" aria-labelledby="tab-inbox" tabindex="0" hidden>
+        <p class="portal-empty" id="empty-inbox" hidden>No messages yet. Use Contact Admin above and the reply lands here.</p>
+
+    <!-- Inbox -->
+    <div class="card" id="card-inbox" style="display:none">
+        <div class="card-title">Inbox <span id="inbox-unread-pill" style="display:none;margin-left:0.5rem;padding:0.18rem 0.55rem;background:var(--gold);color:#1a1300;border-radius:999px;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.15em">0 NEW</span></div>
+        <div class="inbox-list" id="inbox-list"></div>
+    </div>
+    </div>
+
+    <div class="portal-panel" id="panel-career" role="tabpanel" aria-labelledby="tab-career" tabindex="0" hidden>
+        <p class="portal-empty" id="empty-career" hidden>Your standings, badges and results appear here once you have raced a round.</p>
+    <!-- Season standing + Elo -->
+    <div class="card" id="card-standing" style="display:none">
+        <div class="card-title" id="standing-season-label">Current Season</div>
+        <div class="standing-grid" id="standing-grid"></div>
+        <div class="elo-bar-wrap">
+            <div class="elo-label">Elo Rating</div>
+            <div class="elo-value" id="elo-value">—</div>
+            <div id="elo-tier-el"></div>
+            <div id="elo-delta-el"></div>
+        </div>
+    </div>
+
+
+    <!-- Career badges -->
+    <div class="card" id="card-badges" style="display:none">
+        <div class="card-title">Career Badges</div>
+        <div id="badges-grid"></div>
+    </div>
+
 
     <!-- Recent results -->
     <div class="card" id="card-results" style="display:none">
@@ -587,11 +630,16 @@
         <div class="results-list" id="results-list"></div>
     </div>
 
+
     <!-- Split journey -->
     <div class="card" id="card-split-journey" style="display:none">
         <div class="card-title">Split Journey</div>
         <div class="split-timeline" id="split-journey-list"></div>
     </div>
+    </div>
+
+    <div class="portal-panel" id="panel-team" role="tabpanel" aria-labelledby="tab-team" tabindex="0" hidden>
+        <p class="portal-empty" id="empty-team" hidden>Nothing here yet.</p>
 
     <!-- Team (shown if driver is on a team) -->
     <div class="card" id="card-team" style="display:none">
@@ -640,11 +688,13 @@
         </div>
     </div>
 
+
     <!-- Team requests (shown to team leaders only) -->
     <div class="card" id="card-team-requests" style="display:none">
         <div class="card-title">Drivers Applying to Your Team</div>
         <div id="team-requests-list"></div>
     </div>
+
 
     <!-- Find a team (shown to drivers without a team) -->
     <div class="card" id="card-find-team" style="display:none">
@@ -652,6 +702,7 @@
         <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.85rem">Teams with an open seat are listed below. Send a short message and the team leader will decide.</p>
         <div id="find-team-list"></div>
     </div>
+
 
     <!-- Driver's outstanding outgoing requests -->
     <div class="card" id="card-my-requests" style="display:none">
@@ -661,9 +712,12 @@
         </div>
         <div id="my-requests-list"></div>
     </div>
+    </div>
+
+    <div class="portal-panel" id="panel-account" role="tabpanel" aria-labelledby="tab-account" tabindex="0" hidden>
 
     <!-- Edit profile -->
-    <div class="card">
+    <div class="card" id="card-edit-profile">
         <div class="card-title">Edit Your Profile</div>
         <div class="photo-row">
             <div class="avatar-upload" id="avatar-upload" onclick="document.getElementById('photo-file').click()">
@@ -718,8 +772,9 @@
         </div>
     </div>
 
+
     <!-- Change password -->
-    <div class="card">
+    <div class="card" id="card-change-password">
         <div class="card-title">Change Password</div>
         <div class="form-grid">
             <div class="form-group">
@@ -736,13 +791,14 @@
         </div>
     </div>
 
+
     <!-- Delete account -->
-    <div class="card" style="border-color:rgba(239,68,68,0.25)">
+    <div class="card" id="card-delete-account" style="border-color:rgba(239,68,68,0.25)">
         <div class="card-title" style="color:#f87171">Delete Account</div>
         <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.25rem">Permanently removes your login access. Your race history and driver profile remain in the championship records. If you change your mind, contact an admin and you can be re-invited at any time.</p>
         <button class="btn-small danger" onclick="deleteMyAccount()">Delete My Account</button>
     </div>
-
+    </div>
 </div>
 
 <div class="toast-container" id="toasts"></div>
@@ -2512,6 +2568,87 @@ function setupRealtimeSubscriptions(driver) {
         );
     });
 }
+
+// ---- Portal tabs ----------------------------------------------------------
+// The portal used to be one long column of seventeen cards. They're now
+// grouped into five panels. Cards still reveal themselves the same way
+// (style.display), so rather than hooking every call site this watches the
+// panels and keeps the tab counts and empty states in step.
+(function initPortalTabs() {
+    const tablist = document.getElementById('portal-tablist');
+    if (!tablist) return;
+
+    const tabs   = Array.from(tablist.querySelectorAll('.portal-tab'));
+    const panels = tabs.map(t => document.getElementById(t.getAttribute('aria-controls')));
+
+    function showTab(name) {
+        tabs.forEach((tab, i) => {
+            const on = tab.dataset.tab === name;
+            tab.setAttribute('aria-selected', on ? 'true' : 'false');
+            tab.tabIndex = on ? 0 : -1;
+            panels[i].hidden = !on;
+        });
+    }
+
+    // Callable from anywhere, e.g. a "you have a reply" prompt jumping to Inbox.
+    window.openPortalTab = function (name) {
+        if (!tabs.some(t => t.dataset.tab === name)) return;
+        showTab(name);
+        tablist.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    tabs.forEach(tab => tab.addEventListener('click', () => showTab(tab.dataset.tab)));
+
+    tablist.addEventListener('keydown', e => {
+        const i = tabs.indexOf(document.activeElement);
+        if (i === -1) return;
+        let next = null;
+        if (e.key === 'ArrowRight') next = (i + 1) % tabs.length;
+        else if (e.key === 'ArrowLeft') next = (i - 1 + tabs.length) % tabs.length;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = tabs.length - 1;
+        if (next === null) return;
+        e.preventDefault();
+        showTab(tabs[next].dataset.tab);
+        tabs[next].focus();
+    });
+
+    function setCount(id, n) {
+        const el = document.getElementById('tab-count-' + id);
+        if (!el) return;
+        el.textContent = n;
+        el.hidden = !n;
+    }
+
+    function refreshTabState() {
+        panels.forEach(panel => {
+            const empty = panel.querySelector('.portal-empty');
+            if (!empty) return;
+            const shown = Array.from(panel.querySelectorAll('.card'))
+                .some(c => c.style.display !== 'none');
+            empty.hidden = shown;
+        });
+
+        const pill = document.getElementById('inbox-unread-pill');
+        setCount('inbox', pill && pill.style.display !== 'none'
+            ? (parseInt(pill.textContent, 10) || 0) : 0);
+        setCount('team', document.querySelectorAll('#team-requests-list .req-row').length);
+    }
+
+    let pending = 0;
+    const observer = new MutationObserver(() => {
+        if (pending) return;
+        pending = requestAnimationFrame(() => { pending = 0; refreshTabState(); });
+    });
+    panels.forEach(p => observer.observe(p, {
+        subtree: true, childList: true, attributes: true, attributeFilter: ['style'],
+    }));
+
+    // Race day is the default. A link can still land straight on a section.
+    const fromHash = (location.hash || '').replace('#', '');
+    showTab(tabs.some(t => t.dataset.tab === fromHash) ? fromHash : 'raceday');
+    refreshTabState();
+})();
 
 init();
 </script>
