@@ -150,23 +150,98 @@
         .inbox-list::-webkit-scrollbar-track { background: transparent; }
         .inbox-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
         .inbox-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-        .inbox-thread { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.95rem 1.1rem; }
-        .inbox-thread.unread { border-color: rgba(255,209,102,0.45); }
-        .inbox-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.35rem; }
-        .inbox-subj { font-weight: 600; font-size: 0.92rem; }
-        .inbox-when { font-size: 0.7rem; color: var(--muted); font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; }
-        .inbox-body { font-size: 0.85rem; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
-        .inbox-incident { font-size: 0.78rem; margin-top: 0.45rem; word-break: break-all; }
+        .inbox-thread { background: linear-gradient(180deg, var(--bg-2) 0%, rgba(10,14,21,0.75) 100%); border: 1px solid var(--border); border-radius: 16px; padding: 1rem 1.1rem 1.1rem; }
+        .inbox-thread.unread { border-color: rgba(255,209,102,0.4); box-shadow: 0 0 0 1px rgba(255,209,102,0.07), 0 10px 28px rgba(0,0,0,0.32); }
+        .inbox-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.7rem; }
+        .inbox-subj { display: flex; align-items: center; flex-wrap: wrap; gap: 0.45rem; font-weight: 600; font-size: 0.95rem; }
+        .inbox-when { font-size: 0.68rem; color: var(--muted); font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; margin-top: 0.2rem; }
+        .inbox-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px rgba(255,209,102,0.7); }
+        .inbox-incident { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.55rem; word-break: break-all; }
         .inbox-incident a { color: var(--gold); text-decoration: none; }
         .inbox-incident a:hover { text-decoration: underline; }
-        .inbox-reply { margin-top: 0.85rem; padding: 0.85rem 1rem; background: rgba(255,209,102,0.06); border: 1px solid rgba(255,209,102,0.2); border-left: 3px solid var(--gold); border-radius: 6px; }
-        .inbox-reply-head { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.35rem; }
-        .inbox-reply-body { font-size: 0.86rem; line-height: 1.55; white-space: pre-wrap; color: var(--text); }
-        .inbox-status { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.18rem 0.5rem; border-radius: 4px; }
+        .inbox-status { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.18rem 0.5rem; border-radius: 999px; }
         .inbox-status.new         { background: rgba(251,191,36,0.15); color: #fbbf24; }
         .inbox-status.in_progress { background: rgba(255,209,102,0.15); color: var(--gold); }
         .inbox-status.resolved    { background: rgba(34,197,94,0.15); color: #4ade80; }
         .inbox-status.dismissed   { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+        /* Message transcript — read like a phone thread: the driver's own
+           messages ride the right in accent blue, admin answers sit left in
+           the championship gold, and a run from one sender groups under a
+           single name and timestamp. */
+        .chat {
+            display: flex; flex-direction: column; gap: 0.5rem;
+            padding: 1rem 0.95rem; max-height: 340px; overflow-y: auto;
+            background:
+                radial-gradient(130% 90% at 50% 0%, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 62%),
+                linear-gradient(180deg, rgba(5,6,8,0.65) 0%, rgba(5,6,8,0.3) 100%);
+            border: 1px solid var(--border); border-radius: 14px;
+            overscroll-behavior: contain;
+        }
+        .chat::-webkit-scrollbar { width: 6px; }
+        .chat::-webkit-scrollbar-track { background: transparent; }
+        .chat::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        .chat-day { display: flex; justify-content: center; margin: 0.3rem 0 0.1rem; }
+        .chat-day span { padding: 0.2rem 0.72rem; border-radius: 999px; background: rgba(255,255,255,0.045); border: 1px solid var(--border); font-family: 'Orbitron', sans-serif; font-size: 0.54rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+        .chat-row { display: flex; gap: 0.5rem; align-items: flex-end; }
+        .chat-row--out { justify-content: flex-end; }
+        .chat-stack { display: flex; flex-direction: column; gap: 0.2rem; max-width: 78%; min-width: 0; }
+        .chat-row--out .chat-stack { align-items: flex-end; }
+        .chat-avatar { flex: none; width: 26px; height: 26px; margin-bottom: 1.15rem; border-radius: 50%; display: grid; place-items: center; font-size: 0.68rem; color: #1a1300; background: linear-gradient(145deg, var(--gold) 0%, var(--gold-deep) 100%); box-shadow: 0 2px 8px rgba(255,209,102,0.22); }
+        .chat-who { font-family: 'Orbitron', sans-serif; font-size: 0.54rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); padding: 0 0.2rem 0.05rem; }
+        .chat-bubble { padding: 0.6rem 0.85rem; border-radius: 17px; font-size: 0.875rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .chat-row--in .chat-bubble {
+            color: var(--text);
+            background: linear-gradient(155deg, rgba(255,209,102,0.15) 0%, rgba(199,154,58,0.06) 100%);
+            border: 1px solid rgba(255,209,102,0.2);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .chat-row--out .chat-bubble {
+            color: #fff;
+            background: linear-gradient(150deg, #3f86e8 0%, #1b74c4 55%, #1466ae 100%);
+            border: 1px solid rgba(255,255,255,0.14);
+            box-shadow: 0 3px 14px rgba(27,116,196,0.3);
+        }
+        /* Only the bubble that ends a run wears the tail corner. */
+        .chat-row--in  .chat-bubble.tail { border-bottom-left-radius: 5px; }
+        .chat-row--out .chat-bubble.tail { border-bottom-right-radius: 5px; }
+        .chat-time { font-family: 'Orbitron', sans-serif; font-size: 0.56rem; letter-spacing: 0.12em; color: var(--muted); padding: 0.05rem 0.25rem 0; }
+        .chat-empty { padding: 0.6rem 0.2rem; text-align: center; font-size: 0.8rem; color: var(--muted); font-style: italic; }
+        .chat-bubble--wide { max-width: 100%; }
+        .chat-row--wide .chat-stack { max-width: 100%; }
+
+        /* Composer — a phone-style pill and a round send key */
+        .chat-composer { display: flex; align-items: flex-end; gap: 0.5rem; margin-top: 0.7rem; }
+        .chat-composer textarea {
+            /* beats the 90px min-height the shared textarea rule sets */
+            flex: 1; min-width: 0; height: 44px; min-height: 44px; max-height: 150px; padding: 0.72rem 1.05rem;
+            background: var(--bg-2); border: 1px solid var(--border); border-radius: 22px;
+            color: var(--text); font-family: inherit; font-size: 0.875rem; line-height: 1.45; resize: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .chat-composer textarea::placeholder { color: var(--muted); }
+        .chat-composer textarea:focus { outline: none; border-color: rgba(255,209,102,0.45); box-shadow: 0 0 0 3px rgba(255,209,102,0.09); }
+        .chat-send {
+            flex: none; width: 44px; height: 44px; border: 0; border-radius: 50%; cursor: pointer;
+            display: grid; place-items: center; color: #1a1300;
+            background: linear-gradient(145deg, var(--gold) 0%, var(--gold-deep) 100%);
+            box-shadow: 0 3px 12px rgba(255,209,102,0.22);
+            transition: filter 0.15s ease, transform 0.12s ease;
+        }
+        .chat-send:hover:not(:disabled) { filter: brightness(1.08); }
+        .chat-send:active:not(:disabled) { transform: scale(0.94); }
+        .chat-send:disabled { opacity: 0.45; cursor: default; }
+        .chat-send svg { width: 18px; height: 18px; }
+        .chat-send.sending { animation: chat-send-pulse 0.9s ease-in-out infinite; }
+        @keyframes chat-send-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.9; } }
+        @media (prefers-reduced-motion: reduce) {
+            .chat-send.sending { animation: none; }
+            .chat-send:active:not(:disabled) { transform: none; }
+        }
+        @media (max-width: 640px) {
+            .chat-stack { max-width: 86%; }
+            .chat { padding: 0.85rem 0.7rem; }
+        }
 
         /* Team-application rows (find-a-team + leader inbox) */
         .open-team-row, .req-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.85rem 1rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.65rem; flex-wrap: wrap; }
@@ -2391,95 +2466,116 @@ async function loadInbox(driverId) {
         })
         .map(m => m.id);
 
-    list.innerHTML = messages.map(m => {
-        if (m.is_direct) {
-            const posts = (m.message_thread_posts || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-            const adminPosts = posts.filter(p => p.sender_type === 'admin');
-            const unread = adminPosts.length > 0 && (!m.driver_read_reply_at || adminPosts.some(p => new Date(p.created_at) > new Date(m.driver_read_reply_at)));
+    // A phone-style transcript: consecutive messages from one sender group
+    // under a single name and time, and the date only shows when it changes.
+    const fmtClock = iso => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const fmtDay = iso => {
+        const d = new Date(iso), today = new Date();
+        const same = (x, y) => x.toDateString() === y.toDateString();
+        const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+        if (same(d, today))     return 'Today';
+        if (same(d, yesterday)) return 'Yesterday';
+        return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
 
-            const postsHtml = posts.length
-                ? posts.map(p => {
-                    const isAdmin = p.sender_type === 'admin';
-                    return `<div style="display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-start' : 'flex-end'}">
-                        <div style="max-width:88%;padding:0.55rem 0.8rem;border-radius:6px;${isAdmin
-                            ? 'background:rgba(255,209,102,0.06);border:1px solid rgba(255,209,102,0.18);border-left:3px solid var(--gold)'
-                            : 'background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.18);border-right:3px solid #38bdf8;text-align:right'}">
-                            <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${isAdmin ? 'var(--gold)' : '#38bdf8'};margin-bottom:0.2rem">${isAdmin ? '★ Admin' : 'You'} · ${fmtWhen(p.created_at)}</div>
-                            <div style="font-size:0.86rem;white-space:pre-wrap;line-height:1.55;color:var(--text)">${esc(p.content)}</div>
-                        </div>
-                    </div>`;
-                }).join('')
-                : `<div style="font-size:0.8rem;color:var(--muted);font-style:italic">No messages yet.</div>`;
+    function chatHtml(posts, emptyText) {
+        if (!posts.length) return `<div class="chat"><div class="chat-empty">${emptyText}</div></div>`;
 
-            return `<div class="inbox-thread ${unread ? 'unread' : ''}">
-                <div class="inbox-head">
-                    <div>
-                        <div class="inbox-subj"><span class="pill pill-gold" style="margin-right:0.4rem">★ Admin Thread</span>${esc(m.subject) || '<em>Admin message</em>'}</div>
-                        <div class="inbox-when">${fmtWhen(m.created_at)}${unread ? ' · NEW' : ''}</div>
-                    </div>
+        let html = '', lastDay = '', runSender = null, run = [];
+        const flushRun = () => {
+            if (!run.length) return;
+            const isAdmin = runSender === 'admin';
+            const bubbles = run.map((p, i) =>
+                `<div class="chat-bubble${i === run.length - 1 ? ' tail' : ''}">${esc(p.content)}</div>`).join('');
+            html += `<div class="chat-row chat-row--${isAdmin ? 'in' : 'out'}">
+                ${isAdmin ? '<div class="chat-avatar" aria-hidden="true">★</div>' : ''}
+                <div class="chat-stack">
+                    ${isAdmin ? '<div class="chat-who">Admin</div>' : ''}
+                    ${bubbles}
+                    <div class="chat-time">${fmtClock(run[run.length - 1].created_at)}</div>
                 </div>
-                <div style="display:flex;flex-direction:column;gap:0.5rem;margin:0.75rem 0;padding:0.65rem;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;max-height:300px;overflow-y:auto">
-                    ${postsHtml}
-                </div>
-                <form class="inbox-reply-form" onsubmit="event.preventDefault(); submitDriverReply('${m.id}', this)" style="margin-top:0.35rem">
-                    <textarea name="reply" rows="2" placeholder="Reply to admin…" required style="width:100%;background:var(--bg-1);border:1px solid var(--border);border-radius:6px;padding:0.6rem 0.75rem;color:var(--text);font-size:0.86rem;resize:vertical"></textarea>
-                    <div style="margin-top:0.4rem;text-align:right">
-                        <button type="submit" class="btn-sm" style="background:var(--gold);color:#1a1300;border:none;padding:0.4rem 0.9rem;border-radius:5px;font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer">Send Reply</button>
-                    </div>
-                </form>
             </div>`;
-        }
+            run = [];
+        };
+        posts.forEach(p => {
+            const day = fmtDay(p.created_at);
+            if (day !== lastDay) { flushRun(); html += `<div class="chat-day"><span>${day}</span></div>`; lastDay = day; runSender = null; }
+            const sender = p.sender_type === 'admin' ? 'admin' : 'driver';
+            if (sender !== runSender) { flushRun(); runSender = sender; }
+            run.push(p);
+        });
+        flushRun();
+        return `<div class="chat">${html}</div>`;
+    }
+
+    const composerHtml = (id, placeholder) => `
+        <form class="chat-composer" onsubmit="event.preventDefault(); submitDriverReply('${id}', this)">
+            <textarea name="reply" rows="1" required placeholder="${placeholder}" oninput="growComposer(this)" onkeydown="composerKey(event, this)"></textarea>
+            <button type="submit" class="chat-send" aria-label="Send message" title="Send">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            </button>
+        </form>`;
+
+    const sortPosts = m => (m.message_thread_posts || []).slice()
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const hasUnreadAdmin = (m, posts) => {
+        const admin = posts.filter(p => p.sender_type === 'admin');
+        if (!admin.length) return false;
+        if (!m.driver_read_reply_at) return true;
+        return admin.some(p => new Date(p.created_at) > new Date(m.driver_read_reply_at));
+    };
+
+    list.innerHTML = messages.map(m => {
         if (m.is_broadcast) {
             const unread = !m.driver_read_reply_at;
             return `<div class="inbox-thread ${unread ? 'unread' : ''}">
                 <div class="inbox-head">
                     <div>
-                        <div class="inbox-subj"><span class="pill pill-gold" style="margin-right:0.4rem">★ Announcement</span>${esc(m.subject) || '<em>Admin announcement</em>'}</div>
+                        <div class="inbox-subj">${unread ? '<span class="inbox-dot"></span>' : ''}<span class="pill pill-gold">★ Announcement</span><span>${esc(m.subject) || '<em>Admin announcement</em>'}</span></div>
                         <div class="inbox-when">${fmtWhen(m.created_at)}${unread ? ' · NEW' : ''}</div>
                     </div>
                 </div>
-                <div class="inbox-body" style="color:var(--text);margin-top:0.5rem">${esc(m.message)}</div>
+                <div class="chat">
+                    <div class="chat-day"><span>${fmtDay(m.created_at)}</span></div>
+                    <div class="chat-row chat-row--in chat-row--wide">
+                        <div class="chat-avatar" aria-hidden="true">★</div>
+                        <div class="chat-stack">
+                            <div class="chat-who">Admin</div>
+                            <div class="chat-bubble chat-bubble--wide tail">${esc(m.message)}</div>
+                            <div class="chat-time">${fmtClock(m.created_at)}</div>
+                        </div>
+                    </div>
+                </div>
             </div>`;
         }
-        // Driver-initiated contact message — same thread view as admin-direct
-        const posts2 = (m.message_thread_posts || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        const adminPosts2 = posts2.filter(p => p.sender_type === 'admin');
-        const unread2 = adminPosts2.length > 0 && (!m.driver_read_reply_at || adminPosts2.some(p => new Date(p.created_at) > new Date(m.driver_read_reply_at)));
-        const postsHtml2 = posts2.length
-            ? posts2.map(p => {
-                const isAdmin = p.sender_type === 'admin';
-                return `<div style="display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-start' : 'flex-end'}">
-                    <div style="max-width:88%;padding:0.55rem 0.8rem;border-radius:6px;${isAdmin
-                        ? 'background:rgba(255,209,102,0.06);border:1px solid rgba(255,209,102,0.18);border-left:3px solid var(--gold)'
-                        : 'background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.18);border-right:3px solid #38bdf8;text-align:right'}">
-                        <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${isAdmin ? 'var(--gold)' : '#38bdf8'};margin-bottom:0.2rem">${isAdmin ? '★ Admin' : 'You'} · ${fmtWhen(p.created_at)}</div>
-                        <div style="font-size:0.86rem;white-space:pre-wrap;line-height:1.55;color:var(--text)">${esc(p.content)}</div>
-                    </div>
-                </div>`;
-            }).join('')
-            : `<div style="font-size:0.8rem;color:var(--muted);font-style:italic">Awaiting admin reply…</div>`;
+
+        // Admin-opened thread and driver-opened enquiry read the same; only the
+        // header chip, the status and the composer's prompt differ.
+        const posts  = sortPosts(m);
+        const unread = hasUnreadAdmin(m, posts);
+        const chip   = m.is_direct
+            ? '<span class="pill pill-gold">★ Admin Thread</span>'
+            : `<span class="inbox-status ${esc(m.status)}">${esc(m.status.replace('_', ' '))}</span>`;
+        const fallback = m.is_direct ? '<em>Admin message</em>' : '<em>Your enquiry to admin</em>';
         const incidentMeta = m.incident_url
-            ? `<div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.35rem">Incident: <a href="${esc(m.incident_url)}" target="_blank" rel="noopener" style="color:var(--gold)">${esc(m.incident_url)}</a></div>`
+            ? `<div class="inbox-incident">Incident: <a href="${esc(m.incident_url)}" target="_blank" rel="noopener">${esc(m.incident_url)}</a></div>`
             : '';
-        return `<div class="inbox-thread ${unread2 ? 'unread' : ''}">
+
+        return `<div class="inbox-thread ${unread ? 'unread' : ''}">
             <div class="inbox-head">
                 <div>
-                    <div class="inbox-subj">${esc(m.subject) || '<em>Your enquiry to admin</em>'} <span class="inbox-status ${esc(m.status)}" style="margin-left:0.35rem">${esc(m.status.replace('_',' '))}</span></div>
-                    <div class="inbox-when">${fmtWhen(m.created_at)}${unread2 ? ' · NEW' : ''}</div>
+                    <div class="inbox-subj">${unread ? '<span class="inbox-dot"></span>' : ''}${chip}<span>${esc(m.subject) || fallback}</span></div>
+                    <div class="inbox-when">${fmtWhen(m.created_at)}${unread ? ' · NEW' : ''}</div>
                 </div>
             </div>
             ${incidentMeta}
-            <div style="display:flex;flex-direction:column;gap:0.5rem;margin:0.5rem 0;padding:0.65rem;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;max-height:300px;overflow-y:auto">
-                ${postsHtml2}
-            </div>
-            <form class="inbox-reply-form" onsubmit="event.preventDefault(); submitDriverReply('${m.id}', this)" style="margin-top:0.35rem">
-                <textarea name="reply" rows="2" placeholder="Follow up with admin…" required style="width:100%;background:var(--bg-1);border:1px solid var(--border);border-radius:6px;padding:0.6rem 0.75rem;color:var(--text);font-size:0.86rem;resize:vertical"></textarea>
-                <div style="margin-top:0.4rem;text-align:right">
-                    <button type="submit" class="btn-sm" style="background:var(--gold);color:#1a1300;border:none;padding:0.4rem 0.9rem;border-radius:5px;font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer">Send</button>
-                </div>
-            </form>
+            ${chatHtml(posts, m.is_direct ? 'No messages yet.' : 'Awaiting admin reply…')}
+            ${composerHtml(m.id, m.is_direct ? 'Reply to admin…' : 'Follow up with admin…')}
         </div>`;
     }).join('');
+
+    // Open each thread on its newest message, the way a phone thread does.
+    list.querySelectorAll('.chat').forEach(c => { c.scrollTop = c.scrollHeight; });
 
     if (unreadIds.length) {
         pill.textContent = `${unreadIds.length} NEW`;
@@ -2496,13 +2592,25 @@ async function loadInbox(driverId) {
     card.style.display = '';
 }
 
+// The composer grows with what's typed rather than sitting at a fixed height,
+// and Enter sends the way it does in any messaging app (Shift+Enter newlines).
+function growComposer(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+}
+function composerKey(e, el) {
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    e.preventDefault();
+    el.form.requestSubmit ? el.form.requestSubmit() : el.form.querySelector('button[type="submit"]').click();
+}
+
 async function submitDriverReply(messageId, formEl) {
     const reply = (formEl.reply.value || '').trim();
     if (!reply) return;
     const btn = formEl.querySelector('button[type="submit"]');
-    const orig = btn.textContent; btn.textContent = 'Sending…'; btn.disabled = true;
+    btn.classList.add('sending'); btn.disabled = true;
     const { data, error } = await sb.rpc('reply_to_admin_message', { p_message_id: messageId, p_reply: reply });
-    btn.textContent = orig; btn.disabled = false;
+    btn.classList.remove('sending'); btn.disabled = false;
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not send.', 'error'); return; }
     toast('Reply sent.', 'success');
