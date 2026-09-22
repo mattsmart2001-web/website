@@ -243,20 +243,6 @@
             </div>`;
     }
 
-    // Public-style strip — every earned badge across every category,
-    // grouped by category for readability. Nothing rendered for drivers
-    // with no earned badges in any category.
-    function renderBadgeStrip(stats) {
-        stats = stats || {};
-        const sections = CATEGORIES.map(cat => {
-            const earned = earnedFor(cat, stats);
-            if (!earned.length) return '';
-            return earned.map(b => badgeIcon(b)).join('');
-        }).filter(Boolean);
-        if (!sections.length) return '';
-        return `<div class="gtec-badge-strip">${sections.join('')}</div>`;
-    }
-
     // Role badges — only show when earned; no locked tiles (it's a role, not an aspiration).
     function renderRoleSection(cat, stats) {
         const earned = earnedFor(cat, stats);
@@ -392,33 +378,187 @@
             </div>`;
     }
 
+    // ---- Public profile cabinet -------------------------------------
+    // The old public strip listed every badge ever earned, so it grew
+    // without limit — and most of that growth was superseded rungs, with
+    // Debut still sitting beside Endurance Specialist. The cabinet keeps
+    // each ladder to the rung the driver is actually on, shows the
+    // circuits as a set so the gaps are part of the story, and gives the
+    // one-off honours room to stand on their own.
+
+    // A rung is any badge with a finite threshold. The Infinity ones
+    // (Founding Member, Ambassador…) sit in a threshold category beside
+    // the host ladder but aren't rungs, so they never collapse.
+    function isRung(b) { return Number.isFinite(b.threshold); }
+
+    function cabLadder(cat, stats, label) {
+        const rungs = cat.badges.filter(isRung).slice().sort((a, b) => a.threshold - b.threshold);
+        if (!rungs.length) return '';
+        let top = null, pos = 0;
+        rungs.forEach((b, i) => { if (badgeIsEarned(cat, b, stats)) { top = b; pos = i + 1; } });
+        if (!top) return '';
+        const pips = rungs.map((b, i) => `<span class="gtec-cab-pip${i < pos ? ' on' : ''}"></span>`).join('');
+        return `
+            <div class="gtec-cab-ladder" title="${top.name} — ${top.blurb || ''}">
+                <span class="gtec-cab-ladder-icon">${iconMarkup(top.icon)}</span>
+                <span class="gtec-cab-ladder-body">
+                    <span class="gtec-cab-ladder-cat">${label}</span>
+                    <span class="gtec-cab-ladder-name">${top.name}</span>
+                    <span class="gtec-cab-pips">${pips}<span class="gtec-cab-pip-text">${pos} of ${rungs.length}</span></span>
+                </span>
+            </div>`;
+    }
+
+    function cabTile(b) {
+        return `
+            <div class="gtec-cab-tile" title="${b.name} — ${b.blurb || ''}">
+                <span class="gtec-cab-tile-icon">${iconMarkup(b.icon)}</span>
+                <span class="gtec-cab-tile-name">${b.name}</span>
+            </div>`;
+    }
+
+    function cabShelf(title, meta, body) {
+        if (!body) return '';
+        return `
+            <div class="gtec-cab-shelf">
+                <div class="gtec-cab-head">
+                    <span class="gtec-cab-title">${title}</span>
+                    ${meta ? `<span class="gtec-cab-meta">${meta}</span>` : ''}
+                </div>
+                ${body}
+            </div>`;
+    }
+
+    function renderBadgeCabinet(stats) {
+        stats = stats || {};
+        const byKey    = k => CATEGORIES.find(c => c.key === k);
+        const career   = byKey('career');
+        const wins     = byKey('victories');
+        const community = byKey('community');
+        const circuits = byKey('circuits');
+        const titles   = byKey('titles');
+        const secrets  = byKey('secrets');
+
+        const ladders = [
+            career    ? cabLadder(career, stats, 'Career')       : '',
+            wins      ? cabLadder(wins, stats, 'Victories')      : '',
+            community ? cabLadder(community, stats, 'Hosting')   : '',
+        ].filter(Boolean).join('');
+
+        let circuitBody = '', circuitMeta = '', capstone = '', circuitsDone = 0;
+        if (circuits) {
+            const tracks = circuits.badges.filter(b => !b.requiresAll);
+            const done   = tracks.filter(b => badgeIsEarned(circuits, b, stats));
+            circuitsDone = done.length;
+            circuitMeta  = `${done.length} of ${tracks.length}`;
+            circuitBody  = `<div class="gtec-cab-set">${tracks.map(b => {
+                const on = badgeIsEarned(circuits, b, stats);
+                return `<div class="gtec-cab-track${on ? '' : ' locked'}" title="${on ? b.name : b.name + ' — not yet raced'}">
+                    <span class="gtec-cab-track-icon">${iconMarkup(b.icon)}</span>
+                    <span class="gtec-cab-track-name">${b.name}</span>
+                </div>`;
+            }).join('')}</div>`;
+            const cap = circuits.badges.find(b => b.requiresAll);
+            if (cap && badgeIsEarned(circuits, cap, stats)) {
+                capstone = `<div class="gtec-cab-tiles gtec-cab-capstone">${cabTile(cap)}</div>`;
+            }
+        }
+
+        const honours    = community ? community.badges.filter(b => !isRung(b) && badgeIsEarned(community, b, stats)) : [];
+        // Titles are a ladder too, just one built from finishing
+        // positions rather than a threshold: winning the championship
+        // also satisfies top-5 and top-10, so a champion would otherwise
+        // display Season Champion, Challenger and Contender for the same
+        // season. Declaration order runs hardest first, so the first
+        // earned badge is the best one.
+        const bestTitle  = titles    ? titles.badges.find(b => badgeIsEarned(titles, b, stats))     : null;
+        const titleList  = bestTitle ? [bestTitle] : [];
+        const secretList = secrets   ? secrets.badges.filter(b => badgeIsEarned(secrets, b, stats)) : [];
+
+        // A driver who has earned nothing yet gets no cabinet at all,
+        // rather than a case of empty shelves.
+        if (!ladders && !circuitsDone && !honours.length && !titleList.length && !secretList.length) return '';
+
+        const tiles = list => `<div class="gtec-cab-tiles">${list.map(cabTile).join('')}</div>`;
+        const shelves =
+            cabShelf('Progress', '', ladders ? `<div class="gtec-cab-ladders">${ladders}</div>` : '') +
+            cabShelf('Circuits', circuitMeta, circuitBody + capstone) +
+            cabShelf('Titles', '', titleList.length ? tiles(titleList) : '') +
+            cabShelf('Honours', '', honours.length ? tiles(honours) : '') +
+            cabShelf('Rare finds', secretList.length ? String(secretList.length) : '', secretList.length ? tiles(secretList) : '');
+
+        return `<div class="gtec-cabinet">${shelves}</div>`;
+    }
+
     // Inject CSS once.
     if (!document.getElementById('gtec-badge-styles')) {
         const style = document.createElement('style');
         style.id = 'gtec-badge-styles';
         style.textContent = `
-            .gtec-badge-strip {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.4rem;
-                margin: 0.85rem 0 0.5rem;
+            /* ---- public profile cabinet ---- */
+            .gtec-cabinet {
+                background: rgba(10, 14, 21, 0.55);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 14px;
+                overflow: hidden;
             }
-            /* Strip tiles are noticeably smaller than the portal grid
-               so a profile with a full collection doesn't sprawl down
-               the page. The grid keeps its larger sizing for browsing. */
-            .gtec-badge-strip .gtec-badge {
-                min-width: 64px;
-                padding: 0.4rem 0.35rem 0.35rem;
-                gap: 0.25rem;
+            .gtec-cab-shelf { padding: 1.15rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+            .gtec-cab-shelf:last-child { border-bottom: 0; }
+            .gtec-cab-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.8rem; }
+            .gtec-cab-title {
+                font-family: 'Orbitron', sans-serif; font-size: 0.56rem; font-weight: 700;
+                letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted, #94a3b8);
             }
-            .gtec-badge-strip .gtec-badge-icon {
-                width: 34px; height: 34px;
-                font-size: 1.05rem;
-                border-width: 1.5px;
+            .gtec-cab-meta {
+                font-family: 'Orbitron', sans-serif; font-size: 0.56rem; font-weight: 700;
+                letter-spacing: 0.12em; color: var(--gold-deep, #c79a3a); font-variant-numeric: tabular-nums;
             }
-            .gtec-badge-strip .gtec-badge-label {
-                font-size: 0.48rem;
-                letter-spacing: 0.14em;
+            .gtec-cab-ladders { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; }
+            .gtec-cab-ladder {
+                display: flex; align-items: center; gap: 0.75rem;
+                background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+                border-radius: 12px; padding: 0.7rem 0.85rem;
+            }
+            .gtec-cab-ladder-icon { flex: 0 0 auto; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+            .gtec-cab-ladder-icon img { width: 42px; height: 42px; object-fit: contain; display: block; }
+            .gtec-cab-ladder-body { min-width: 0; display: flex; flex-direction: column; }
+            .gtec-cab-ladder-cat {
+                font-family: 'Orbitron', sans-serif; font-size: 0.46rem; font-weight: 700;
+                letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold-deep, #c79a3a);
+            }
+            .gtec-cab-ladder-name {
+                font-family: 'Anton', sans-serif; font-size: 0.95rem; letter-spacing: 0.02em;
+                text-transform: uppercase; line-height: 1.15; margin-top: 0.1rem; color: var(--text, #f1f5f9);
+            }
+            .gtec-cab-pips { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.35rem; }
+            .gtec-cab-pip { width: 12px; height: 3.5px; border-radius: 2px; background: rgba(255,255,255,0.14); }
+            .gtec-cab-pip.on { background: var(--gold, #ffd166); }
+            .gtec-cab-pip-text {
+                font-family: 'Orbitron', sans-serif; font-size: 0.48rem; font-weight: 700;
+                letter-spacing: 0.1em; color: var(--muted, #94a3b8); margin-left: 0.3rem; font-variant-numeric: tabular-nums;
+            }
+            .gtec-cab-set { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+            .gtec-cab-track { width: 64px; display: flex; flex-direction: column; align-items: center; gap: 0.28rem; text-align: center; }
+            .gtec-cab-track-icon { font-size: 1.3rem; }
+            .gtec-cab-track-icon img { width: 38px; height: 38px; object-fit: contain; display: block; }
+            .gtec-cab-track-name {
+                font-family: 'Orbitron', sans-serif; font-size: 0.43rem; font-weight: 700;
+                letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted, #94a3b8); line-height: 1.2;
+            }
+            .gtec-cab-track.locked .gtec-cab-track-icon img { filter: grayscale(1) brightness(0.45); opacity: 0.5; }
+            .gtec-cab-track.locked .gtec-cab-track-name { color: rgba(148,163,184,0.4); }
+            .gtec-cab-tiles { display: flex; flex-wrap: wrap; gap: 0.8rem 0.5rem; }
+            .gtec-cab-capstone { margin-top: 0.9rem; }
+            .gtec-cab-tile { width: 74px; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; text-align: center; }
+            .gtec-cab-tile-icon { font-size: 1.5rem; }
+            .gtec-cab-tile-icon img { width: 46px; height: 46px; object-fit: contain; display: block; }
+            .gtec-cab-tile-name {
+                font-family: 'Orbitron', sans-serif; font-size: 0.45rem; font-weight: 700;
+                letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted, #94a3b8); line-height: 1.25;
+            }
+            @media (max-width: 560px) {
+                .gtec-cab-shelf { padding: 1rem; }
+                .gtec-cab-tile { width: 66px; }
             }
             .gtec-badge-section + .gtec-badge-section { margin-top: 1.5rem; }
             .gtec-badge-section-title {
@@ -561,9 +701,9 @@
         document.head.appendChild(style);
     }
 
-    window.BADGE_CATEGORIES  = CATEGORIES;
-    window.renderBadgeStrip  = renderBadgeStrip;
-    window.renderBadgeGrid   = renderBadgeGrid;
+    window.BADGE_CATEGORIES   = CATEGORIES;
+    window.renderBadgeCabinet = renderBadgeCabinet;
+    window.renderBadgeGrid    = renderBadgeGrid;
     // Shared with other pages that render their own compact badge chips
     // (driver cards, admin's manual-badge picker) so a badge's icon — emoji
     // or custom PNG — never has to be interpreted more than once.

@@ -907,13 +907,12 @@
             .stat-bar { flex-wrap: wrap; }
             .stat-item { min-width: 33%; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
             /* Stack the header into a single centred column: avatar on top,
-               then name, tags, badges and the share button all centred, so
-               nothing is left orphaned to one side. */
+               then name, tags and the share button all centred, so nothing
+               is left orphaned to one side. */
             .profile-header { gap: 1rem; flex-direction: column; align-items: center; text-align: center; }
             .profile-avatar { width: 104px; height: 104px; }
             .profile-name-block { width: 100%; }
             .profile-tags { justify-content: center; }
-            .gtec-badge-strip { justify-content: center; }
             .hide-mob { display: none; }
         }
     </style>
@@ -950,7 +949,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="../assets/gtec-config.js"></script>
 <script src="/endurance/assets/elo-tiers.js?v=3"></script>
-<script src="/endurance/assets/gtec-badges.js?v=22"></script>
+<script src="/endurance/assets/gtec-badges.js?v=23"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script src="/endurance/assets/gtec-crest.js"></script>
 <script src="/endurance/assets/gtec-trading-card.js"></script>
@@ -1888,6 +1887,24 @@ async function showProfile() {
     // rebuild the exact driver/stats objects gtecTradingCard needs without
     // a second fetch.
     const seasonCards = seasonCardsRes.data || [];
+    // Badge cabinet sits below the season stakes rather than up in the
+    // header: it's a career trophy case, so it shouldn't push the stats
+    // and the current championship picture down the page.
+    const cabinetInner = window.renderBadgeCabinet ? window.renderBadgeCabinet({
+        starts: totals.races,
+        wins: totals.wins,
+        completedCircuits,
+        seasonFinishes,
+        secretBadges,
+        manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [],
+        hostCount,
+        foundingMember,
+        hasStreamLink: (streamLinkRes?.count || 0) > 0,
+    }) : '';
+    const badgeCabinetHTML = cabinetInner
+        ? `<div class="section"><div class="section-title">Badges</div>${cabinetInner}</div>`
+        : '';
+
     const seasonCardsHTML = seasonCards.length ? `
         <div class="section">
             <div class="section-title">My Collection</div>
@@ -2194,7 +2211,6 @@ async function showProfile() {
                     ${driver.career_number ? `<div class="profile-number">#${driver.career_number}</div>` : ''}
                     <div class="profile-name">${esc(driver.display_name)}</div>
                     <div class="profile-tags">${tagsHTML}</div>
-                    ${window.renderBadgeStrip ? window.renderBadgeStrip({ starts: totals.races, wins: totals.wins, completedCircuits, seasonFinishes, secretBadges, manualBadges: Array.isArray(driver.manual_badges) ? driver.manual_badges : [], hostCount, foundingMember, hasStreamLink: (streamLinkRes?.count || 0) > 0 }) : ''}
                     <div class="profile-actions">
                         <button class="share-btn" id="share-profile-btn" type="button">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2232,6 +2248,8 @@ async function showProfile() {
             </div>
 
             ${seasonStakesHTML}
+
+            ${badgeCabinetHTML}
 
             ${driver.bio ? `<div class="section"><div class="section-title">Bio</div><div class="bio-text">${esc(driver.bio)}</div></div>` : ''}
 
