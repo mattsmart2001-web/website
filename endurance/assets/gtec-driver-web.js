@@ -59,8 +59,44 @@
 
     var DEPTH, SPREAD_X, SPREAD_Y;
     var crews = [];
-    var crossLinks = [];
+    var manuGroups = {};
+    var rand = mulberry32(20260922);
     var camZ = 0, t = 0, running = false;
+
+    // Put a crew somewhere across the field. A crew keeps its depth but
+    // takes a new lateral spot each time it loops round, because a crew
+    // parked out at the edge sweeps off-frame before it is ever close
+    // enough to read. Any crew that has gone a few laps without a pass
+    // near the centre line is placed on it, so every driver on the grid
+    // comes past the camera eventually rather than only the ones who
+    // happened to start in the middle.
+    function placeCrew(cr) {
+        cr.laps = (cr.laps || 0) + 1;
+        var central = cr.laps >= 3 || rand() < 0.35;
+        var f = central ? 0.3 : 1;
+        cr.x = (rand() - 0.5) * 2 * SPREAD_X * f;
+        cr.y = (rand() - 0.5) * 2 * SPREAD_Y * f;
+        if (central) cr.laps = 0;
+    }
+
+    // Nearest same-manufacturer crew. Recomputed for the whole group
+    // whenever one of its crews moves, so a strand never ends up
+    // stretched across the entire field to a crew that has since
+    // relocated.
+    function relinkGroup(manu) {
+        var g = manuGroups[manu];
+        if (!g) return;
+        for (var i = 0; i < g.length; i++) {
+            var a = g[i], best = null, bestD = Infinity;
+            for (var j = 0; j < g.length; j++) {
+                if (i === j) continue;
+                var b = g[j];
+                var dd = (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z);
+                if (dd < bestD) { bestD = dd; best = b; }
+            }
+            a.link = best;
+        }
+    }
 
     function layout(drivers) {
         // One crew per team; drivers without a team fly solo.
@@ -90,10 +126,8 @@
         SPREAD_X = Math.max(600, Math.min(1700, 600 + n * 13));
         SPREAD_Y = SPREAD_X * 0.68;
 
-        var rand = mulberry32(1337 + n);
+        rand = mulberry32(1337 + n);
         crews = groups.map(function (g) {
-            var cx = (rand() - 0.5) * 2 * SPREAD_X;
-            var cy = (rand() - 0.5) * 2 * SPREAD_Y;
             var cz = rand() * DEPTH;
             var sep = 42 + rand() * 46;
             var a0 = rand() * Math.PI * 2;
@@ -109,26 +143,14 @@
                     name: (d.display_name || '').toUpperCase()
                 };
             });
-            return { x: cx, y: cy, z: cz, manu: g.manu, lights: lights };
+            var crew = { x: 0, y: 0, z: cz, manu: g.manu, lights: lights };
+            placeCrew(crew);
+            return crew;
         });
 
-        // Nearest same-manufacturer crew, worked out once.
-        var byManu = {};
-        crews.forEach(function (c) { if (c.manu) (byManu[c.manu] = byManu[c.manu] || []).push(c); });
-        crossLinks = [];
-        Object.keys(byManu).forEach(function (m) {
-            var g = byManu[m];
-            for (var i = 0; i < g.length; i++) {
-                var a = g[i], best = null, bestD = Infinity;
-                for (var j = 0; j < g.length; j++) {
-                    if (i === j) continue;
-                    var b = g[j];
-                    var dd = (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z);
-                    if (dd < bestD) { bestD = dd; best = b; }
-                }
-                if (best) crossLinks.push([a, best]);
-            }
-        });
+        manuGroups = {};
+        crews.forEach(function (c) { if (c.manu) (manuGroups[c.manu] = manuGroups[c.manu] || []).push(c); });
+        Object.keys(manuGroups).forEach(relinkGroup);
         return true;
     }
 
@@ -157,8 +179,9 @@
 
         ctx.clearRect(0, 0, W, H);
 
-        for (var c = 0; c < crossLinks.length; c++) {
-            var ca = crossLinks[c][0], cb = crossLinks[c][1];
+        for (var c = 0; c < crews.length; c++) {
+            var ca = crews[c], cb = ca.link;
+            if (!cb) continue;
             var rza = relZ(ca.z), rzb = relZ(cb.z);
             if (Math.abs(rza - rzb) > DEPTH * 0.45) continue; // wrapped apart
             var aa = depthAlpha(rza), ab = depthAlpha(rzb);
@@ -170,7 +193,17 @@
             ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
         }
 
-        var order = crews.map(function (cr) { return { cr: cr, rz: relZ(cr.z) }; });
+        // A crew that has just wrapped to the far plane is invisible for
+        // the moment, which is when it is safe to move it sideways.
+        var order = crews.map(function (cr) {
+            var rz = relZ(cr.z);
+            if (cr.prevRz !== undefined && rz > cr.prevRz + DEPTH * 0.5) {
+                placeCrew(cr);
+                relinkGroup(cr.manu);
+            }
+            cr.prevRz = rz;
+            return { cr: cr, rz: rz };
+        });
         order.sort(function (a, b) { return b.rz - a.rz; });
 
         for (var i = 0; i < order.length; i++) {
