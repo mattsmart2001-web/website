@@ -66,6 +66,7 @@
            below that, quiet until hovered, so four tools no longer read as
            four competing gold buttons. */
         .profile-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.55rem 0 0.6rem; }
+        .tag-group { display: flex; flex-wrap: wrap; gap: 0.4rem; }
         .profile-tools { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 1.5rem; }
         .profile-share-btn {
             display: inline-flex; align-items: center; gap: 0.38rem;
@@ -2017,15 +2018,23 @@ async function init() {
 
     // Tags
     const isTeamLeader = driver.teams?.leader_driver_id && driver.teams.leader_driver_id === driver.id;
-    const tagData = [
-        driver.career_number ? { text: `#${driver.career_number}`, key: 'num' } : null,
-        driver.nationality   ? { text: `${flag(driver.nationality)} ${driver.nationality}`, key: 'nat', attr: 'data-nat' } : null,
-        driver.teams?.name   ? { text: `${driver.teams.name}${isTeamLeader ? ' <span class="pill-leader-inline">★ Leader</span>' : ''}`, key: 'team', raw: true } : null,
-        driver.manufacturers?.name ? { text: driver.manufacturers.name + (driver.manufacturers.car_name ? ' — ' + driver.manufacturers.car_name : ''), key: 'mfr' } : null,
+    const tagHtml = t => `<span class="tag" ${t.attr ? t.attr + '=""' : ''}>${t.raw ? t.text : esc(t.text)}</span>`;
+
+    const identity = [
+        driver.career_number ? { text: `#${driver.career_number}` } : null,
+        driver.nationality   ? { text: `${flag(driver.nationality)} ${driver.nationality}`, attr: 'data-nat' } : null,
     ].filter(Boolean);
-    document.getElementById('profile-tags').innerHTML = tagData.map(t =>
-        `<span class="tag" ${t.attr ? t.attr + '=""' : ''}>${t.raw ? t.text : esc(t.text)}</span>`
-    ).join('');
+    // Team and car belong together, so they sit in a nested group: the pair
+    // wraps to the next line as a unit rather than the car being orphaned
+    // under the team, and only splits when even one line cannot hold it.
+    const affiliation = [
+        driver.teams?.name   ? { text: `${driver.teams.name}${isTeamLeader ? ' <span class="pill-leader-inline">★ Leader</span>' : ''}`, raw: true } : null,
+        driver.manufacturers?.name ? { text: driver.manufacturers.name + (driver.manufacturers.car_name ? ' — ' + driver.manufacturers.car_name : '') } : null,
+    ].filter(Boolean);
+
+    document.getElementById('profile-tags').innerHTML =
+        identity.map(tagHtml).join('') +
+        (affiliation.length ? `<span class="tag-group">${affiliation.map(tagHtml).join('')}</span>` : '');
 
     // Editable fields
     document.getElementById('field-nationality').innerHTML = window.gtecCountryOptions(driver.nationality);
