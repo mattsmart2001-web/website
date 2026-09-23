@@ -1,0 +1,6 @@
+# Recorder only (to capture real GT7 telemetry):
+pycryptodome>=3.20
+
+# analyser.py, synth.py and commentary.py use only the Python standard
+# library. The LLM and TTS calls in commentary.py are plain HTTPS requests
+# (urllib), so no extra SDKs are required.
