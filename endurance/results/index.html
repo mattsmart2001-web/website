@@ -289,6 +289,11 @@
         .sort-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
         .sort-btn.sort-btn-active { border-color: var(--gold); color: var(--gold); }
         .q-split-badge { display: inline-block; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 4px; padding: 0.12rem 0.5rem; font-size: 0.7rem; }
+        /* The searched driver, between the two they were closest to on pace */
+        #quali-neighbours[hidden] { display: none; }
+        #quali-neighbours .q-hit { background: rgba(255,209,102,0.08); }
+        #quali-neighbours .q-hit td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+        #quali-neighbours .q-hit td { color: var(--text); }
         .q-split-block { margin-top: 2rem; }
         .q-split-block:first-of-type { margin-top: 0; }
         .q-empty-msg { padding: 1.25rem; text-align: center; color: var(--muted); font-size: 0.85rem; }
@@ -912,6 +917,10 @@ function searchBagFor(row) {
     ].filter(Boolean).join(' ').toLowerCase();
 }
 
+// Every driver in the event, ordered by quali lap regardless of split, so a
+// search can show who is immediately either side of them on outright pace.
+let _qualiRanked = [];
+
 function buildQualifyingTab(driverRows, lobbyKeys, groups) {
     const allQ = driverRows.filter(r => r.quali?.position != null || r.quali?.best_lap_ms != null);
     if (!allQ.length) {
@@ -925,6 +934,16 @@ function buildQualifyingTab(driverRows, lobbyKeys, groups) {
     const overallRank = new Map();
     ranked.forEach((r, i) => overallRank.set(r, i + 1));
     const fastestMs = ranked[0]?.quali.best_lap_ms;
+
+    _qualiRanked = ranked.map((row, i) => ({
+        rank:   i + 1,
+        bag:    searchBagFor(row),
+        ms:     row.quali.best_lap_ms,
+        name:   row.driver?.display_name || '',
+        cell:   driverCell(row),
+        carNum: row.driver?.career_number ?? row.entry.car_number,
+        split:  (row.entry.lobby_number ?? 0) === 0 ? 'Unassigned' : `Split ${row.entry.lobby_number}`,
+    }));
 
     const splitPills = lobbyKeys.map(k => {
         const title = k === 0 ? 'Unassigned' : `Split ${k}`;
@@ -962,6 +981,8 @@ function buildQualifyingTab(driverRows, lobbyKeys, groups) {
                 ${splitPills}
             </div>
         </div>
+
+        <div id="quali-neighbours" hidden></div>
 
         <div class="section-subheading">Fastest Overall</div>
         <div class="table-wrap">${renderOverallQualyTable(ranked.slice(0, Math.min(8, ranked.length)))}</div>
@@ -1023,6 +1044,46 @@ function filterQualiRows(query) {
         const bag = tr.getAttribute('data-search') || '';
         tr.style.display = (!q || bag.includes(q)) ? '' : 'none';
     });
+    renderQualiNeighbours(q);
+}
+
+// Search hit plus the driver either side of it on outright pace, whatever
+// split they ran in. The split tables answer "where did I finish"; this
+// answers "who was I actually closest to".
+function renderQualiNeighbours(q) {
+    const host = document.getElementById('quali-neighbours');
+    if (!host) return;
+
+    const hits = q ? _qualiRanked.filter(r => r.bag.includes(q)) : [];
+    // One driver is the point of this. A team or country search matching the
+    // whole grid would just repeat the tables below.
+    if (!hits.length || hits.length > 3) { host.hidden = true; host.innerHTML = ''; return; }
+
+    host.innerHTML = hits.map(hit => {
+        const i = hit.rank - 1;
+        const band = [_qualiRanked[i - 1], hit, _qualiRanked[i + 1]].filter(Boolean);
+        const rows = band.map(r => {
+            const isHit = r === hit;
+            const gap = (!isHit && r.ms != null && hit.ms != null)
+                ? `${r.ms < hit.ms ? '-' : '+'}${(Math.abs(r.ms - hit.ms) / 1000).toFixed(3)}s`
+                : '—';
+            return `<tr class="${isHit ? 'q-hit' : ''}">
+                <td class="pos-cell">${r.rank}</td>
+                <td class="td-num">${r.carNum != null ? '#' + r.carNum : '—'}</td>
+                <td>${r.cell}</td>
+                <td class="td-muted"><span class="q-split-badge">${esc(r.split)}</span></td>
+                <td class="td-muted">${r.ms ? fmtMs(r.ms) : '—'}</td>
+                <td class="td-muted">${gap}</td>
+            </tr>`;
+        }).join('');
+        return `
+        <div class="section-subheading">Either Side Of ${esc(hit.name) || 'This Driver'}</div>
+        <div class="table-wrap"><table class="q-table">
+            <thead><tr><th>Overall</th><th>Car</th><th>Driver</th><th>Split</th><th>Best Lap</th><th title="Gap to the searched driver">Gap</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table></div>`;
+    }).join('');
+    host.hidden = false;
 }
 
 function filterQualiSplit(btn) {
