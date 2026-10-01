@@ -352,6 +352,10 @@
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: rgba(255,255,255,0.02); }
         .td-muted { color: var(--muted); font-size: 0.82rem; }
+        /* How a disconnect will be rated, shown under the status select */
+        .dc-note { margin-top: 0.25rem; font-size: 0.7rem; line-height: 1.3; color: var(--muted); }
+        .dc-note:empty { display: none; }
+        .dc-note.warn { color: #f87171; font-weight: 600; }
         .season-driver-list { margin: 0.35rem 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.15rem; }
         .season-driver-list li { font-size: 0.8rem; color: var(--muted); }
         th.th-sort { cursor: pointer; user-select: none; }
@@ -4890,6 +4894,24 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
     const results    = resultsRes.data || [];
     const rMap       = Object.fromEntries(results.map(r => [r.entry_id, r]));
 
+    // Disconnects each driver has already used this season, so the Elo rule
+    // is visible where the call is made rather than only after Compute Elo
+    // runs. Mirrors the count in compute_elo_for_event. Best-effort: if it
+    // fails the editor still works, it just loses the hint.
+    const priorDc = {};
+    try {
+        const { data: ev } = await sb.from('events')
+            .select('season_id, starts_at').eq('id', eventId).maybeSingle();
+        if (ev?.season_id && ev?.starts_at) {
+            const { data: dcRows } = await sb.from('result_drivers')
+                .select('driver_id, results!inner(events!inner(season_id, starts_at))')
+                .eq('status', 'dc')
+                .eq('results.events.season_id', ev.season_id)
+                .lt('results.events.starts_at', ev.starts_at);
+            (dcRows || []).forEach(r => { priorDc[r.driver_id] = (priorDc[r.driver_id] || 0) + 1; });
+        }
+    } catch { /* hint only */ }
+
     const resultIds = results.map(r => r.id);
     let rdMap = {};
     if (resultIds.length) {
@@ -4949,7 +4971,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
                 <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}${en.lobby_number != null ? ` · S${en.lobby_number}` : ''}</span></td>
                 <td><select data-entry="${en.id}" ${dAttr} data-field="finish_position" data-max="${lobbyDriverCount}" onchange="onPositionChange(this,'results-table')" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis || !isClassified ? 'disabled' : ''}>${buildPositionOptions(lobbyDriverCount, isClassified ? pos : '')}</select></td>
                 <td><input type="number" min="0" data-entry="${en.id}" ${dAttr} data-field="laps_driven" value="${laps}" style="width:65px;padding:0.4rem 0.5rem" ${dis}></td>
-                <td><select data-entry="${en.id}" ${dAttr} data-field="status" onchange="onResultStatusChange(this)" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select></td>
+                <td><select data-entry="${en.id}" ${dAttr} data-field="status" onchange="onResultStatusChange(this)" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis}>${statusSel}</select>${dcNoteHtml(d ? (priorDc[d.id] || 0) : 0, status)}</td>
                 <td style="text-align:center;font-size:0.78rem;${isPole && isClassified ? 'color:var(--gold);font-weight:600' : 'color:var(--muted)'}" title="Auto-set from qualifying P1">${isPole && isClassified ? '★' : '—'}</td>
                 <td style="white-space:nowrap">
                     <input type="checkbox" data-entry="${en.id}" ${dAttr} data-field="fastest_lap_point" ${isFL && flEligible ? 'checked' : ''} style="accent-color:var(--gold);width:16px;height:16px;vertical-align:middle" ${dis || !flEligible ? 'disabled' : ''}>
@@ -5187,7 +5209,11 @@ async function computeElo(eventId) {
     const { data, error } = await sb.rpc('compute_elo_for_event', { p_event_id: eventId });
     if (error) { toast(error.message, 'error'); return; }
     if (data?.error) { toast(data.error, 'error'); return; }
-    toast(`Elo computed for ${data.drivers_rated} driver${data.drivers_rated !== 1 ? 's' : ''}.`, 'success');
+    const excused = data.disconnects_excused || 0;
+    const tail = excused
+        ? ` ${excused} disconnect${excused !== 1 ? 's' : ''} excused.`
+        : '';
+    toast(`Elo computed for ${data.drivers_rated} driver${data.drivers_rated !== 1 ? 's' : ''}.${tail}`, 'success');
 }
 
 async function recomputePoints(eventId, eventName) {
@@ -5371,10 +5397,36 @@ function loadEntryDriversForPenalty(sel) {
     });
 }
 
+// Disconnects excused per driver per season, matching compute_elo_for_event.
+const DC_ALLOWANCE = 2;
+
+// A disconnect is neutral for Elo until the allowance runs out, then it is
+// rated as an ordinary DNF. Admin needs to know which one they are setting.
+function dcNoteHtml(prior, status) {
+    let text = '', warn = false;
+    if (status === 'dc') {
+        if (prior >= DC_ALLOWANCE) {
+            const n = prior + 1;
+            text = `${n}${n === 3 ? 'rd' : 'th'} DC — rated as a DNF`;
+            warn = true;
+        } else {
+            text = `Excused · ${prior + 1} of ${DC_ALLOWANCE}`;
+        }
+    } else if (prior > 0) {
+        text = `${prior} DC used this season`;
+    }
+    return `<div class="dc-note${warn ? ' warn' : ''}" data-prior-dc="${prior}">${text}</div>`;
+}
+
 function onResultStatusChange(sel) {
     const row = sel.closest('tr');
     if (!row) return;
     const status = sel.value;
+    const note = row.querySelector('.dc-note');
+    if (note) {
+        const prior = Number(note.dataset.priorDc) || 0;
+        note.outerHTML = dcNoteHtml(prior, status);
+    }
     const classified = status === 'classified';
     // Fastest lap is allowed for a classified finisher, a DNF or a
     // disconnect (all raced); finishing position stays classified-only.
