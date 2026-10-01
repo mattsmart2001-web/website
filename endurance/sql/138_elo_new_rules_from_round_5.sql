@@ -1,6 +1,17 @@
 -- ============================================================
 -- 138 Pin the new Elo rules to Round 5 onward
 --
+-- NOT REQUIRED, AND NOT RUN. Rounds 1 to 4 were locked from the admin
+-- panel instead, which is a better guard: compute_elo_for_event opens
+-- by clearing the event's ratings, the migration 68 lock trigger on
+-- driver_ratings refuses that DELETE, and the whole call aborts with
+-- "Event is locked" before anything is written. SECURITY DEFINER does
+-- not bypass triggers, so the stored ratings survive untouched, and a
+-- locked round cannot be rescored under rules it never raced under.
+--
+-- Keep this for the day an old round IS unlocked to correct a result.
+-- The lock stops recomputes; this makes them safe when the lock is off.
+--
 -- Migration 137 replaced compute_elo_for_event outright, so the new
 -- scale and the disconnect rule apply to whatever event is computed
 -- next. That matches what the grid has been told, since Rounds 1 to 4
