@@ -4911,7 +4911,7 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
     const currentLobby = lobbyFilter || defaultLobbyFilter(allEntries);
     const entries = filterEntriesByLobby(allEntries, currentLobby);
 
-    const statusOpts = ['classified', 'dnf', 'dsq', 'dns', 'withdrawn'];
+    const statusOpts = ['classified', 'dnf', 'dc', 'dsq', 'dns', 'withdrawn'];
 
     const rowSpecs = entries.flatMap(en => {
         const drvs = (en.entry_drivers || []).map(ed => ed.drivers).filter(Boolean);
@@ -4942,9 +4942,9 @@ async function viewEventResults(eventId, eventName, lobbyFilter) {
             const dis   = d ? '' : 'disabled';
             const teamCell = en.teams?.name ? esc(en.teams.name) : '<em>Solo</em>';
             const isClassified = status === 'classified';
-            // Fastest lap can be earned by a classified finisher OR a DNF
-            // (raced but retired). DSQ / DNS / withdrawn never can.
-            const flEligible = isClassified || status === 'dnf';
+            // Fastest lap can be earned by a classified finisher, a DNF or a
+            // disconnect (all raced). DSQ / DNS / withdrawn never can.
+            const flEligible = isClassified || status === 'dnf' || status === 'dc';
             return `<tr>
                 <td>${driverLabel}<br><span class="td-muted" style="font-size:0.78rem">${carLabel} ${teamCell}${en.lobby_number != null ? ` · S${en.lobby_number}` : ''}</span></td>
                 <td><select data-entry="${en.id}" ${dAttr} data-field="finish_position" data-max="${lobbyDriverCount}" onchange="onPositionChange(this,'results-table')" style="padding:0.4rem 0.5rem;font-size:0.82rem" ${dis || !isClassified ? 'disabled' : ''}>${buildPositionOptions(lobbyDriverCount, isClassified ? pos : '')}</select></td>
@@ -5080,9 +5080,9 @@ async function saveResults(eventId, eventName) {
         if (!result_id) return null;
         const status = dr.status || 'classified';
         const isClassified = status === 'classified';
-        // Fastest lap survives a DNF (raced but retired); positions / pole
-        // remain classified-only.
-        const flEligible = isClassified || status === 'dnf';
+        // Fastest lap survives a DNF or a disconnect (both raced); positions
+        // and pole remain classified-only.
+        const flEligible = isClassified || status === 'dnf' || status === 'dc';
         return {
             result_id,
             driver_id:        dr.driver_id,
@@ -5376,9 +5376,9 @@ function onResultStatusChange(sel) {
     if (!row) return;
     const status = sel.value;
     const classified = status === 'classified';
-    // Fastest lap is allowed for a classified finisher or a DNF (raced but
-    // retired); finishing position stays classified-only.
-    const flEligible = classified || status === 'dnf';
+    // Fastest lap is allowed for a classified finisher, a DNF or a
+    // disconnect (all raced); finishing position stays classified-only.
+    const flEligible = classified || status === 'dnf' || status === 'dc';
     row.querySelectorAll('[data-field="finish_position"]').forEach(el => {
         if (classified) { el.disabled = false; }
         else { el.value = ''; el.disabled = true; }
@@ -6710,8 +6710,9 @@ function buildRaceReport(d) {
         // Winner came from way back — a separate story to "drive of the day"
         // (which is by definition not the winner).
         const comebackWin = !!(winner && winner._gained != null && winner._gained >= 3 && winner._qualiPos > 1);
-        // Named DNFs / DSQs rather than bare counts.
-        const dnfDrivers = (split.drivers || []).filter(rd => rd.status === 'dnf');
+        // Named retirements / DSQs rather than bare counts. A disconnect is
+        // a retirement as far as the race story goes.
+        const dnfDrivers = (split.drivers || []).filter(rd => rd.status === 'dnf' || rd.status === 'dc');
         const dsqDrivers = (split.drivers || []).filter(rd => rd.status === 'dsq');
         const dnf = dnfDrivers.length;
         const dsq = dsqDrivers.length;

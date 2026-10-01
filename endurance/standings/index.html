@@ -797,7 +797,7 @@ function formStrip(form) {
         let cls = 'form-pill', label, title;
         if (st !== 'classified') {
             cls += ' form-dnf';
-            label = st === 'dnf' ? 'DNF' : st === 'dsq' ? 'DSQ' : st === 'dns' ? 'DNS' : st === 'withdrawn' ? 'WD' : '—';
+            label = st === 'dnf' ? 'DNF' : st === 'dc' ? 'DC' : st === 'dsq' ? 'DSQ' : st === 'dns' ? 'DNS' : st === 'withdrawn' ? 'WD' : '—';
             title = label;
         } else if (f.pos === 1) {
             cls += ' form-win'; label = 'P1'; title = 'Win';
