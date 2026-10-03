@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- SEO -->
+    <meta name="description" content="Live entry list for The 2026 Gran Turismo Nordschleife 24 Hours — see who's signed up to be in the driver draw on 12 June 2026.">
+    <meta name="author" content="SparksTheory">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0ea5e9">
+    <link rel="canonical" href="https://sparkstheory.co.uk/drivers.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sparkstheory.co.uk/drivers.html">
+    <meta property="og:title" content="Drivers Entered — The 2026 Gran Turismo Nordschleife 24 Hours">
+    <meta property="og:description" content="Live entry list for the 2026 Gran Turismo Nordschleife 24 Hours, presented by SparksTheory and Sim-Lab.">
+    <meta property="og:image" content="https://sparkstheory.co.uk/sparks_logo.jpg">
+    <meta property="og:site_name" content="SparksTheory">
+
+    <title>Drivers Entered — The 2026 Gran Turismo Nordschleife 24 Hours</title>
+    <link rel="icon" type="image/jpeg" href="sparks_logo.jpg">
+    <link rel="apple-touch-icon" href="sparks_logo.jpg">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Audiowide&family=Inter:wght@300;400;600;700;900&family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { background: #060910; }
+        #canvas-container { pointer-events: none; }
+
+        /* Hero band */
+        .drivers-hero {
+            background:
+                radial-gradient(ellipse at top, rgba(255,154,60,0.14), transparent 60%),
+                radial-gradient(ellipse at bottom, rgba(124,58,237,0.18), transparent 60%),
+                linear-gradient(180deg, #000 0%, #0a0e15 100%);
+            padding: 8rem 1.5rem 4rem;
+            position: relative;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .drivers-hero .kicker {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(0.7rem, 1.4vw, 1rem);
+            letter-spacing: 0.5em;
+            text-transform: uppercase;
+            color: rgba(255,210,180,0.75);
+            text-indent: 0.5em;
+            margin-bottom: 0.85rem;
+        }
+        .drivers-hero h1 {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2.4rem, 7vw, 5rem);
+            letter-spacing: 0.05em;
+            line-height: 1;
+            text-transform: uppercase;
+            background: linear-gradient(180deg,
+                #fff1a8 0%, #ffd166 22%, #ff9a3c 44%,
+                #ff6b6b 66%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            margin: 0 0 1rem;
+        }
+        .drivers-hero .lead {
+            color: var(--color-text-muted);
+            font-size: 1.05rem;
+            max-width: 640px;
+            margin: 0 auto 2rem;
+            line-height: 1.6;
+        }
+        .drivers-hero .actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .drivers-hero .actions .btn {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            padding: 0.85rem 1.6rem;
+            border-radius: 10px;
+            text-decoration: none;
+            transition: transform 0.15s, filter 0.15s, background 0.2s, border-color 0.2s;
+        }
+        .drivers-hero .actions .btn-primary {
+            background: linear-gradient(135deg, var(--color-primary), #38bdf8);
+            color: #060910;
+            border: none;
+        }
+        .drivers-hero .actions .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .drivers-hero .actions .btn-secondary {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--color-text);
+        }
+        .drivers-hero .actions .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        /* Headline stat trio */
+        .drivers-stats-strip {
+            background: linear-gradient(180deg, #0a0e15 0%, #060910 100%);
+            padding: 2.5rem 1.5rem;
+            position: relative;
+            z-index: 1;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .stat-trio {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+        .stat-trio .stat {
+            text-align: center;
+            padding: 1.25rem 0.6rem;
+            background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005));
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+        }
+        .stat-trio .stat-num {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+            line-height: 1;
+            background: linear-gradient(180deg, #fff1a8 0%, #ff9a3c 60%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.4rem;
+        }
+        .stat-trio .stat-label {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--color-text-muted);
+            text-indent: 0.25em;
+        }
+        @media (max-width: 540px) {
+            .stat-trio { grid-template-columns: 1fr; }
+        }
+
+        /* Manufacturer popularity chart */
+        .mfr-chart-wrap {
+            background: #060910;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        .mfr-chart {
+            max-width: 1100px;
+            margin: 0 auto 1.25rem;
+            padding: 1.5rem 1.5rem 1.25rem;
+            background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+        }
+        .mfr-chart[hidden] { display: none !important; }
+        .mfr-chart-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .mfr-chart-header h2 {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--color-text);
+            margin: 0;
+            text-indent: 0.3em;
+        }
+        .mfr-chart-sub {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.7rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--color-text-muted);
+        }
+        .mfr-bars {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem 1.5rem;
+        }
+        @media (max-width: 640px) {
+            .mfr-bars { grid-template-columns: 1fr; }
+        }
+        .mfr-row {
+            display: grid;
+            grid-template-columns: 90px 1fr 34px;
+            align-items: center;
+            gap: 0.7rem;
+            font-size: 0.8rem;
+        }
+        .mfr-name {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-weight: 700;
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--color-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mfr-track {
+            position: relative;
+            height: 12px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .mfr-fill {
+            position: absolute;
+            inset: 0 auto 0 0;
+            border-radius: 999px;
+            background: var(--mfr-color, var(--color-primary));
+            box-shadow: 0 0 14px rgba(255,255,255,0.05);
+            transition: width 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+        }
+        .mfr-count {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-weight: 700;
+            color: var(--color-text);
+            font-size: 0.85rem;
+            text-align: right;
+        }
+
+        /* Top picks pill */
+        .top-picks-wrap {
+            background: #060910;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        .top-picks {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 1.1rem 1.25rem;
+            background: linear-gradient(180deg, rgba(14,165,233,0.08), rgba(14,165,233,0.03));
+            border: 1px solid rgba(14,165,233,0.25);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            font-size: 0.92rem;
+            color: var(--color-text-muted);
+            text-align: center;
+        }
+        .top-picks[hidden] { display: none !important; }
+        .top-picks .label {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--color-primary);
+        }
+        .top-picks .pick {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            color: var(--color-text);
+            white-space: nowrap;
+            padding: 0.25rem 0.55rem;
+            background: rgba(0,0,0,0.25);
+            border-radius: 999px;
+        }
+        .top-picks .pick .n {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.6em;
+            padding: 0.1em 0.45em;
+            border-radius: 999px;
+            background: rgba(14,165,233,0.22);
+            color: var(--color-primary);
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        /* Controls bar */
+        .controls-wrap {
+            background: #060910;
+            padding: 1.5rem 1.5rem 2rem;
+        }
+        .controls {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            flex-wrap: wrap;
+        }
+        .controls .search {
+            flex: 1;
+            min-width: 240px;
+            position: relative;
+        }
+        .controls .search svg {
+            position: absolute;
+            top: 50%;
+            left: 0.95rem;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--color-text-muted);
+            pointer-events: none;
+        }
+        .controls .search input {
+            width: 100%;
+            padding: 0.95rem 1rem 0.95rem 2.6rem;
+            background: linear-gradient(180deg, #11161f, #0a0e15);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: var(--color-text);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .controls .search input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(14,165,233,0.18);
+        }
+        .controls .sort {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.8rem;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .controls .sort select {
+            appearance: none;
+            -webkit-appearance: none;
+            padding: 0.85rem 2.4rem 0.85rem 1rem;
+            background-color: #11161f;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%230ea5e9' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.95rem center;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: var(--color-text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .controls .sort select option { background: #0a0e15; color: var(--color-text); }
+
+        /* Driver card grid */
+        .grid-wrap {
+            background: linear-gradient(180deg, #060910 0%, #0a0e15 100%);
+            padding: 0 1.5rem 6rem;
+        }
+        .driver-grid {
+            max-width: 1240px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+        }
+        .driver-card {
+            position: relative;
+            background: linear-gradient(180deg, #11161f, #0a0e15);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 1.5rem 1.25rem 1.25rem;
+            overflow: hidden;
+            transition: border-color 0.25s, transform 0.25s;
+        }
+        .driver-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at top right, var(--make-color, transparent), transparent 60%);
+            opacity: 0.18;
+            pointer-events: none;
+        }
+        .driver-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255,255,255,0.18);
+        }
+        .driver-card .entry-num {
+            position: absolute;
+            top: 1rem;
+            right: 1.1rem;
+            font-family: 'Anton', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.18em;
+            color: rgba(255,255,255,0.35);
+        }
+        .driver-card .badge-row {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        .driver-card .make-badge {
+            flex-shrink: 0;
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.92rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        }
+        .driver-card .make-badge.is-undecided {
+            background: rgba(255,255,255,0.04);
+            border: 1px dashed rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.45);
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-shadow: none;
+        }
+        .driver-card .make-badge.has-image {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 0;
+            overflow: hidden;
+        }
+        .driver-card .make-badge.has-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            border-radius: inherit;
+        }
+        .driver-card .psn {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(1.1rem, 2.1vw, 1.4rem);
+            line-height: 1.05;
+            color: var(--color-text);
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            word-break: break-word;
+            min-width: 0;
+        }
+        .driver-card .car {
+            font-family: var(--font-display, 'Orbitron', sans-serif);
+            font-size: 0.82rem;
+            color: var(--color-text-muted);
+            line-height: 1.45;
+            margin-top: 0.5rem;
+            padding-top: 0.7rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            position: relative;
+            z-index: 1;
+        }
+        .driver-card .car.is-undecided {
+            font-style: italic;
+            opacity: 0.65;
+        }
+        .driver-card .car-label {
+            display: block;
+            font-size: 0.62rem;
+            letter-spacing: 0.22em;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase;
+            margin-bottom: 0.2rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+        .grid-message {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--color-text-muted);
+        }
+
+        /* Footer reuses the existing site footer style */
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">SPARKS<span class="highlight">THEORY</span></a>
+        <div class="nav-links">
+            <a href="/#about">About</a>
+            <a href="/#sponsors">Sponsors</a>
+            <a href="/#tools">Tools</a>
+            <a href="/lights-out.html">Lights Out</a>
+        </div>
+        <a class="live-button" id="liveButton"
+           href="https://www.youtube.com/@SparksTheory/live"
+           target="_blank" rel="noopener"
+           aria-label="Watch SparksTheory on YouTube">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span class="live-label">YouTube</span>
+        </a>
+        <div class="nav-burger" id="navBurger">
+            <span></span><span></span><span></span>
+        </div>
+    </nav>
+
+    <!-- Floating event partner -->
+    <div class="sponsor-badges is-event-partner">
+        <span class="event-partner-label">Event Partner</span>
+        <a href="https://sim-lab.eu/?ref=SPARKSTHEORY" target="_blank" rel="noopener" class="sponsor-badge" title="Sim-Lab — Event Partner">
+            <img src="simlab.png" alt="Sim-Lab" />
+        </a>
+    </div>
+
+    <!-- Hero -->
+    <header class="drivers-hero">
+        <div class="kicker">The 2026 Gran Turismo</div>
+        <h1>Nordschleife 24 Hours</h1>
+        <p class="lead">
+            The entry list — everyone in the hat for the live driver draw
+            on 12 June 2026.
+        </p>
+        <div class="actions">
+            <a class="btn btn-primary" href="/signup.html">Sign Up</a>
+            <a class="btn btn-secondary" href="/">Back to Home</a>
+        </div>
+    </header>
+
+    <!-- Stats -->
+    <section class="drivers-stats-strip">
+        <div class="stat-trio">
+            <div class="stat">
+                <div class="stat-num" id="statEntries">—</div>
+                <div class="stat-label">Entries</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num" id="statCars">—</div>
+                <div class="stat-label">Different Cars</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num" id="statMakes">—</div>
+                <div class="stat-label">Manufacturers</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Manufacturer popularity chart -->
+    <section class="mfr-chart-wrap">
+        <div class="mfr-chart" id="mfrChart" hidden>
+            <div class="mfr-chart-header">
+                <h2>Field by Manufacturer</h2>
+                <span class="mfr-chart-sub" id="mfrChartSub"></span>
+            </div>
+            <div class="mfr-bars" id="mfrBars"></div>
+        </div>
+    </section>
+
+    <!-- Top picks -->
+    <section class="top-picks-wrap">
+        <div class="top-picks" id="topPicks" hidden></div>
+    </section>
+
+    <!-- Controls -->
+    <section class="controls-wrap">
+        <div class="controls" id="controls" hidden>
+            <div class="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="search" id="searchInput" placeholder="Search by PSN ID or car…" autocomplete="off">
+            </div>
+            <label class="sort">
+                <span>Sort</span>
+                <select id="sortSelect">
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="az">PSN A–Z</option>
+                    <option value="car">By car</option>
+                </select>
+            </label>
+        </div>
+    </section>
+
+    <!-- Grid -->
+    <section class="grid-wrap">
+        <div class="driver-grid" id="driverGrid">
+            <div class="grid-message">Loading entries…</div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">SPARKS<span class="highlight">THEORY</span></div>
+                <div class="footer-links">
+                    <a href="/#about">About</a>
+                    <a href="/#sponsors">Sponsors</a>
+                    <a href="/#shop">Shop</a>
+                    <a href="/#tools">Tools</a>
+                    <a href="/lights-out.html">Lights Out</a>
+                    <a href="/#contact">Contact</a>
+                </div>
+                <div class="footer-social">
+                    <a href="https://www.youtube.com/@SparksTheory" target="_blank" title="YouTube">YT</a>
+                    <a href="https://twitter.com/SparksTheory" target="_blank" title="Twitter">X</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 sparkstheory. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile nav toggle
+        (function () {
+            const burger = document.getElementById('navBurger');
+            const links = document.querySelector('.nav-links');
+            if (burger && links) {
+                burger.addEventListener('click', () => {
+                    burger.classList.toggle('active');
+                    links.classList.toggle('active');
+                });
+            }
+        })();
+
+        (function () {
+            const grid       = document.getElementById('driverGrid');
+            const statE      = document.getElementById('statEntries');
+            const statC      = document.getElementById('statCars');
+            const statM      = document.getElementById('statMakes');
+            const topPicks   = document.getElementById('topPicks');
+            const controls   = document.getElementById('controls');
+            const searchEl   = document.getElementById('searchInput');
+            const sortEl     = document.getElementById('sortSelect');
+            if (!grid) return;
+
+            const MAKES = {
+                'Alfa Romeo':   { short: 'ALFA',  color: '#c8102e' },
+                'Aston Martin': { short: 'AST',   color: '#00665e' },
+                'Audi':         { short: 'AUDI',  color: '#bb0a30' },
+                'BMW':          { short: 'BMW',   color: '#0066b1' },
+                'Chevrolet':    { short: 'CHEV',  color: '#c79a3a' },
+                'Citroën':      { short: 'CITR',  color: '#c8102e' },
+                'Dodge':        { short: 'DODG',  color: '#c40000' },
+                'Ferrari':      { short: 'FER',   color: '#d40000' },
+                'Ford':         { short: 'FORD',  color: '#003478' },
+                'Genesis':      { short: 'GEN',   color: '#1a1a1a' },
+                'Honda':        { short: 'HOND',  color: '#c40000' },
+                'Hyundai':      { short: 'HYU',   color: '#002c5f' },
+                'Jaguar':       { short: 'JAG',   color: '#9e1b32' },
+                'Lamborghini':  { short: 'LAMB',  color: '#a37d2b' },
+                'Lexus':        { short: 'LEX',   color: '#1a1a1a' },
+                'Mazda':        { short: 'MAZ',   color: '#202830' },
+                'McLaren':      { short: 'MCL',   color: '#ff8000' },
+                'Mercedes':     { short: 'MERC',  color: '#5a5a5a' },
+                'Mitsubishi':   { short: 'MITS',  color: '#c40000' },
+                'Nissan':       { short: 'NIS',   color: '#c3002f' },
+                'Peugeot':      { short: 'PEU',   color: '#1c1c1c' },
+                'Porsche':      { short: 'POR',   color: '#b0001a' },
+                'Renault':      { short: 'REN',   color: '#1a1a1a' },
+                'Subaru':       { short: 'SUB',   color: '#0041aa' },
+                'Suzuki':       { short: 'SUZ',   color: '#c40000' },
+                'Toyota':       { short: 'TOY',   color: '#c40000' },
+                'Volkswagen':   { short: 'VW',    color: '#001e50' },
+            };
+            function isUndecided(car) { return !car || car.toLowerCase() === 'undecided'; }
+            function getMake(car) {
+                if (!car) return null;
+                const n = car.toLowerCase();
+                if (n.startsWith('alfa romeo'))   return MAKES['Alfa Romeo'];
+                if (n.startsWith('aston martin')) return MAKES['Aston Martin'];
+                if (n.startsWith('mercedes'))     return MAKES['Mercedes'];
+                if (n.includes('citroën') || n.includes('citroen')) return MAKES['Citroën'];
+                const first = n.split(/\s+/)[0];
+                const single = {
+                    audi:'Audi', bmw:'BMW', chevrolet:'Chevrolet', dodge:'Dodge',
+                    ferrari:'Ferrari', ford:'Ford', genesis:'Genesis', honda:'Honda',
+                    hyundai:'Hyundai', jaguar:'Jaguar', lamborghini:'Lamborghini',
+                    lexus:'Lexus', mazda:'Mazda', mclaren:'McLaren',
+                    mitsubishi:'Mitsubishi', nissan:'Nissan', peugeot:'Peugeot',
+                    porsche:'Porsche', renault:'Renault', subaru:'Subaru',
+                    suzuki:'Suzuki', toyota:'Toyota', volkswagen:'Volkswagen',
+                };
+                return MAKES[single[first]] || null;
+            }
+            function textOn(hex) {
+                const h = hex.replace('#','');
+                const r = parseInt(h.substr(0,2),16);
+                const g = parseInt(h.substr(2,2),16);
+                const b = parseInt(h.substr(4,2),16);
+                return ((0.299*r + 0.587*g + 0.114*b) / 255) > 0.6 ? '#0a0e15' : '#fff';
+            }
+            function esc(s) {
+                return String(s).replace(/[&<>"']/g, (c) => ({
+                    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+                }[c]));
+            }
+            // Convert a car name to a filename slug for /car-images/{slug}.png.
+            function carSlug(car) {
+                return (car || '')
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                    .replace(/['']/g, '')
+                    .replace(/[()]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            }
+            // After rendering badges, try to upgrade each one with a car
+            // image from /car-images/{slug}.png. Silent failure leaves the
+            // 3-letter badge in place.
+            function upgradeBadges() {
+                document.querySelectorAll('.make-badge[data-slug]').forEach((badge) => {
+                    if (badge.classList.contains('has-image')) return;
+                    const slug = badge.dataset.slug;
+                    if (!slug) return;
+                    const probe = new Image();
+                    probe.src = `/car-images/${slug}.png`;
+                    probe.onload = () => {
+                        badge.classList.add('has-image');
+                        // Clear the inline manufacturer-colour background so
+                        // the white .has-image rule actually wins.
+                        badge.style.background = '';
+                        badge.style.color = '';
+                        const el = document.createElement('img');
+                        el.src = `/car-images/${slug}.png`;
+                        el.alt = '';
+                        badge.innerHTML = '';
+                        badge.appendChild(el);
+                    };
+                });
+            }
+            function animateCount(el, to) {
+                const dur = 900;
+                const start = performance.now();
+                function step(t) {
+                    const p = Math.min(1, (t - start) / dur);
+                    const eased = 1 - Math.pow(1 - p, 3);
+                    el.textContent = Math.round(to * eased);
+                    if (p < 1) requestAnimationFrame(step);
+                    else el.textContent = String(to);
+                }
+                requestAnimationFrame(step);
+            }
+
+            let allDrivers = [];
+
+            function cardHtml(driver, entryNum) {
+                const car = (driver.preferred_car || '').trim();
+                const undecided = isUndecided(car);
+                const make = undecided ? null : getMake(car);
+                let badge, accent = 'transparent';
+                if (make) {
+                    const slug = carSlug(car);
+                    badge = `<div class="make-badge" data-slug="${esc(slug)}" style="background:${make.color};color:${textOn(make.color)}">${esc(make.short)}</div>`;
+                    accent = make.color;
+                } else {
+                    badge = `<div class="make-badge is-undecided">TBC</div>`;
+                }
+                return `
+                    <article class="driver-card" style="--make-color:${accent}">
+                        <div class="entry-num">#${entryNum}</div>
+                        <div class="badge-row">
+                            ${badge}
+                            <div class="psn">${esc(driver.psn_id)}</div>
+                        </div>
+                        <div class="car${undecided ? ' is-undecided' : ''}">
+                            <span class="car-label">Car</span>
+                            ${esc(undecided ? 'Undecided' : car)}
+                        </div>
+                    </article>
+                `;
+            }
+
+            function renderStats(drivers) {
+                const cars = new Set(), makes = new Set();
+                drivers.forEach((d) => {
+                    const car = (d.preferred_car || '').trim();
+                    if (!isUndecided(car)) {
+                        cars.add(car);
+                        const m = getMake(car);
+                        if (m) makes.add(m.short);
+                    }
+                });
+                animateCount(statE, drivers.length);
+                animateCount(statC, cars.size);
+                animateCount(statM, makes.size);
+            }
+
+            function renderMfrChart(drivers) {
+                const chart    = document.getElementById('mfrChart');
+                const barsEl   = document.getElementById('mfrBars');
+                const subEl    = document.getElementById('mfrChartSub');
+                if (!chart || !barsEl) return;
+
+                const counts = new Map();
+                let totalCounted = 0;
+                drivers.forEach((d) => {
+                    const car = (d.preferred_car || '').trim();
+                    if (isUndecided(car)) return;
+                    const m = getMake(car);
+                    if (!m) return;
+                    const key = m.short;
+                    if (!counts.has(key)) counts.set(key, { count: 0, color: m.color });
+                    counts.get(key).count += 1;
+                    totalCounted += 1;
+                });
+                if (!counts.size) {
+                    chart.hidden = true;
+                    return;
+                }
+
+                const rows = [...counts.entries()]
+                    .map(([name, v]) => ({ name, count: v.count, color: v.color }))
+                    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+                const max = rows[0].count;
+                subEl.textContent = `${rows.length} ${rows.length === 1 ? 'make' : 'makes'} · ${totalCounted} car${totalCounted === 1 ? '' : 's'}`;
+
+                barsEl.innerHTML = rows.map((r) => {
+                    const pct = Math.round((r.count / max) * 100);
+                    return `
+                        <div class="mfr-row">
+                            <span class="mfr-name">${esc(r.name)}</span>
+                            <div class="mfr-track"><div class="mfr-fill" style="--mfr-color:${r.color};width:0"></div></div>
+                            <span class="mfr-count">${r.count}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                chart.hidden = false;
+                // Animate bars in on the next frame so the CSS transition fires.
+                requestAnimationFrame(() => {
+                    barsEl.querySelectorAll('.mfr-fill').forEach((el, i) => {
+                        const r = rows[i];
+                        const pct = Math.round((r.count / max) * 100);
+                        el.style.width = pct + '%';
+                    });
+                });
+            }
+
+            function renderTopPicks(drivers) {
+                const tally = new Map();
+                drivers.forEach((d) => {
+                    const car = (d.preferred_car || '').trim();
+                    if (isUndecided(car)) return;
+                    tally.set(car, (tally.get(car) || 0) + 1);
+                });
+                const top = [...tally.entries()]
+                    .filter(([, n]) => n >= 2)
+                    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                    .slice(0, 4);
+                if (!top.length) {
+                    topPicks.hidden = true;
+                    return;
+                }
+                topPicks.hidden = false;
+                topPicks.innerHTML = `
+                    <span class="label">Top picks</span>
+                    ${top.map(([car, n]) => `
+                        <span class="pick"><span class="n">×${n}</span>${esc(car)}</span>
+                    `).join('')}
+                `;
+            }
+
+            function applyFilterAndSort(drivers) {
+                const q = (searchEl.value || '').trim().toLowerCase();
+                const sort = sortEl.value;
+                let out = drivers.slice();
+                if (q) {
+                    out = out.filter((d) =>
+                        (d.psn_id || '').toLowerCase().includes(q) ||
+                        (d.preferred_car || '').toLowerCase().includes(q)
+                    );
+                }
+                if (sort === 'oldest') {
+                    out.sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+                } else if (sort === 'az') {
+                    out.sort((a, b) => (a.psn_id || '').localeCompare(b.psn_id || '', undefined, { sensitivity: 'base' }));
+                } else if (sort === 'car') {
+                    out.sort((a, b) => {
+                        const ac = isUndecided(a.preferred_car) ? '￿' : a.preferred_car;
+                        const bc = isUndecided(b.preferred_car) ? '￿' : b.preferred_car;
+                        return ac.localeCompare(bc, undefined, { sensitivity: 'base' });
+                    });
+                }
+                return out;
+            }
+
+            function renderGrid(filtered) {
+                if (!filtered.length) {
+                    grid.innerHTML = '<div class="grid-message">No drivers match those filters.</div>';
+                    return;
+                }
+                // Entry numbers stay tied to the FULL driver list ordering by
+                // submission time so cards keep a stable identity across
+                // search/sort changes. Find each driver's original index in
+                // the sorted-newest-first list and number from there.
+                const newestFirst = allDrivers.slice().sort(
+                    (a, b) => new Date(b.submitted_at) - new Date(a.submitted_at)
+                );
+                const entryNumByPsn = new Map();
+                newestFirst.forEach((d, i) => entryNumByPsn.set(d.psn_id, newestFirst.length - i));
+                grid.innerHTML = filtered
+                    .map((d) => cardHtml(d, entryNumByPsn.get(d.psn_id) || 0))
+                    .join('');
+            }
+
+            function rerender() {
+                renderGrid(applyFilterAndSort(allDrivers));
+                upgradeBadges();
+            }
+
+            fetch('/.netlify/functions/signups')
+                .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+                .then(({ drivers }) => {
+                    if (!drivers || !drivers.length) {
+                        grid.innerHTML = '<div class="grid-message">No drivers entered yet — be the first to sign up.</div>';
+                        animateCount(statE, 0);
+                        animateCount(statC, 0);
+                        animateCount(statM, 0);
+                        return;
+                    }
+                    allDrivers = drivers;
+                    renderStats(drivers);
+                    renderMfrChart(drivers);
+                    renderTopPicks(drivers);
+                    controls.hidden = false;
+                    searchEl.addEventListener('input', rerender);
+                    sortEl.addEventListener('change', rerender);
+                    rerender();
+                })
+                .catch(() => {
+                    grid.innerHTML = '<div class="grid-message">Couldn’t load the entry list right now. Try refreshing.</div>';
+                });
+        })();
+    </script>
+  <script defer src="/live-banner.js"></script>
+</body>
+</html>

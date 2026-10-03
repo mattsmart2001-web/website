@@ -3,26 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GT7 Live Telemetry — SparksTheory</title>
+<title>GT7 Live Telemetry | SparksTheory</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap');
 :root{
   --bg:#07080d;--sur:#0d0f18;--pan:#0f1119;--bor:#1c1f2e;
   --red:#ff2d3b;--gold:#ffc31a;--grn:#00e5a0;--blu:#1ab4ff;
   --wht:#eef0f8;--mut:#525870;--dim:#2a2d3e;
+  --accent:#1ab4ff;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;background:var(--bg);color:var(--wht);font-family:'Rajdhani',sans-serif;overflow:hidden;}
-body{display:flex;flex-direction:column;}
+html{height:100%;}
+html,body{width:100%;background:var(--bg);color:var(--wht);font-family:'Rajdhani',sans-serif;}
+body{display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden;}
 body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:.018;pointer-events:none;z-index:9999;}
 
 /* ── HEADER ── */
 header{flex:0 0 auto;padding:.6rem 1.4rem .55rem;border-bottom:1px solid var(--bor);display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
 header::before{content:'';position:absolute;top:-60px;left:-60px;width:240px;height:240px;background:radial-gradient(circle,rgba(26,180,255,.07) 0%,transparent 70%);pointer-events:none;}
 .hdr-l{position:relative;}
-.eyebrow{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.35em;color:var(--blu);text-transform:uppercase;margin-bottom:.1rem;}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.35em;color:var(--accent);text-transform:uppercase;margin-bottom:.1rem;}
 h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.2rem,2.5vw,1.9rem);letter-spacing:.08em;line-height:1;}
-h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.45);}
+h1 em{font-style:normal;color:var(--accent);text-shadow:0 0 20px rgba(26,180,255,.45);}
 .hdr-sub{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.14em;color:var(--mut);margin-top:.08rem;}
 .hdr-r{display:flex;align-items:center;gap:1.2rem;}
 .status-pill{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;display:flex;align-items:center;gap:.4rem;padding:.28rem .65rem;border-radius:20px;border:1px solid var(--bor);background:rgba(13,15,24,.8);transition:border-color .3s,color .3s;}
@@ -64,96 +66,255 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
 .waiting-dots span:nth-child(3){animation-delay:.4s;}
 @keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
 
-/* ── DASHBOARD ── */
-#dashboard{flex:1;display:none;grid-template-rows:auto auto 1fr;gap:0;min-height:0;padding:.6rem .75rem .5rem;gap:.5rem;}
+/* ── HELP (collapsible) ── */
+.help-wrap{margin-top:1.5rem;padding-top:1.3rem;border-top:1px solid var(--bor);}
+.help summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:.5rem;font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--blu);}
+.help summary::-webkit-details-marker{display:none;}
+.help summary::before{content:'+';font-size:.85rem;line-height:0;}
+.help[open] summary::before{content:'\2212';}
+.help-body{margin-top:1rem;font-family:'JetBrains Mono',monospace;font-size:.5rem;line-height:1.8;color:var(--mut);}
+.help-body h4{color:var(--wht);font-size:.5rem;letter-spacing:.16em;text-transform:uppercase;margin:1.1rem 0 .4rem;}
+.help-body h4:first-child{margin-top:0;}
+.help-body ol,.help-body ul{margin:0 0 .3rem 1.1rem;padding:0;}
+.help-body li{margin-bottom:.3rem;}
+.help-body b{color:var(--gold);font-weight:400;}
+.help-body code{background:var(--dim);border:1px solid var(--bor);border-radius:3px;padding:.02rem .3rem;color:var(--gold);font-size:.46rem;}
+
+/* ── DASHBOARD (modular, OBS-ready widgets) ── */
+#dashboard{flex:1;display:none;min-height:0;padding:14px;gap:12px;
+  grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:min-content;align-content:start;grid-auto-flow:row dense;}
 #dashboard.vis{display:grid;}
 
-/* Hero strip */
-.hero{display:grid;grid-template-columns:110px 72px 1fr;gap:.5rem;align-items:center;}
+/* Transparent OBS mode: ?obs drops the page background + chrome so only the
+   widgets float over gameplay. Each widget keeps its own translucent panel. */
+body.obs{background:transparent;}
+body.obs::after{display:none;}
+body.obs header{display:none;}
+body.obs #setupScreen{display:none!important;}
+body.obs #dashboard{padding:12px;}
+/* Track map floats as just the line in OBS (no box behind it). */
+body.obs .card-map{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
+/* backdrop blur is very expensive in OBS's embedded browser (CEF) over live
+   video and is a major cause of the overlay stuttering. Drop it in OBS; the
+   panels keep their translucent background, just without the blur. */
+body.obs .card{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+/* Bare mode: drop every widget's box so only the data floats. Text gets a
+   shadow so it stays readable over bright gameplay. */
+body.bare .card{background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+/* Also strip the inner boxes (tyre corners, hero gear, map buttons) so bare
+   really is data-only. Data-viz fills (bars, LED strip, gauges) are left alone. */
+body.bare .tyre-corner,body.bare .hero-gear,body.bare .map-metric{background:transparent!important;border-color:transparent!important;}
+body.bare .card-title,body.bare .card *:not(canvas){text-shadow:0 1px 4px rgba(0,0,0,.92),0 0 2px rgba(0,0,0,.75);}
+
+/* A widget = its own self-contained, translucent, croppable entity.
+   Each is resizable: drag the bottom-right corner, double-click to reset. */
+/* Coloured accent bar down the left edge (FLUX89 style). An inset box-shadow
+   is used so it hugs the rounded corners and never scrolls with content; it
+   drops out cleanly in obs/bare mode where the box-shadow is stripped. */
+.card{background:rgba(10,12,19,.72);border:1px solid rgba(255,255,255,.08);border-radius:13px;
+  padding:.85rem 1rem .85rem 1.2rem;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  box-shadow:0 6px 22px rgba(0,0,0,.4),inset 4px 0 0 var(--accent);display:flex;flex-direction:column;
+  align-self:start;min-width:190px;min-height:110px;resize:both;overflow:auto;}
+.card::-webkit-resizer{background:transparent;}
+/* subtle grip in the corner so it reads as resizable */
+.card::after{content:'';position:absolute;right:3px;bottom:3px;width:9px;height:9px;pointer-events:none;
+  background:linear-gradient(135deg,transparent 46%,rgba(255,255,255,.28) 46%,rgba(255,255,255,.28) 54%,transparent 54%,transparent 70%,rgba(255,255,255,.28) 70%,rgba(255,255,255,.28) 78%,transparent 78%);}
+.card{position:relative;}
+.card-title{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.24em;color:var(--mut);
+  text-transform:uppercase;margin-bottom:.7rem;display:flex;align-items:center;justify-content:space-between;}
+.card-title .accent{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(26,180,255,.6);}
+
+/* Composition: tidy rows on desktop; every card still crops on its own. */
+.card-hero   {grid-column:span 5;}
+.card-delta  {grid-column:span 4;}
+.card-laps   {grid-column:span 3;}
+.card-sectors{grid-column:span 3;}
+.card-inputs {grid-column:span 6;}
+.card-gforce {grid-column:span 3;}
+.card-map    {grid-column:span 6;}
+.card-fuel   {grid-column:span 3;}
+.card-tyres  {grid-column:span 6;}
+.card-temps  {grid-column:span 6;}
+.card-engine {grid-column:span 12;}
+@media (max-width:1024px){
+  .card-hero,.card-inputs,.card-tyres,.card-temps,.card-engine,.card-map{grid-column:span 12;}
+  .card-delta,.card-laps,.card-gforce,.card-fuel,.card-sectors{grid-column:span 6;}
+}
+@media (max-width:560px){ #dashboard .card{grid-column:span 12;} }
+
+/* HERO: speed / gear / rpm */
+.hero-inner{display:grid;grid-template-columns:1fr 92px 1.5fr;gap:1.1rem;align-items:center;}
 .hero-speed{display:flex;flex-direction:column;align-items:flex-start;}
-.hero-speed .val{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.8rem,5vw,4rem);line-height:1;color:var(--wht);}
-.hero-speed .unit{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.22em;color:var(--mut);margin-top:-.2rem;}
-.hero-gear{display:flex;flex-direction:column;align-items:center;background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:.5rem .3rem;}
-.hero-gear .lbl{font-family:'JetBrains Mono',monospace;font-size:.4rem;letter-spacing:.2em;color:var(--mut);}
-.hero-gear .val{font-family:'Bebas Neue',sans-serif;font-size:2.6rem;line-height:1;color:var(--gold);}
-.rpm-section{display:flex;flex-direction:column;gap:.3rem;}
+.hero-speed .val{font-family:'Bebas Neue',sans-serif;font-size:clamp(4rem,7.5vw,6.8rem);line-height:.85;color:var(--wht);text-shadow:0 2px 12px rgba(0,0,0,.35);}
+.hero-speed .unit{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.22em;color:var(--mut);margin-top:.1rem;}
+.hero-gear{display:flex;flex-direction:column;align-items:center;background:rgba(0,0,0,.28);border:1px solid var(--bor);border-radius:8px;padding:.4rem .5rem;}
+.hero-gear .lbl{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.2em;color:var(--mut);}
+.hero-gear .val{font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,5vw,4.6rem);line-height:1;color:var(--gold);text-shadow:0 0 16px rgba(255,195,26,.35);}
+.rpm-section{display:flex;flex-direction:column;gap:.4rem;}
 .rpm-header{display:flex;justify-content:space-between;align-items:baseline;}
-.rpm-lbl{font-family:'JetBrains Mono',monospace;font-size:.42rem;letter-spacing:.2em;color:var(--mut);}
-.rpm-val{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--wht);}
-.rpm-bar-wrap{height:10px;background:var(--dim);border-radius:3px;overflow:hidden;position:relative;}
-.rpm-bar{height:100%;border-radius:3px;transition:width .06s linear,background .1s;background:var(--grn);}
-.rpm-zone{position:absolute;top:0;height:100%;border-left:1px solid rgba(255,255,255,.12);}
+.rpm-lbl{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.2em;color:var(--mut);}
+.rpm-val{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--wht);}
+/* Segmented RPM LED strip (FLUX89-style) */
+.rpm-led{display:flex;gap:3px;height:18px;}
+.rpm-led .seg{flex:1;background:var(--dim);border-radius:2px;transition:background .04s,box-shadow .04s;}
+.rpm-led .seg.on-green{background:var(--grn);box-shadow:0 0 7px rgba(0,229,160,.65);}
+.rpm-led .seg.on-amber{background:var(--gold);box-shadow:0 0 7px rgba(255,195,26,.65);}
+.rpm-led .seg.on-red{background:var(--red);box-shadow:0 0 8px rgba(255,45,59,.75);}
+.rpm-led.flash .seg{background:var(--red);box-shadow:0 0 12px rgba(255,45,59,.95);}
 
-/* Middle row */
-.mid{display:grid;grid-template-columns:1fr 180px 1fr;gap:.5rem;min-height:0;}
-
-/* Inputs panel */
-.panel{background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:.65rem .75rem;}
-.panel-title{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:.24em;color:var(--mut);text-transform:uppercase;margin-bottom:.6rem;border-bottom:1px solid var(--bor);padding-bottom:.4rem;}
-.input-row{display:flex;flex-direction:column;gap:.45rem;}
-.inp-item{display:flex;flex-direction:column;gap:.2rem;}
-.inp-header{display:flex;justify-content:space-between;align-items:baseline;}
-.inp-lbl{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:.18em;color:var(--mut);}
-.inp-val{font-family:'Bebas Neue',sans-serif;font-size:.9rem;line-height:1;}
-.inp-bar-wrap{height:7px;background:var(--dim);border-radius:3px;overflow:hidden;}
-.inp-bar{height:100%;border-radius:3px;transition:width .06s linear;}
-.bar-throttle{background:var(--grn);}
-.bar-brake{background:var(--red);}
-.steer-wrap{height:7px;background:var(--dim);border-radius:3px;position:relative;overflow:hidden;}
-.steer-center{position:absolute;top:0;left:50%;width:1px;height:100%;background:rgba(255,255,255,.15);}
+/* INPUTS: rolling throttle/brake line graph + steering */
+.inp-legend{display:flex;gap:1.4rem;margin-bottom:.5rem;}
+.inp-chip{display:flex;align-items:center;gap:.45rem;font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.14em;color:var(--mut);}
+.inp-chip .sw{width:15px;height:3px;border-radius:2px;}
+.inp-chip b{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.02em;margin-left:.2rem;}
+.inp-canvas-wrap{position:relative;width:100%;height:150px;flex:1;min-height:120px;}
+#inputCanvas{display:block;width:100%;height:100%;}
+.steer-block{margin-top:.65rem;}
+.steer-lbl{font-family:'JetBrains Mono',monospace;font-size:.48rem;letter-spacing:.16em;color:var(--mut);margin-bottom:.28rem;display:flex;justify-content:space-between;}
+.steer-wrap{height:9px;background:var(--dim);border-radius:4px;position:relative;overflow:hidden;}
+.steer-center{position:absolute;top:0;left:50%;width:1px;height:100%;background:rgba(255,255,255,.18);}
 .steer-bar{position:absolute;top:0;height:100%;background:var(--blu);transition:left .06s linear,width .06s linear;}
 
-/* G-force canvas panel */
-.gforce-panel{background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:.65rem .75rem;display:flex;flex-direction:column;align-items:center;}
-#gCanvas{display:block;margin:.2rem auto;}
-.gforce-vals{display:flex;gap:1.2rem;margin-top:.3rem;}
+/* G-FORCE */
+.gforce-inner{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+#gCanvas{display:block;margin:.2rem auto;width:150px;height:150px;}
+.gforce-vals{display:flex;gap:1.8rem;margin-top:.45rem;}
 .gval{display:flex;flex-direction:column;align-items:center;}
 .gval .lbl{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.18em;color:var(--mut);}
-.gval .num{font-family:'Bebas Neue',sans-serif;font-size:.95rem;line-height:1.1;}
+.gval .num{font-family:'Bebas Neue',sans-serif;font-size:1.85rem;line-height:1.1;}
 
-/* Lap times panel */
-.lap-panel{background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:.65rem .75rem;}
-.lap-row{display:flex;justify-content:space-between;align-items:baseline;padding:.3rem 0;border-bottom:1px solid rgba(28,31,46,.8);}
-.lap-row:last-child{border-bottom:none;}
-.lap-lbl{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:.16em;color:var(--mut);}
-.lap-time{font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:.04em;color:var(--wht);}
+/* LAPS */
+.lap-row{display:flex;justify-content:space-between;align-items:baseline;padding:.5rem 0;border-bottom:1px solid rgba(28,31,46,.8);}
+.lap-row:last-of-type{border-bottom:none;}
+.lap-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.16em;color:var(--mut);}
+.lap-time{font-family:'Bebas Neue',sans-serif;font-size:2.15rem;letter-spacing:.04em;color:var(--wht);}
 .lap-time.best{color:var(--grn);}
 .lap-time.current{color:var(--gold);}
-.lap-count-row{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding-top:.4rem;border-top:1px solid var(--bor);}
-.lc-lbl{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.16em;color:var(--mut);}
-.lc-val{font-family:'Bebas Neue',sans-serif;font-size:.85rem;color:var(--wht);}
+.lap-count-row{display:flex;justify-content:space-between;align-items:center;margin-top:.55rem;padding-top:.5rem;border-top:1px solid var(--bor);}
+.lc-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.16em;color:var(--mut);}
+.lc-val{font-family:'Bebas Neue',sans-serif;font-size:1.85rem;color:var(--wht);}
 
-/* Bottom row */
-.bot{display:grid;grid-template-columns:2fr 1fr 1fr;gap:.5rem;min-height:0;}
+/* TYRES: big, OBS-legible */
+.tyre-grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:.65rem;}
+.tyre-corner{background:rgba(0,0,0,.3);border:1px solid var(--bor);border-radius:9px;padding:.7rem .85rem;display:flex;flex-direction:column;gap:.35rem;justify-content:center;}
+.tyre-corner .tc-lbl{font-family:'JetBrains Mono',monospace;font-size:.54rem;letter-spacing:.2em;color:var(--mut);}
+.tc-temp-line{display:flex;align-items:baseline;gap:.35rem;}
+.tyre-corner .tc-temp{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.4rem,3.6vw,3.6rem);line-height:.92;transition:color .3s;}
+.tyre-corner .tc-temp-unit{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--mut);}
+.tyre-temp-bar{height:7px;border-radius:4px;background:var(--dim);overflow:hidden;}
+.tyre-temp-fill{height:100%;border-radius:4px;transition:width .15s,background .3s;}
+.tyre-rps,.tyre-sus{font-family:'JetBrains Mono',monospace;font-size:.52rem;color:var(--mut);}
 
-/* Tyre panel */
-.tyre-panel{background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:.65rem .75rem;}
-.tyre-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:.4rem;height:calc(100% - 1.4rem);}
-.tyre-corner{background:var(--pan);border:1px solid var(--bor);border-radius:5px;padding:.4rem .5rem;display:flex;flex-direction:column;gap:.2rem;}
-.tyre-corner .tc-lbl{font-family:'JetBrains Mono',monospace;font-size:.48rem;letter-spacing:.2em;color:var(--mut);}
-.tyre-corner .tc-temp{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;line-height:1;transition:color .3s;}
-.tyre-corner .tc-temp-unit{font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mut);}
-.tyre-temp-bar{height:4px;border-radius:2px;background:var(--dim);overflow:hidden;margin-top:.1rem;}
-.tyre-temp-fill{height:100%;border-radius:2px;transition:width .15s,background .3s;}
-.tyre-rps{font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mut);margin-top:.15rem;}
-.tyre-sus{font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mut);}
+/* FUEL */
+.fuel-inner{flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:.5rem;}
+.fuel-main{display:flex;align-items:baseline;gap:.35rem;}
+.fuel-val{font-family:'Bebas Neue',sans-serif;font-size:2.4rem;line-height:1;color:var(--wht);}
+.fuel-cap{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--mut);}
+.fuel-bar-wrap{height:11px;background:var(--dim);border-radius:6px;overflow:hidden;margin:.35rem 0;}
+.fuel-bar{height:100%;border-radius:6px;background:var(--grn);transition:width .3s,background .3s;}
 
-/* Fuel panel */
-.fuel-panel{background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:.65rem .75rem;display:flex;flex-direction:column;justify-content:space-between;}
-.fuel-main{display:flex;align-items:baseline;gap:.3rem;}
-.fuel-val{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;line-height:1;color:var(--wht);}
-.fuel-cap{font-family:'JetBrains Mono',monospace;font-size:.54rem;color:var(--mut);}
-.fuel-bar-wrap{height:8px;background:var(--dim);border-radius:4px;overflow:hidden;margin:.4rem 0;}
-.fuel-bar{height:100%;border-radius:4px;background:var(--grn);transition:width .3s,background .3s;}
+/* ENGINE (horizontal strip) */
+.engine-inner{flex:1;display:flex;flex-direction:row;gap:1.6rem;align-items:stretch;flex-wrap:wrap;}
+.eng-row{flex:1;min-width:120px;display:flex;flex-direction:column;gap:.28rem;justify-content:center;}
+.eng-lbl{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:.2em;color:var(--mut);}
+.eng-val{font-family:'Bebas Neue',sans-serif;font-size:2.15rem;line-height:1;color:var(--wht);transition:color .3s;}
+.eng-bar-wrap{height:6px;background:var(--dim);border-radius:3px;overflow:hidden;}
+.eng-bar{height:100%;border-radius:3px;background:var(--blu);transition:width .3s,background .3s;}
+.eng-divider{width:1px;align-self:stretch;background:var(--bor);}
 
-/* Engine panel */
-.engine-panel{background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:.65rem .75rem;display:flex;flex-direction:column;justify-content:space-around;}
-.eng-row{display:flex;flex-direction:column;gap:.2rem;}
-.eng-lbl{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.2em;color:var(--mut);}
-.eng-val{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;line-height:1;color:var(--wht);transition:color .3s;}
-.eng-bar-wrap{height:4px;background:var(--dim);border-radius:2px;overflow:hidden;}
-.eng-bar{height:100%;border-radius:2px;background:var(--blu);transition:width .3s,background .3s;}
-.eng-divider{height:1px;background:var(--bor);}
+/* LAP DELTA (predictive) */
+.delta-inner{flex:1;display:flex;flex-direction:column;justify-content:center;gap:.5rem;}
+.delta-big{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.6rem,5vw,4rem);line-height:.9;letter-spacing:.02em;color:var(--mut);transition:color .2s;}
+.delta-big.up{color:var(--red);} .delta-big.dn{color:var(--grn);}
+.delta-sub{display:flex;justify-content:space-between;gap:1rem;}
+.delta-cell .l{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.16em;color:var(--mut);}
+.delta-cell .v{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--wht);}
+.delta-note{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.06em;color:var(--mut);}
+
+/* TEMP HISTORY graph */
+.temps-inner{flex:1;display:flex;flex-direction:column;gap:.4rem;min-height:0;}
+.temps-legend{display:flex;flex-wrap:wrap;gap:.4rem .9rem;}
+.temps-chip{display:flex;align-items:center;gap:.35rem;font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.1em;color:var(--mut);}
+.temps-chip .sw{width:13px;height:3px;border-radius:2px;}
+.temps-chip b{font-family:'Bebas Neue',sans-serif;font-size:.95rem;margin-left:.2rem;letter-spacing:.02em;}
+.temps-canvas-wrap{position:relative;width:100%;height:150px;flex:1;min-height:110px;}
+#tempsCanvas{display:block;width:100%;height:100%;}
+
+/* FUEL strategy rows */
+.fuel-strat{border-top:1px solid var(--bor);margin-top:.4rem;padding-top:.45rem;display:flex;flex-direction:column;gap:.4rem;}
+.fs-row{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;}
+.fs-lbl{font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.14em;color:var(--mut);}
+.fs-val{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--wht);}
+.fs-val.ok{color:var(--grn);} .fs-val.warn{color:var(--gold);} .fs-val.bad{color:var(--red);}
+
+/* ── LAYOUT EDITOR ── */
+.editbar{display:none;align-items:center;gap:.5rem;}
+body.editing .editbar{display:flex;}
+.editbar .eb{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.14em;padding:.28rem .6rem;border-radius:5px;border:1px solid var(--bor);background:rgba(13,15,24,.8);color:var(--mut);cursor:pointer;text-transform:uppercase;}
+.editbar .eb:hover{border-color:var(--blu);color:var(--blu);}
+#editToggle{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;padding:.28rem .65rem;border-radius:20px;border:1px solid var(--bor);background:rgba(13,15,24,.8);color:var(--mut);cursor:pointer;text-transform:uppercase;}
+#editToggle:hover{border-color:var(--blu);color:var(--blu);}
+body.editing #editToggle{border-color:var(--blu);color:var(--blu);background:rgba(26,180,255,.1);}
+body.editing #dashboard .card{cursor:grab;outline:1px dashed rgba(26,180,255,.35);outline-offset:2px;}
+body.editing #dashboard .card:hover{outline-color:rgba(26,180,255,.7);}
+body.editing #dashboard .card.dragging{cursor:grabbing;opacity:.9;outline-color:var(--blu);z-index:100;box-shadow:0 12px 34px rgba(0,0,0,.6);}
+/* free (custom) layout: widgets become absolutely positioned */
+#dashboard.freelayout{display:block;position:relative;}
+#dashboard.freelayout .card{position:absolute;align-self:auto;margin:0;}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:rgba(13,15,24,.96);border:1px solid var(--blu);color:var(--wht);font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.06em;padding:.6rem 1rem;border-radius:8px;z-index:3000;opacity:0;transition:opacity .3s;pointer-events:none;max-width:80vw;text-align:center;}
+.toast.show{opacity:1;}
+
+/* TRACK MAP */
+.map-inner{flex:1;display:flex;flex-direction:column;gap:.4rem;min-height:0;}
+.map-metrics{display:flex;gap:.35rem;flex-wrap:wrap;}
+.map-metric{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.1em;text-transform:uppercase;padding:.22rem .5rem;border-radius:4px;border:1px solid var(--bor);background:rgba(0,0,0,.25);color:var(--mut);cursor:pointer;}
+.map-metric.on{border-color:var(--accent);color:var(--accent);background:rgba(26,180,255,.1);}
+.map-canvas-wrap{position:relative;flex:1;min-height:180px;width:100%;}
+#mapCanvas{display:block;width:100%;height:100%;}
+.map-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mut);text-align:center;line-height:1.7;pointer-events:none;width:80%;}
+
+/* SECTORS */
+.sectors-inner{flex:1;display:flex;flex-direction:column;justify-content:center;gap:.2rem;}
+.sec-row{display:grid;grid-template-columns:auto 1fr auto;gap:.7rem;align-items:baseline;padding:.4rem 0;border-bottom:1px solid rgba(28,31,46,.8);}
+.sec-row:last-child{border-bottom:none;}
+.sec-row.active .sec-lbl{color:var(--accent);}
+.sec-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.14em;color:var(--mut);}
+.sec-time{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;color:var(--wht);text-align:right;}
+.sec-delta{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;text-align:right;color:var(--mut);min-width:64px;}
+.sec-delta.up{color:var(--red);} .sec-delta.dn{color:var(--grn);}
+
+/* Edit: per-widget hide button, brand + hidden chips */
+.card-hide{display:none;position:absolute;top:5px;right:5px;z-index:6;width:20px;height:20px;border-radius:50%;border:1px solid var(--bor);background:rgba(0,0,0,.6);color:var(--mut);font-size:12px;line-height:1;cursor:pointer;align-items:center;justify-content:center;}
+body.editing .card-hide{display:flex;}
+.card-hide:hover{border-color:var(--red);color:var(--red);}
+.hidden-widgets{display:none;align-items:center;gap:.3rem;flex-wrap:wrap;}
+body.editing .hidden-widgets{display:flex;}
+.hw-chip{font-family:'JetBrains Mono',monospace;font-size:.42rem;letter-spacing:.1em;text-transform:uppercase;padding:.24rem .5rem;border-radius:4px;border:1px dashed var(--bor);background:transparent;color:var(--mut);cursor:pointer;}
+.hw-chip:hover{border-color:var(--grn);color:var(--grn);}
+.accent-swatches{display:none;align-items:center;gap:.35rem;}
+body.editing .accent-swatches{display:flex;}
+.accent-sw{width:15px;height:15px;border-radius:50%;border:1px solid rgba(255,255,255,.3);cursor:pointer;padding:0;}
+.accent-sw.on{outline:2px solid #fff;outline-offset:1px;}
+
+/* OBS LINKS panel */
+#obsBtn{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;padding:.28rem .65rem;border-radius:20px;border:1px solid rgba(0,229,160,.4);background:rgba(0,229,160,.08);color:var(--grn);cursor:pointer;text-transform:uppercase;}
+#obsBtn:hover{background:rgba(0,229,160,.16);}
+.obs-modal{display:none;position:fixed;inset:0;z-index:4000;background:rgba(3,4,7,.78);align-items:center;justify-content:center;padding:1.5rem;}
+.obs-modal.show{display:flex;}
+.obs-card{background:var(--sur);border:1px solid var(--bor);border-radius:14px;max-width:660px;width:100%;max-height:86vh;overflow:auto;padding:1.5rem 1.6rem 1.7rem;position:relative;}
+.obs-card h3{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.05em;color:var(--wht);}
+.obs-card h3 em{font-style:normal;color:var(--grn);}
+.obs-card p{font-family:'JetBrains Mono',monospace;font-size:.5rem;line-height:1.7;color:var(--mut);margin:.4rem 0 1rem;}
+.obs-close{position:absolute;top:12px;right:14px;background:transparent;border:0;color:var(--mut);font-size:22px;line-height:1;cursor:pointer;}
+.obs-close:hover{color:var(--wht);}
+.obs-list{display:flex;flex-direction:column;gap:.45rem;}
+.obs-row{display:grid;grid-template-columns:1fr auto auto auto;gap:.6rem;align-items:center;padding:.5rem .65rem;border:1px solid var(--bor);border-radius:9px;background:var(--pan);}
+.obs-row.full{border-color:rgba(0,229,160,.35);background:rgba(0,229,160,.05);}
+.obs-row .nm{font-family:'Barlow',sans-serif;font-size:.9rem;color:var(--wht);font-weight:600;}
+.obs-row .sz{font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mut);letter-spacing:.06em;}
+.obs-act{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.1em;text-transform:uppercase;padding:.32rem .6rem;border-radius:6px;border:1px solid var(--line2);background:#20252c;color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;}
+.obs-act:hover{border-color:var(--grn);color:var(--grn);}
+.obs-act.copied{border-color:var(--grn);color:var(--grn);}
 </style>
 </head>
 <body>
@@ -171,6 +332,14 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
       <span id="statusTxt">DISCONNECTED</span>
     </div>
     <button id="previewClose" onclick="stopPreview()" style="display:none;font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;padding:.28rem .65rem;border-radius:20px;border:1px solid rgba(255,195,26,.4);background:rgba(255,195,26,.08);color:var(--gold);cursor:pointer;">EXIT PREVIEW</button>
+    <div class="editbar">
+      <span class="hidden-widgets" id="hiddenWidgets"></span>
+      <span class="accent-swatches" id="accentSwatches"></span>
+      <button class="eb" id="editShare" onclick="shareLayout()">Copy Layout Link</button>
+      <button class="eb" id="editReset" onclick="resetLayout()">Reset</button>
+    </div>
+    <button id="obsBtn" onclick="openObs()">OBS Links</button>
+    <button id="editToggle" onclick="toggleEdit()">Edit Layout</button>
     <a href="index.html" class="back-link">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <polyline points="15 18 9 12 15 6"></polyline>
@@ -194,7 +363,7 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
     <div class="setup-steps">
       <div class="step">
         <div class="step-num">1</div>
-        <div class="step-txt">Download and run <code>GT7-Live-Connector.exe</code> — it will appear in your system tray.</div>
+        <div class="step-txt">Download the zip, <b style="color:var(--gold);font-weight:600">right-click it and Extract All</b>, then run <code>GT7-Live-Connector.exe</code> from inside the extracted folder. It appears in your system tray. (Do not run it from inside the zip, or Windows will say "Failed to load Python DLL".)</div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
@@ -202,11 +371,11 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
       </div>
       <div class="step">
         <div class="step-num">3</div>
-        <div class="step-txt">Telemetry will appear here automatically — no settings changes needed.</div>
+        <div class="step-txt">Telemetry will appear here automatically, no settings changes needed.</div>
       </div>
     </div>
     <div class="setup-actions">
-      <a href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.exe" class="btn btn-primary">
+      <a href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.zip" class="btn btn-primary">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="7 10 12 15 17 10"></polyline>
@@ -215,6 +384,8 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
         DOWNLOAD CONNECTOR
       </a>
       <a href="index.html" class="btn btn-secondary">BACK TO SITE</a>
+      <a href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.exe" class="btn btn-secondary" style="border-color:var(--mut);color:var(--mut)" title="Single file, no extracting. May show an antivirus prompt.">SINGLE-FILE .EXE</a>
+      <a href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector-macOS-AppleSilicon.zip" class="btn btn-secondary" style="border-color:var(--mut);color:var(--mut)" title="For Apple Silicon Macs (any Mac from late 2020 on). Unzip, then right-click the app and Open.">MAC (APPLE SILICON)</a>
       <button class="btn btn-secondary" onclick="previewDashboard()" style="border-color:var(--mut);color:var(--mut);">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -223,8 +394,46 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
         PREVIEW DASHBOARD
       </button>
     </div>
-    <div class="waiting">
-      <span>Waiting for connection</span>
+    <div class="help-wrap">
+      <details class="help">
+        <summary>How to use this dashboard</summary>
+        <div class="help-body">
+          <h4>Quick start</h4>
+          <ol>
+            <li>Download the connector zip, then <b>right-click it and Extract All</b>. Run <code>GT7-Live-Connector.exe</code> from inside the extracted folder (running it from inside the zip causes a "Failed to load Python DLL" error). It lives in your system tray.</li>
+            <li>Start a session in Gran Turismo 7 and get out on track.</li>
+            <li>Telemetry appears here automatically. No in-game settings to change.</li>
+          </ol>
+          <p>Cannot get the zip to work? Use the <b>Single-file .exe</b> download instead. It runs without extracting, though Windows may show a one-time antivirus prompt (click Allow).</p>
+          <p><b>On a Mac?</b> Grab the <b>Apple Silicon</b> download (any Mac from late 2020 on: M1/M2/M3/M4), unzip it, then <b>right-click the app and choose Open</b> the first time (macOS shows an "unidentified developer" warning once, then remembers your choice). Everything else works exactly the same.</p>
+
+          <h4>Use it in OBS</h4>
+          <ul>
+            <li>Click <b>OBS Links</b> in the top bar for a copy-ready link to the full overlay or any single widget.</li>
+            <li>In OBS: add a <b>Browser Source</b>, paste the link, and set the width and height. The background is transparent, so it floats over your gameplay.</li>
+            <li>Prefer one big overlay? Use the full-overlay link and <b>Alt-drag</b> the source in OBS to crop to the widgets you want.</li>
+          </ul>
+
+          <h4>Make it yours</h4>
+          <ul>
+            <li><b>Edit Layout</b> lets you drag widgets anywhere and resize them (drag a corner). Double-click a widget to reset its size.</li>
+            <li>Pick a brand accent colour and hide any widgets you do not need.</li>
+            <li><b>Copy Layout Link</b> saves your exact arrangement as a URL you can load into OBS or share with others.</li>
+            <li>Switch the Track Map overlay between plain, throttle and brake, speed, or tyre temperature with the buttons on the map.</li>
+          </ul>
+
+          <h4>Not seeing data?</h4>
+          <ul>
+            <li>Make sure you are <b>on track</b> in GT7, not in a menu or lobby.</li>
+            <li>Hover the tray icon: it shows your console IP and a packet count. <b>Decoded</b> should climb while you are driving.</li>
+            <li>If Windows flags the download, it is a false positive on the packaged app. Allow it in Windows Security, then run it.</li>
+            <li>Still nothing? Put your console's IP in a <code>gt7-console-ip.txt</code> file next to the connector (find the IP in the console's Network settings).</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+    <div class="waiting" style="flex-wrap:wrap;line-height:1.6;">
+      <span id="waitingTxt">Waiting for connection</span>
       <span class="waiting-dots"><span>.</span><span>.</span><span>.</span></span>
     </div>
   </div>
@@ -233,65 +442,93 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
 <!-- LIVE DASHBOARD (shown when connected + receiving telemetry) -->
 <div id="dashboard">
 
-  <!-- Hero: Speed / Gear / RPM -->
-  <div class="hero">
-    <div class="hero-speed">
-      <div class="val" id="speed">0</div>
-      <div class="unit">KM/H</div>
-    </div>
-    <div class="hero-gear">
-      <div class="lbl">GEAR</div>
-      <div class="val" id="gear">N</div>
-    </div>
-    <div class="rpm-section">
-      <div class="rpm-header">
-        <span class="rpm-lbl">ENGINE RPM</span>
-        <span class="rpm-val" id="rpmVal">0</span>
+  <!-- SPEED / GEAR / RPM -->
+  <div class="card card-hero" data-widget="speed">
+    <div class="hero-inner">
+      <div class="hero-speed">
+        <div class="val" id="speed">0</div>
+        <div class="unit">KM/H</div>
       </div>
-      <div class="rpm-bar-wrap">
-        <div class="rpm-bar" id="rpmBar" style="width:0%"></div>
-        <div class="rpm-zone" style="left:80%"></div>
-        <div class="rpm-zone" style="left:90%"></div>
+      <div class="hero-gear">
+        <div class="lbl">GEAR</div>
+        <div class="val" id="gear">N</div>
+      </div>
+      <div class="rpm-section">
+        <div class="rpm-header">
+          <span class="rpm-lbl">ENGINE RPM</span>
+          <span class="rpm-val" id="rpmVal">0</span>
+        </div>
+        <div class="rpm-led" id="rpmLed"></div>
       </div>
     </div>
   </div>
 
-  <!-- Middle: Inputs | G-Force | Lap Times -->
-  <div class="mid">
+  <!-- LAP TIMES -->
+  <div class="card card-laps" data-widget="laps">
+    <div class="card-title">Lap Times <span class="accent"></span></div>
+    <div class="lap-row">
+      <span class="lap-lbl">CURRENT</span>
+      <span class="lap-time current" id="lapCurrent">--:--.---</span>
+    </div>
+    <div class="lap-row">
+      <span class="lap-lbl">BEST</span>
+      <span class="lap-time best" id="lapBest">--:--.---</span>
+    </div>
+    <div class="lap-row">
+      <span class="lap-lbl">LAST</span>
+      <span class="lap-time" id="lapLast">--:--.---</span>
+    </div>
+    <div class="lap-count-row">
+      <span class="lc-lbl">LAP</span>
+      <span class="lc-val" id="lapCount">0</span>
+    </div>
+  </div>
 
-    <div class="panel">
-      <div class="panel-title">Inputs</div>
-      <div class="input-row">
-        <div class="inp-item">
-          <div class="inp-header">
-            <span class="inp-lbl">THROTTLE</span>
-            <span class="inp-val" id="throttleVal" style="color:var(--grn)">0%</span>
-          </div>
-          <div class="inp-bar-wrap"><div class="inp-bar bar-throttle" id="throttleBar" style="width:0%"></div></div>
-        </div>
-        <div class="inp-item">
-          <div class="inp-header">
-            <span class="inp-lbl">BRAKE</span>
-            <span class="inp-val" id="brakeVal" style="color:var(--red)">0%</span>
-          </div>
-          <div class="inp-bar-wrap"><div class="inp-bar bar-brake" id="brakeBar" style="width:0%"></div></div>
-        </div>
-        <div class="inp-item">
-          <div class="inp-header">
-            <span class="inp-lbl">STEERING</span>
-            <span class="inp-val" id="steerVal" style="color:var(--blu)">0%</span>
-          </div>
-          <div class="steer-wrap">
-            <div class="steer-center"></div>
-            <div class="steer-bar" id="steerBar" style="left:50%;width:0%"></div>
-          </div>
-        </div>
+  <!-- LAP DELTA (predictive vs best) -->
+  <div class="card card-delta" data-widget="delta">
+    <div class="card-title">Lap Delta <span class="accent"></span></div>
+    <div class="delta-inner">
+      <div class="delta-big" id="deltaBig">+0.00</div>
+      <div class="delta-sub">
+        <div class="delta-cell"><div class="l">PREDICTED</div><div class="v" id="deltaPred">--:--.---</div></div>
+        <div class="delta-cell"><div class="l">CURRENT</div><div class="v" id="deltaCur">--:--.---</div></div>
+      </div>
+      <div class="delta-note" id="deltaNote">Set a clean lap to arm the delta.</div>
+    </div>
+  </div>
+
+  <!-- SECTORS -->
+  <div class="card card-sectors" data-widget="sectors">
+    <div class="card-title">Sectors <span class="accent"></span></div>
+    <div class="sectors-inner">
+      <div class="sec-row" id="secRow1"><span class="sec-lbl">S1</span><span class="sec-time" id="secTime1">--.---</span><span class="sec-delta" id="secDelta1"></span></div>
+      <div class="sec-row" id="secRow2"><span class="sec-lbl">S2</span><span class="sec-time" id="secTime2">--.---</span><span class="sec-delta" id="secDelta2"></span></div>
+      <div class="sec-row" id="secRow3"><span class="sec-lbl">S3</span><span class="sec-time" id="secTime3">--.---</span><span class="sec-delta" id="secDelta3"></span></div>
+    </div>
+  </div>
+
+  <!-- INPUTS (rolling line graph) -->
+  <div class="card card-inputs" data-widget="inputs">
+    <div class="card-title">Inputs <span class="accent"></span></div>
+    <div class="inp-legend">
+      <span class="inp-chip"><span class="sw" style="background:var(--grn)"></span>THROTTLE<b id="throttleVal" style="color:var(--grn)">0%</b></span>
+      <span class="inp-chip"><span class="sw" style="background:var(--red)"></span>BRAKE<b id="brakeVal" style="color:var(--red)">0%</b></span>
+    </div>
+    <div class="inp-canvas-wrap"><canvas id="inputCanvas" width="640" height="220"></canvas></div>
+    <div class="steer-block">
+      <div class="steer-lbl"><span>STEERING</span><span id="steerVal" style="color:var(--blu)">0%</span></div>
+      <div class="steer-wrap">
+        <div class="steer-center"></div>
+        <div class="steer-bar" id="steerBar" style="left:50%;width:0%"></div>
       </div>
     </div>
+  </div>
 
-    <div class="panel gforce-panel">
-      <div class="panel-title" style="align-self:flex-start;width:100%">G-Force</div>
-      <canvas id="gCanvas" width="120" height="120"></canvas>
+  <!-- G-FORCE -->
+  <div class="card card-gforce" data-widget="gforce">
+    <div class="card-title">G-Force <span class="accent"></span></div>
+    <div class="gforce-inner">
+      <canvas id="gCanvas" width="150" height="150"></canvas>
       <div class="gforce-vals">
         <div class="gval">
           <span class="lbl">LAT</span>
@@ -303,80 +540,80 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
         </div>
       </div>
     </div>
-
-    <div class="panel lap-panel">
-      <div class="panel-title">Lap Times</div>
-      <div class="lap-row">
-        <span class="lap-lbl">CURRENT</span>
-        <span class="lap-time current" id="lapCurrent">--:--.---</span>
-      </div>
-      <div class="lap-row">
-        <span class="lap-lbl">BEST</span>
-        <span class="lap-time best" id="lapBest">--:--.---</span>
-      </div>
-      <div class="lap-row">
-        <span class="lap-lbl">LAST</span>
-        <span class="lap-time" id="lapLast">--:--.---</span>
-      </div>
-      <div class="lap-count-row">
-        <span class="lc-lbl">LAP</span>
-        <span class="lc-val" id="lapCount">0</span>
-      </div>
-    </div>
-
   </div>
 
-  <!-- Bottom: Tyres | Fuel | Engine -->
-  <div class="bot">
-
-    <div class="panel tyre-panel">
-      <div class="panel-title">Tyres</div>
-      <div class="tyre-grid">
-        <div class="tyre-corner">
-          <span class="tc-lbl">FRONT LEFT</span>
-          <div style="display:flex;align-items:baseline;gap:.25rem;">
-            <span class="tc-temp" id="tFL">--</span>
-            <span class="tc-temp-unit">°C</span>
-          </div>
-          <div class="tyre-temp-bar"><div class="tyre-temp-fill" id="tFL_bar" style="width:0%"></div></div>
-          <span class="tyre-rps" id="rpsFL">-- rad/s</span>
-          <span class="tyre-sus" id="susFL">Sus: --</span>
-        </div>
-        <div class="tyre-corner">
-          <span class="tc-lbl">FRONT RIGHT</span>
-          <div style="display:flex;align-items:baseline;gap:.25rem;">
-            <span class="tc-temp" id="tFR">--</span>
-            <span class="tc-temp-unit">°C</span>
-          </div>
-          <div class="tyre-temp-bar"><div class="tyre-temp-fill" id="tFR_bar" style="width:0%"></div></div>
-          <span class="tyre-rps" id="rpsFR">-- rad/s</span>
-          <span class="tyre-sus" id="susFR">Sus: --</span>
-        </div>
-        <div class="tyre-corner">
-          <span class="tc-lbl">REAR LEFT</span>
-          <div style="display:flex;align-items:baseline;gap:.25rem;">
-            <span class="tc-temp" id="tRL">--</span>
-            <span class="tc-temp-unit">°C</span>
-          </div>
-          <div class="tyre-temp-bar"><div class="tyre-temp-fill" id="tRL_bar" style="width:0%"></div></div>
-          <span class="tyre-rps" id="rpsRL">-- rad/s</span>
-          <span class="tyre-sus" id="susRL">Sus: --</span>
-        </div>
-        <div class="tyre-corner">
-          <span class="tc-lbl">REAR RIGHT</span>
-          <div style="display:flex;align-items:baseline;gap:.25rem;">
-            <span class="tc-temp" id="tRR">--</span>
-            <span class="tc-temp-unit">°C</span>
-          </div>
-          <div class="tyre-temp-bar"><div class="tyre-temp-fill" id="tRR_bar" style="width:0%"></div></div>
-          <span class="tyre-rps" id="rpsRR">-- rad/s</span>
-          <span class="tyre-sus" id="susRR">Sus: --</span>
-        </div>
+  <!-- TRACK MAP -->
+  <div class="card card-map" data-widget="map">
+    <div class="card-title">Track Map <span class="accent"></span></div>
+    <div class="map-inner">
+      <div class="map-metrics">
+        <button class="map-metric on" data-metric="line">Line</button>
+        <button class="map-metric" data-metric="inputs">Throttle/Brake</button>
+        <button class="map-metric" data-metric="speed">Speed</button>
+        <button class="map-metric" data-metric="tyres">Tyre Temp</button>
+      </div>
+      <div class="map-canvas-wrap">
+        <canvas id="mapCanvas" width="480" height="360"></canvas>
+        <div class="map-hint" id="mapHint">Drive a lap to trace the track.</div>
       </div>
     </div>
+  </div>
 
-    <div class="panel fuel-panel">
-      <div class="panel-title">Fuel</div>
+  <!-- TYRES -->
+  <div class="card card-tyres" data-widget="tyres">
+    <div class="card-title">Tyre Temps <span class="accent"></span></div>
+    <div class="tyre-grid">
+      <div class="tyre-corner">
+        <span class="tc-lbl">FRONT LEFT</span>
+        <div class="tc-temp-line"><span class="tc-temp" id="tFL">--</span><span class="tc-temp-unit">°C</span></div>
+        <div class="tyre-temp-bar"><div class="tyre-temp-fill" id="tFL_bar" style="width:0%"></div></div>
+        <span class="tyre-rps" id="rpsFL">-- rad/s</span>
+        <span class="tyre-sus" id="susFL">Sus: --</span>
+      </div>
+      <div class="tyre-corner">
+        <span class="tc-lbl">FRONT RIGHT</span>
+        <div class="tc-temp-line"><span class="tc-temp" id="tFR">--</span><span class="tc-temp-unit">°C</span></div>
+        <div class="tyre-temp-bar"><div class="tyre-temp-fill" id="tFR_bar" style="width:0%"></div></div>
+        <span class="tyre-rps" id="rpsFR">-- rad/s</span>
+        <span class="tyre-sus" id="susFR">Sus: --</span>
+      </div>
+      <div class="tyre-corner">
+        <span class="tc-lbl">REAR LEFT</span>
+        <div class="tc-temp-line"><span class="tc-temp" id="tRL">--</span><span class="tc-temp-unit">°C</span></div>
+        <div class="tyre-temp-bar"><div class="tyre-temp-fill" id="tRL_bar" style="width:0%"></div></div>
+        <span class="tyre-rps" id="rpsRL">-- rad/s</span>
+        <span class="tyre-sus" id="susRL">Sus: --</span>
+      </div>
+      <div class="tyre-corner">
+        <span class="tc-lbl">REAR RIGHT</span>
+        <div class="tc-temp-line"><span class="tc-temp" id="tRR">--</span><span class="tc-temp-unit">°C</span></div>
+        <div class="tyre-temp-bar"><div class="tyre-temp-fill" id="tRR_bar" style="width:0%"></div></div>
+        <span class="tyre-rps" id="rpsRR">-- rad/s</span>
+        <span class="tyre-sus" id="susRR">Sus: --</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYRE / ENGINE TEMP HISTORY -->
+  <div class="card card-temps" data-widget="temps">
+    <div class="card-title">Temp History <span class="accent"></span></div>
+    <div class="temps-inner">
+      <div class="temps-legend">
+        <span class="temps-chip"><span class="sw" style="background:#1ab4ff"></span>FL<b id="thFL">--</b></span>
+        <span class="temps-chip"><span class="sw" style="background:#00e5a0"></span>FR<b id="thFR">--</b></span>
+        <span class="temps-chip"><span class="sw" style="background:#ffc31a"></span>RL<b id="thRL">--</b></span>
+        <span class="temps-chip"><span class="sw" style="background:#ff6ad5"></span>RR<b id="thRR">--</b></span>
+        <span class="temps-chip"><span class="sw" style="background:#7aa5ff;height:2px;border-top:1px dashed #7aa5ff"></span>WATER<b id="thWAT">--</b></span>
+        <span class="temps-chip"><span class="sw" style="background:#e0a63a;height:2px;border-top:1px dashed #e0a63a"></span>OIL<b id="thOIL">--</b></span>
+      </div>
+      <div class="temps-canvas-wrap"><canvas id="tempsCanvas" width="640" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <!-- FUEL + PIT STRATEGY -->
+  <div class="card card-fuel" data-widget="fuel">
+    <div class="card-title">Fuel &amp; Strategy <span class="accent"></span></div>
+    <div class="fuel-inner">
       <div>
         <div class="fuel-main">
           <span class="fuel-val" id="fuelVal">--</span>
@@ -385,16 +622,21 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
         <div class="fuel-bar-wrap">
           <div class="fuel-bar" id="fuelBar" style="width:0%"></div>
         </div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mut);margin-top:.3rem;" id="fuelPct">--%</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mut);margin-top:.3rem;" id="fuelPct">--%</div>
       </div>
-      <div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:.38rem;letter-spacing:.2em;color:var(--mut);margin-bottom:.2rem;">BOOST</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--wht);" id="boostVal">--</div>
+      <div class="fuel-strat">
+        <div class="fs-row"><span class="fs-lbl">PER LAP</span><span class="fs-val" id="fuelPerLap">-- L</span></div>
+        <div class="fs-row"><span class="fs-lbl">FUEL LAPS LEFT</span><span class="fs-val" id="fuelLapsLeft">--</span></div>
+        <div class="fs-row"><span class="fs-lbl">RACE LAPS LEFT</span><span class="fs-val" id="raceLapsLeft">--</span></div>
+        <div class="fs-row"><span class="fs-lbl">STATUS</span><span class="fs-val" id="fuelStatus">--</span></div>
       </div>
     </div>
+  </div>
 
-    <div class="panel engine-panel">
-      <div class="panel-title">Engine</div>
+  <!-- ENGINE -->
+  <div class="card card-engine" data-widget="engine">
+    <div class="card-title">Engine <span class="accent"></span></div>
+    <div class="engine-inner">
       <div class="eng-row">
         <span class="eng-lbl">WATER TEMP</span>
         <span class="eng-val" id="waterTemp">--°C</span>
@@ -409,41 +651,115 @@ h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.4
       <div class="eng-divider"></div>
       <div class="eng-row">
         <span class="eng-lbl">OIL PRESSURE</span>
-        <span class="eng-val" id="oilPress" style="font-size:.85rem;">-- kPa</span>
+        <span class="eng-val" id="oilPress" style="font-size:1.55rem;">-- kPa</span>
       </div>
     </div>
+  </div>
 
+</div>
+
+<!-- OBS LINKS panel -->
+<div class="obs-modal" id="obsModal">
+  <div class="obs-card">
+    <button class="obs-close" onclick="closeObs()" aria-label="Close">&times;</button>
+    <h3>OBS <em>Browser Sources</em></h3>
+    <p>In OBS: add a <b>Browser Source</b>, tick "Local file" off, paste a link below, and set the width/height. Each link is a single transparent widget you can place anywhere. Use the full overlay to crop with Alt-drag instead.</p>
+    <label style="display:flex;align-items:center;gap:.5rem;margin:0 0 1rem;font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mut);cursor:pointer;">
+      <input type="checkbox" id="obsBareToggle" onchange="toggleObsBare(this)"> Transparent panels (data only, no box behind it)
+    </label>
+    <div class="obs-list" id="obsList"></div>
   </div>
 </div>
 
 <script>
 // ── WEBSOCKET ──
-const WS_URL = 'ws://localhost:8765';
+// The connector binds on IPv4 (0.0.0.0). On Windows, "localhost" often
+// resolves to IPv6 (::1) first, so ws://localhost can fail to connect even
+// with the connector running and GT7 live. Try the IPv4 loopback first and
+// fall back to localhost for the odd machine that only has IPv6 loopback.
+const WS_CANDIDATES = ['ws://127.0.0.1:8765', 'ws://localhost:8765'];
+let wsIdx = 0;
 let ws = null, reconnectTimer = null;
 let hasLiveData = false, isPreview = false;
+let lastMsgTs = Date.now();   // watchdog: any message (telemetry or 2s status) resets this
+// Latest live packet, rendered once per animation frame (see renderLoop). This
+// decouples rendering from the packet rate so a slow browser (OBS's embedded
+// CEF) coalesces a burst down to the newest frame instead of falling behind.
+let latestTelemetry = null;
+
+function updateWaiting(txt){
+  const el = document.getElementById('waitingTxt');
+  if(el) el.textContent = txt;
+}
 
 function connect(){
-  if(ws && ws.readyState === WebSocket.OPEN) return;
+  if(isPreview) return;
+  if(ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+  const url = WS_CANDIDATES[wsIdx % WS_CANDIDATES.length];
   setStatus('connecting','CONNECTING');
+  updateWaiting('Connecting to the GT7 Live Connector…');
   try{
-    ws = new WebSocket(WS_URL);
-    ws.onopen = () => { setStatus('bridge','BRIDGE READY'); clearTimeout(reconnectTimer); };
-    ws.onmessage = e => { try{ handleMsg(JSON.parse(e.data)); }catch(_){} };
-    ws.onclose = () => { if(isPreview) return; setStatus('','DISCONNECTED'); showSetup(); reconnectTimer = setTimeout(connect, 3000); };
-    ws.onerror = () => { if(isPreview) return; setStatus('','DISCONNECTED'); showSetup(); };
+    ws = new WebSocket(url);
+    ws.onopen = () => {
+      setStatus('bridge','BRIDGE READY');
+      clearTimeout(reconnectTimer);
+      updateWaiting('Connector found. Waiting for GT7. Start a session in Gran Turismo 7. If nothing appears, check the connector shows your PS5/PS4 IP.');
+    };
+    ws.onmessage = e => { lastMsgTs = Date.now(); try{ handleMsg(JSON.parse(e.data)); }catch(_){} };
+    ws.onclose = () => { if(isPreview) return; setStatus('','DISCONNECTED'); showSetup(); wsIdx++; scheduleReconnect(); };
+    ws.onerror = () => { if(isPreview) return; try{ ws.close(); }catch(_){} };
   }catch(_){
-    setStatus('','DISCONNECTED');
-    reconnectTimer = setTimeout(connect, 3000);
+    wsIdx++; scheduleReconnect();
   }
 }
 
+// Watchdog: the connector emits a status message every 2s, so a healthy link
+// always has traffic within a couple of seconds. If nothing arrives for 6s
+// while the socket still looks open, the feed has stalled (e.g. a throttled
+// tab), so force a reconnect and the data starts flowing again on its own.
+setInterval(function(){
+  if(isPreview || !ws || ws.readyState !== WebSocket.OPEN) return;
+  if(Date.now() - lastMsgTs > 6000){
+    lastMsgTs = Date.now();
+    try{ ws.close(); }catch(_){}   // onclose schedules the reconnect
+  }
+}, 2000);
+
+function scheduleReconnect(){
+  clearTimeout(reconnectTimer);
+  const httpsHint = location.protocol === 'https:'
+    ? ' If it never connects, your browser may be blocking the local link. Open this page over http:// instead, or keep the connector running and reload.'
+    : '';
+  updateWaiting('Waiting for the GT7 Live Connector. Make sure GT7-Live-Connector.exe is running in your system tray, then it will connect automatically.' + httpsHint);
+  reconnectTimer = setTimeout(connect, 2500);
+}
+
 function handleMsg(msg){
-  if(msg.type === 'connected'){ setStatus('bridge','BRIDGE READY'); return; }
+  if(msg.type === 'connected'){ setStatus('bridge','BRIDGE READY'); updateWaiting('Connector found. Waiting for GT7. Start a session in Gran Turismo 7.'); return; }
+  if(msg.type === 'status'){
+    // The connector reporting whether the console is actually sending packets.
+    if(!hasLiveData){
+      if((msg.packets || 0) > 0){
+        updateWaiting('Receiving telemetry from ' + (msg.ps5 || 'your console') + '. Get on track in GT7.');
+      } else if((msg.raw || 0) > 0){
+        var dbg = msg.debug ? (' [diag len=' + msg.debug.len + ' dec=' + msg.debug.dec + ' head=' + (msg.debug.head||'').slice(0,24) + ']') : '';
+        updateWaiting('Data IS arriving from your console (' + (msg.raw) + ' packets) but the connector could not decode it yet. Screenshot this line for support:' + dbg);
+      } else {
+        updateWaiting('Connector is running but no data is arriving from your console. 1) Be on track in GT7 (not a menu). 2) Allow GT7-Live-Connector through Windows Firewall (inbound UDP). 3) Set your console IP in a gt7-console-ip.txt file next to the connector.');
+      }
+    }
+    return;
+  }
   if(msg.type === 'gt7_detected'){ setStatus('live','GT7 LIVE'); showDashboard(); return; }
   if(msg.type === 'telemetry'){
     setStatus('live','GT7 LIVE');
     if(!hasLiveData){ hasLiveData = true; showDashboard(); }
-    update(msg);
+    // Advance the integrated state on EVERY packet (cheap, never rAF-gated) so
+    // distance/lap/delta/sectors stay accurate even when OBS throttles rendering.
+    advanceState(msg);
+    // Keep the newest frame for renderLoop to draw on the next animation frame,
+    // so the expensive DOM/canvas work is throttled and can never back up.
+    latestTelemetry = msg;
   }
 }
 
@@ -453,7 +769,12 @@ function setStatus(cls, txt){
   document.getElementById('statusTxt').textContent = txt;
 }
 
-function showSetup(){ document.getElementById('setupScreen').style.display='flex'; document.getElementById('dashboard').classList.remove('vis'); document.getElementById('previewClose').style.display='none'; }
+function showSetup(){
+  // In OBS mode the dashboard stays on screen through brief drop-outs so the
+  // overlay never flashes back to the setup card mid-stream.
+  if(document.body.classList.contains('obs')) return;
+  document.getElementById('setupScreen').style.display='flex'; document.getElementById('dashboard').classList.remove('vis'); document.getElementById('previewClose').style.display='none';
+}
 function showDashboard(){ document.getElementById('setupScreen').style.display='none'; document.getElementById('dashboard').classList.add('vis'); }
 
 // ── DATA UPDATE ──
@@ -461,7 +782,7 @@ function fmtLap(ms){
   if(!ms || ms <= 0) return '--:--.---';
   const m = Math.floor(ms/60000);
   const s = Math.floor((ms%60000)/1000);
-  const r = ms%1000;
+  const r = Math.floor(ms%1000);
   return m+':'+(s<10?'0':'')+s+'.'+(r<100?'0':'')+(r<10?'0':'')+r;
 }
 
@@ -484,7 +805,7 @@ function engineColor(t, warn, hot){
 const gCtx = document.getElementById('gCanvas').getContext('2d');
 const G_MAX = 3.0;  // g range for the plot
 function drawG(lat, lon){
-  const c = gCtx, w = 120, h = 120, cx = w/2, cy = h/2, r = 50;
+  const c = gCtx, w = c.canvas.width, h = c.canvas.height, cx = w/2, cy = h/2, r = w*0.42;
   c.clearRect(0,0,w,h);
 
   // Background circles
@@ -517,7 +838,523 @@ function drawG(lat, lon){
 }
 drawG(0,0); // initial render
 
+// ── INPUT TRACE (rolling throttle/brake line graph) ──
+const inputCanvas = document.getElementById('inputCanvas');
+const iCtx = inputCanvas.getContext('2d');
+const IN_HIST = 260;                       // samples held on screen (~ several seconds)
+const inThr = new Array(IN_HIST).fill(0);
+const inBrk = new Array(IN_HIST).fill(0);
+function pushInput(thr, brk){
+  inThr.push(thr); inThr.shift();
+  inBrk.push(brk); inBrk.shift();
+}
+function drawInputs(){
+  const c = iCtx, w = inputCanvas.width, h = inputCanvas.height;
+  c.clearRect(0,0,w,h);
+  // horizontal grid (0 / 25 / 50 / 75 / 100%)
+  c.strokeStyle = 'rgba(255,255,255,.055)'; c.lineWidth = 1;
+  for(let i=0;i<=4;i++){ const y = Math.round(h*i/4)+.5; c.beginPath(); c.moveTo(0,y); c.lineTo(w,y); c.stroke(); }
+  function trace(arr, stroke, fill){
+    c.beginPath();
+    for(let i=0;i<arr.length;i++){
+      const x = (i/(arr.length-1))*w;
+      const y = h - (Math.max(0,Math.min(100,arr[i]))/100)*h;
+      i===0 ? c.moveTo(x,y) : c.lineTo(x,y);
+    }
+    c.strokeStyle = stroke; c.lineWidth = 2.4; c.lineJoin = 'round'; c.stroke();
+    c.lineTo(w,h); c.lineTo(0,h); c.closePath(); c.fillStyle = fill; c.fill();
+  }
+  trace(inBrk, '#ff2d3b', 'rgba(255,45,59,.10)');
+  trace(inThr, '#00e5a0', 'rgba(0,229,160,.13)');
+}
+drawInputs(); // initial render
+
+// ── TEMP HISTORY (tyre surface temps over time) ──
+const tempsCanvas = document.getElementById('tempsCanvas');
+const tCtx = tempsCanvas.getContext('2d');
+const T_HIST = 300;                        // samples; sampled every ~0.5s => ~2.5 min
+const T_KEYS = ['FL','FR','RL','RR','WAT','OIL'];
+const tHist = {};
+T_KEYS.forEach(k => tHist[k] = new Array(T_HIST).fill(null));
+const T_COLS = { FL:'#1ab4ff', FR:'#00e5a0', RL:'#ffc31a', RR:'#ff6ad5', WAT:'#7aa5ff', OIL:'#e0a63a' };
+function pushTemps(fl, fr, rl, rr, wat, oil){
+  const vals = { FL:fl, FR:fr, RL:rl, RR:rr, WAT:wat, OIL:oil };
+  T_KEYS.forEach(k => { tHist[k].push(vals[k]==null?null:vals[k]); tHist[k].shift(); });
+}
+function drawTemps(){
+  const c = tCtx, w = tempsCanvas.width, h = tempsCanvas.height;
+  c.clearRect(0,0,w,h);
+  let lo = Infinity, hi = -Infinity;
+  T_KEYS.forEach(k => tHist[k].forEach(v => { if(v!=null){ if(v<lo)lo=v; if(v>hi)hi=v; } }));
+  if(lo === Infinity){ lo = 60; hi = 110; }
+  if(hi - lo < 16){ const m=(lo+hi)/2; lo=m-8; hi=m+8; }
+  lo -= 4; hi += 4;
+  c.strokeStyle = 'rgba(255,255,255,.055)'; c.lineWidth = 1;
+  for(let i=0;i<=4;i++){ const y = Math.round(h*i/4)+.5; c.beginPath(); c.moveTo(0,y); c.lineTo(w,y); c.stroke(); }
+  c.lineJoin = 'round';
+  T_KEYS.forEach(k => {
+    const arr = tHist[k]; c.beginPath(); let started = false;
+    for(let i=0;i<arr.length;i++){
+      const v = arr[i]; if(v==null){ started = false; continue; }
+      const x = (i/(arr.length-1))*w, y = h - ((v-lo)/(hi-lo))*h;
+      started ? c.lineTo(x,y) : (c.moveTo(x,y), started = true);
+    }
+    const dashed = (k === 'WAT' || k === 'OIL');
+    c.setLineDash(dashed ? [5,4] : []);
+    c.strokeStyle = T_COLS[k]; c.lineWidth = dashed ? 1.6 : 2; c.stroke();
+  });
+  c.setLineDash([]);
+  c.fillStyle = 'rgba(134,141,152,.85)'; c.font = '9px "JetBrains Mono",monospace'; c.textAlign = 'left';
+  c.fillText(Math.round(hi)+'°', 4, 11);
+  c.fillText(Math.round(lo)+'°', 4, h-4);
+}
+drawTemps();
+
+// ── DERIVED: predictive lap delta + fuel strategy (live only) ──
+const lap = { lastCount:null, startPid:null, lastPid:null, dist:0, trace:[], ref:null, refLapMs:0, curMs:0 };
+const fuelS = { lapStartFuel:null, burns:[] };
+let tempsAccum = 0;
+let tempsDirty = false;   // set by advanceState when a temp-history point is added; drawn on the next render
+
+function interpTime(trace, dist){
+  if(dist <= trace[0][0]) return trace[0][1];
+  const last = trace[trace.length-1];
+  if(dist >= last[0]) return last[1];
+  let lo = 0, hi = trace.length-1;
+  while(hi - lo > 1){ const mid = (lo+hi)>>1; trace[mid][0] < dist ? lo = mid : hi = mid; }
+  const a = trace[lo], b = trace[hi], f = (dist-a[0])/((b[0]-a[0])||1);
+  return a[1] + (b[1]-a[1])*f;
+}
+function setTemp(id, v){ const e = document.getElementById(id); if(e) e.textContent = v!=null ? Math.round(v)+'°' : '--'; }
+
+// STATE (runs on EVERY packet, driven by the WebSocket message, never gated by
+// requestAnimationFrame). OBS throttles rAF, so anything time/distance-integrated
+// must live here or it drifts. This is cheap (arithmetic + a couple array pushes),
+// so the message handler stays fast and the connector never has to drop packets.
+function advanceState(d){
+  const pid = d.packetId;
+  if(pid == null) return;                  // live data only; preview drives its own widgets
+  if(lap.lastPid == null){ lap.lastPid = pid; lap.startPid = pid; lap.lastCount = d.lapCount; fuelS.lapStartFuel = d.fuel; }
+  let dpid = pid - lap.lastPid; lap.lastPid = pid;
+  // Only treat a genuinely huge gap (5s+) as a reset/menu jump. Smaller gaps
+  // (a brief hitch, or coalesced frames) still advance time correctly via dt.
+  if(dpid < 0 || dpid > 300) dpid = 0;
+  const dt = dpid/60;
+  tempsAccum += dt;
+  lap.dist += ((d.speed||0)/3.6) * dt;
+
+  // lap transition
+  if(d.lapCount != null && lap.lastCount != null && d.lapCount !== lap.lastCount){
+    if(secS.boundaries && secS.idx === 2) finalizeSector(2, lap.curMs - secS.startMs);  // close S3
+    if(d.lastLap > 0 && lap.trace.length > 20 && d.bestLap > 0 && d.lastLap <= d.bestLap){
+      lap.ref = lap.trace.slice(); lap.refLapMs = d.lastLap;   // store the best lap as reference
+      armSectors(lap.ref, lap.refLapMs);
+      if(mapCur.length > 30) mapRef = mapCur; // lock the best lap's shape (aligned with the delta ref)
+    } else if(!mapRef && mapCur.length > 30){
+      mapRef = mapCur;                         // first lap: show the track even before a best is set
+    }
+    if(fuelS.lapStartFuel != null && d.fuel != null){
+      const used = fuelS.lapStartFuel - d.fuel;
+      if(used > 0.02 && used < 60){ fuelS.burns.push(used); if(fuelS.burns.length > 5) fuelS.burns.shift(); }
+    }
+    fuelS.lapStartFuel = d.fuel;
+    mapCur = []; mapSampleDist = -99;
+    secS.idx = 0; secS.startMs = 0;
+    lap.lastCount = d.lapCount; lap.startPid = pid; lap.dist = 0; lap.trace = [];
+  }
+  if(lap.lastCount == null) lap.lastCount = d.lapCount;
+  if(fuelS.lapStartFuel == null) fuelS.lapStartFuel = d.fuel;
+  lap.curMs = (pid - lap.startPid) * 1000/60;
+
+  const tr = lap.trace;
+  if(tr.length === 0 || lap.dist - tr[tr.length-1][0] > 4) tr.push([lap.dist, lap.curMs]);
+
+  if(tempsAccum >= 0.5){ tempsAccum = 0; pushTemps(d.tyreTempFL, d.tyreTempFR, d.tyreTempRL, d.tyreTempRR, d.waterTemp, d.oilTemp); tempsDirty = true; }
+
+  // Track map sampling + sector state (drawing happens on the map's own timer).
+  // Sample by REAL world-space movement, not integrated lap distance: the line
+  // then grows whenever the car actually moves, even if distance integration
+  // hitches (which it can on OBS's gappier packet delivery, freezing the line
+  // while the position dot kept moving).
+  if(d.posX || d.posZ){
+    mapLive = { x: d.posX, z: d.posZ };
+    const lastP = mapCur[mapCur.length - 1];
+    if(!lastP || Math.hypot(d.posX - lastP.x, d.posZ - lastP.z) > 4){ pushMapPoint(d, lap.dist); }
+  }
+  mapGhost = (lap.ref && lap.ref.length > 2 && mapRef && mapRef.length > 5)
+    ? mapPosAtDist(mapRef, interpDist(lap.ref, lap.curMs)) : null;
+  advanceSectors(lap.dist, lap.curMs);
+}
+
+// RENDER (throttled to the animation frame; reads the state advanceState built).
+function renderDerived(d){
+  const lc = document.getElementById('lapCurrent'); if(lc) lc.textContent = fmtLap(lap.curMs);
+  document.getElementById('deltaCur').textContent = fmtLap(lap.curMs);
+
+  const big = document.getElementById('deltaBig');
+  if(lap.ref && lap.ref.length > 2){
+    const delta = (lap.curMs - interpTime(lap.ref, lap.dist)) / 1000;
+    big.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(2);
+    big.className = 'delta-big ' + (delta > 0.02 ? 'up' : delta < -0.02 ? 'dn' : '');
+    document.getElementById('deltaPred').textContent = fmtLap(Math.max(0, (lap.refLapMs || d.bestLap) + delta*1000));
+    document.getElementById('deltaNote').textContent = 'vs your best lap';
+  } else {
+    big.textContent = '+0.00'; big.className = 'delta-big';
+    document.getElementById('deltaPred').textContent = d.bestLap > 0 ? fmtLap(d.bestLap) : '--:--.---';
+    document.getElementById('deltaNote').textContent = 'Complete a best lap to arm the delta.';
+  }
+
+  updateFuelStrategy(d);
+
+  if(tempsDirty){ tempsDirty = false; drawTemps(); }
+  setTemp('thFL', d.tyreTempFL); setTemp('thFR', d.tyreTempFR); setTemp('thRL', d.tyreTempRL); setTemp('thRR', d.tyreTempRR);
+  setTemp('thWAT', d.waterTemp); setTemp('thOIL', d.oilTemp);
+
+  // The track map draws on its own setInterval timer (see below), not here, so
+  // it stays alive in OBS even if the animation frame is throttled or another
+  // widget's render throws.
+  renderSectors(lap.curMs);
+}
+
+function updateFuelStrategy(d){
+  const burn = fuelS.burns.length ? fuelS.burns.reduce((a,b)=>a+b,0)/fuelS.burns.length : null;
+  document.getElementById('fuelPerLap').textContent = burn != null ? burn.toFixed(2)+' L' : '-- L';
+  const fuelLaps = (burn && burn > 0 && d.fuel != null) ? d.fuel/burn : null;
+  document.getElementById('fuelLapsLeft').textContent = fuelLaps != null ? fuelLaps.toFixed(1) : '--';
+  const raceLeft = (d.lapsInRace > 0 && d.lapCount != null) ? Math.max(0, d.lapsInRace - d.lapCount) : null;
+  document.getElementById('raceLapsLeft').textContent = raceLeft != null ? raceLeft : '--';
+  const st = document.getElementById('fuelStatus');
+  if(fuelLaps == null){ st.textContent = '...'; st.className = 'fs-val'; return; }
+  if(raceLeft == null){ st.textContent = fuelLaps >= 99 ? 'PLENTY' : fuelLaps.toFixed(1)+' laps'; st.className = 'fs-val'; return; }
+  const margin = fuelLaps - raceLeft;
+  if(margin >= 1){ st.textContent = 'CAN FINISH'; st.className = 'fs-val ok'; }
+  else if(margin >= 0){ st.textContent = 'TIGHT'; st.className = 'fs-val warn'; }
+  else { const n = Math.ceil(-margin); st.textContent = 'SHORT ' + n + ' LAP' + (n>=2?'S':''); st.className = 'fs-val bad'; }
+}
+
+// preview-only synthetic feed for the derived widgets
+let previewStart = 0, previewTempAcc = 0;
+function previewExtras(ts, cur){
+  if(!previewStart) previewStart = ts;
+  const e = (ts - previewStart) / 1000;
+  const curMs = (e % 92) * 1000;
+  document.getElementById('lapCurrent').textContent = fmtLap(curMs);
+  document.getElementById('deltaCur').textContent = fmtLap(curMs);
+  const delta = 0.5*Math.sin(e*0.55) - 0.05;
+  const big = document.getElementById('deltaBig');
+  big.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(2);
+  big.className = 'delta-big ' + (delta > 0.02 ? 'up' : delta < -0.02 ? 'dn' : '');
+  document.getElementById('deltaPred').textContent = fmtLap(81234 + delta*1000);
+  document.getElementById('deltaNote').textContent = 'vs your best lap';
+  const burn = 2.35;
+  document.getElementById('fuelPerLap').textContent = burn.toFixed(2)+' L';
+  const fuelLaps = cur.fuel/burn;
+  document.getElementById('fuelLapsLeft').textContent = fuelLaps.toFixed(1);
+  const raceLeft = Math.max(0, Math.round(18 - e/5));
+  document.getElementById('raceLapsLeft').textContent = raceLeft;
+  const st = document.getElementById('fuelStatus'), margin = fuelLaps - raceLeft;
+  if(margin >= 1){ st.textContent = 'CAN FINISH'; st.className = 'fs-val ok'; }
+  else if(margin >= 0){ st.textContent = 'TIGHT'; st.className = 'fs-val warn'; }
+  else { const n = Math.ceil(-margin); st.textContent = 'SHORT ' + n + ' LAP' + (n>=2?'S':''); st.className = 'fs-val bad'; }
+  const watV = 82 + cur.speed*0.05, oilV = 94 + cur.speed*0.06;
+  previewTempAcc += 0.016;
+  if(previewTempAcc >= 0.4){ previewTempAcc = 0; pushTemps(cur.tFL, cur.tFR, cur.tRL, cur.tRR, watV, oilV); drawTemps(); }
+  setTemp('thFL', cur.tFL); setTemp('thFR', cur.tFR); setTemp('thRL', cur.tRL); setTemp('thRR', cur.tRR);
+  setTemp('thWAT', watV); setTemp('thOIL', oilV);
+  previewMapSectors(e);
+}
+
+// ── TRACK MAP (records the driven line, colours it by a chosen metric) ──
+const mapCanvas = document.getElementById('mapCanvas');
+const mCtx = mapCanvas.getContext('2d');
+let ACCENT = '#1ab4ff';
+let mapMetric = 'line';
+let mapCur = [];        // current-lap points {x,z,thr,brk,spd,tt,dist}
+let mapRef = null;      // last completed lap (locked track shape)
+let mapLive = null;     // {x,z} current car position
+let mapGhost = null;    // {x,z} where the best-lap car would be right now
+let mapSampleDist = -99;
+
+function pushMapPoint(d, dist){
+  // Skip packets with no position (posX/posZ arrive as 0 during pauses/pits/menu
+  // frames). Plotting a 0,0 point draws a stray line to the origin and skews the
+  // map's bounds, which is the little gap/spike the track sometimes showed.
+  if(!d.posX && !d.posZ) return;
+  const tt = ((d.tyreTempFL||0)+(d.tyreTempFR||0)+(d.tyreTempRL||0)+(d.tyreTempRR||0))/4;
+  mapCur.push({ x:d.posX, z:d.posZ, thr:d.throttle||0, brk:d.brake||0, spd:d.speed||0, tt, dist });
+  if(mapCur.length > 4000) mapCur.shift();
+}
+// invert the reference trace: distance the best-lap car had covered at time `ms`
+function interpDist(ref, ms){
+  if(ms <= ref[0][1]) return ref[0][0];
+  const last = ref[ref.length-1];
+  if(ms >= last[1]) return last[0];
+  let lo = 0, hi = ref.length-1;
+  while(hi - lo > 1){ const mid = (lo+hi)>>1; ref[mid][1] < ms ? lo = mid : hi = mid; }
+  const a = ref[lo], b = ref[hi], f = (ms-a[1])/((b[1]-a[1])||1);
+  return a[0] + (b[0]-a[0])*f;
+}
+// position on the recorded track at a given lap distance
+function mapPosAtDist(src, dist){
+  if(!src || !src.length) return null;
+  if(dist <= src[0].dist) return { x:src[0].x, z:src[0].z };
+  const last = src[src.length-1];
+  if(dist >= last.dist) return { x:last.x, z:last.z };
+  let lo = 0, hi = src.length-1;
+  while(hi - lo > 1){ const mid = (lo+hi)>>1; src[mid].dist < dist ? lo = mid : hi = mid; }
+  const a = src[lo], b = src[hi], f = (dist-a.dist)/((b.dist-a.dist)||1);
+  return { x: a.x+(b.x-a.x)*f, z: a.z+(b.z-a.z)*f };
+}
+function mapBounds(src){
+  let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+  for(const p of src){ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.z<minZ)minZ=p.z; if(p.z>maxZ)maxZ=p.z; }
+  return {minX,maxX,minZ,maxZ};
+}
+function speedColor(f){
+  f = Math.max(0, Math.min(1, f));
+  // blue -> green -> red
+  let r,g,b;
+  if(f < 0.5){ const t=f/0.5; r=Math.round(26+(0)*t); g=Math.round(180+(229-180)*t); b=Math.round(255+(160-255)*t); }
+  else { const t=(f-0.5)/0.5; r=Math.round(0+(255)*t); g=Math.round(229+(45-229)*t); b=Math.round(160+(59-160)*t); }
+  return 'rgb('+r+','+g+','+b+')';
+}
+function segColor(p){
+  if(mapMetric === 'inputs') return p.brk > 8 ? '#ff2d3b' : p.thr > 8 ? '#00e5a0' : 'rgba(150,160,175,.55)';
+  if(mapMetric === 'speed')  return null; // handled with range
+  if(mapMetric === 'tyres')  return tyreColor(p.tt || 0);
+  return ACCENT;
+}
+function syncMapCanvas(){
+  // Match the backing store to the displayed size so the track keeps its real
+  // aspect ratio (letterboxed) instead of stretching when the widget resizes.
+  let w = Math.round(mapCanvas.clientWidth), h = Math.round(mapCanvas.clientHeight);
+  if(w <= 0 || h <= 0){
+    // OBS's offscreen browser can report a 0 client size before layout settles;
+    // fall back to the wrapper size, then a sane default, so we never draw into
+    // a 0x0 canvas (which looks like the map "not working").
+    const wrap = mapCanvas.parentElement;
+    w = Math.round((wrap && wrap.clientWidth) || 480);
+    h = Math.round((wrap && wrap.clientHeight) || 360);
+  }
+  if(w > 0 && h > 0 && (mapCanvas.width !== w || mapCanvas.height !== h)){ mapCanvas.width = w; mapCanvas.height = h; }
+}
+function drawMap(){
+  syncMapCanvas();
+  const c = mCtx, w = mapCanvas.width, h = mapCanvas.height, pad = 16;
+  c.clearRect(0,0,w,h);
+  // Show whichever trace is more complete. Once a full lap is locked into mapRef
+  // it stays the stable base, but if we joined mid-session (so mapRef is a short
+  // partial lap) the growing current lap wins and the track keeps filling in.
+  const src = (mapRef && mapRef.length > mapCur.length) ? mapRef : mapCur;
+  const hint = document.getElementById('mapHint');
+  if(!src || src.length < 3){ if(hint) hint.style.display = ''; if(mapLive) {} return; }
+  if(hint) hint.style.display = 'none';
+  const b = mapBounds(src);
+  const bw = (b.maxX-b.minX)||1, bh = (b.maxZ-b.minZ)||1;
+  const s = Math.min((w-2*pad)/bw, (h-2*pad)/bh);
+  const ox = (w-bw*s)/2, oy = (h-bh*s)/2;
+  // Flip both axes: GT7 uses a left-handed coordinate system, so a plain
+  // top-down plot comes out mirrored; flipping X (and Z for north-up) matches
+  // the real track orientation.
+  const T = (x,z) => [ ox+(b.maxX-x)*s, oy+(b.maxZ-z)*s ];
+  let spMin=Infinity, spMax=-Infinity;
+  if(mapMetric === 'speed'){ for(const p of src){ if(p.spd<spMin)spMin=p.spd; if(p.spd>spMax)spMax=p.spd; } }
+  // Thicker, softly-glowing line in OBS so it reads over gameplay.
+  const obs = document.body.classList.contains('obs');
+  c.lineWidth = obs ? 6 : 3; c.lineCap = 'round'; c.lineJoin = 'round';
+  if(obs){ c.shadowColor = 'rgba(0,0,0,0.75)'; c.shadowBlur = 6; c.globalAlpha = 0.9; }
+  // Batch consecutive same-colour segments into a single path. In LINE mode the
+  // whole track is one colour, so this is ONE stroke instead of thousands, which
+  // is what let the map choke OBS's browser (CEF) to a standstill.
+  let curColor = null;
+  for(let i=1;i<src.length;i++){
+    const col = mapMetric === 'speed' ? speedColor((src[i].spd-spMin)/((spMax-spMin)||1)) : segColor(src[i]);
+    if(col !== curColor){
+      if(curColor !== null) c.stroke();          // flush the run built so far
+      c.strokeStyle = col; curColor = col;
+      c.beginPath();
+      const a = T(src[i-1].x, src[i-1].z);
+      c.moveTo(a[0], a[1]);
+    }
+    const q = T(src[i].x, src[i].z);
+    c.lineTo(q[0], q[1]);
+  }
+  if(curColor !== null) c.stroke();
+  c.shadowBlur = 0; c.globalAlpha = 1;
+  if(mapGhost){
+    const g = T(mapGhost.x, mapGhost.z);
+    c.beginPath(); c.arc(g[0], g[1], 5, 0, Math.PI*2);
+    c.fillStyle = 'rgba(255,255,255,.18)'; c.fill();
+    c.setLineDash([3,3]); c.lineWidth = 1.5; c.strokeStyle = 'rgba(255,255,255,.75)'; c.stroke(); c.setLineDash([]);
+  }
+  if(mapLive){
+    const d = T(mapLive.x, mapLive.z);
+    c.beginPath(); c.arc(d[0], d[1], 5.5, 0, Math.PI*2);
+    c.fillStyle = '#fff'; c.fill();
+    c.strokeStyle = ACCENT; c.lineWidth = 2.5; c.stroke();
+  }
+}
+document.querySelectorAll('.map-metric').forEach(btn => btn.addEventListener('click', () => {
+  mapMetric = btn.dataset.metric;
+  document.querySelectorAll('.map-metric').forEach(b => b.classList.toggle('on', b === btn));
+  drawMap();
+}));
+if(window.ResizeObserver){ new ResizeObserver(() => drawMap()).observe(mapCanvas); }
+// Draw the track map on its own interval timer instead of the animation frame.
+// OBS's embedded browser throttles requestAnimationFrame (which is what kept
+// freezing the map), but interval timers keep firing, so this keeps the track
+// live in OBS. The map's data (points, car position, ghost) is updated on every
+// packet in advanceState; this loop only paints it. Preview drives its own map,
+// so skip while previewing to avoid the two fighting over the canvas.
+setInterval(function(){
+  if(isPreview) return;
+  if(!document.getElementById('dashboard').classList.contains('vis')) return;
+  try { drawMap(); } catch(_){}
+}, 50);
+// Single render loop for live data. It renders at most one frame per display
+// refresh from the newest packet, so a burst of packets (or a browser that has
+// fallen behind, like OBS's CEF under load) collapses to just the latest frame
+// instead of queuing work and stuttering. update() redraws every widget,
+// including the track map, so no separate per-frame map loop is needed; resize
+// is covered by the ResizeObserver above.
+(function renderLoop(){
+  try {
+    if(!isPreview && latestTelemetry){
+      update(latestTelemetry);
+      latestTelemetry = null;
+    }
+  } catch(_){ /* never let one bad frame kill the loop and freeze the overlay */ }
+  requestAnimationFrame(renderLoop);
+})();
+
+// ── SECTORS (three splits by distance, delta vs best lap) ──
+const secS = { boundaries:null, ref:null, idx:0, startMs:0, shown:[null,null,null], delta:[null,null,null] };
+function armSectors(ref, lapMs){
+  if(!ref || ref.length < 4 || !lapMs) return;
+  const total = ref[ref.length-1][0];
+  const b0 = total/3, b1 = 2*total/3;
+  secS.boundaries = [b0, b1, total];
+  const t0 = interpTime(ref, b0), t1 = interpTime(ref, b1);
+  secS.ref = [t0, t1-t0, lapMs-t1];
+}
+function fmtSec(ms){
+  if(ms == null || ms <= 0) return '--.---';
+  const s = ms/1000;
+  if(s < 60) return s.toFixed(3);
+  const m = Math.floor(s/60); return m + ':' + ((s-m*60)<10?'0':'') + (s-m*60).toFixed(3);
+}
+function finalizeSector(k, timeMs){
+  secS.shown[k] = timeMs;
+  secS.delta[k] = secS.ref ? (timeMs - secS.ref[k]) : null;
+}
+// State: advance the sector index and finalize a split when a boundary is
+// crossed. Runs every packet (in advanceState) so splits land at the right spot.
+function advanceSectors(dist, curMs){
+  if(secS.boundaries){
+    const b = secS.boundaries;
+    const idx = dist < b[0] ? 0 : dist < b[1] ? 1 : 2;
+    if(idx > secS.idx){
+      finalizeSector(secS.idx, curMs - secS.startMs);
+      secS.startMs = curMs; secS.idx = idx;
+    }
+  }
+}
+// Render: draw the three sector rows from the current state. Runs on the render
+// frame only.
+function renderSectors(curMs){
+  for(let k=0;k<3;k++){
+    const tEl = document.getElementById('secTime'+(k+1));
+    const dEl = document.getElementById('secDelta'+(k+1));
+    const rEl = document.getElementById('secRow'+(k+1));
+    if(k === secS.idx && secS.boundaries){
+      tEl.textContent = fmtSec(curMs - secS.startMs);
+      dEl.textContent = ''; dEl.className = 'sec-delta';
+      rEl.classList.add('active');
+    } else {
+      rEl.classList.remove('active');
+      tEl.textContent = fmtSec(secS.shown[k]);
+      if(secS.delta[k] != null){
+        const dv = secS.delta[k]/1000;
+        dEl.textContent = (dv>=0?'+':'') + dv.toFixed(2);
+        dEl.className = 'sec-delta ' + (dv>0.005?'up':dv<-0.005?'dn':'');
+      } else { dEl.textContent = ''; dEl.className = 'sec-delta'; }
+    }
+  }
+}
+
+// ── preview synthetic map + sectors ──
+let mapPreviewBuilt = false;
+function buildPreviewTrack(){
+  const pts = [], N = 240;
+  for(let i=0;i<N;i++){
+    const t = i/N * Math.PI*2;
+    // an oval with a chicane kink
+    const x = Math.cos(t)*260 + Math.sin(t*3)*22;
+    const z = Math.sin(t)*160 + Math.sin(t*2)*30;
+    const straight = Math.abs(Math.cos(t));          // ~1 on straights
+    const spd = 90 + straight*150;
+    const brk = straight < 0.35 ? 70 : 0;
+    const thr = straight < 0.35 ? 10 : 95;
+    const tt = 78 + (1-straight)*22;                 // tyres hotter in corners
+    pts.push({ x, z, thr, brk, spd, tt });
+  }
+  mapRef = pts; mapPreviewBuilt = true;
+}
+function previewMapSectors(e){
+  if(!mapPreviewBuilt) buildPreviewTrack();
+  const N = mapRef.length;
+  const frac = (e % 24) / 24;                          // ~24s lap loop
+  const idx = Math.floor(frac * N) % N;
+  mapLive = { x: mapRef[idx].x, z: mapRef[idx].z };
+  const delta = 0.5*Math.sin(e*0.55) - 0.05;           // matches the delta widget
+  let gf = ((frac + delta/24) % 1 + 1) % 1;             // best-lap car position at this time
+  const gidx = Math.floor(gf * N) % N;
+  mapGhost = { x: mapRef[gidx].x, z: mapRef[gidx].z };
+  drawMap();
+  // synthetic sectors
+  const refS = [7.9, 8.4, 7.7], lapT = frac*24, names = [0,1,2];
+  let acc = 0;
+  names.forEach(k => {
+    const start = acc; acc += refS[k];
+    const tEl = document.getElementById('secTime'+(k+1)), dEl = document.getElementById('secDelta'+(k+1)), rEl = document.getElementById('secRow'+(k+1));
+    if(lapT >= acc){
+      const dv = 0.25*Math.sin(e*0.5 + k);
+      tEl.textContent = (refS[k]+dv).toFixed(3);
+      dEl.textContent = (dv>=0?'+':'') + dv.toFixed(2);
+      dEl.className = 'sec-delta ' + (dv>0.005?'up':dv<-0.005?'dn':'');
+      rEl.classList.remove('active');
+    } else if(lapT >= start){
+      tEl.textContent = (lapT-start).toFixed(3);
+      dEl.textContent = ''; dEl.className = 'sec-delta';
+      rEl.classList.add('active');
+    } else {
+      tEl.textContent = '--.---'; dEl.textContent = ''; dEl.className = 'sec-delta';
+      rEl.classList.remove('active');
+    }
+  });
+}
+
 let rpmMax = 9000;
+
+// ── RPM LED strip ──
+const RPM_SEGS = 26;
+const rpmLedEl = document.getElementById('rpmLed');
+for(let i=0;i<RPM_SEGS;i++){ const s = document.createElement('div'); s.className = 'seg'; rpmLedEl.appendChild(s); }
+function drawRpmLed(pct){
+  const lit = Math.round(pct/100 * RPM_SEGS);
+  const flash = pct >= 97;                 // shift light: flash red near redline
+  rpmLedEl.classList.toggle('flash', flash);
+  const segs = rpmLedEl.children;
+  for(let i=0;i<RPM_SEGS;i++){
+    let cls = 'seg';
+    if(i < lit && !flash){
+      const frac = i / RPM_SEGS;
+      cls += frac < 0.6 ? ' on-green' : frac < 0.85 ? ' on-amber' : ' on-red';
+    }
+    segs[i].className = cls;
+  }
+}
+drawRpmLed(0);
 
 function update(d){
   // Speed
@@ -531,16 +1368,14 @@ function update(d){
   if(d.rpmMax && d.rpmMax > 1000) rpmMax = d.rpmMax;
   const rpmPct = Math.min(100, (d.rpm / rpmMax) * 100);
   document.getElementById('rpmVal').textContent = Math.round(d.rpm).toLocaleString();
-  const bar = document.getElementById('rpmBar');
-  bar.style.width = rpmPct + '%';
-  bar.style.background = rpmPct >= 90 ? 'var(--red)' : rpmPct >= 78 ? 'var(--gold)' : 'var(--grn)';
+  drawRpmLed(rpmPct);
 
-  // Inputs
+  // Inputs: numeric readouts + rolling line graph
   const thr = Math.round(d.throttle), brk = Math.round(d.brake), str = d.steer||0;
   document.getElementById('throttleVal').textContent = thr + '%';
-  document.getElementById('throttleBar').style.width = thr + '%';
   document.getElementById('brakeVal').textContent = brk + '%';
-  document.getElementById('brakeBar').style.width = brk + '%';
+  pushInput(thr, brk);
+  drawInputs();
   document.getElementById('steerVal').textContent = str.toFixed(0) + '%';
   // Steer bar: centered, extends left or right
   const steerAbs = Math.abs(str);
@@ -589,7 +1424,6 @@ function update(d){
   const fb = document.getElementById('fuelBar');
   fb.style.width = fpct+'%';
   fb.style.background = fpct < 20 ? 'var(--red)' : fpct < 40 ? 'var(--gold)' : 'var(--grn)';
-  document.getElementById('boostVal').textContent = d.boost != null ? d.boost.toFixed(3)+' bar' : '--';
 
   // Engine
   const wt = d.waterTemp||0, ot = d.oilTemp||0;
@@ -606,14 +1440,24 @@ function update(d){
   document.getElementById('oilBar').style.background = engineColor(ot,110,130);
 
   document.getElementById('oilPress').textContent = d.oilPress != null ? (d.oilPress*1000).toFixed(0)+' kPa' : '-- kPa';
+
+  // Derived readouts (predictive delta, fuel, temp graph, map, sectors) are
+  // render-only here; the state behind them is advanced per-packet in
+  // advanceState. Preview (no packetId) drives those widgets via previewExtras.
+  if(d.packetId != null) renderDerived(d);
 }
 
 // ── PREVIEW MODE ──
-let previewInterval = null;
+// Runs on requestAnimationFrame (display-refresh smooth, 60fps+) with
+// time-based smoothing so the motion is identical on any refresh rate.
+let previewRAF = null, previewLast = 0, phaseElapsed = 0;
 function stopPreview(){
   isPreview = false;
-  clearInterval(previewInterval);
-  previewInterval = null;
+  cancelAnimationFrame(previewRAF);
+  previewRAF = null; previewLast = 0; previewStart = 0; previewTempAcc = 0;
+  mapRef = null; mapCur = []; mapLive = null; mapGhost = null; mapPreviewBuilt = false;
+  secS.boundaries = null; secS.ref = null; secS.idx = 0; secS.startMs = 0;
+  secS.shown = [null,null,null]; secS.delta = [null,null,null];
   document.getElementById('previewClose').style.display = 'none';
   showSetup();
   setStatus('', 'DISCONNECTED');
@@ -625,9 +1469,8 @@ function previewDashboard(){
   setStatus('live', 'PREVIEW MODE');
   document.getElementById('previewClose').style.display = 'block';
 
-  // Smooth lerp helper
-  function lerp(a, b, t){ return a + (b - a) * t; }
-  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+  const lerp  = (a, b, t) => a + (b - a) * t;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
   // Current smoothed state
   let cur = {
@@ -638,9 +1481,6 @@ function previewDashboard(){
     fuel: 42.0
   };
 
-  // Target state (updated every few seconds to simulate driving phases)
-  let tgt = {...cur};
-  let phaseTimer = 0;
   const phases = [
     // accelerating on straight
     { speed:240, gear:5, throttle:95, brake:0, steer:2, latG:0.1, longG:0.8 },
@@ -656,34 +1496,36 @@ function previewDashboard(){
     { speed:205, gear:5, throttle:98, brake:0, steer:6, latG:0.5, longG:0.9 },
   ];
   let phaseIdx = 0;
+  let tgt = {...phases[0]};
+  function nextPhase(){ phaseIdx = (phaseIdx + 1) % phases.length; tgt = {...phases[phaseIdx]}; }
 
-  function nextPhase(){
-    phaseIdx = (phaseIdx + 1) % phases.length;
-    tgt = {...phases[phaseIdx]};
-    phaseTimer = 0;
-  }
-  tgt = {...phases[0]};
+  phaseElapsed = 0; previewLast = 0;
 
-  function tick(){
-    phaseTimer++;
-    if(phaseTimer > 28) nextPhase();
+  function loop(ts){
+    if(!isPreview) return;
+    const dt = previewLast ? Math.min(0.05, (ts - previewLast) / 1000) : 0.016;
+    previewLast = ts;
 
-    const s = 0.06; // smoothing factor
-    cur.speed    = lerp(cur.speed,    tgt.speed,    s);
-    cur.throttle = lerp(cur.throttle, tgt.throttle, s);
-    cur.brake    = lerp(cur.brake,    tgt.brake,    s);
-    cur.steer    = lerp(cur.steer,    tgt.steer,    s);
-    cur.latG     = lerp(cur.latG,     tgt.latG,     s);
-    cur.longG    = lerp(cur.longG,    tgt.longG,    s);
+    phaseElapsed += dt;
+    if(phaseElapsed > 3.0){ nextPhase(); phaseElapsed = 0; }
+
+    // time-based smoothing: reach ~halfway to target every 0.32s regardless of fps
+    const k  = 1 - Math.pow(0.5, dt / 0.32);
+    const kt = 1 - Math.pow(0.5, dt / 1.4);   // slower drift for tyre temps
+    cur.speed    = lerp(cur.speed,    tgt.speed,    k);
+    cur.throttle = lerp(cur.throttle, tgt.throttle, k);
+    cur.brake    = lerp(cur.brake,    tgt.brake,    k);
+    cur.steer    = lerp(cur.steer,    tgt.steer,    k);
+    cur.latG     = lerp(cur.latG,     tgt.latG,     k);
+    cur.longG    = lerp(cur.longG,    tgt.longG,    k);
     cur.gear     = tgt.gear;
     cur.rpm      = clamp(cur.speed * 38 + 800, 1200, 8800);
-    cur.fuel    -= 0.003;
+    cur.fuel     = Math.max(0, cur.fuel - 0.02 * dt);
 
-    // Tyre temps drift slowly
-    cur.tFL = lerp(cur.tFL, 84 + cur.latG * 3, 0.02);
-    cur.tFR = lerp(cur.tFR, 86 + cur.latG * 3, 0.02);
-    cur.tRL = lerp(cur.tRL, 90 + cur.latG * 2, 0.02);
-    cur.tRR = lerp(cur.tRR, 88 + cur.latG * 2, 0.02);
+    cur.tFL = lerp(cur.tFL, 84 + cur.latG * 3, kt);
+    cur.tFR = lerp(cur.tFR, 86 + cur.latG * 3, kt);
+    cur.tRL = lerp(cur.tRL, 90 + cur.latG * 2, kt);
+    cur.tRR = lerp(cur.tRR, 88 + cur.latG * 2, kt);
 
     const rps = cur.speed * 0.24;
     update({
@@ -714,13 +1556,326 @@ function previewDashboard(){
       waterTemp:  88,
       oilTemp:    102,
     });
+    previewExtras(ts, cur);
+
+    previewRAF = requestAnimationFrame(loop);
   }
-  tick();
-  previewInterval = setInterval(tick, 120);
+  previewRAF = requestAnimationFrame(loop);
 }
+
+// ── OBS OVERLAY MODE ──
+// ?obs            → transparent background, no header, widgets only
+// ?only=tyres     → show just that widget (comma-separate for several):
+//                   speed, inputs, gforce, laps, tyres, fuel, engine
+(function initObs(){
+  const params = new URLSearchParams(location.search);
+  const only = (params.get('only') || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  if(params.has('obs') || only.length || params.has('bare')) document.body.classList.add('obs');
+  if(params.has('bare')) document.body.classList.add('bare');   // transparent panels, data only
+  if(only.length){
+    document.querySelectorAll('#dashboard .card').forEach(card => {
+      const w = card.getAttribute('data-widget');
+      if(only.includes(w)){ card.style.gridColumn = 'span 12'; }
+      else { card.style.display = 'none'; }
+    });
+  }
+  // In overlay mode, show the widgets straight away (and keep them up) so the
+  // Browser Source is croppable even before telemetry starts flowing.
+  if(document.body.classList.contains('obs')) showDashboard();
+})();
+
+// ── RESIZABLE WIDGETS ──
+// Drag a widget's bottom-right corner to resize it; double-click to reset.
+// Sizes persist per browser (so an OBS Browser Source keeps your layout).
+(function initResize(){
+  const SIZE_KEY = 'gt7-widget-sizes';
+  const cards = [...document.querySelectorAll('#dashboard .card')];
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(SIZE_KEY)) || {}; } catch(_){}
+
+  cards.forEach(c => {
+    const s = saved[c.dataset.widget];
+    if(s){ if(s.w) c.style.width = s.w + 'px'; if(s.h) c.style.height = s.h + 'px'; }
+    // double-click clears a widget's custom size (not while free-dragging layout)
+    c.addEventListener('dblclick', () => {
+      if(document.getElementById('dashboard').classList.contains('freelayout')) return;
+      if(!c.style.width && !c.style.height) return;
+      c.style.width = ''; c.style.height = '';
+      save();
+    });
+  });
+
+  function save(){
+    const out = {};
+    cards.forEach(c => {
+      if(c.style.width || c.style.height){
+        const r = c.getBoundingClientRect();
+        out[c.dataset.widget] = { w: Math.round(r.width), h: Math.round(r.height) };
+      }
+    });
+    try { localStorage.setItem(SIZE_KEY, JSON.stringify(out)); } catch(_){}
+  }
+
+  // Persist shortly after a resize settles.
+  let t = null;
+  if(window.ResizeObserver){
+    const ro = new ResizeObserver(() => { clearTimeout(t); t = setTimeout(save, 350); });
+    cards.forEach(c => ro.observe(c));
+  }
+})();
+
+// ── LAYOUT EDITOR ──
+// Edit mode lets you drag widgets anywhere and resize them into a custom
+// layout. Free layouts persist per browser and can be shared as a link
+// (?layout=...) so the exact arrangement loads into an OBS Browser Source.
+const LAYOUT_KEY = 'gt7-layout';
+let editing = false, editAutoPreview = false;
+let brandAccent = null;
+const hiddenSet = new Set();
+const ACCENTS = [['#1ab4ff','Cyan'],['#ffc31a','GTEC Gold'],['#00e5a0','Green'],['#ff2d3b','Red'],['#a855f7','Purple'],['#eef0f8','White']];
+
+function _dash(){ return document.getElementById('dashboard'); }
+
+function applyAccent(color, save){
+  brandAccent = color || null;
+  const c = color || '#1ab4ff';
+  document.documentElement.style.setProperty('--accent', c);
+  ACCENT = c;
+  document.querySelectorAll('.accent-sw').forEach(sw => sw.classList.toggle('on', (sw.dataset.color||'').toLowerCase() === c.toLowerCase()));
+  if(save) saveLayout();
+  drawMap();
+}
+function refreshHiddenChips(){
+  const box = document.getElementById('hiddenWidgets');
+  if(box) box.innerHTML = [...hiddenSet].map(w => '<button class="hw-chip" onclick="showWidget(\''+w+'\')">+ '+w+'</button>').join('');
+}
+function applyHidden(list){
+  hiddenSet.clear();
+  (list||[]).forEach(w => hiddenSet.add(w));
+  document.querySelectorAll('#dashboard .card').forEach(c => {
+    const hid = hiddenSet.has(c.dataset.widget);
+    c.dataset.hidden = hid ? '1' : '';
+    if(hid) c.style.display = 'none'; else if(c.style.display === 'none') c.style.display = '';
+  });
+  refreshHiddenChips(); updateDashHeight();
+}
+function hideWidget(w){
+  hiddenSet.add(w);
+  const c = document.querySelector('#dashboard .card[data-widget="'+w+'"]');
+  if(c){ c.dataset.hidden = '1'; c.style.display = 'none'; }
+  refreshHiddenChips(); saveLayout(); updateDashHeight();
+}
+function showWidget(w){
+  hiddenSet.delete(w);
+  const c = document.querySelector('#dashboard .card[data-widget="'+w+'"]');
+  if(c){ c.dataset.hidden = ''; c.style.display = ''; }
+  refreshHiddenChips(); saveLayout(); updateDashHeight();
+}
+function buildEditControls(){
+  document.querySelectorAll('#dashboard .card').forEach(c => {
+    if(c.querySelector('.card-hide')) return;
+    const btn = document.createElement('button');
+    btn.className = 'card-hide'; btn.type = 'button'; btn.title = 'Hide widget'; btn.textContent = '✕';
+    btn.addEventListener('click', e => { e.stopPropagation(); hideWidget(c.dataset.widget); });
+    c.appendChild(btn);
+  });
+  const sw = document.getElementById('accentSwatches');
+  if(sw && !sw.children.length){
+    ACCENTS.forEach(([col,name]) => {
+      const b = document.createElement('button');
+      b.className = 'accent-sw'; b.type = 'button'; b.style.background = col; b.dataset.color = col; b.title = name;
+      b.addEventListener('click', () => applyAccent(col, true));
+      sw.appendChild(b);
+    });
+  }
+}
+function applyAll(obj){
+  if(!obj) return;
+  applyLayout(obj);
+  applyAccent(obj.accent, false);
+  applyHidden(obj.hidden || []);
+}
+
+function toast(msg){
+  let el = document.getElementById('gt7toast');
+  if(!el){ el = document.createElement('div'); el.id = 'gt7toast'; el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+function updateDashHeight(){
+  const dash = _dash();
+  if(!dash.classList.contains('freelayout')){ dash.style.minHeight = ''; return; }
+  let max = 0;
+  dash.querySelectorAll('.card').forEach(c => { if(c.style.display !== 'none') max = Math.max(max, c.offsetTop + c.offsetHeight); });
+  dash.style.minHeight = (max + 16) + 'px';
+}
+
+function snapshotToFree(){
+  const dash = _dash();
+  if(dash.classList.contains('freelayout')) return;
+  const dRect = dash.getBoundingClientRect();
+  const cards = [...dash.querySelectorAll('.card')].filter(c => c.style.display !== 'none');
+  const coords = cards.map(c => { const r = c.getBoundingClientRect(); return { c, x: r.left - dRect.left, y: r.top - dRect.top, w: r.width, h: r.height }; });
+  dash.classList.add('freelayout');
+  coords.forEach(o => { o.c.style.left = Math.round(o.x)+'px'; o.c.style.top = Math.round(o.y)+'px'; o.c.style.width = Math.round(o.w)+'px'; o.c.style.height = Math.round(o.h)+'px'; });
+  updateDashHeight();
+}
+
+function applyLayout(obj){
+  if(!obj || obj.mode !== 'free' || !obj.items) return false;
+  const dash = _dash();
+  dash.classList.add('freelayout');
+  Object.entries(obj.items).forEach(([w, it]) => {
+    const c = dash.querySelector('.card[data-widget="'+w+'"]');
+    if(!c || c.style.display === 'none') return;
+    c.style.left = it.x+'px'; c.style.top = it.y+'px';
+    if(it.w) c.style.width = it.w+'px'; if(it.h) c.style.height = it.h+'px';
+  });
+  updateDashHeight();
+  return true;
+}
+
+function saveLayout(){
+  const dash = _dash();
+  const obj = {};
+  if(dash.classList.contains('freelayout')){
+    obj.mode = 'free'; obj.items = {};
+    dash.querySelectorAll('.card').forEach(c => {
+      if(c.dataset.hidden === '1') return;
+      const r = c.getBoundingClientRect();
+      obj.items[c.dataset.widget] = { x: Math.round(parseFloat(c.style.left)||0), y: Math.round(parseFloat(c.style.top)||0), w: Math.round(r.width), h: Math.round(r.height) };
+    });
+  }
+  if(brandAccent) obj.accent = brandAccent;
+  if(hiddenSet.size) obj.hidden = [...hiddenSet];
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(obj)); } catch(_){}
+}
+
+function resetLayout(){
+  try { localStorage.removeItem(LAYOUT_KEY); localStorage.removeItem('gt7-widget-sizes'); } catch(_){}
+  const dash = _dash();
+  dash.classList.remove('freelayout'); dash.style.minHeight = '';
+  dash.querySelectorAll('.card').forEach(c => { c.style.left = c.style.top = c.style.width = c.style.height = ''; });
+  applyHidden([]);            // show everything again
+  applyAccent(null, false);   // back to default accent
+  toast('Layout reset to default');
+}
+
+function shareLayout(){
+  saveLayout();
+  let raw = null; try { raw = localStorage.getItem(LAYOUT_KEY); } catch(_){}
+  if(!raw){ toast('Arrange a widget first, then share'); return; }
+  const code = btoa(unescape(encodeURIComponent(raw)));
+  const url = location.origin + location.pathname + '?layout=' + code;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(() => toast('Layout link copied to clipboard'), () => prompt('Copy this layout link:', url));
+  } else { prompt('Copy this layout link:', url); }
+}
+
+function toggleEdit(){
+  editing = !editing;
+  document.body.classList.toggle('editing', editing);
+  document.getElementById('editToggle').textContent = editing ? 'Done' : 'Edit Layout';
+  if(editing){
+    if(!_dash().classList.contains('vis')){ editAutoPreview = true; previewDashboard(); }
+    snapshotToFree();
+    toast('Drag widgets to move. Drag a corner to resize. Double-click grip resets size.');
+  } else {
+    saveLayout();
+    if(editAutoPreview){ editAutoPreview = false; stopPreview(); }
+  }
+}
+
+function initDrag(card){
+  card.addEventListener('pointerdown', e => {
+    if(!editing) return;
+    if(e.target.closest('button, input, select, .map-metric')) return;  // let controls work in edit mode
+    const r = card.getBoundingClientRect();
+    if(e.clientX > r.right - 20 && e.clientY > r.bottom - 20) return;  // leave the resize corner alone
+    snapshotToFree();
+    e.preventDefault();
+    card.classList.add('dragging');
+    const startX = e.clientX, startY = e.clientY;
+    const ox = parseFloat(card.style.left) || 0, oy = parseFloat(card.style.top) || 0;
+    function mv(ev){
+      card.style.left = Math.max(0, ox + (ev.clientX - startX)) + 'px';
+      card.style.top  = Math.max(0, oy + (ev.clientY - startY)) + 'px';
+      updateDashHeight();
+    }
+    function up(){
+      card.classList.remove('dragging');
+      document.removeEventListener('pointermove', mv);
+      document.removeEventListener('pointerup', up);
+      saveLayout();
+    }
+    document.addEventListener('pointermove', mv);
+    document.addEventListener('pointerup', up);
+  });
+}
+
+(function initLayout(){
+  const params = new URLSearchParams(location.search);
+  let obj = null;
+  const code = params.get('layout');
+  if(code){ try { obj = JSON.parse(decodeURIComponent(escape(atob(code)))); localStorage.setItem(LAYOUT_KEY, JSON.stringify(obj)); } catch(_){} }
+  if(!obj){ try { obj = JSON.parse(localStorage.getItem(LAYOUT_KEY)); } catch(_){} }
+  document.querySelectorAll('#dashboard .card').forEach(initDrag);
+  buildEditControls();
+  if(obj) applyAll(obj);
+  window.addEventListener('resize', () => { if(_dash().classList.contains('freelayout')) updateDashHeight(); });
+})();
+
+// ── OBS LINKS ──
+// A copy-ready transparent Browser Source URL for the full overlay and each
+// individual widget, so building an OBS scene is point-and-paste.
+const OBS_WIDGETS = [
+  ['',        'Full overlay (all widgets)', '1920 x 1080'],
+  ['speed',   'Speed / Gear / RPM',         '520 x 170'],
+  ['delta',   'Lap Delta',                  '440 x 230'],
+  ['sectors', 'Sectors',                    '380 x 230'],
+  ['laps',    'Lap Times',                  '380 x 260'],
+  ['inputs',  'Inputs trace',               '640 x 320'],
+  ['gforce',  'G-Force',                    '320 x 320'],
+  ['map',     'Track Map',                  '520 x 460'],
+  ['tyres',   'Tyre Temps',                 '560 x 380'],
+  ['temps',   'Temp History',               '560 x 320'],
+  ['fuel',    'Fuel & Strategy',            '360 x 320'],
+  ['engine',  'Engine',                     '900 x 200'],
+];
+let obsBare = false;
+function toggleObsBare(cb){ obsBare = cb.checked; buildObsList(); }
+function obsUrl(key){
+  const base = location.origin + location.pathname;
+  let q = key ? ('?obs&only=' + key) : '?obs';
+  if(obsBare) q += '&bare';
+  return base + q;
+}
+function buildObsList(){
+  document.getElementById('obsList').innerHTML = OBS_WIDGETS.map(function(w){
+    var key = w[0];
+    return '<div class="obs-row' + (key ? '' : ' full') + '">' +
+      '<span class="nm">' + w[1] + '</span>' +
+      '<span class="sz">' + w[2] + '</span>' +
+      '<button class="obs-act" onclick="copyObs(\'' + key + '\', this)">Copy link</button>' +
+      '<a class="obs-act" href="' + obsUrl(key) + '" target="_blank" rel="noopener">Open</a>' +
+    '</div>';
+  }).join('');
+}
+function openObs(){ buildObsList(); document.getElementById('obsModal').classList.add('show'); }
+function closeObs(){ document.getElementById('obsModal').classList.remove('show'); }
+function copyObs(key, btn){
+  var url = obsUrl(key);
+  function done(){ btn.textContent = 'Copied'; btn.classList.add('copied'); setTimeout(function(){ btn.textContent = 'Copy link'; btn.classList.remove('copied'); }, 1500); }
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function(){ prompt('Copy this link:', url); });
+  else prompt('Copy this link:', url);
+}
+document.getElementById('obsModal').addEventListener('click', function(e){ if(e.target.id === 'obsModal') closeObs(); });
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeObs(); });
 
 // Boot
 setTimeout(connect, 400);
 </script>
+  <script defer src="/live-banner.js"></script>
 </body>
 </html>

@@ -1,0 +1,180 @@
+/* ============================================================
+   GTEC shared nav — mobile-responsive layer.
+   Each page declares its own .gtec-nav rules inline (for desktop),
+   and this stylesheet adds the hamburger button + drawer behavior
+   on small screens. Use selector "nav.gtec-nav" so these rules win
+   over the inline .gtec-nav declarations at the matching breakpoint.
+   ============================================================ */
+
+/* ---------- Desktop centring ----------
+   Default per-page inline rule is justify-content: space-between with
+   the brand chip on the left and nav-links bunched on the right, which
+   reads right-heavy. Above the mobile breakpoint we anchor the brand
+   and the back-link to the corners and let the nav-links sit dead
+   centre. nav.gtec-nav has higher specificity than the inline
+   .gtec-nav rule so this wins without per-page edits. */
+@media (min-width: 721px) {
+    nav.gtec-nav {
+        position: relative;
+        justify-content: center !important;
+    }
+    nav.gtec-nav .brand {
+        position: absolute;
+        left: 2rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    nav.gtec-nav .nav-links .back {
+        position: absolute;
+        right: 2rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+}
+
+/* "Back to SparksTheory" pill when it contains the logo image — tighten
+   the padding so it sits as a compact round chip instead of a wide pill. */
+nav.gtec-nav .back:has(img) {
+    padding: 0.3rem !important;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Unread-message badge next to the "My Profile" nav link */
+.nav-badge {
+    display: none;
+    margin-left: 0.45em;
+    min-width: 1.1em;
+    padding: 0.05em 0.45em;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 999px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+    text-align: center;
+    vertical-align: middle;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 0 6px rgba(239,68,68,0.55);
+}
+.nav-badge.show { display: inline-block; }
+
+/* Logo image used in the nav brand */
+.gtec-nav .brand-logo {
+    height: 22px;
+    width: auto;
+    vertical-align: middle;
+    margin-left: 0.45em;
+    display: inline-block;
+}
+@media (max-width: 720px) {
+    .gtec-nav .brand-logo { height: 18px; margin-left: 0.35em; }
+}
+
+/* Animated underline on nav links (desktop only, excludes Apply + Back pills) */
+@media (min-width: 721px) {
+    nav.gtec-nav .nav-links a:not(.apply):not(.back) {
+        position: relative;
+    }
+    nav.gtec-nav .nav-links a:not(.apply):not(.back)::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 100%;
+        height: 1.5px;
+        background: var(--gold, #ffd166);
+        border-radius: 2px;
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.25s ease;
+        pointer-events: none;
+    }
+    nav.gtec-nav .nav-links a:not(.apply):not(.back):hover::after {
+        transform: scaleX(1);
+    }
+}
+
+/* Hamburger toggle button (hidden on desktop) */
+.gtec-nav-toggle {
+    display: none;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    padding: 0;
+    flex-shrink: 0;
+}
+.gtec-nav-toggle:hover {
+    color: #f1f5f9;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+.gtec-nav-toggle svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+.gtec-nav-toggle .icon-close { display: none; }
+body.nav-open .gtec-nav-toggle .icon-open  { display: none; }
+body.nav-open .gtec-nav-toggle .icon-close { display: block; }
+
+@media (max-width: 720px) {
+    /* Show hamburger */
+    .gtec-nav-toggle { display: inline-flex; }
+
+    /* Collapse the link group into a drop-down drawer */
+    nav.gtec-nav {
+        padding: 0.9rem 1rem;
+    }
+    nav.gtec-nav .nav-links,
+    nav.gtec-nav > div[style*="display:flex"] {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 0.5rem 0 0.75rem;
+        background: rgba(5, 6, 8, 0.98);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    body.nav-open nav.gtec-nav .nav-links,
+    body.nav-open nav.gtec-nav > div[style*="display:flex"] {
+        display: flex;
+    }
+    nav.gtec-nav .nav-links a {
+        padding: 0.85rem 1.5rem;
+        font-size: 0.72rem;
+        letter-spacing: 0.2em;
+    }
+    nav.gtec-nav .nav-links a:hover {
+        background: rgba(255, 255, 255, 0.04);
+    }
+    nav.gtec-nav .nav-links .apply,
+    nav.gtec-nav .nav-links .back {
+        margin: 0.5rem 1.5rem;
+        text-align: center;
+        padding: 0.7rem 0.85rem;
+    }
+    /* Portal page: keep the user chip + sign-out tidy in the drawer */
+    nav.gtec-nav .nav-links .nav-user {
+        padding: 0.5rem 1.5rem;
+        font-size: 0.78rem;
+    }
+    nav.gtec-nav .nav-links .btn-sm {
+        margin: 0.25rem 1.5rem 0.5rem;
+    }
+}

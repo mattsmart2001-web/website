@@ -1,7 +1,6 @@
 const fetch = require('node-fetch');
 
 const YOUTUBE_CHANNEL_ID = 'UCuUCB1yQyF23u5ESGvNZKNg';
-const YOUTUBE_API_KEY = 'AIzaSyBRxCoE4FhqnNfVOHWgVxLApLSnxIlbQ4w';
 
 exports.handler = async (event) => {
   // CORS headers
@@ -14,6 +13,15 @@ exports.handler = async (event) => {
   // Handle preflight
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
+  }
+
+  const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+  if (!YOUTUBE_API_KEY) {
+    return {
+      statusCode: 500,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ success: false, error: 'YOUTUBE_API_KEY env var not set' }),
+    };
   }
 
   try {

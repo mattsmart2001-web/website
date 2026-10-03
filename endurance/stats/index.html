@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics &amp; Hall of Fame | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="Hall of Fame, championship records and all-time statistics from GTEC, the Gran Turismo 7 endurance championship.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/stats/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Open Graph / Twitter card -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Statistics & Hall of Fame">
+    <meta property="og:description" content="Career stats, Hall of Fame, ratings and circuit records for the GTEC endurance championship.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/stats/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Statistics">
+    <meta name="twitter:description" content="Career stats, Hall of Fame and circuit records for the GTEC endurance championship.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608; --bg-1: #0a0e15; --bg-2: #11161f;
+            --text: #f1f5f9; --muted: #94a3b8;
+            --gold: #ffd166; --gold-deep: #c79a3a; --silver: #cbd5e1; --bronze: #cd7f32;
+            --green: #22c55e; --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .gtec-nav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5,6,8,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--text);
+            text-decoration: none;
+            text-indent: 0.32em;
+        }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-decoration: none;
+            padding: 0.45rem 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .gtec-nav .back:hover {
+            color: var(--text);
+            border-color: rgba(255,255,255,0.25);
+        }
+
+        /* Hero */
+        .hero { padding: 3rem 2rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+        .hero-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; }
+        .hero-title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.4rem; }
+        .hero-sub { color: var(--muted); font-size: 0.88rem; }
+
+        .content { max-width: 1100px; margin: 0 auto; padding: 1rem 2rem 4rem; }
+        .section { margin-bottom: 2.75rem; }
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 1.1rem;
+            text-indent: 0.35em;
+        }
+
+        /* Hall of Fame strip */
+        .hof-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 0.85rem;
+        }
+        .hof-card {
+            background: linear-gradient(135deg, rgba(255,209,102,0.06), rgba(255,209,102,0.02));
+            border: 1px solid rgba(255,209,102,0.18);
+            border-radius: 12px;
+            padding: 1.1rem 1.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .hof-card::before {
+            content: "★";
+            position: absolute;
+            top: -10px; right: -8px;
+            font-size: 4rem;
+            color: rgba(255,209,102,0.06);
+            line-height: 1;
+        }
+        .hof-cat {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.58rem;
+            font-weight: 700;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 0.6rem;
+            position: relative;
+        }
+        .hof-value {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.8rem;
+            letter-spacing: 0.03em;
+            line-height: 1;
+            margin-bottom: 0.45rem;
+            position: relative;
+        }
+        .hof-context { font-size: 0.8rem; color: var(--muted); position: relative; }
+        .hof-context a { color: var(--text); text-decoration: none; }
+        .hof-context a:hover { color: var(--gold); }
+
+        /* Leaderboard cards grid */
+        .lb-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1rem;
+        }
+        .lb-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .lb-header {
+            padding: 0.75rem 1.1rem;
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--gold);
+            text-indent: 0.25em;
+        }
+        .lb-table { width: 100%; border-collapse: collapse; }
+        .lb-table td {
+            padding: 0.55rem 1.1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.87rem;
+        }
+        .lb-table tr:last-child td { border-bottom: none; }
+        .lb-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .lb-pos {
+            font-family: 'Anton', sans-serif;
+            font-size: 1rem;
+            width: 36px;
+            color: var(--muted);
+        }
+        .lb-pos.p1 { color: var(--gold); }
+        .lb-pos.p2 { color: var(--silver); }
+        .lb-pos.p3 { color: var(--bronze); }
+        .lb-name a { color: var(--text); text-decoration: none; font-weight: 500; }
+        .lb-name a:hover { color: var(--gold); }
+        .lb-value {
+            text-align: right;
+            font-weight: 700;
+            color: var(--gold);
+            font-family: 'Anton', sans-serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.02em;
+        }
+        .empty-lb {
+            padding: 1.5rem 1.1rem;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
+        /* Circuit records */
+        .records-table {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .records-table table { width: 100%; border-collapse: collapse; }
+        .records-table th {
+            padding: 0.75rem 1.1rem;
+            text-align: left;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+        }
+        .records-table th.right { text-align: right; }
+        .records-table td {
+            padding: 0.75rem 1.1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.88rem;
+        }
+        .records-table tr:last-child td { border-bottom: none; }
+        .records-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .records-table td.right { text-align: right; }
+        .records-table td.muted { color: var(--muted); font-size: 0.82rem; }
+        .laptime { font-family: 'Orbitron', sans-serif; color: var(--gold); font-weight: 700; font-size: 0.92rem; }
+
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+        .empty-msg { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
+
+        /* Positions Gained */
+        .pg-mover { background: linear-gradient(160deg, rgba(255,209,102,0.10), rgba(255,209,102,0.02)); border: 1px solid rgba(255,209,102,0.28); border-radius: 14px; padding: 1.1rem 1.3rem; display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.1rem; }
+        .pg-mover .pg-label { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+        .pg-mover .pg-name { font-weight: 700; font-size: 1.05rem; margin-top: 0.15rem; }
+        .pg-mover .pg-name a { color: var(--text); text-decoration: none; }
+        .pg-mover .pg-name a:hover { color: var(--gold); }
+        .pg-mover .pg-meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.1rem; }
+        .pg-mover .pg-net { font-family: 'Anton', sans-serif; font-size: 2.4rem; line-height: 1; color: var(--green); margin-left: auto; }
+        .pg-av { width: 40px; height: 40px; border-radius: 50%; background: #1b2230; display: inline-flex; align-items: center; justify-content: center; font-family: 'Anton', sans-serif; color: var(--muted); font-size: 1rem; flex-shrink: 0; object-fit: cover; }
+        .pg-board { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .pg-board table { width: 100%; border-collapse: collapse; }
+        .pg-board th { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+        .pg-board th.center { text-align: center; } .pg-board th.net-col { text-align: center; width: 34%; }
+        .pg-board td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; vertical-align: middle; }
+        .pg-board tr:last-child td { border-bottom: none; }
+        .pg-board tr:hover td { background: rgba(255,255,255,0.02); }
+        .pg-pos { font-family: 'Orbitron', sans-serif; color: var(--muted); text-align: center; width: 44px; }
+        .pg-board tr.r1 .pg-pos { color: var(--gold); } .pg-board tr.r2 .pg-pos { color: var(--silver); } .pg-board tr.r3 .pg-pos { color: var(--bronze); }
+        .pg-dcell { display: flex; align-items: center; gap: 0.6rem; }
+        .pg-dname { font-weight: 700; } .pg-dname a { color: var(--text); text-decoration: none; } .pg-dname a:hover { color: var(--gold); }
+        .pg-flag { margin-right: 0.2rem; }
+        .pg-avg { font-family: 'Orbitron', sans-serif; font-size: 0.82rem; text-align: center; }
+        .pg-netwrap { display: flex; align-items: center; gap: 0.7rem; }
+        .pg-bar { position: relative; flex: 1; height: 15px; background: rgba(255,255,255,0.04); border-radius: 4px; min-width: 90px; }
+        .pg-bar .mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: rgba(255,255,255,0.18); }
+        .pg-bar .fill { position: absolute; top: 2px; bottom: 2px; border-radius: 3px; }
+        .pg-bar .fill.pos { left: 50%; background: linear-gradient(90deg, rgba(34,197,94,0.5), var(--green)); }
+        .pg-bar .fill.neg { right: 50%; background: linear-gradient(270deg, rgba(248,113,113,0.5), #f87171); }
+        .pg-netnum { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 0.92rem; min-width: 44px; text-align: right; }
+        .pg-netnum.pos { color: var(--green); } .pg-netnum.neg { color: #f87171; } .pg-netnum.zero { color: var(--muted); }
+        .pg-foot { color: var(--muted); font-size: 0.78rem; margin-top: 0.8rem; line-height: 1.5; }
+        @media (max-width: 640px) { .pg-board th.hide-mob, .pg-board td.hide-mob { display: none; } .pg-board th.net-col { width: auto; } }
+
+        /* Compare Drivers */
+        .compare-feature { background: linear-gradient(160deg, rgba(255,209,102,0.09), rgba(255,209,102,0.015)); border: 1px solid rgba(255,209,102,0.30); border-radius: 16px; padding: 1.5rem 1.5rem 1.75rem; box-shadow: 0 10px 40px rgba(0,0,0,0.35); }
+        .compare-feature .section-title { margin-bottom: 0.35rem; }
+        .compare-feature-sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.25rem; max-width: 660px; line-height: 1.5; }
+        .compare-feature .compare-picker { margin-bottom: 0; }
+        .compare-picker { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .compare-picker select { flex: 1; min-width: 180px; padding: 0.6rem 0.8rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.9rem; }
+        .compare-vs { font-family: 'Anton', sans-serif; color: var(--gold); font-size: 1.1rem; }
+        .compare-table { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+        .compare-fight {
+            display: flex; align-items: center; gap: 0.6rem;
+            background: var(--bg-2); border: 1px solid rgba(255,209,102,0.3); border-radius: 10px;
+            padding: 0.75rem 1.1rem; margin-top: 0.85rem;
+            font-size: 0.85rem; color: var(--text);
+        }
+        .compare-fight .cf-icon { font-size: 1.1rem; flex-shrink: 0; }
+        .compare-fight.settled { border-color: var(--border); color: var(--muted); }
+        .compare-fight b { color: var(--gold); }
+        .compare-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 1.5rem 1.25rem; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+        .compare-driver-name { text-align: center; }
+        .compare-driver-name a {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(1.4rem, 3.2vw, 2.1rem);
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            line-height: 1.05;
+            background: linear-gradient(180deg, #fff, var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            text-decoration: none;
+            text-shadow: 0 0 24px rgba(255,209,102,0.25);
+            transition: filter 0.2s;
+            display: inline-block;
+        }
+        .compare-driver-name a:hover { filter: brightness(1.2); }
+        .compare-row { position: relative; display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; padding: 0.65rem 1.25rem 1.05rem; align-items: center; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+        .compare-row:last-child { border-bottom: none; }
+        .compare-val { text-align: center; font-family: 'Orbitron', sans-serif; }
+        .compare-label { text-align: center; color: var(--muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; min-width: 110px; }
+        .compare-win { color: var(--gold); font-weight: 800; }
+
+        /* Tug-of-war bar: each stat row grows a fill from the centre toward
+           whichever side is ahead, proportional to their share of the total —
+           a quick visual read on "how much" a driver is winning by. */
+        .compare-bar { position: absolute; left: 1.25rem; right: 1.25rem; bottom: 0.4rem; height: 4px; display: flex; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+        .compare-bar-half { flex: 1; display: flex; }
+        .compare-bar-half.left { justify-content: flex-end; }
+        .compare-bar-half.right { justify-content: flex-start; }
+        .compare-bar-center { flex: none; width: 2px; background: rgba(255,255,255,0.18); }
+        .compare-bar-fill { width: 0%; height: 100%; background: rgba(148,163,184,0.5); transition: width 0.9s cubic-bezier(0.22,1,0.36,1); }
+        .compare-bar-fill.win { background: linear-gradient(90deg, rgba(255,209,102,0.45), var(--gold)); box-shadow: 0 0 8px rgba(255,209,102,0.55); }
+        .compare-share-btn {
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            width: 100%; margin-top: 1rem; padding: 0.85rem 1rem;
+            background: linear-gradient(135deg, rgba(255,209,102,0.22), rgba(255,209,102,0.06));
+            border: 1px solid rgba(255,209,102,0.4); border-radius: 8px;
+            color: var(--gold); font-family: 'Orbitron', sans-serif; font-size: 0.68rem;
+            font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
+            cursor: pointer; transition: background 0.2s, border-color 0.2s;
+        }
+        .compare-share-btn:hover:not(:disabled) { background: linear-gradient(135deg, rgba(255,209,102,0.32), rgba(255,209,102,0.1)); border-color: rgba(255,209,102,0.6); }
+        .compare-share-btn:disabled { opacity: 0.7; cursor: progress; }
+
+        @media (max-width: 600px) {
+            .nav { padding: 1rem; }
+            .hero, .content { padding: 1.5rem 1rem; }
+            .hide-mob { display: none; }
+            .compare-label { min-width: 72px; font-size: 0.58rem; }
+            .compare-driver-name a { font-size: clamp(1rem, 5vw, 1.5rem); }
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/" class="active">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div class="hero">
+    <div class="hero-eyebrow">All-Time Records</div>
+    <div class="hero-title">Statistics</div>
+    <div class="hero-sub">Head-to-head driver compare, Hall of Fame, career leaderboards and circuit records.</div>
+</div>
+
+<div class="content" id="content">
+    <div class="loading">Loading…</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script src="/endurance/assets/elo-tiers.js?v=3"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data.session) { if (portal) portal.style.display = ''; }
+    else              { if (signin) signin.style.display = ''; }
+});
+
+const CAT_LABELS = {
+    most_wins:                 'Most Wins',
+    most_championships:        'Most Championships',
+    highest_rating:            'Highest Rating',
+    most_race_hours:           'Most Race Hours',
+    longest_win_streak:        'Longest Win Streak',
+    most_consecutive_finishes: 'Most Consecutive Finishes',
+    fastest_lap:               'Fastest Lap',
+};
+
+function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function posCls(p) { if (p === 1) return 'lb-pos p1'; if (p === 2) return 'lb-pos p2'; if (p === 3) return 'lb-pos p3'; return 'lb-pos'; }
+
+function fmtLap(ms) {
+    if (ms == null) return '';
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const r = ms % 1000;
+    return `${m}:${String(s).padStart(2,'0')}.${String(r).padStart(3,'0')}`;
+}
+
+function leaderboardHTML(title, rows, valueFmt = v => v) {
+    const ranked = rows.filter(r => Number(r.__value) > 0).slice(0, 5);
+    const inner = ranked.length === 0
+        ? `<div class="empty-lb">No data yet.</div>`
+        : `<table class="lb-table"><tbody>
+            ${ranked.map((r, i) => `<tr>
+                <td class="${posCls(i + 1)}">${i + 1}</td>
+                <td class="lb-name"><a href="/endurance/drivers/?slug=${esc(r.driver_slug)}">${esc(r.driver_name)}</a></td>
+                <td class="lb-value">${valueFmt(r.__value)}</td>
+            </tr>`).join('')}
+          </tbody></table>`;
+    return `<div class="lb-card">
+        <div class="lb-header">${title}</div>
+        ${inner}
+    </div>`;
+}
+
+// Same shape as leaderboardHTML but for teams — separate function rather
+// than parameterizing driver vs team in one, since the row shape (slug/name
+// field names, link target) differs and this stays simpler to read.
+function teamLeaderboardHTML(title, rows, valueFmt = v => v) {
+    const ranked = rows.filter(r => Number(r.__value) > 0).slice(0, 5);
+    const inner = ranked.length === 0
+        ? `<div class="empty-lb">No data yet.</div>`
+        : `<table class="lb-table"><tbody>
+            ${ranked.map((r, i) => `<tr>
+                <td class="${posCls(i + 1)}">${i + 1}</td>
+                <td class="lb-name"><a href="/endurance/teams/?slug=${esc(r.team_slug)}">${esc(r.team_name)}</a></td>
+                <td class="lb-value">${valueFmt(r.__value)}</td>
+            </tr>`).join('')}
+          </tbody></table>`;
+    return `<div class="lb-card">
+        <div class="lb-header">${title}</div>
+        ${inner}
+    </div>`;
+}
+
+// ISO alpha-2 → flag emoji (regional indicator letters), no dependency.
+function flagEmoji(cc) {
+    if (!cc || cc.length !== 2) return '';
+    return String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+function pgAvatar(photo, name) {
+    if (photo) return `<img class="pg-av" src="${esc(photo)}" alt="" loading="lazy">`;
+    const init = (name || '?').trim().charAt(0).toUpperCase() || '#';
+    return `<span class="pg-av">${esc(init)}</span>`;
+}
+
+// Positions Gained section — biggest mover highlight + a diverging-bar board.
+function positionsGainedHTML(rows) {
+    if (!rows.length) return '';
+    const sign = n => (n > 0 ? '+' : '') + n;
+    const maxAbs = Math.max(1, ...rows.map(r => Math.abs(r.net)));
+    const top = rows[0];
+    const mover = top && top.net > 0 ? `
+        <div class="pg-mover">
+            ${pgAvatar(top.photo, top.name)}
+            <div>
+                <div class="pg-label">Top overtaker</div>
+                <div class="pg-name">${flagEmoji(top.nationality)} ${top.slug ? `<a href="/endurance/drivers/?slug=${esc(top.slug)}">${esc(top.name)}</a>` : esc(top.name)}</div>
+                <div class="pg-meta">${top.races} race${top.races === 1 ? '' : 's'} · +${(top.net / top.races).toFixed(1)} avg / race</div>
+            </div>
+            <span class="pg-net">+${top.net}</span>
+        </div>` : '';
+
+    const body = rows.map((d, i) => {
+        const pct = Math.abs(d.net) / maxAbs * 50;
+        const cls = d.net > 0 ? 'pos' : d.net < 0 ? 'neg' : 'zero';
+        const fill = d.net === 0 ? '' : `<span class="fill ${d.net > 0 ? 'pos' : 'neg'}" style="width:${pct.toFixed(1)}%"></span>`;
+        const avg = d.net / d.races;
+        const avgColor = d.net > 0 ? 'var(--green)' : d.net < 0 ? '#f87171' : 'var(--muted)';
+        const nameLink = d.slug ? `<a href="/endurance/drivers/?slug=${esc(d.slug)}">${esc(d.name)}</a>` : esc(d.name);
+        return `<tr class="r${i + 1}">
+            <td class="pg-pos">${i + 1}</td>
+            <td><div class="pg-dcell">${pgAvatar(d.photo, d.name)}<div class="pg-dname"><span class="pg-flag">${flagEmoji(d.nationality)}</span>${nameLink}</div></div></td>
+            <td class="center muted hide-mob">${d.races}</td>
+            <td class="pg-avg hide-mob" style="color:${avgColor}">${d.net === 0 ? '0.0' : sign(avg.toFixed(1))}</td>
+            <td>
+                <div class="pg-netwrap">
+                    <div class="pg-bar"><span class="mid"></span>${fill}</div>
+                    <span class="pg-netnum ${cls}">${d.net === 0 ? '0' : sign(d.net)}</span>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `
+        <div class="section">
+            <div class="section-title">Positions Gained</div>
+            ${mover}
+            <div class="pg-board">
+                <table>
+                    <thead><tr>
+                        <th class="center">#</th>
+                        <th>Driver</th>
+                        <th class="center hide-mob">Races</th>
+                        <th class="center hide-mob">Avg</th>
+                        <th class="net-col">Net Positions</th>
+                    </tr></thead>
+                    <tbody>${body}</tbody>
+                </table>
+            </div>
+            <p class="pg-foot">Grid position minus finishing position, across all classified finishes with a qualifying time. Co-drivers share their car's result.</p>
+        </div>`;
+}
+
+async function load() {
+    const [hofRes, careerRes, ratingsRes, circuitsRes, seasonRes, teamStandingsRes, resultsRes, qualiRes, driversRes] = await Promise.all([
+        sb.from('hall_of_fame_records').select('*, drivers(display_name,slug)').order('sort_order'),
+        sb.from('driver_career_stats').select('*'),
+        sb.from('driver_current_ratings').select('driver_id, driver_name, driver_slug, rating, peak_rating, last_rated_at'),
+        sb.from('circuit_records').select('*').order('best_lap_ms'),
+        sb.from('seasons').select('id, year, points_systems(points, pole_points, fastest_lap_points)').eq('is_active', true).maybeSingle(),
+        // team_standings is per-team-per-season, same shape driver_career_stats
+        // is derived from — aggregated client-side into career totals below,
+        // same reduce() pattern teams/index.html's own profile page already uses.
+        sb.from('team_standings').select('*'),
+        // Positions Gained (grid → flag). Qualifying and finishing positions
+        // are both per-driver (migrations 27/28), so match on driver_id, not
+        // the car — classified finishes with a per-driver qualifying slot.
+        sb.from('result_drivers').select('driver_id, finish_position, status, results!inner(event_id)'),
+        sb.from('qualifying_results').select('event_id, driver_id, position'),
+        sb.from('drivers').select('id, display_name, slug, nationality, photo_url'),
+    ]);
+
+    const content = document.getElementById('content');
+    const hof      = hofRes.data      || [];
+    const career   = careerRes.data   || [];
+    const ratings  = (ratingsRes.data || []).filter(r => r.last_rated_at);
+    const circuits = circuitsRes.data || [];
+
+    // Team career totals — team_standings has one row per team per season,
+    // sum them into one row per team the same way a team's own profile
+    // page rolls up its "Season History" table into a career line.
+    const teamCareerMap = new Map();
+    (teamStandingsRes.data || []).forEach(s => {
+        const t = teamCareerMap.get(s.team_id) || {
+            team_id: s.team_id, team_name: s.team_name, team_slug: s.team_slug,
+            wins: 0, podiums: 0, poles: 0, fastest_laps: 0, races: 0, points: 0,
+        };
+        t.wins         += Number(s.wins) || 0;
+        t.podiums      += Number(s.podiums) || 0;
+        t.poles        += Number(s.poles) || 0;
+        t.fastest_laps += Number(s.fastest_laps) || 0;
+        t.races        += Number(s.races) || 0;
+        t.points       += Number(s.points) || 0;
+        teamCareerMap.set(s.team_id, t);
+    });
+    const teamCareer = Array.from(teamCareerMap.values());
+
+    // Season Stakes ceiling for the compare tool's "Championship Fight"
+    // row — same engine as the driver/team profile pages and Standings.
+    // Fetched once here (doesn't depend on which two drivers get picked)
+    // rather than re-fetched on every dropdown change.
+    let seasonFight = null;
+    let topTwo = [];
+    const season = seasonRes.data;
+    if (season) {
+        const [{ count: remaining }, { data: standings }] = await Promise.all([
+            sb.from('events').select('id', { count: 'exact', head: true })
+                .eq('season_id', season.id).in('status', ['scheduled', 'in_progress']),
+            sb.from('driver_standings').select('driver_id, points, wins, podiums').eq('season_id', season.id),
+        ]);
+        // Current championship top two — used to pre-fill the compare panel.
+        topTwo = (standings || []).slice()
+            .sort((a, b) => (Number(b.points) - Number(a.points)) || (Number(b.wins || 0) - Number(a.wins || 0)) || (Number(b.podiums || 0) - Number(a.podiums || 0)))
+            .slice(0, 2).map(s => s.driver_id);
+        const ps = season.points_systems;
+        if (remaining && ps) {
+            const maxPos = Math.max(0, ...(ps.points || []).map(p => Number(p.points) || 0));
+            seasonFight = {
+                remaining,
+                ceiling: remaining * (maxPos + Number(ps.pole_points || 0) + Number(ps.fastest_lap_points || 0)),
+                pointsByDriver: new Map((standings || []).map(s => [s.driver_id, Number(s.points) || 0])),
+            };
+        }
+    }
+
+    // Hall of Fame (skip Most Race Hours — derived from event duration,
+    // not actual driving time, so it can mislead)
+    const hofFiltered = (hof || []).filter(r => r.category !== 'most_race_hours');
+    const hofHTML = hofFiltered.length ? `
+        <div class="section">
+            <div class="section-title">Hall of Fame</div>
+            <div class="hof-grid">
+                ${hofFiltered.map(r => {
+                    const drv = r.drivers;
+                    const ctx = drv?.slug
+                        ? `<a href="/endurance/drivers/?slug=${esc(drv.slug)}">${esc(r.context || drv.display_name)}</a>`
+                        : esc(r.context || '');
+                    return `<div class="hof-card">
+                        <div class="hof-cat">${esc(CAT_LABELS[r.category] || r.category)}</div>
+                        <div class="hof-value">${esc(r.value)}</div>
+                        <div class="hof-context">${ctx}</div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>` : `
+        <div class="section">
+            <div class="section-title">Hall of Fame</div>
+            <div class="empty-msg">No records yet. Admins can populate this from the admin dashboard.</div>
+        </div>`;
+
+    // Career leaderboards — annotate each with __value for the metric
+    const lb = (key, transform = v => v) => career.map(d => ({ ...d, __value: transform(d[key]) || 0 })).sort((a, b) => b.__value - a.__value);
+    const lbRatings = (key) => ratings.map(d => ({ ...d, __value: Number(d[key]) || 0 })).sort((a, b) => b.__value - a.__value);
+    const teamLb = (key, transform = v => v) => teamCareer.map(t => ({ ...t, __value: transform(t[key]) || 0 })).sort((a, b) => b.__value - a.__value);
+
+    const leaderboardsHTML = `
+        <div class="section">
+            <div class="section-title">Driver Career Leaderboards</div>
+            <div class="lb-grid">
+                ${leaderboardHTML('Most Wins',         lb('wins'))}
+                ${leaderboardHTML('Most Podiums',      lb('podiums'))}
+                ${leaderboardHTML('Most Poles',        lb('poles'))}
+                ${leaderboardHTML('Most Fastest Laps', lb('fastest_laps'))}
+                ${leaderboardHTML('Most Starts',       lb('starts'))}
+                ${leaderboardHTML('Career Points',     lb('career_points', v => Number(v)), v => Number(v).toFixed(v % 1 === 0 ? 0 : 1))}
+                ${leaderboardHTML('Highest Rating',    lbRatings('rating'),      v => `${v}${window.eloTierBadge ? window.eloTierBadge(v) : ''}`)}
+                ${leaderboardHTML('Peak Rating',       lbRatings('peak_rating'), v => `${v}${window.eloTierBadge ? window.eloTierBadge(v) : ''}`)}
+            </div>
+        </div>
+        <div class="section">
+            <div class="section-title">Team Career Leaderboards</div>
+            <div class="lb-grid">
+                ${teamLeaderboardHTML('Most Team Wins',         teamLb('wins'))}
+                ${teamLeaderboardHTML('Most Team Podiums',      teamLb('podiums'))}
+                ${teamLeaderboardHTML('Most Team Poles',        teamLb('poles'))}
+                ${teamLeaderboardHTML('Most Team Fastest Laps', teamLb('fastest_laps'))}
+                ${teamLeaderboardHTML('Most Team Races',        teamLb('races'))}
+                ${teamLeaderboardHTML('Team Career Points',     teamLb('points', v => Number(v)), v => Number(v).toFixed(v % 1 === 0 ? 0 : 1))}
+            </div>
+        </div>`;
+
+    // Circuit records
+    const recordsHTML = circuits.length ? `
+        <div class="section">
+            <div class="section-title">Circuit Records</div>
+            <div class="records-table">
+                <table>
+                    <thead><tr>
+                        <th>Circuit</th>
+                        <th>Driver</th>
+                        <th class="hide-mob">Team</th>
+                        <th class="right">Best Lap</th>
+                    </tr></thead>
+                    <tbody>
+                        ${circuits.map(c => `<tr>
+                            <td><strong>${esc(c.circuit_name)}</strong>${c.circuit_country ? ` <span class="muted">${esc(c.circuit_country)}</span>` : ''}</td>
+                            <td>${c.driver_slug ? `<a href="/endurance/drivers/?slug=${esc(c.driver_slug)}" style="color:inherit;text-decoration:none">${esc(c.driver_name)}</a>` : esc(c.driver_name || '—')}</td>
+                            <td class="muted hide-mob">${c.team_slug ? `<a href="/endurance/teams/?slug=${esc(c.team_slug)}" style="color:inherit;text-decoration:none">${esc(c.team_name)}</a>` : (esc(c.team_name) || '—')}</td>
+                            <td class="right"><span class="laptime">${fmtLap(c.best_lap_ms)}</span></td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>` : '';
+
+    // Compare Drivers — reuses the career + ratings data already fetched
+    // above, so picking two drivers is instant, no extra queries.
+    const driverOptions = career.slice()
+        .sort((a, b) => a.driver_name.localeCompare(b.driver_name))
+        .map(d => `<option value="${esc(d.driver_id)}">${esc(d.driver_name)}</option>`).join('');
+    const compareHTML = career.length ? `
+        <div class="section compare-feature">
+            <div class="section-title">Head to Head</div>
+            <p class="compare-feature-sub">Pick any two drivers to see who comes out on top: points, wins, ratings and the season fight, side by side.</p>
+            <div class="compare-picker">
+                <select id="compare-a"><option value="">Select a driver</option>${driverOptions}</select>
+                <span class="compare-vs">VS</span>
+                <select id="compare-b"><option value="">Select a driver</option>${driverOptions}</select>
+            </div>
+            <div id="compare-result"></div>
+        </div>` : '';
+
+    // Positions Gained — per-driver grid slot vs per-driver finish (both keyed
+    // on driver_id), for classified finishes that have a qualifying time.
+    const gridByKey = new Map();
+    (qualiRes.data || []).forEach(q => { if (q.driver_id) gridByKey.set(q.event_id + ':' + q.driver_id, q.position); });
+    const pgAcc = new Map();
+    (resultsRes.data || []).forEach(rd => {
+        if (rd.status !== 'classified' || rd.finish_position == null) return;
+        const ev = rd.results?.event_id;
+        if (!ev) return;
+        const grid = gridByKey.get(ev + ':' + rd.driver_id);
+        if (grid == null) return;
+        const a = pgAcc.get(rd.driver_id) || { net: 0, races: 0 };
+        a.net += grid - rd.finish_position; a.races += 1;
+        pgAcc.set(rd.driver_id, a);
+    });
+    const driverById = new Map((driversRes.data || []).map(d => [d.id, d]));
+    const pgRows = [...pgAcc.entries()].map(([id, a]) => {
+        const d = driverById.get(id) || {};
+        return { id, name: d.display_name || 'Unknown', slug: d.slug, nationality: d.nationality, photo: d.photo_url, net: a.net, races: a.races };
+    }).filter(r => r.races > 0)
+      .sort((x, y) => (y.net - x.net) || (y.races - x.races) || (x.name || '').localeCompare(y.name || ''));
+
+    content.innerHTML = compareHTML + hofHTML + leaderboardsHTML + positionsGainedHTML(pgRows) + recordsHTML;
+
+    // Unfiltered ratings (not just last_rated_at like the leaderboards use)
+    // so an unraced driver still shows their real provisional DR/SR-seeded
+    // rating instead of a misleading 0.
+    if (career.length) setupCompare(career, ratingsRes.data || [], seasonFight, topTwo);
+}
+
+// Splits a formatted value like "1799<span class=...>Platinum</span>" into
+// its leading number (which gets counted up) and trailing suffix (badge HTML,
+// left static — only the number itself needs to animate).
+function renderCompareVal(v, fmt) {
+    if (v == null) return '<span class="cv-num">—</span>';
+    const full = String(fmt(v));
+    const m = full.match(/^(-?[\d,]*\.?\d+)/);
+    if (!m) return full;
+    const numStr = m[1];
+    const suffix = full.slice(numStr.length);
+    const target = parseFloat(numStr.replace(/,/g, ''));
+    const decimals = numStr.includes('.') ? numStr.split('.')[1].length : 0;
+    return `<span class="cv-num" data-target="${target}" data-decimals="${decimals}">0</span>${suffix}`;
+}
+
+// Counts each stat up from 0 to its real value and grows the tug-of-war
+// bars from the centre, so picking two drivers feels like a live readout
+// rather than a static table dump.
+function animateCompareEntrance(container) {
+    const duration = 750;
+    container.querySelectorAll('.cv-num[data-target]').forEach((el) => {
+        const target = parseFloat(el.dataset.target);
+        const decimals = parseInt(el.dataset.decimals, 10) || 0;
+        if (!Number.isFinite(target)) return;
+        const start = performance.now();
+        const tick = (now) => {
+            const t = Math.min(1, (now - start) / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            el.textContent = (target * eased).toFixed(decimals);
+            if (t < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    });
+    requestAnimationFrame(() => {
+        container.querySelectorAll('.compare-bar-fill[data-pct]').forEach((el) => {
+            el.style.width = `${el.dataset.pct}%`;
+        });
+    });
+}
+
+// Championship Fight: can driver A still finish ahead of driver B in the
+// active season's points table (or vice versa)? Uses the extreme joint
+// case: whoever's behind scores the shared remaining-rounds ceiling every
+// round, whoever's ahead scores nothing more. Same Split-1-forever
+// assumption as Season Stakes elsewhere. Returns null when there's no
+// active season, no rounds left, or a selected driver isn't part of it.
+function championshipFight(seasonFight, driverIdA, driverIdB) {
+    if (!seasonFight) return null;
+    const pa = seasonFight.pointsByDriver.get(driverIdA) ?? 0;
+    const pb = seasonFight.pointsByDriver.get(driverIdB) ?? 0;
+    if (pa === pb) return { tied: true, remaining: seasonFight.remaining };
+    const [leaderPts, chaserPts, leaderIsA] = pa > pb ? [pa, pb, true] : [pb, pa, false];
+    const gap = leaderPts - chaserPts;
+    const stillAlive = chaserPts + seasonFight.ceiling >= leaderPts;
+    return { tied: false, leaderIsA, gap, stillAlive, remaining: seasonFight.remaining };
+}
+
+function setupCompare(career, ratings, seasonFight, preselect) {
+    const selA = document.getElementById('compare-a');
+    const selB = document.getElementById('compare-b');
+    const result = document.getElementById('compare-result');
+    const ratingByDriver = new Map(ratings.map(r => [r.driver_id, r]));
+
+    function update() {
+        const da = career.find(d => d.driver_id === selA.value);
+        const db = career.find(d => d.driver_id === selB.value);
+        if (!da || !db) { result.innerHTML = ''; return; }
+        const ra = ratingByDriver.get(da.driver_id);
+        const rb = ratingByDriver.get(db.driver_id);
+        const tierFmt = v => v == null ? '—' : `${v}${window.eloTierBadge ? window.eloTierBadge(v) : ''}`;
+
+        const rows = [
+            ['Career Points', Number(da.career_points) || 0, Number(db.career_points) || 0, v => v.toFixed(v % 1 === 0 ? 0 : 1)],
+            ['Wins',          da.wins || 0,          db.wins || 0],
+            ['Podiums',       da.podiums || 0,       db.podiums || 0],
+            ['Poles',         da.poles || 0,         db.poles || 0],
+            ['Fastest Laps',  da.fastest_laps || 0,  db.fastest_laps || 0],
+            ['Starts',        da.starts || 0,        db.starts || 0],
+            ['Current Rating', ra?.rating ?? 0,      rb?.rating ?? 0,      tierFmt],
+        ];
+
+        // Peak Rating repeats Current Rating whenever a driver hasn't dropped
+        // from their high point — the common case — so it reads as a
+        // duplicate stat. Only worth a row when it actually differs.
+        const peakA = ra?.peak_rating ?? 0, peakB = rb?.peak_rating ?? 0;
+        if (peakA !== (ra?.rating ?? 0) || peakB !== (rb?.rating ?? 0)) {
+            rows.push(['Peak Rating', peakA, peakB, tierFmt]);
+        }
+
+        const fight = championshipFight(seasonFight, da.driver_id, db.driver_id);
+        let fightHTML = '';
+        if (fight?.tied) {
+            fightHTML = `<div class="compare-fight">
+                <span class="cf-icon">🔥</span>
+                <span>Tied on points right now: ${fight.remaining} round${fight.remaining === 1 ? '' : 's'} left, this one's still wide open.</span>
+            </div>`;
+        } else if (fight) {
+            const leaderName  = fight.leaderIsA ? da.driver_name : db.driver_name;
+            const chaserName  = fight.leaderIsA ? db.driver_name : da.driver_name;
+            fightHTML = fight.stillAlive
+                ? `<div class="compare-fight">
+                    <span class="cf-icon">🔥</span>
+                    <span>Still alive: <b>${esc(chaserName)}</b> needs at least a ${fight.gap.toFixed(fight.gap % 1 === 0 ? 0 : 1)}pt swing over ${fight.remaining} round${fight.remaining === 1 ? '' : 's'} to catch <b>${esc(leaderName)}</b> this season.</span>
+                </div>`
+                : `<div class="compare-fight settled">
+                    <span class="cf-icon">🏁</span>
+                    <span>Settled: <b>${esc(leaderName)}</b> can no longer be caught by ${esc(chaserName)} this season.</span>
+                </div>`;
+        }
+
+        result.innerHTML = `
+            <div class="compare-table">
+                <div class="compare-head">
+                    <div class="compare-driver-name"><a href="/endurance/drivers/?slug=${esc(da.driver_slug)}">${esc(da.driver_name)}</a></div>
+                    <div></div>
+                    <div class="compare-driver-name"><a href="/endurance/drivers/?slug=${esc(db.driver_slug)}">${esc(db.driver_name)}</a></div>
+                </div>
+                ${rows.map(([label, va, vb, fmt = v => v]) => {
+                    const aWin = va > vb, bWin = vb > va;
+                    const total = Math.abs(va) + Math.abs(vb);
+                    const shareA = total === 0 ? 50 : (Math.abs(va) / total) * 100;
+                    const shareB = total === 0 ? 50 : (Math.abs(vb) / total) * 100;
+                    return `<div class="compare-row">
+                        <div class="compare-val ${aWin ? 'compare-win' : ''}">${renderCompareVal(va, fmt)}</div>
+                        <div class="compare-label">${label}</div>
+                        <div class="compare-val ${bWin ? 'compare-win' : ''}">${renderCompareVal(vb, fmt)}</div>
+                        <div class="compare-bar">
+                            <div class="compare-bar-half left"><div class="compare-bar-fill ${aWin ? 'win' : ''}" data-pct="${shareA.toFixed(1)}"></div></div>
+                            <div class="compare-bar-center"></div>
+                            <div class="compare-bar-half right"><div class="compare-bar-fill ${bWin ? 'win' : ''}" data-pct="${shareB.toFixed(1)}"></div></div>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+            ${fightHTML}
+            <button class="compare-share-btn" id="compare-share-btn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                Share Comparison
+            </button>`;
+
+        document.getElementById('compare-share-btn').addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            if (!window.gtecCompareCard) return;
+            const { data: mfrRows } = await sb.from('drivers')
+                .select('id, manufacturers(brand_color)')
+                .in('id', [da.driver_id, db.driver_id]);
+            const colorFor = (id) => (mfrRows || []).find(r => r.id === id)?.manufacturers?.brand_color || null;
+
+            // The on-page fmt functions (tierFmt in particular) return HTML
+            // for innerHTML display — Canvas can only draw plain text, so
+            // the card needs its own plain-text formatting, not a reuse of
+            // whatever fmt each row uses on the page.
+            const cardFmt = (label, v) => {
+                if (label === 'Current Rating' || label === 'Peak Rating') {
+                    const tier = window.eloTier ? window.eloTier(v).name : '';
+                    return tier ? `${v} ${tier.toUpperCase()}` : String(v);
+                }
+                if (label === 'Career Points') return Number(v).toFixed(v % 1 === 0 ? 0 : 1);
+                return String(v);
+            };
+
+            window.gtecCompareCard({
+                a: { display_name: da.driver_name, slug: da.driver_slug, photo_url: da.photo_url, manufacturer_color: colorFor(da.driver_id) },
+                b: { display_name: db.driver_name, slug: db.driver_slug, photo_url: db.photo_url, manufacturer_color: colorFor(db.driver_id) },
+                rows: rows.map(([label, va, vb]) => ({ label, va, vb, fmt: v => cardFmt(label, v) })),
+                buttonEl: btn,
+            });
+        });
+
+        animateCompareEntrance(result);
+    }
+
+    selA.addEventListener('change', update);
+    selB.addEventListener('change', update);
+
+    // Pre-fill with the current championship top two so the panel shows a live
+    // comparison on load instead of two empty selects.
+    if (Array.isArray(preselect) && preselect.length === 2) {
+        const [a, b] = preselect;
+        const has = id => career.some(d => d.driver_id === id);
+        if (a && b && a !== b && has(a) && has(b)) {
+            selA.value = a; selB.value = b;
+            update();
+        }
+    }
+}
+
+load();
+</script>
+<script src="/endurance/assets/gtec-compare-card.js" defer></script>
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>
