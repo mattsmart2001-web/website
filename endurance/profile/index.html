@@ -879,6 +879,40 @@
         </div>
     </div>
 
+    <!-- Hardware -->
+    <div class="card" id="card-hardware">
+        <div class="card-title">Your Hardware</div>
+        <p class="form-hint" style="margin-bottom:1.25rem">What you race on. This shows on your public driver profile, and it tells us how much of the grid is on a wheel.</p>
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="field-label">Console</label>
+                <select id="field-hw-console">
+                    <option value="">— not set —</option>
+                    <option value="PS4">PS4</option>
+                    <option value="PS4 Pro">PS4 Pro</option>
+                    <option value="PS5">PS5</option>
+                    <option value="PS5 Pro">PS5 Pro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="field-label">Wheel or Controller</label>
+                <select id="field-hw-input" onchange="onHardwareInputChange()">
+                    <option value="">— not set —</option>
+                    <option value="wheel">Wheel</option>
+                    <option value="controller">Controller</option>
+                </select>
+            </div>
+            <div class="form-group full" id="hw-wheel-group" style="display:none">
+                <label class="field-label">Your Wheel</label>
+                <input type="text" id="field-hw-wheel" maxlength="120" placeholder="e.g. Fanatec CSL DD with CSL Elite V2 pedals">
+                <div class="field-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.3rem">Rim, base, pedals, whatever you want to mention. 120 characters.</div>
+            </div>
+        </div>
+        <div style="margin-top:1.5rem">
+            <button class="btn-save" id="btn-save-hardware" onclick="saveHardware()">Save Hardware</button>
+        </div>
+    </div>
+
 
     <!-- Change password -->
     <div class="card" id="card-change-password">
@@ -1157,6 +1191,34 @@ async function checkCareerNumber() {
             hint.style.color = '#4ade80';
         }
     }, 250);
+}
+
+// The wheel name only means anything alongside a wheel, so it is hidden
+// (and cleared on save) for anyone on a controller.
+function onHardwareInputChange() {
+    const isWheel = document.getElementById('field-hw-input').value === 'wheel';
+    document.getElementById('hw-wheel-group').style.display = isWheel ? '' : 'none';
+}
+
+async function saveHardware() {
+    const btn = document.getElementById('btn-save-hardware');
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    const input = document.getElementById('field-hw-input').value || null;
+    const wheel = document.getElementById('field-hw-wheel').value.trim();
+    const payload = {
+        hardware_console: document.getElementById('field-hw-console').value || null,
+        hardware_input:   input,
+        // Never store a wheel against a controller, so the public profile
+        // cannot show a stale one if someone switches.
+        hardware_wheel:   input === 'wheel' ? (wheel.slice(0, 120) || null) : null,
+    };
+
+    const { error } = await sb.from('drivers').update(payload).eq('id', driverId);
+    btn.disabled = false; btn.textContent = 'Save Hardware';
+    if (error) { toast(error.message, 'error'); return; }
+    if (payload.hardware_wheel === null) document.getElementById('field-hw-wheel').value = '';
+    toast('Hardware saved.', 'success');
 }
 
 async function saveProfile() {
@@ -2059,6 +2121,11 @@ async function init() {
     if (driver.discord_username)  document.getElementById('field-discord').value = driver.discord_username;
     if (driver.date_of_birth)     document.getElementById('field-dob').value = driver.date_of_birth;
     if (driver.career_number)     document.getElementById('field-career-num').value = driver.career_number;
+
+    document.getElementById('field-hw-console').value = driver.hardware_console || '';
+    document.getElementById('field-hw-input').value   = driver.hardware_input   || '';
+    document.getElementById('field-hw-wheel').value   = driver.hardware_wheel   || '';
+    onHardwareInputChange();
 
     // Birthday banner: compares month/day only, parsed as local time (a bare
     // "YYYY-MM-DD" string parses as UTC midnight, which can land on the

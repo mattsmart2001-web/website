@@ -657,6 +657,13 @@
         }
         .bio-text { color: var(--muted); line-height: 1.7; font-size: 0.9rem; }
 
+        /* Hardware */
+        .hw-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.65rem; }
+        .hw-item { padding: 0.8rem 1rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; min-width: 0; }
+        .hw-item-wide { grid-column: 1 / -1; }
+        .hw-label { font-family: 'Orbitron', sans-serif; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+        .hw-value { font-size: 0.95rem; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+
         /* Season Stakes — best/worst possible finish still open, shown
            for every driver, not just the title fight. */
         .stakes-bar {
@@ -1905,6 +1912,28 @@ async function showProfile() {
         ? `<div class="section"><div class="section-title">Badges</div>${cabinetInner}</div>`
         : '';
 
+    // What they race on. Only rendered once they have filled something in,
+    // so a driver who has not bothered gets no empty block.
+    const hwItems = [
+        driver.hardware_console ? { label: 'Console', value: driver.hardware_console } : null,
+        driver.hardware_input
+            ? { label: 'Input', value: driver.hardware_input === 'wheel' ? 'Wheel' : 'Controller' }
+            : null,
+        (driver.hardware_input === 'wheel' && driver.hardware_wheel)
+            ? { label: 'Wheel', value: driver.hardware_wheel, wide: true } : null,
+    ].filter(Boolean);
+    const hardwareHTML = hwItems.length ? `
+        <div class="section">
+            <div class="section-title">Hardware</div>
+            <div class="hw-grid">
+                ${hwItems.map(i => `
+                <div class="hw-item${i.wide ? ' hw-item-wide' : ''}">
+                    <div class="hw-label">${esc(i.label)}</div>
+                    <div class="hw-value">${esc(i.value)}</div>
+                </div>`).join('')}
+            </div>
+        </div>` : '';
+
     const seasonCardsHTML = seasonCards.length ? `
         <div class="section">
             <div class="section-title">My Collection</div>
@@ -2252,6 +2281,8 @@ async function showProfile() {
             ${badgeCabinetHTML}
 
             ${driver.bio ? `<div class="section"><div class="section-title">Bio</div><div class="bio-text">${esc(driver.bio)}</div></div>` : ''}
+
+            ${hardwareHTML}
 
             ${seasonCardsHTML}
             ${seasonsHTML}
