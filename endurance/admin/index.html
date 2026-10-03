@@ -2142,6 +2142,7 @@ async function renderDrivers() {
             <div class="table-toolbar">
                 <input class="table-search" type="search" placeholder="Search drivers…" oninput="filterTable(this,'drivers-table')">
                 ${exportBtn("exportTableCsv('drivers-table','drivers')")}
+                ${exportBtn("exportHardwareCsv()", 'Hardware CSV')}
             </div>
             <table id="drivers-table"><thead><tr>
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">Name</th>
@@ -9825,6 +9826,39 @@ function exportResultsCsv(eventName) {
 // standings page reads and applies the same finishing order (points,
 // then wins, then podiums), so the CSV matches the live table. kind is
 // 'driver' or 'team'.
+// What the grid races on. Reads the hardware columns straight from the
+// drivers table rather than the rendered list, which does not carry them.
+// Every driver is included, blanks and all, because "who has not told us
+// yet" is half the reason to pull this.
+async function exportHardwareCsv() {
+    const { data, error } = await sb.from('drivers')
+        .select('display_name, career_number, psn_id, hardware_console, hardware_input, hardware_wheel, teams!current_team_id(name)')
+        .order('display_name');
+    if (error) { toast(error.message, 'error'); return; }
+
+    const drivers = data || [];
+    const headers = ['Driver', 'Car #', 'PSN ID', 'Team', 'Console', 'Input', 'Wheel'];
+    const rows = drivers.map(d => [
+        d.display_name || '',
+        d.career_number ?? '',
+        d.psn_id || '',
+        d.teams?.name || 'Solo',
+        d.hardware_console || '',
+        d.hardware_input === 'wheel' ? 'Wheel' : d.hardware_input === 'controller' ? 'Controller' : '',
+        // A wheel name only counts alongside a wheel, matching the profile.
+        (d.hardware_input === 'wheel' && d.hardware_wheel) ? d.hardware_wheel : '',
+    ]);
+    downloadCsv('driver-hardware', headers, rows);
+
+    // The headline number, since it is usually why this gets pulled.
+    const stated = drivers.filter(d => d.hardware_input).length;
+    if (stated) {
+        const wheels = drivers.filter(d => d.hardware_input === 'wheel').length;
+        toast(`${wheels} of ${stated} who have said are on a wheel `
+            + `(${Math.round((wheels / stated) * 100)}%). ${drivers.length - stated} not stated.`, 'success');
+    }
+}
+
 async function exportStandingsCsv(kind) {
     const { data: season } = await sb.from('seasons').select('id, name').eq('is_active', true).maybeSingle();
     if (!season) { toast('No active season is set.', 'error'); return; }
