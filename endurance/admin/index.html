@@ -5306,6 +5306,21 @@ async function openPenaltyModal(eventId, eventName, penalty) {
         .eq('event_id', eventId)
         .order('car_number');
 
+    // A grid penalty is usually served at a later round, so offer every
+    // round in this season from the current one onward.
+    const { data: thisEvent } = await sb.from('events')
+        .select('season_id, round').eq('id', eventId).maybeSingle();
+    const { data: seasonEvents } = thisEvent?.season_id
+        ? await sb.from('events').select('id, name, round')
+            .eq('season_id', thisEvent.season_id)
+            .gte('round', thisEvent.round ?? 0).order('round')
+        : { data: [] };
+    const selServe = penalty?.serve_event_id || eventId;
+    const serveOpts = (seasonEvents || []).map(e =>
+        `<option value="${esc(e.id)}" ${e.id === selServe ? 'selected' : ''}>`
+        + `${e.round != null ? 'R' + e.round + ' — ' : ''}${esc(e.name)}`
+        + `${e.id === eventId ? ' (this round)' : ''}</option>`).join('');
+
     const selEntry = penalty?.entry_id || '';
     const entryOpts = (entries || []).map(en => {
         const driverNames = (en.entry_drivers || []).map(ed => ed.drivers?.display_name).filter(Boolean).join(' / ');
@@ -5315,6 +5330,7 @@ async function openPenaltyModal(eventId, eventName, penalty) {
 
     const penaltyTypes = [
         { value: 'time_add',         label: 'Time Added' },
+        { value: 'grid_drop',        label: 'Grid Penalty' },
         { value: 'points_deduction', label: 'Points Deduction' },
         { value: 'points_bonus',     label: 'Points Bonus' },
         { value: 'dsq',              label: 'DSQ' },
@@ -5356,6 +5372,27 @@ async function openPenaltyModal(eventId, eventName, penalty) {
                 <input type="number" name="points_amount" id="pen-amount" min="1" max="999" placeholder="e.g. 5" value="${penalty?.points_amount != null ? penalty.points_amount : ''}">
                 <div class="form-hint" id="pen-amount-hint">Subtracted from the driver's season points (and the team's, if the entry has a team).</div>
             </div>
+            <div class="form-row" id="pen-grid-row" style="display:none">
+                <div class="form-group">
+                    <label>Grid Penalty <span class="required">*</span></label>
+                    <select id="pen-grid-kind" onchange="onGridKindChange()">
+                        <option value="Start last">Start from the back of the grid</option>
+                        <option value="places">Drop a number of places</option>
+                    </select>
+                </div>
+                <div class="form-group" id="pen-grid-places-group" style="display:none">
+                    <label>Places <span class="required">*</span></label>
+                    <input type="number" id="pen-grid-places" min="1" max="40" placeholder="e.g. 5">
+                </div>
+            </div>
+            <div class="form-group" id="pen-serve-row" style="display:none">
+                <label>Served at <span class="required">*</span></label>
+                <select id="pen-serve-event">${serveOpts}</select>
+                <div class="form-hint">The round the driver actually takes the drop. That split's host is told in their hosting instructions, and the driver is told in their split assignment.</div>
+            </div>
+            <div id="pen-grid-note" style="display:none;padding:0.6rem 0.85rem;background:rgba(255,209,102,0.08);border:1px solid rgba(255,209,102,0.25);border-radius:6px;font-size:0.82rem;color:var(--gold);margin-bottom:0.85rem">
+                Pick the driver above — a grid penalty applies to one driver, not a whole entry.
+            </div>
             <div id="pen-dsq-note" style="display:none;padding:0.6rem 0.85rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:6px;font-size:0.82rem;color:#fca5a5;margin-bottom:0.85rem">
                 DSQ auto-zeroes the driver's points for this round and marks their result as DSQ — no value needed.
             </div>
@@ -5375,6 +5412,11 @@ async function openPenaltyModal(eventId, eventName, penalty) {
     // editing an existing penalty, populate its entry's drivers and reselect
     // the one it was recorded against.
     const typeSel = document.getElementById('pen-type');
+    if (penalty?.penalty_type === 'grid_drop') {
+        const m = /^Drop (\d+) place/.exec(penalty.penalty_value || '');
+        document.getElementById('pen-grid-kind').value = m ? 'places' : 'Start last';
+        if (m) document.getElementById('pen-grid-places').value = m[1];
+    }
     if (typeSel) onPenaltyTypeChange(typeSel);
     if (editing && selEntry) {
         loadEntryDriversForPenalty(document.getElementById('pen-entry'));
@@ -5447,14 +5489,40 @@ function onResultStatusChange(sel) {
     });
 }
 
+// "Drop a number of places" needs a number; "start last" does not.
+function onGridKindChange() {
+    const kind = document.getElementById('pen-grid-kind');
+    const grp  = document.getElementById('pen-grid-places-group');
+    if (grp) grp.style.display = kind && kind.value === 'places' ? '' : 'none';
+}
+
+// Turns the two grid controls into the text that goes in the host's
+// instructions and the driver's message, so the wording is consistent.
+function gridPenaltyValue() {
+    const kind = document.getElementById('pen-grid-kind');
+    if (!kind) return null;
+    if (kind.value !== 'places') return 'Start last';
+    const n = parseInt(document.getElementById('pen-grid-places').value, 10);
+    if (!n || n < 1) return null;
+    return `Drop ${n} place${n === 1 ? '' : 's'}`;
+}
+
 function onPenaltyTypeChange(sel) {
     const amountRow = document.getElementById('pen-amount-row');
     const valueRow  = document.getElementById('pen-value-row');
     const dsqNote   = document.getElementById('pen-dsq-note');
     const isBonus   = sel.value === 'points_bonus';
     const isAmount  = sel.value === 'points_deduction' || isBonus;
+    const isGrid    = sel.value === 'grid_drop';
+    const gridRow   = document.getElementById('pen-grid-row');
+    const serveRow  = document.getElementById('pen-serve-row');
+    const gridNote  = document.getElementById('pen-grid-note');
+    if (gridRow)  gridRow.style.display  = isGrid ? '' : 'none';
+    if (serveRow) serveRow.style.display = isGrid ? '' : 'none';
+    if (gridNote) gridNote.style.display = isGrid ? '' : 'none';
+    if (isGrid) onGridKindChange();
     if (amountRow) amountRow.style.display = isAmount ? '' : 'none';
-    if (valueRow)  valueRow.style.display  = (sel.value === 'dsq' || isAmount) ? 'none' : '';
+    if (valueRow)  valueRow.style.display  = (sel.value === 'dsq' || isAmount || isGrid) ? 'none' : '';
     if (dsqNote)   dsqNote.style.display   = sel.value === 'dsq' ? '' : 'none';
     // The shared amount row reads as "award" for a bonus, "deduct" otherwise.
     const lbl = document.getElementById('pen-amount-label');
@@ -5469,6 +5537,17 @@ async function savePenalty(eventId, eventName) {
     const d = getFormData('entity-form');
     if (!d.entry_id || !d.penalty_type || !d.reason) {
         toast('Entry, type and reason are required.', 'error'); return;
+    }
+    const isGrid = d.penalty_type === 'grid_drop';
+    let gridValue = null, serveEventId = null;
+    if (isGrid) {
+        if (!d.driver_id) {
+            toast('Pick the driver — a grid penalty applies to one driver, not a whole entry.', 'error'); return;
+        }
+        gridValue = gridPenaltyValue();
+        if (!gridValue) { toast('Enter how many places to drop.', 'error'); return; }
+        serveEventId = document.getElementById('pen-serve-event')?.value || null;
+        if (!serveEventId) { toast('Pick the round the penalty is served at.', 'error'); return; }
     }
     const isAmount = d.penalty_type === 'points_deduction' || d.penalty_type === 'points_bonus';
     const isBonus  = d.penalty_type === 'points_bonus';
@@ -5485,8 +5564,9 @@ async function savePenalty(eventId, eventName) {
         entry_id: d.entry_id,
         driver_id: d.driver_id || null,
         penalty_type: d.penalty_type,
-        penalty_value: d.penalty_value || (pointsAmount ? `${isBonus ? '+' : '-'}${pointsAmount} pts` : null),
+        penalty_value: gridValue || d.penalty_value || (pointsAmount ? `${isBonus ? '+' : '-'}${pointsAmount} pts` : null),
         points_amount: pointsAmount,
+        serve_event_id: serveEventId,
         reason: d.reason,
         issued_by: currentUser.id,
     });
@@ -5500,6 +5580,17 @@ async function updatePenalty(id, eventId, eventName) {
     const d = getFormData('entity-form');
     if (!d.entry_id || !d.penalty_type || !d.reason) {
         toast('Entry, type and reason are required.', 'error'); return;
+    }
+    const isGrid = d.penalty_type === 'grid_drop';
+    let gridValue = null, serveEventId = null;
+    if (isGrid) {
+        if (!d.driver_id) {
+            toast('Pick the driver — a grid penalty applies to one driver, not a whole entry.', 'error'); return;
+        }
+        gridValue = gridPenaltyValue();
+        if (!gridValue) { toast('Enter how many places to drop.', 'error'); return; }
+        serveEventId = document.getElementById('pen-serve-event')?.value || null;
+        if (!serveEventId) { toast('Pick the round the penalty is served at.', 'error'); return; }
     }
     const isAmount = d.penalty_type === 'points_deduction' || d.penalty_type === 'points_bonus';
     const isBonus  = d.penalty_type === 'points_bonus';
@@ -5515,8 +5606,9 @@ async function updatePenalty(id, eventId, eventName) {
         entry_id: d.entry_id,
         driver_id: d.driver_id || null,
         penalty_type: d.penalty_type,
-        penalty_value: d.penalty_value || (pointsAmount ? `${isBonus ? '+' : '-'}${pointsAmount} pts` : null),
+        penalty_value: gridValue || d.penalty_value || (pointsAmount ? `${isBonus ? '+' : '-'}${pointsAmount} pts` : null),
         points_amount: pointsAmount,
+        serve_event_id: serveEventId,
         reason: d.reason,
     }).eq('id', id);
     if (error) { toast(error.message, 'error'); return; }
