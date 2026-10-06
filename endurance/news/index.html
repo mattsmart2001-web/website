@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News &amp; Race Reports | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="News, race reports and announcements from GTEC, the Gran Turismo 7 endurance championship. Round-by-round reports, championship analysis and series updates.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/news/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Open Graph / Twitter card -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC News">
+    <meta property="og:description" content="News, reports and announcements from the GTEC endurance championship.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/news/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC News">
+    <meta name="twitter:description" content="News, reports and announcements from the GTEC endurance championship.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .gtec-nav {
+            position: sticky; top: 0; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.25rem 2rem;
+            background: rgba(5,6,8,0.85); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; transition: color 0.2s, border-color 0.2s; }
+        .gtec-nav .back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Page */
+        .page-wrap { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem 5rem; }
+        .page-hero { margin-bottom: 2.5rem; }
+        .eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; text-indent: 0.45em; }
+        .page-title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: 0.04em; text-transform: uppercase; }
+
+        /* Listing grid */
+        .news-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+        .news-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color 0.2s, transform 0.15s; text-decoration: none; color: var(--text); display: flex; flex-direction: column; }
+        .news-card:hover { border-color: rgba(255,209,102,0.3); transform: translateY(-2px); }
+        .news-card-img { aspect-ratio: 16/9; overflow: hidden; background: var(--bg-2); }
+        .news-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
+        .news-card:hover .news-card-img img { transform: scale(1.04); }
+        .news-card-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-family: 'Anton', sans-serif; font-size: 1.8rem; letter-spacing: 0.3em; color: rgba(255,255,255,0.07); }
+        .news-card-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; }
+        .news-tag { display: inline-block; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.18rem 0.55rem; border-radius: 3px; margin-bottom: 0.55rem; }
+        .news-card-title { font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.25; margin-bottom: 0.5rem; }
+        .news-card-excerpt { color: var(--muted); font-size: 0.84rem; line-height: 1.55; flex: 1; margin-bottom: 0.85rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .news-card-meta { font-size: 0.73rem; color: var(--muted); display: flex; gap: 0.6rem; flex-wrap: wrap; }
+        .news-card-meta .by { color: var(--gold); }
+
+        /* Article */
+        .article-back { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.82rem; text-decoration: none; margin-bottom: 2rem; transition: color 0.15s; }
+        .article-back:hover { color: var(--text); }
+        .article-cover { width: 100%; aspect-ratio: 21/9; object-fit: cover; border-radius: 12px; margin-bottom: 2.5rem; display: block; }
+        .article-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.65rem; }
+        .article-title { font-family: 'Anton', sans-serif; font-size: clamp(1.8rem, 5vw, 3rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.1; margin-bottom: 0.75rem; }
+        .article-meta { color: var(--muted); font-size: 0.82rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+        .article-meta strong { color: var(--text); }
+        .article-body { max-width: 720px; line-height: 1.8; font-size: 0.95rem; }
+        .article-body h2 { font-family: 'Anton', sans-serif; font-size: 1.4rem; letter-spacing: 0.04em; text-transform: uppercase; margin: 2rem 0 0.75rem; }
+        .article-body h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .article-body p { margin-bottom: 1rem; }
+        .article-body ul, .article-body ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        .article-body li { margin-bottom: 0.4rem; }
+        .article-body a { color: var(--gold); text-underline-offset: 3px; }
+        .article-body img { max-width: 100%; border-radius: 8px; margin: 1rem 0; display: block; }
+        .article-body blockquote { border-left: 3px solid var(--gold); padding: 0.5rem 1rem; color: var(--muted); font-style: italic; margin: 1.5rem 0; }
+        .article-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.88rem; }
+        .article-body th { background: var(--bg-2); color: var(--muted); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+        .article-body td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
+
+        /* Race report newsroom styling */
+        .article-body.race-report .dateline {
+            font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700;
+            letter-spacing: 0.35em; text-transform: uppercase; color: var(--gold);
+            padding-bottom: 1rem; margin-bottom: 1.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .article-body.race-report > p.lede {
+            font-size: 1.18rem; line-height: 1.7; color: #e2e8f0;
+            margin-bottom: 1.75rem;
+        }
+        .article-body.race-report .dropcap {
+            font-family: 'Anton', sans-serif; font-size: 4.2em; line-height: 0.85;
+            float: left; margin: 0.08em 0.5rem 0 0; color: var(--gold);
+            text-transform: uppercase; font-weight: 400;
+        }
+        .article-body.race-report .stat-card {
+            background: linear-gradient(135deg, rgba(255,209,102,0.07), rgba(255,209,102,0.02));
+            border: 1px solid rgba(255,209,102,0.18); border-left: 3px solid var(--gold);
+            border-radius: 8px; padding: 1.1rem 1.25rem; margin: 1.75rem 0;
+        }
+        .article-body.race-report .stat-card-label {
+            font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700;
+            letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold);
+            margin-bottom: 0.45rem;
+        }
+        .article-body.race-report .stat-card-value {
+            font-family: 'Anton', sans-serif; font-size: 1.55rem;
+            letter-spacing: 0.04em; text-transform: uppercase;
+            line-height: 1.1; margin-bottom: 0.45rem;
+        }
+        .article-body.race-report .stat-card-detail {
+            color: var(--muted); font-size: 0.84rem; line-height: 1.55;
+        }
+        .article-body.race-report .kicker {
+            font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700;
+            letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold);
+            margin-top: 2.5rem; margin-bottom: 0.3rem;
+        }
+        .article-body.race-report .kicker + h2 { margin-top: 0.15rem; }
+        .article-body.race-report blockquote.pull-quote {
+            font-family: 'Anton', sans-serif; font-size: 1.45rem;
+            letter-spacing: 0.02em; text-transform: none; color: var(--text);
+            font-style: normal; border-left: 3px solid var(--gold);
+            padding: 0.35rem 1.25rem; margin: 1.85rem 0;
+            line-height: 1.3;
+        }
+        .article-body.race-report .closer {
+            margin-top: 2.5rem; padding-top: 1.5rem;
+            border-top: 1px solid var(--border); color: var(--muted);
+        }
+
+        /* States */
+        .state-msg { text-align: center; padding: 5rem 2rem; }
+        .state-msg h3 { font-family: 'Anton', sans-serif; font-size: 1.3rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .state-msg p { color: var(--muted); font-size: 0.88rem; }
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+
+        @media (max-width: 900px) { .news-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 580px) {
+            .gtec-nav { padding: 1rem; }
+            .page-wrap { padding: 1.5rem 1rem 3rem; }
+            .news-grid { grid-template-columns: 1fr; }
+            .article-cover { aspect-ratio: 16/9; }
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/" class="active">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div id="app"><div class="loading">Loading…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data.session) { if (portal) portal.style.display = ''; }
+    else              { if (signin) signin.style.display = ''; }
+});
+const app = document.getElementById('app');
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+}
+
+const slug = new URLSearchParams(location.search).get('slug');
+slug ? loadArticle(slug) : loadListing();
+
+async function loadListing() {
+    const { data, error } = await sb.from('news')
+        .select('title, slug, excerpt, cover_url, author, published_at, tags')
+        .eq('is_published', true)
+        .order('published_at', { ascending: false });
+
+    if (error) {
+        app.innerHTML = `<div class="state-msg"><h3>Error</h3><p>${esc(error.message)}</p></div>`;
+        return;
+    }
+
+    if (!data?.length) {
+        app.innerHTML = `
+        <div class="page-wrap">
+            <div class="page-hero"><div class="eyebrow">Latest</div><div class="page-title">News</div></div>
+            <div class="state-msg"><h3>No Articles Yet</h3><p>Race reports and championship news will appear here.</p></div>
+        </div>`;
+        return;
+    }
+
+    const tagMeta = {
+        'race-report':   { label: 'Race Report',    bg: 'rgba(233,78,123,0.18)', color: '#e94e7b' },
+        'pre-season':    { label: 'Pre-Season',     bg: 'rgba(14,165,233,0.18)', color: '#0ea5e9' },
+        'announcement':  { label: 'Announcement',   bg: 'rgba(255,209,102,0.18)', color: '#ffd166' },
+        'season-review': { label: 'Season Review',  bg: 'rgba(34,197,94,0.18)',  color: '#22c55e' },
+        'news':          { label: 'News',            bg: 'rgba(148,163,184,0.18)', color: '#94a3b8' },
+    };
+    function newsTagPill(tags) {
+        if (!Array.isArray(tags)) return '';
+        for (const t of ['race-report','season-review','pre-season','announcement','news']) {
+            if (tags.includes(t)) {
+                const m = tagMeta[t];
+                return `<span class="news-tag" style="background:${m.bg};color:${m.color}">${m.label}</span>`;
+            }
+        }
+        return '';
+    }
+
+    const cards = data.map(n => `
+        <a class="news-card" href="/endurance/news/?slug=${encodeURIComponent(n.slug)}">
+            <div class="news-card-img">
+                <img src="${esc(n.cover_url || '/endurance/assets/og-card.png')}" alt="${esc(n.title)}" loading="lazy" onerror="this.onerror=null;this.src='/endurance/assets/og-card.png'">
+            </div>
+            <div class="news-card-body">
+                ${newsTagPill(n.tags)}
+                <div class="news-card-title">${esc(n.title)}</div>
+                ${n.excerpt ? `<div class="news-card-excerpt">${esc(n.excerpt)}</div>` : '<div class="news-card-excerpt"></div>'}
+                <div class="news-card-meta">
+                    ${n.author ? `<span class="by">${esc(n.author)}</span>` : ''}
+                    <span>${fmtDate(n.published_at)}</span>
+                </div>
+            </div>
+        </a>`).join('');
+
+    app.innerHTML = `
+    <div class="page-wrap">
+        <div class="page-hero"><div class="eyebrow">Latest</div><div class="page-title">News</div></div>
+        <div class="news-grid">${cards}</div>
+    </div>`;
+}
+
+async function loadArticle(slug) {
+    const { data, error } = await sb.from('news')
+        .select('*')
+        .eq('slug', slug)
+        .eq('is_published', true)
+        .maybeSingle();
+
+    if (error || !data) {
+        app.innerHTML = `<div class="state-msg"><h3>Not Found</h3><p>This article doesn't exist or hasn't been published yet.</p></div>`;
+        return;
+    }
+
+    document.title = `${data.title} | GTEC`;
+
+    const isReport = Array.isArray(data.tags) && data.tags.includes('race-report');
+    const eyebrow  = isReport ? 'Race Report' : 'News';
+    const cover    = data.cover_url || '/endurance/assets/og-card.png';
+
+    app.innerHTML = `
+    <div class="page-wrap">
+        <a class="article-back" href="/endurance/news/">← Back to News</a>
+        ${cover ? `<img class="article-cover" src="${esc(cover)}" alt="${esc(data.title)}" onerror="this.onerror=null;this.src='/endurance/assets/og-card.png'">` : ''}
+        <div class="article-eyebrow">${eyebrow}</div>
+        <h1 class="article-title">${esc(data.title)}</h1>
+        <div class="article-meta">
+            ${data.author ? `<strong>${esc(data.author)}</strong> · ` : ''}${fmtDate(data.published_at)}
+        </div>
+        <div class="article-body${isReport ? ' race-report' : ''}">${data.body || ''}</div>
+    </div>`;
+}
+</script>
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>

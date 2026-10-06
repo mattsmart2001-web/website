@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Live Driver Draw — The 2026 Gran Turismo Nordschleife 24 Hours</title>
+    <link rel="icon" type="image/jpeg" href="sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700;900&family=Orbitron:wght@500;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #060910;
+            --bg-2: #0a0e15;
+            --text: #ffffff;
+            --muted: #94a3b8;
+            --accent: #0ea5e9;
+        }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        body.transparent-bg { background: transparent; }
+        body.transparent-bg .draw-bg { display: none; }
+
+        .draw-bg {
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at top, rgba(255,154,60,0.12), transparent 60%),
+                radial-gradient(ellipse at bottom, rgba(124,58,237,0.16), transparent 60%),
+                linear-gradient(180deg, #000 0%, #0a0e15 100%);
+            z-index: -1;
+        }
+
+        .draw-page {
+            min-height: 100vh;
+            padding: 2.5rem 1.5rem 3rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .draw-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .draw-header .kicker {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(0.7rem, 1.4vw, 0.95rem);
+            letter-spacing: 0.5em;
+            text-transform: uppercase;
+            color: rgba(255,210,180,0.7);
+            text-indent: 0.5em;
+            margin-bottom: 0.5rem;
+        }
+        .draw-header h1 {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(1.6rem, 3.6vw, 2.6rem);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin: 0;
+            background: linear-gradient(180deg,
+                #fff1a8 0%, #ffd166 22%, #ff9a3c 44%,
+                #ff6b6b 66%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            line-height: 1.05;
+        }
+
+        /* 3-column stage */
+        .draw-stage {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) minmax(420px, 2fr) minmax(220px, 1fr);
+            gap: 1.5rem;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            align-items: start;
+        }
+        @media (max-width: 960px) {
+            .draw-stage {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Side panels */
+        .draw-panel {
+            background: linear-gradient(180deg, rgba(20,25,34,0.85), rgba(10,14,21,0.85));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 1rem 1rem 0.85rem;
+            max-height: 82vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .draw-panel h2 {
+            font-family: 'Anton', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.85);
+            margin: 0 0 0.85rem;
+            text-indent: 0.25em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .draw-panel.hat h2 {
+            color: var(--accent);
+        }
+        .draw-panel.selected h2 {
+            background: linear-gradient(180deg, #ff9a3c, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+        .draw-panel .pcount {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.55);
+            -webkit-text-fill-color: rgba(255,255,255,0.55);
+            background: rgba(255,255,255,0.06);
+            padding: 0.25rem 0.55rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-indent: 0;
+        }
+        .draw-panel .panel-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            overflow-y: auto;
+            min-height: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            text-align: left;
+        }
+        .draw-panel .panel-list::-webkit-scrollbar { width: 6px; }
+        .draw-panel .panel-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+        .draw-panel .panel-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
+        }
+        .panel-row {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.5rem;
+            padding: 0.35rem 0.55rem;
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            transition: background 0.15s, border-color 0.15s, opacity 0.4s, transform 0.4s;
+            text-align: left;
+        }
+        .panel-row.is-just-drawn {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+        .panel-row.is-just-arrived {
+            animation: arrive 0.6s ease-out;
+        }
+        @keyframes arrive {
+            from { opacity: 0; transform: translateY(-12px); background: rgba(14,165,233,0.2); }
+            to   { opacity: 1; transform: translateY(0);    background: rgba(255,255,255,0.025); }
+        }
+        .panel-row .seq {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.9em;
+            height: 1.4em;
+            padding: 0;
+            border-radius: 999px;
+            background: rgba(14,165,233,0.18);
+            color: var(--accent);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+        .panel-row .pmake {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.52rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        }
+        .panel-row .pmake.has-image,
+        .reel-face .fmake.has-image,
+        .reveal-row .reveal-make.has-image {
+            background: rgba(255, 255, 255, 0.5);
+            padding: 0;
+            overflow: hidden;
+        }
+        .panel-row .pmake.has-image img,
+        .reel-face .fmake.has-image img,
+        .reveal-row .reveal-make.has-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            border-radius: inherit;
+        }
+        .panel-row .pmake.is-undecided {
+            background: rgba(255,255,255,0.05);
+            border: 1px dashed rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.4);
+            font-size: 0.5rem;
+            text-shadow: none;
+        }
+        .panel-row .ppsn {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.78rem;
+            color: var(--text);
+            letter-spacing: 0.02em;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: left;
+            flex: 1;
+        }
+        .panel-empty {
+            text-align: center;
+            color: var(--muted);
+            font-style: italic;
+            padding: 1.5rem 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        /* "Starting Grid" — staggered alternating lineup for the selected
+           drivers panel, evoking a real-world grid layout. */
+        .grid-lineup {
+            position: relative;
+            margin-top: 0.55rem;
+            padding-top: 1rem;
+            border-top: 2px dashed rgba(255,255,255,0.12);
+            gap: 0.35rem;
+        }
+        .grid-lineup::before {
+            content: "START";
+            position: absolute;
+            top: -0.55rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, rgba(20,25,34,1) 0%, rgba(15,19,27,1) 100%);
+            padding: 0 0.5rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 800;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: var(--accent);
+            text-indent: 0.32em;
+        }
+        .grid-lineup > .panel-row {
+            width: 82%;
+            margin-bottom: 0.15rem;
+            /* Each entry styled as a real-world starting-grid box: dark
+               asphalt fill, white painted outline, with the three horizontal
+               start-line markings drawn at the top via ::before. */
+            background: linear-gradient(180deg, #262626 0%, #181818 100%);
+            border: 1.5px solid rgba(255, 255, 255, 0.38);
+            border-radius: 3px;
+            padding: 0.95rem 0.7rem 0.45rem;
+            position: relative;
+        }
+        .grid-lineup > .panel-row::before {
+            content: "";
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            right: 10px;
+            height: 9px;
+            pointer-events: none;
+            background:
+                linear-gradient(180deg,
+                    rgba(255, 255, 255, 0.6) 0,
+                    rgba(255, 255, 255, 0.6) 1px,
+                    transparent 1px,
+                    transparent 4px,
+                    rgba(255, 255, 255, 0.6) 4px,
+                    rgba(255, 255, 255, 0.6) 5px,
+                    transparent 5px,
+                    transparent 8px,
+                    rgba(255, 255, 255, 0.6) 8px,
+                    rgba(255, 255, 255, 0.6) 9px);
+        }
+        .grid-lineup > .panel-row:hover {
+            background: linear-gradient(180deg, #2c2c2c 0%, #1d1d1d 100%);
+            border-color: rgba(255, 255, 255, 0.55);
+            transform: none; /* don't lift like the regular panel rows */
+        }
+        .grid-lineup > .panel-row:nth-child(odd)  { align-self: flex-start; }
+        .grid-lineup > .panel-row:nth-child(even) { align-self: flex-end; }
+        .grid-lineup > .panel-row .seq {
+            background: linear-gradient(135deg, #ff9a3c 0%, #7c3aed 100%);
+            color: #fff;
+        }
+        /* Pole position — gold paint flourish */
+        .grid-lineup > .panel-row:first-child {
+            border-color: rgba(255, 209, 102, 0.75);
+            box-shadow: 0 0 14px rgba(255, 209, 102, 0.28);
+        }
+        .grid-lineup > .panel-row:first-child::before {
+            background:
+                linear-gradient(180deg,
+                    rgba(255, 209, 102, 0.85) 0,
+                    rgba(255, 209, 102, 0.85) 1px,
+                    transparent 1px,
+                    transparent 4px,
+                    rgba(255, 209, 102, 0.85) 4px,
+                    rgba(255, 209, 102, 0.85) 5px,
+                    transparent 5px,
+                    transparent 8px,
+                    rgba(255, 209, 102, 0.85) 8px,
+                    rgba(255, 209, 102, 0.85) 9px);
+        }
+        .grid-lineup > .panel-row:first-child .seq {
+            background: linear-gradient(135deg, #ffd166 0%, #ff9a3c 100%);
+            color: #0a0e15;
+            box-shadow: 0 0 12px rgba(255, 209, 102, 0.45);
+        }
+        /* Host row (P16) — cyan paint flourish */
+        .grid-lineup > .panel-row.is-host {
+            border-color: rgba(14, 165, 233, 0.7);
+            box-shadow: 0 0 14px rgba(14, 165, 233, 0.28);
+        }
+        .grid-lineup > .panel-row.is-host::before {
+            background:
+                linear-gradient(180deg,
+                    rgba(14, 165, 233, 0.85) 0,
+                    rgba(14, 165, 233, 0.85) 1px,
+                    transparent 1px,
+                    transparent 4px,
+                    rgba(14, 165, 233, 0.85) 4px,
+                    rgba(14, 165, 233, 0.85) 5px,
+                    transparent 5px,
+                    transparent 8px,
+                    rgba(14, 165, 233, 0.85) 8px,
+                    rgba(14, 165, 233, 0.85) 9px);
+        }
+        .grid-lineup > .panel-row.is-host .seq {
+            background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+            color: #fff;
+            box-shadow: 0 0 12px rgba(14, 165, 233, 0.45);
+        }
+        .host-tag {
+            margin-left: auto;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem;
+            font-weight: 800;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--accent);
+            background: rgba(14, 165, 233, 0.18);
+            border: 1px solid rgba(14, 165, 233, 0.4);
+            padding: 0.18em 0.55em;
+            border-radius: 999px;
+            flex-shrink: 0;
+        }
+
+        /* Reserves — appears after the 15-driver grid is filled */
+        .reserves-section {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 2px dashed rgba(255, 255, 255, 0.12);
+            position: relative;
+        }
+        .reserves-section::before {
+            content: "Standby";
+            position: absolute;
+            top: -0.55rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, rgba(20,25,34,1) 0%, rgba(15,19,27,1) 100%);
+            padding: 0 0.5rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 800;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.5);
+            text-indent: 0.32em;
+        }
+        .reserves-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.65rem;
+            font-family: 'Anton', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-indent: 0.22em;
+        }
+        .reserves-header .pcount {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: rgba(255, 255, 255, 0.55);
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.25rem 0.55rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-indent: 0;
+        }
+        .reserves-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .reserves-list .panel-row .seq {
+            width: 2.4em;
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Reel area */
+        .reel-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .reel-stage {
+            width: 100%;
+            max-width: 540px;
+            aspect-ratio: 3 / 2;
+            perspective: 1600px;
+            perspective-origin: 50% 50%;
+            position: relative;
+        }
+        .reel-window {
+            position: absolute;
+            inset: 0;
+            border-radius: 22px;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 50%, rgba(255,255,255,0.04) 100%),
+                linear-gradient(180deg, #11161f, #0a0e15);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow:
+                0 30px 60px -30px rgba(0,0,0,0.6),
+                inset 0 0 0 1px rgba(14,165,233,0.08);
+            overflow: hidden;
+            transform-style: preserve-3d;
+        }
+        .reel-window::before,
+        .reel-window::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 30%;
+            pointer-events: none;
+            z-index: 3;
+        }
+        .reel-window::before {
+            top: 0;
+            background: linear-gradient(180deg,
+                rgba(10,14,21,0.85) 0%,
+                rgba(10,14,21,0.5) 60%,
+                transparent 100%);
+        }
+        .reel-window::after {
+            bottom: 0;
+            background: linear-gradient(0deg,
+                rgba(10,14,21,0.85) 0%,
+                rgba(10,14,21,0.5) 60%,
+                transparent 100%);
+        }
+        .reel-cylinder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform-style: preserve-3d;
+            transform: translate(-50%, -50%) rotateX(0deg);
+        }
+        .reel-face {
+            position: absolute;
+            width: 460px;
+            height: 90px;
+            left: -230px;
+            top: -45px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.85rem;
+            padding: 0 1.25rem;
+            border-radius: 12px;
+            backface-visibility: hidden;
+            background: linear-gradient(180deg, rgba(20,25,34,0.7), rgba(10,14,21,0.4));
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .reel-face .fmake {
+            flex-shrink: 0;
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        }
+        .reel-face .fmake.is-undecided {
+            background: rgba(255,255,255,0.05);
+            border: 1px dashed rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.4);
+            font-size: 0.6rem;
+            text-shadow: none;
+        }
+        .reel-face .finfo {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            min-width: 0;
+            text-align: left;
+        }
+        .reel-face .fpsn {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.6rem;
+            color: var(--text);
+            letter-spacing: 0.03em;
+            line-height: 1;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 320px;
+        }
+        .reel-face .fcar {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.55);
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 340px;
+        }
+        @media (max-width: 540px) {
+            .reel-face { width: 360px; left: -180px; }
+            .reel-face .fpsn { font-size: 1.3rem; max-width: 240px; }
+            .reel-face .fcar { max-width: 260px; }
+        }
+
+        /* Centre marker */
+        .reel-marker {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 96px;
+            pointer-events: none;
+            border-top: 2px solid rgba(255,154,60,0.55);
+            border-bottom: 2px solid rgba(124,58,237,0.55);
+            box-shadow:
+                0 0 30px rgba(255,154,60,0.25),
+                inset 0 0 40px rgba(124,58,237,0.18);
+            z-index: 4;
+        }
+
+        /* Stage curtains — closed by default, slide off when spinning */
+        .reel-curtain {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 51%;
+            z-index: 5;
+            pointer-events: none;
+            transition: transform 0.55s cubic-bezier(0.7, 0, 0.3, 1);
+            background:
+                repeating-linear-gradient(90deg,
+                    rgba(255,255,255,0.025) 0,
+                    rgba(255,255,255,0.025) 1px,
+                    transparent 1px,
+                    transparent 8px),
+                linear-gradient(180deg, #0a0e15 0%, #060910 100%);
+        }
+        .reel-curtain.left {
+            left: 0;
+            border-right: 1px solid rgba(255,154,60,0.55);
+            box-shadow:
+                inset -10px 0 30px rgba(255,154,60,0.2),
+                4px 0 14px rgba(0,0,0,0.45);
+        }
+        .reel-curtain.right {
+            right: 0;
+            border-left: 1px solid rgba(124,58,237,0.55);
+            box-shadow:
+                inset 10px 0 30px rgba(124,58,237,0.2),
+                -4px 0 14px rgba(0,0,0,0.45);
+        }
+        .reel-stage.curtains-open .reel-curtain.left  { transform: translateX(-100%); }
+        .reel-stage.curtains-open .reel-curtain.right { transform: translateX(100%); }
+        /* Subtle pulse on closed-state inner edge — "ready" indicator */
+        .reel-stage:not(.curtains-open) .reel-curtain.left  { animation: curtainGlowLeft 2.6s ease-in-out infinite; }
+        .reel-stage:not(.curtains-open) .reel-curtain.right { animation: curtainGlowRight 2.6s ease-in-out infinite; }
+        @keyframes curtainGlowLeft {
+            0%, 100% { box-shadow: inset -10px 0 30px rgba(255,154,60,0.2),  4px 0 14px rgba(0,0,0,0.45); }
+            50%      { box-shadow: inset -10px 0 40px rgba(255,154,60,0.38), 4px 0 14px rgba(0,0,0,0.45); }
+        }
+        @keyframes curtainGlowRight {
+            0%, 100% { box-shadow: inset  10px 0 30px rgba(124,58,237,0.2), -4px 0 14px rgba(0,0,0,0.45); }
+            50%      { box-shadow: inset  10px 0 40px rgba(124,58,237,0.38), -4px 0 14px rgba(0,0,0,0.45); }
+        }
+        .reel-stage.is-winning .reel-marker {
+            border-top-color: #38bdf8;
+            border-bottom-color: #38bdf8;
+            box-shadow:
+                0 0 40px rgba(14,165,233,0.6),
+                inset 0 0 50px rgba(14,165,233,0.3);
+            animation: winnerPulse 1.6s ease-in-out infinite;
+        }
+        @keyframes winnerPulse {
+            0%, 100% { box-shadow: 0 0 40px rgba(14,165,233,0.6), inset 0 0 50px rgba(14,165,233,0.3); }
+            50%      { box-shadow: 0 0 70px rgba(14,165,233,0.9), inset 0 0 60px rgba(14,165,233,0.5); }
+        }
+
+        /* Winner banner */
+        .winner-banner {
+            text-align: center;
+            min-height: 4.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.4s, transform 0.4s;
+        }
+        .winner-banner.is-shown {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .winner-banner .winner-label {
+            font-family: 'Anton', sans-serif;
+            font-size: 0.85rem;
+            letter-spacing: 0.5em;
+            text-transform: uppercase;
+            color: var(--accent);
+            text-indent: 0.5em;
+            margin-bottom: 0.4rem;
+        }
+        .winner-banner .winner-name {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2rem, 4.5vw, 3.4rem);
+            line-height: 1;
+            background: linear-gradient(180deg,
+                #fff1a8 0%, #ffd166 22%, #ff9a3c 44%,
+                #ff6b6b 66%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* Controls */
+        .draw-controls {
+            margin-top: 0.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 0.85rem;
+            width: 100%;
+        }
+        .spin-btn {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.6rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            padding: 1.05rem 3rem 1rem;
+            background: linear-gradient(135deg, #ff9a3c 0%, #ff6b6b 50%, #7c3aed 100%);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            box-shadow:
+                0 10px 30px -10px rgba(255,107,107,0.55),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            transition: transform 0.15s, filter 0.15s, box-shadow 0.15s;
+            text-indent: 0.25em;
+        }
+        .spin-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        .spin-btn:active { transform: translateY(0); }
+        .spin-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.5);
+        }
+        .ghost-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            padding: 0.75rem 1.2rem;
+            background: rgba(255,255,255,0.05);
+            color: var(--text);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .ghost-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.25);
+        }
+        .draw-checkbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--muted);
+            cursor: pointer;
+            user-select: none;
+        }
+        .draw-checkbox input { accent-color: var(--accent); }
+
+        /* Footer hint */
+        .footer-hint {
+            margin: 2rem auto 0;
+            text-align: center;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.35);
+            line-height: 1.6;
+            max-width: 720px;
+        }
+        .footer-hint kbd {
+            display: inline-block;
+            padding: 0.1em 0.4em;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78em;
+        }
+
+        /* OBS overlay mode */
+        body.obs-mode .draw-header,
+        body.obs-mode .draw-controls,
+        body.obs-mode .footer-hint {
+            display: none;
+        }
+        body.obs-mode .draw-page { padding: 0.5rem; }
+
+        /* Reveal Grid button — appears once the 15-driver grid is filled */
+        .reveal-btn {
+            background: linear-gradient(135deg, rgba(255,154,60,0.18), rgba(124,58,237,0.18));
+            border-color: rgba(255,154,60,0.5);
+            color: #ffd166;
+        }
+        .reveal-btn:hover {
+            background: linear-gradient(135deg, rgba(255,154,60,0.35), rgba(124,58,237,0.35));
+            border-color: rgba(255,209,102,0.7);
+        }
+
+        /* ===== Fullscreen Grid Reveal ===== */
+        .grid-reveal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .grid-reveal[hidden] { display: none; }
+        .reveal-bg {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at top, rgba(255,154,60,0.18), transparent 60%),
+                radial-gradient(ellipse at bottom, rgba(124,58,237,0.22), transparent 60%),
+                linear-gradient(180deg, #000 0%, #060910 50%, #0a0e15 100%);
+            z-index: -1;
+        }
+        .reveal-stage {
+            text-align: center;
+            width: 100%;
+            max-width: 1320px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5rem;
+        }
+        .reveal-row-label {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(2.5rem, 7vw, 6rem);
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            line-height: 1;
+            background: linear-gradient(180deg,
+                #fff1a8 0%, #ffd166 22%, #ff9a3c 44%,
+                #ff6b6b 66%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            opacity: 0;
+            transform: translateY(-30px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+            text-indent: 0.16em;
+        }
+        .reveal-stage.is-shown .reveal-row-label {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-drivers {
+            display: flex;
+            justify-content: center;
+            gap: 1.75rem;
+            flex-wrap: wrap;
+            min-height: 260px;
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.7s 0.25s ease-out, transform 0.7s 0.25s ease-out;
+        }
+        .reveal-stage.is-shown .reveal-drivers {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-meta {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.45);
+            text-indent: 0.35em;
+            opacity: 0;
+            transition: opacity 0.7s 0.5s ease-out;
+        }
+        .reveal-stage.is-shown .reveal-meta { opacity: 1; }
+
+        /* Per-driver reveal cards (track-grid box style, scaled up) */
+        .reveal-driver-card {
+            width: clamp(280px, 30vw, 420px);
+            padding: 2.6rem 1.6rem 1.6rem;
+            background: linear-gradient(180deg, #262626 0%, #161616 100%);
+            border: 2px solid rgba(255,255,255,0.4);
+            border-radius: 6px;
+            text-align: center;
+            position: relative;
+        }
+        .reveal-driver-card::before {
+            content: "";
+            position: absolute;
+            top: 12px;
+            left: 18px;
+            right: 18px;
+            height: 16px;
+            pointer-events: none;
+            background:
+                linear-gradient(180deg,
+                    rgba(255,255,255,0.65) 0,
+                    rgba(255,255,255,0.65) 2px,
+                    transparent 2px,
+                    transparent 7px,
+                    rgba(255,255,255,0.65) 7px,
+                    rgba(255,255,255,0.65) 9px,
+                    transparent 9px,
+                    transparent 14px,
+                    rgba(255,255,255,0.65) 14px,
+                    rgba(255,255,255,0.65) 16px);
+        }
+        .reveal-driver-card.is-pole {
+            border-color: rgba(255,209,102,0.8);
+            box-shadow: 0 0 40px rgba(255,209,102,0.4);
+        }
+        .reveal-driver-card.is-pole::before {
+            background:
+                linear-gradient(180deg,
+                    rgba(255,209,102,0.85) 0,
+                    rgba(255,209,102,0.85) 2px,
+                    transparent 2px,
+                    transparent 7px,
+                    rgba(255,209,102,0.85) 7px,
+                    rgba(255,209,102,0.85) 9px,
+                    transparent 9px,
+                    transparent 14px,
+                    rgba(255,209,102,0.85) 14px,
+                    rgba(255,209,102,0.85) 16px);
+        }
+        /* Host card (P16) — cyan paint flourish */
+        .reveal-driver-card.is-host {
+            border-color: rgba(14, 165, 233, 0.8);
+            box-shadow: 0 0 40px rgba(14, 165, 233, 0.4);
+        }
+        .reveal-driver-card.is-host::before {
+            background:
+                linear-gradient(180deg,
+                    rgba(14, 165, 233, 0.85) 0,
+                    rgba(14, 165, 233, 0.85) 2px,
+                    transparent 2px,
+                    transparent 7px,
+                    rgba(14, 165, 233, 0.85) 7px,
+                    rgba(14, 165, 233, 0.85) 9px,
+                    transparent 9px,
+                    transparent 14px,
+                    rgba(14, 165, 233, 0.85) 14px,
+                    rgba(14, 165, 233, 0.85) 16px);
+        }
+        .reveal-driver-card.is-host .reveal-position {
+            background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+        .reveal-host-tag {
+            position: absolute;
+            top: -0.7em;
+            right: 1.25rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 800;
+            letter-spacing: 0.32em;
+            text-transform: uppercase;
+            color: #38bdf8;
+            background: linear-gradient(180deg, #060910 0%, #0a0e15 100%);
+            border: 1px solid rgba(14, 165, 233, 0.5);
+            padding: 0.3em 0.7em;
+            border-radius: 999px;
+            text-indent: 0.32em;
+        }
+        .reveal-position {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(3rem, 7vw, 5rem);
+            line-height: 1;
+            color: #fff;
+            margin-bottom: 0.85rem;
+            letter-spacing: 0.04em;
+        }
+        .reveal-driver-card.is-pole .reveal-position {
+            background: linear-gradient(135deg, #ffd166 0%, #ff9a3c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+        .reveal-name {
+            font-family: 'Anton', sans-serif;
+            font-size: clamp(1.4rem, 2.4vw, 2.2rem);
+            line-height: 1.05;
+            color: #fff;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            word-break: break-word;
+            margin-bottom: 0.85rem;
+        }
+        .reveal-row {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+        }
+        .reveal-row .reveal-make {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 7px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        }
+        .reveal-row .reveal-make.is-undecided {
+            background: rgba(255,255,255,0.05);
+            border: 1px dashed rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.4);
+            font-size: 0.55rem;
+            text-shadow: none;
+        }
+        .reveal-row .reveal-car {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.65);
+            letter-spacing: 0.02em;
+            max-width: 280px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .reveal-close {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.5rem;
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.7);
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .reveal-close:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.3);
+            color: #fff;
+        }
+        .reveal-hint {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.04em;
+        }
+        .reveal-hint kbd {
+            display: inline-block;
+            padding: 0.1em 0.4em;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78em;
+        }
+
+        /* "clean" mode — no panels, only the reel */
+        body.clean-mode .draw-panel,
+        body.clean-mode .draw-header,
+        body.clean-mode .draw-controls,
+        body.clean-mode .footer-hint { display: none; }
+        body.clean-mode .draw-stage {
+            grid-template-columns: 1fr;
+        }
+    </style>
+</head>
+<body>
+<div class="draw-bg"></div>
+
+<main class="draw-page">
+    <header class="draw-header">
+        <div class="kicker">The 2026 Gran Turismo</div>
+        <h1>Nordschleife 24 Hours · Live Driver Draw</h1>
+    </header>
+
+    <div class="draw-stage">
+
+        <aside class="draw-panel hat">
+            <h2>
+                <span>Still in the Hat</span>
+                <span class="pcount" id="hatCount">0</span>
+            </h2>
+            <ul class="panel-list" id="hatList"></ul>
+        </aside>
+
+        <div class="reel-area">
+            <div class="reel-stage" id="reelStage">
+                <div class="reel-window">
+                    <div class="reel-cylinder" id="reelCylinder"></div>
+                    <div class="reel-marker"></div>
+                    <div class="reel-curtain left"></div>
+                    <div class="reel-curtain right"></div>
+                </div>
+            </div>
+
+            <div class="winner-banner" id="winnerBanner">
+                <div class="winner-label" id="winnerLabel">Selected</div>
+                <div class="winner-name" id="winnerName"></div>
+            </div>
+
+            <div class="draw-controls">
+                <button class="spin-btn" id="spinBtn" disabled>Spin</button>
+                <button class="ghost-btn" id="resetBtn">Reset draw</button>
+                <button class="ghost-btn reveal-btn" id="revealBtn" hidden>▶ Reveal Grid</button>
+                <button class="ghost-btn" id="csvBtn" hidden>⇩ Save CSV</button>
+                <label class="draw-checkbox">
+                    <input type="checkbox" id="removeDrawn" checked>
+                    Remove drawn drivers
+                </label>
+            </div>
+        </div>
+
+        <aside class="draw-panel selected">
+            <h2>
+                <span>Starting Grid</span>
+                <span class="pcount" id="selCount">0 / 15</span>
+            </h2>
+            <ol class="panel-list grid-lineup" id="selList"></ol>
+
+            <div class="reserves-section" id="reservesSection" hidden>
+                <div class="reserves-header">
+                    <span>Reserves</span>
+                    <span class="pcount" id="reservesCount">0 / 10</span>
+                </div>
+                <ol class="panel-list reserves-list" id="reservesList"></ol>
+            </div>
+        </aside>
+
+    </div>
+
+    <p class="footer-hint">
+        Hotkey: <kbd>Space</kbd> spins · <code>?obs=1</code> hides chrome · <code>?clean=1</code> shows reel only · <code>?bg=transparent</code> for OBS browser sources.
+    </p>
+</main>
+
+<!-- Fullscreen grid reveal sequence (F1 style) -->
+<div class="grid-reveal" id="gridReveal" hidden>
+    <div class="reveal-bg"></div>
+    <div class="reveal-stage">
+        <div class="reveal-row-label" id="revealRowLabel">Starting Grid</div>
+        <div class="reveal-drivers" id="revealDrivers"></div>
+        <div class="reveal-meta" id="revealMeta">Fri 26 June 2026 · 09:00 BST</div>
+    </div>
+    <button class="reveal-close" id="revealClose" aria-label="Close">✕</button>
+    <div class="reveal-hint" id="revealHint"><kbd>Space</kbd> next · <kbd>Esc</kbd> close</div>
+</div>
+
+<script>
+(function () {
+    // ===== URL params =====
+    const params = new URLSearchParams(location.search);
+    if (params.get('obs')   === '1') document.body.classList.add('obs-mode');
+    if (params.get('clean') === '1') document.body.classList.add('clean-mode');
+    if (params.get('bg')    === 'transparent') document.body.classList.add('transparent-bg');
+
+    // ===== DOM refs =====
+    const reelStage   = document.getElementById('reelStage');
+    const cylinder    = document.getElementById('reelCylinder');
+    const winnerBanner= document.getElementById('winnerBanner');
+    const winnerName  = document.getElementById('winnerName');
+    const spinBtn     = document.getElementById('spinBtn');
+    const resetBtn    = document.getElementById('resetBtn');
+    const removeChk   = document.getElementById('removeDrawn');
+    const hatList     = document.getElementById('hatList');
+    const hatCount    = document.getElementById('hatCount');
+    const selList     = document.getElementById('selList');
+    const selCount    = document.getElementById('selCount');
+
+    // ===== Constants =====
+    const FACE_H = 90;            // px — kept in sync with .reel-face height
+    const SPIN_DURATION_MS = 5400;
+    const SPIN_EASING = 'cubic-bezier(0.16, 0.86, 0.18, 1)';
+    const MIN_FULL_ROTATIONS = 5; // integer minimum, plus 0-2 random extras
+    const CURTAIN_MS = 600;       // curtain open/close transition
+    const WINNER_HOLD_MS = 2200;  // how long the winner stays on screen
+
+    // How many drivers we draw in total for the event.
+    const MAX_DRAWS = 15;
+    // Reserves drawn after the grid is full.
+    const MAX_RESERVES = 10;
+    const TOTAL_PICKS = MAX_DRAWS + MAX_RESERVES;
+
+    // Pre-committed drivers — guaranteed to land within the MAX_DRAWS picks.
+    // Matching is fuzzy: case-insensitive and ignores spaces / underscores /
+    // dashes, with substring fallback, so "TCR_Rapid" matches "TCR_Rapid_GT".
+    const PRIORITY_DRIVERS = ['YT-GCR-SixxdogUK', 'Hogston GT', 'TCR_Rapid_GT', 'l888-1', 'A_Ozzy87', 'Vinnycroft20'];
+
+    // Drivers to silently exclude from the draw entirely. Filtered out
+    // before the pool is built, so they never appear in the hat, on the
+    // reel, or in the priority slots.
+    const BLOCKED_DRIVERS = ['RacingRichey'];
+
+    // Host driver — auto-locked into the P16 slot after the 15 grid
+    // drivers are drawn. Never in the hat or on the reel.
+    const HOST_DRIVER = {
+        psn_id: 'SparksTheory',
+        preferred_car: "McLaren 650S GT3 '15",
+        is_host: true,
+    };
+    const GRID_SIZE = MAX_DRAWS + 1; // 15 drawn + host = 16 on the grid
+
+    // ===== Manufacturer table =====
+    const MAKES = {
+        'Alfa Romeo':   { short: 'ALFA',  color: '#c8102e' },
+        'Aston Martin': { short: 'AST',   color: '#00665e' },
+        'Audi':         { short: 'AUDI',  color: '#bb0a30' },
+        'BMW':          { short: 'BMW',   color: '#0066b1' },
+        'Chevrolet':    { short: 'CHEV',  color: '#c79a3a' },
+        'Citroën':      { short: 'CITR',  color: '#c8102e' },
+        'Dodge':        { short: 'DODG',  color: '#c40000' },
+        'Ferrari':      { short: 'FER',   color: '#d40000' },
+        'Ford':         { short: 'FORD',  color: '#003478' },
+        'Genesis':      { short: 'GEN',   color: '#1a1a1a' },
+        'Honda':        { short: 'HOND',  color: '#c40000' },
+        'Hyundai':      { short: 'HYU',   color: '#002c5f' },
+        'Jaguar':       { short: 'JAG',   color: '#9e1b32' },
+        'Lamborghini':  { short: 'LAMB',  color: '#a37d2b' },
+        'Lexus':        { short: 'LEX',   color: '#1a1a1a' },
+        'Mazda':        { short: 'MAZ',   color: '#202830' },
+        'McLaren':      { short: 'MCL',   color: '#ff8000' },
+        'Mercedes':     { short: 'MERC',  color: '#5a5a5a' },
+        'Mitsubishi':   { short: 'MITS',  color: '#c40000' },
+        'Nissan':       { short: 'NIS',   color: '#c3002f' },
+        'Peugeot':      { short: 'PEU',   color: '#1c1c1c' },
+        'Porsche':      { short: 'POR',   color: '#b0001a' },
+        'Renault':      { short: 'REN',   color: '#1a1a1a' },
+        'Subaru':       { short: 'SUB',   color: '#0041aa' },
+        'Suzuki':       { short: 'SUZ',   color: '#c40000' },
+        'Toyota':       { short: 'TOY',   color: '#c40000' },
+        'Volkswagen':   { short: 'VW',    color: '#001e50' },
+    };
+    function isUndecided(car) { return !car || car.toLowerCase() === 'undecided'; }
+    function getMake(car) {
+        if (!car) return null;
+        const n = car.toLowerCase();
+        if (n.startsWith('alfa romeo'))   return MAKES['Alfa Romeo'];
+        if (n.startsWith('aston martin')) return MAKES['Aston Martin'];
+        if (n.startsWith('mercedes'))     return MAKES['Mercedes'];
+        if (n.includes('citroën') || n.includes('citroen')) return MAKES['Citroën'];
+        const first = n.split(/\s+/)[0];
+        const single = {
+            audi:'Audi', bmw:'BMW', chevrolet:'Chevrolet', dodge:'Dodge', ferrari:'Ferrari',
+            ford:'Ford', genesis:'Genesis', honda:'Honda', hyundai:'Hyundai', jaguar:'Jaguar',
+            lamborghini:'Lamborghini', lexus:'Lexus', mazda:'Mazda', mclaren:'McLaren',
+            mitsubishi:'Mitsubishi', nissan:'Nissan', peugeot:'Peugeot', porsche:'Porsche',
+            renault:'Renault', subaru:'Subaru', suzuki:'Suzuki', toyota:'Toyota',
+            volkswagen:'Volkswagen',
+        };
+        return MAKES[single[first]] || null;
+    }
+    function textOn(hex) {
+        const h = hex.replace('#','');
+        const r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
+        return ((0.299*r + 0.587*g + 0.114*b) / 255) > 0.6 ? '#0a0e15' : '#fff';
+    }
+    function esc(s) {
+        return String(s).replace(/[&<>"']/g, (c) => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+    }
+    // Slug for /car-images/{slug}.png lookups.
+    function carSlug(car) {
+        return (car || '')
+            .toLowerCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/['']/g, '')
+            .replace(/[()]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+    // Walk badges with a data-slug and swap in the car PNG if it exists.
+    // Targets all three badge classes used on the page.
+    function upgradeBadges(root) {
+        const scope = root || document;
+        scope.querySelectorAll(
+            '.pmake[data-slug], .fmake[data-slug], .reveal-make[data-slug]'
+        ).forEach((badge) => {
+            if (badge.classList.contains('has-image')) return;
+            const slug = badge.dataset.slug;
+            if (!slug) return;
+            const probe = new Image();
+            probe.src = `/car-images/${slug}.png`;
+            probe.onload = () => {
+                badge.classList.add('has-image');
+                badge.style.background = '';
+                badge.style.color = '';
+                const el = document.createElement('img');
+                el.src = `/car-images/${slug}.png`;
+                el.alt = '';
+                badge.innerHTML = '';
+                badge.appendChild(el);
+            };
+        });
+    }
+
+    // ===== State =====
+    let allDrivers = [];
+    let activePool = [];
+    let winners    = [];
+    let spinning   = false;
+    let cylinderAngle = 0;   // current actual rotateX in degrees (monotonically decreases)
+    let faceStep = 0;        // degrees per face for the current cylinder build
+    let priorityMap = {};    // { slotIndex: driverObject } — pre-rigged slots
+
+    // ===== Priority slot helpers =====
+    function normalizeName(s) {
+        return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+    function isBlockedDriver(driver) {
+        const target = normalizeName(driver && driver.psn_id);
+        if (!target) return false;
+        return BLOCKED_DRIVERS.some((blocked) => {
+            const b = normalizeName(blocked);
+            return b && (target === b || target.includes(b) || b.includes(target));
+        });
+    }
+    function findPriorityDrivers(pool) {
+        const out = [];
+        for (const name of PRIORITY_DRIVERS) {
+            const target = normalizeName(name);
+            if (!target) continue;
+            const driver = pool.find((d) => {
+                const p = normalizeName(d.psn_id);
+                return p && (p === target || p.includes(target) || target.includes(p));
+            });
+            if (driver && !out.includes(driver)) out.push(driver);
+            else if (!driver) console.warn(`Priority driver not found in pool: ${name}`);
+        }
+        return out;
+    }
+    function setupPrioritySlots(pool) {
+        priorityMap = {};
+        const priority = findPriorityDrivers(pool);
+        if (!priority.length) return;
+        // Pick distinct random slots within the first MAX_DRAWS picks
+        const totalSlots = Math.min(MAX_DRAWS, pool.length);
+        const slotsAvailable = Array.from({ length: totalSlots }, (_, i) => i);
+        // Fisher–Yates shuffle
+        for (let i = slotsAvailable.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [slotsAvailable[i], slotsAvailable[j]] = [slotsAvailable[j], slotsAvailable[i]];
+        }
+        // Also shuffle the priority drivers so the order varies between resets
+        const shuffledPriority = priority.slice();
+        for (let i = shuffledPriority.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledPriority[i], shuffledPriority[j]] = [shuffledPriority[j], shuffledPriority[i]];
+        }
+        const chosenSlots = slotsAvailable.slice(0, shuffledPriority.length);
+        chosenSlots.forEach((slot, i) => { priorityMap[slot] = shuffledPriority[i]; });
+    }
+
+    // ===== Render helpers =====
+    function panelRowHtml(d, opts) {
+        const car = (d.preferred_car || '').trim();
+        const undecided = isUndecided(car);
+        const make = undecided ? null : getMake(car);
+        let badge;
+        if (make) {
+            badge = `<span class="pmake" data-slug="${esc(carSlug(car))}" style="background:${make.color};color:${textOn(make.color)}">${esc(make.short)}</span>`;
+        } else {
+            badge = `<span class="pmake is-undecided">?</span>`;
+        }
+        const seq = opts && opts.seq != null ? `<span class="seq">${opts.seq}</span>` : '';
+        const hostTag = opts && opts.isHost ? '<span class="host-tag">Host</span>' : '';
+        const rowClass = opts && opts.isHost ? 'panel-row is-host' : 'panel-row';
+        return `<li class="${rowClass}">${seq}${badge}<span class="ppsn">${esc(d.psn_id)}</span>${hostTag}</li>`;
+    }
+    function renderHat() {
+        hatCount.textContent = activePool.length;
+        if (!activePool.length) {
+            hatList.innerHTML = '<div class="panel-empty">Hat is empty.</div>';
+            return;
+        }
+        // Alphabetical for easy scanning
+        const sorted = activePool.slice().sort(
+            (a, b) => (a.psn_id || '').localeCompare(b.psn_id || '', undefined, { sensitivity: 'base' })
+        );
+        hatList.innerHTML = sorted.map((d) => panelRowHtml(d)).join('');
+        upgradeBadges(hatList);
+    }
+    function renderSelected(highlightIdx) {
+        const inGrid     = winners.slice(0, MAX_DRAWS);
+        const inReserves = winners.slice(MAX_DRAWS);
+        const gridFull   = inGrid.length >= MAX_DRAWS;
+
+        selCount.textContent = gridFull
+            ? `${MAX_DRAWS} + Host`
+            : `${inGrid.length} / ${MAX_DRAWS}`;
+
+        if (!inGrid.length) {
+            selList.innerHTML = '<div class="panel-empty">No drivers drawn yet.</div>';
+        } else {
+            const rows = inGrid.map((d, i) => panelRowHtml(d, { seq: i + 1 }));
+            if (gridFull) {
+                rows.push(panelRowHtml(HOST_DRIVER, { seq: GRID_SIZE, isHost: true }));
+            }
+            selList.innerHTML = rows.join('');
+        }
+
+        const reservesSection = document.getElementById('reservesSection');
+        const reservesList    = document.getElementById('reservesList');
+        const reservesCount   = document.getElementById('reservesCount');
+        if (inReserves.length) {
+            reservesSection.hidden = false;
+            reservesCount.textContent = `${inReserves.length} / ${MAX_RESERVES}`;
+            reservesList.innerHTML = inReserves
+                .map((d, i) => panelRowHtml(d, { seq: `R${i + 1}` }))
+                .join('');
+        } else if (reservesSection) {
+            reservesSection.hidden = true;
+        }
+
+        if (typeof highlightIdx === 'number') {
+            const row = highlightIdx < MAX_DRAWS
+                ? selList.children[highlightIdx]
+                : (reservesList ? reservesList.children[highlightIdx - MAX_DRAWS] : null);
+            if (row && row.classList) {
+                row.classList.add('is-just-arrived');
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+        upgradeBadges(selList);
+        if (reservesList) upgradeBadges(reservesList);
+    }
+
+    // ===== Cylinder build =====
+    function buildCylinder(driverList) {
+        cylinder.innerHTML = '';
+        const N = driverList.length;
+        if (N === 0) return;
+
+        // For N=1, just place one face at the centre with no rotation
+        // For very small N, ensure a minimum radius
+        faceStep = N >= 2 ? (360 / N) : 0;
+        const radius = N >= 3
+            ? (FACE_H / 2) / Math.tan(Math.PI / N)
+            : (N === 2 ? FACE_H : 0);
+
+        driverList.forEach((d, i) => {
+            const car = (d.preferred_car || '').trim();
+            const undecided = isUndecided(car);
+            const make = undecided ? null : getMake(car);
+            let badge;
+            if (make) {
+                badge = `<div class="fmake" data-slug="${esc(carSlug(car))}" style="background:${make.color};color:${textOn(make.color)}">${esc(make.short)}</div>`;
+            } else {
+                badge = `<div class="fmake is-undecided">?</div>`;
+            }
+            const face = document.createElement('div');
+            face.className = 'reel-face';
+            face.innerHTML = `
+                ${badge}
+                <div class="finfo">
+                    <span class="fpsn">${esc(d.psn_id)}</span>
+                    <span class="fcar">${esc(undecided ? 'Car undecided' : car)}</span>
+                </div>
+            `;
+            // Each face rotated around the X axis at i * faceStep, then pushed out by radius
+            face.style.transform = `rotateX(${i * faceStep}deg) translateZ(${radius}px)`;
+            cylinder.appendChild(face);
+        });
+        upgradeBadges(cylinder);
+
+        // Reset cylinder rotation to a clean starting state. Curtains hide
+        // the rest position so the centre face here is never seen — viewers
+        // only see the cylinder while it's actively spinning.
+        cylinder.style.transition = 'none';
+        cylinder.style.transform = 'translate(-50%, -50%) rotateX(0deg)';
+        cylinderAngle = 0;
+        // Flush so the next transition takes effect
+        void cylinder.offsetWidth;
+    }
+
+    // ===== Spin =====
+    function spin() {
+        if (spinning) return;
+        if (!activePool.length) return;
+        if (winners.length >= TOTAL_PICKS) return;
+        const N = activePool.length;
+
+        spinning = true;
+        spinBtn.disabled = true;
+        winnerBanner.classList.remove('is-shown');
+        reelStage.classList.remove('is-winning');
+
+        // Open the curtains — happens in parallel with the spin so by the time
+        // the curtains finish opening the reel is already in full motion.
+        reelStage.classList.add('curtains-open');
+
+        // Pick the winner. If this draw slot has a pre-committed driver still
+        // in the pool, use them; otherwise pick randomly from the eligible
+        // drivers (excluding both reserved priority drivers and blocked
+        // drivers — blocked stay in the hat but never get drawn).
+        const currentSlot = winners.length;
+        const priorityDriver = priorityMap[currentSlot];
+        let winnerIdx;
+        if (priorityDriver) {
+            const idx = activePool.indexOf(priorityDriver);
+            if (idx !== -1) {
+                winnerIdx = idx;
+            } else {
+                // Priority driver missing — fall back to a random non-blocked pick
+                const fallback = activePool
+                    .map((d, i) => ({ d, i }))
+                    .filter(({ d }) => !isBlockedDriver(d));
+                winnerIdx = fallback[Math.floor(Math.random() * fallback.length)].i;
+            }
+        } else {
+            const remainingPrioritySlots = Object.keys(priorityMap)
+                .map(Number)
+                .filter((s) => s > currentSlot);
+            const reservedDrivers = remainingPrioritySlots.map((s) => priorityMap[s]);
+            const eligible = activePool
+                .map((d, i) => ({ d, i }))
+                .filter(({ d }) => !reservedDrivers.includes(d) && !isBlockedDriver(d));
+            // If reserving the priority slots leaves no one eligible, drop
+            // that constraint but still exclude blocked drivers.
+            const pickFrom = eligible.length
+                ? eligible
+                : activePool.map((d, i) => ({ d, i })).filter(({ d }) => !isBlockedDriver(d));
+            if (!pickFrom.length) {
+                // No drawable drivers left at all — bail.
+                spinning = false;
+                spinBtn.disabled = true;
+                reelStage.classList.remove('curtains-open');
+                return;
+            }
+            winnerIdx = pickFrom[Math.floor(Math.random() * pickFrom.length)].i;
+        }
+        const winner = activePool[winnerIdx];
+
+        // Compute the final cylinder rotation that places winnerIdx at the front.
+        // Each face is at rotateX(i * faceStep). To bring face i to the front
+        // (face's effective angle = 0), the cylinder needs rotateX(-i * faceStep).
+        // We add INTEGER full negative rotations so the spin visually goes round.
+        const fullRotations = MIN_FULL_ROTATIONS + Math.floor(Math.random() * 3); // 5, 6 or 7
+        const targetLandingMod = -winnerIdx * faceStep;
+        // Start from the current cylinderAngle, decrement by 360*K, then snap to landing mod.
+        // After K full rotations from current: cylinderAngle - 360*K
+        const afterK = cylinderAngle - 360 * fullRotations;
+        // We want final angle mod 360 to equal targetLandingMod mod 360
+        const finalMod = ((targetLandingMod % 360) + 360) % 360;
+        const afterKMod = ((afterK % 360) + 360) % 360;
+        // Subtract extra to align mod (always subtracting so direction stays consistent)
+        let extra = afterKMod - finalMod;
+        if (extra < 0) extra += 360;
+        const newAngle = afterK - extra;
+
+        cylinder.style.transition = `transform ${SPIN_DURATION_MS}ms ${SPIN_EASING}`;
+        cylinder.style.transform = `translate(-50%, -50%) rotateX(${newAngle}deg)`;
+        cylinderAngle = newAngle;
+
+        // After the animation, reveal the winner, hold, then close curtains
+        // and rebuild the cylinder while it's hidden.
+        setTimeout(() => {
+            // The visible face now is the winner — confirm by setting the banner text.
+            winnerName.textContent = winner.psn_id;
+            // Banner label depends on phase: grid (P1..P15) vs reserves (R1..R10).
+            const winnerLabel = document.getElementById('winnerLabel');
+            if (winnerLabel) {
+                winnerLabel.textContent = winners.length >= MAX_DRAWS ? 'Reserve' : 'Selected';
+            }
+            winnerBanner.classList.add('is-shown');
+            reelStage.classList.add('is-winning');
+
+            // Add to selected panel immediately (so viewers see them lock in)
+            winners.push(winner);
+            renderSelected(winners.length - 1);
+            maybeShowRevealBtn();
+
+            const cap = winners.length >= TOTAL_PICKS;
+            const drawableLeft = activePool.filter((d, i) => i !== winnerIdx && !isBlockedDriver(d));
+
+            // Hold the winner for a beat, then sweep the curtains shut.
+            setTimeout(() => {
+                reelStage.classList.remove('curtains-open');
+                reelStage.classList.remove('is-winning');
+
+                // Once the curtains are fully closed, rebuild behind them so
+                // the next spin reveals a freshly-shuffled cylinder.
+                setTimeout(() => {
+                    if (removeChk.checked) {
+                        activePool = activePool.filter((_, i) => i !== winnerIdx);
+                        renderHat();
+                    }
+                    if (cap || drawableLeft.length === 0) {
+                        const msg = cap
+                            ? `Full grid + ${MAX_RESERVES} reserves drawn.`
+                            : 'No drivers left to draw.';
+                        cylinder.innerHTML = `<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">${msg}</div>`;
+                        spinBtn.disabled = true;
+                    } else {
+                        buildCylinder(activePool);
+                        spinBtn.disabled = false;
+                    }
+                    spinning = false;
+                }, CURTAIN_MS + 60);
+            }, WINNER_HOLD_MS);
+        }, SPIN_DURATION_MS + 30);
+    }
+
+    function reset() {
+        if (spinning) return;
+        activePool = allDrivers.slice();
+        winners = [];
+        setupPrioritySlots(activePool);
+        reelStage.classList.remove('is-winning');
+        reelStage.classList.remove('curtains-open');
+        winnerBanner.classList.remove('is-shown');
+        const winnerLabel = document.getElementById('winnerLabel');
+        if (winnerLabel) winnerLabel.textContent = 'Selected';
+        renderHat();
+        renderSelected();
+        maybeShowRevealBtn();
+        if (activePool.length) {
+            buildCylinder(activePool);
+            spinBtn.disabled = false;
+        } else {
+            spinBtn.disabled = true;
+        }
+    }
+
+    // ===== Grid Reveal (F1-style row-by-row reveal) =====
+    const revealBtn   = document.getElementById('revealBtn');
+    const revealOverlay = document.getElementById('gridReveal');
+    const revealLabel = document.getElementById('revealRowLabel');
+    const revealDrvs  = document.getElementById('revealDrivers');
+    const revealMeta  = document.getElementById('revealMeta');
+    const revealClose = document.getElementById('revealClose');
+    const revealStage = revealOverlay ? revealOverlay.querySelector('.reveal-stage') : null;
+    const ROW_LABELS = [
+        'Front Row',  '2nd Row', '3rd Row', '4th Row',
+        '5th Row',    '6th Row', '7th Row', '8th Row',
+    ];
+    const REVEAL_ROW_MS = 5500;     // total time per row
+    const REVEAL_CROSS_MS = 600;    // fade-out duration between rows
+    let revealRowIdx = -1;
+    let revealTimer  = null;
+    let revealCancelled = false;
+
+    function maybeShowRevealBtn() {
+        const gridFull = winners.length >= MAX_DRAWS;
+        revealBtn.hidden = !gridFull;
+        if (csvBtn) csvBtn.hidden = !gridFull;
+    }
+
+    function revealCardHtml(driver, position) {
+        const car = (driver.preferred_car || '').trim();
+        const undecided = isUndecided(car);
+        const make = undecided ? null : getMake(car);
+        let badge;
+        if (make) {
+            badge = `<span class="reveal-make" data-slug="${esc(carSlug(car))}" style="background:${make.color};color:${textOn(make.color)}">${esc(make.short)}</span>`;
+        } else {
+            badge = `<span class="reveal-make is-undecided">?</span>`;
+        }
+        const carText = undecided ? 'Car undecided' : car;
+        const isPole = position === 1;
+        const isHost = !!driver.is_host;
+        const classes = ['reveal-driver-card'];
+        if (isPole) classes.push('is-pole');
+        if (isHost) classes.push('is-host');
+        const hostTag = isHost ? '<div class="reveal-host-tag">Host</div>' : '';
+        return `
+            <article class="${classes.join(' ')}">
+                ${hostTag}
+                <div class="reveal-position">P${position}</div>
+                <div class="reveal-name">${esc(driver.psn_id)}</div>
+                <div class="reveal-row">
+                    ${badge}
+                    <span class="reveal-car">${esc(carText)}</span>
+                </div>
+            </article>
+        `;
+    }
+
+    function showRevealRow(idx) {
+        if (!revealStage) return;
+        // Fade out current
+        revealStage.classList.remove('is-shown');
+
+        setTimeout(() => {
+            if (revealCancelled) return;
+            // Full grid lineup = the 15 drawn winners followed by the host.
+            const gridLineup = [...winners.slice(0, MAX_DRAWS), HOST_DRIVER];
+            const startPos = idx * 2;
+            const drivers  = gridLineup.slice(startPos, Math.min(startPos + 2, GRID_SIZE));
+            if (!drivers.length) {
+                endReveal();
+                return;
+            }
+            revealLabel.textContent = ROW_LABELS[idx] || `Row ${idx + 1}`;
+            revealDrvs.innerHTML = drivers
+                .map((d, i) => revealCardHtml(d, startPos + i + 1))
+                .join('');
+            revealMeta.textContent = `Fri 26 June 2026  ·  09:00 BST`;
+            upgradeBadges(revealDrvs);
+            // Force reflow then fade in
+            void revealStage.offsetWidth;
+            revealStage.classList.add('is-shown');
+        }, REVEAL_CROSS_MS);
+    }
+
+    function showRevealEnd() {
+        revealStage.classList.remove('is-shown');
+        setTimeout(() => {
+            if (revealCancelled) return;
+            revealLabel.textContent = 'Lights Out · 26 June';
+            revealDrvs.innerHTML = '';
+            revealMeta.textContent = 'The 2026 Gran Turismo Nordschleife 24 Hours';
+            void revealStage.offsetWidth;
+            revealStage.classList.add('is-shown');
+        }, REVEAL_CROSS_MS);
+    }
+
+    function nextRevealRow() {
+        revealRowIdx++;
+        const totalRows = Math.ceil(GRID_SIZE / 2);
+        if (revealRowIdx >= totalRows) {
+            // End state
+            if (revealTimer) clearTimeout(revealTimer);
+            showRevealEnd();
+            revealTimer = null;
+            return;
+        }
+        showRevealRow(revealRowIdx);
+        if (revealTimer) clearTimeout(revealTimer);
+        revealTimer = setTimeout(nextRevealRow, REVEAL_ROW_MS);
+    }
+
+    function startReveal() {
+        if (!revealOverlay) return;
+        if (winners.length < MAX_DRAWS) return;
+        revealCancelled = false;
+        revealOverlay.hidden = false;
+        revealRowIdx = -1;
+        // Brief intro state
+        revealStage.classList.remove('is-shown');
+        revealLabel.textContent = 'Starting Grid';
+        revealDrvs.innerHTML = '';
+        revealMeta.textContent = 'The 2026 Gran Turismo Nordschleife 24 Hours';
+        setTimeout(() => {
+            if (revealCancelled) return;
+            revealStage.classList.add('is-shown');
+        }, 80);
+        // First row after a held intro
+        revealTimer = setTimeout(nextRevealRow, 2800);
+    }
+
+    function endReveal() {
+        revealCancelled = true;
+        if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
+        revealOverlay.hidden = true;
+        revealStage.classList.remove('is-shown');
+    }
+
+    if (revealBtn)   revealBtn.addEventListener('click', startReveal);
+    if (revealClose) revealClose.addEventListener('click', endReveal);
+
+    // ===== Save CSV =====
+    const csvBtn = document.getElementById('csvBtn');
+    function csvField(val) {
+        const s = String(val == null ? '' : val);
+        if (/[",\n\r]/.test(s)) {
+            return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+    }
+    function downloadCsv() {
+        const rows = [['Position', 'Role', 'PSN ID', 'Preferred Car']];
+        const grid = winners.slice(0, MAX_DRAWS);
+        grid.forEach((d, i) => {
+            rows.push([`P${i + 1}`, 'Grid', d.psn_id, (d.preferred_car || '').trim() || 'Undecided']);
+        });
+        if (grid.length >= MAX_DRAWS) {
+            rows.push([
+                `P${GRID_SIZE}`,
+                'Host',
+                HOST_DRIVER.psn_id,
+                (HOST_DRIVER.preferred_car || '').trim() || 'Undecided',
+            ]);
+        }
+        const reserves = winners.slice(MAX_DRAWS);
+        reserves.forEach((d, i) => {
+            rows.push([`R${i + 1}`, 'Reserve', d.psn_id, (d.preferred_car || '').trim() || 'Undecided']);
+        });
+
+        const csv = rows.map((r) => r.map(csvField).join(',')).join('\r\n');
+        // Prepend UTF-8 BOM so Excel opens special chars (e.g. ë in "Citroën")
+        // and emoji-free identifiers correctly.
+        const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `nordschleife-24h-2026-drivers.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    if (csvBtn) csvBtn.addEventListener('click', downloadCsv);
+
+    // ===== Wire up controls =====
+    spinBtn.addEventListener('click', spin);
+    resetBtn.addEventListener('click', reset);
+    document.addEventListener('keydown', (e) => {
+        // Reveal-mode keys
+        if (revealOverlay && !revealOverlay.hidden) {
+            if (e.code === 'Escape') {
+                e.preventDefault();
+                endReveal();
+                return;
+            }
+            if (e.code === 'Space' || e.code === 'ArrowRight') {
+                e.preventDefault();
+                nextRevealRow();
+                return;
+            }
+            return;
+        }
+        // Normal mode — space spins
+        if (e.code !== 'Space') return;
+        const t = e.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+        e.preventDefault();
+        spin();
+    });
+
+    // ===== Load drivers from the Netlify Function =====
+    fetch('/.netlify/functions/signups')
+        .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+        .then(({ drivers }) => {
+            if (!drivers || !drivers.length) {
+                cylinder.innerHTML = '<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">No drivers signed up yet.</div>';
+                renderHat();
+                renderSelected();
+                return;
+            }
+            // Blocked drivers stay in the hat and on the reel for show, but
+            // the spin logic excludes them so the reel can never stop on
+            // them. Log for visibility.
+            drivers.forEach((d) => {
+                if (isBlockedDriver(d)) {
+                    console.log(`Cannot be drawn (kept in hat for show): ${d.psn_id}`);
+                }
+            });
+            allDrivers = drivers;
+            activePool = drivers.slice();
+            setupPrioritySlots(activePool);
+            spinBtn.disabled = false;
+            buildCylinder(activePool);
+            renderHat();
+            renderSelected();
+        })
+        .catch(() => {
+            cylinder.innerHTML = '<div class="panel-empty" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;">Couldn’t load the entry list.</div>';
+        });
+})();
+</script>
+
+  <script defer src="/live-banner.js"></script>
+</body>
+</html>

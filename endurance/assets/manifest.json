@@ -1,0 +1,84 @@
+{
+    "name": "GTEC · Gran Turismo 7 Endurance Championship",
+    "short_name": "GTEC",
+    "description": "A Gran Turismo 7 endurance championship. Run by SparksTheory.",
+    "start_url": "/endurance/",
+    "scope": "/endurance/",
+    "id": "/endurance/",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#050608",
+    "theme_color": "#0a0e15",
+    "categories": ["sports", "games"],
+    "lang": "en-GB",
+    "dir": "ltr",
+    "display_override": ["standalone", "minimal-ui"],
+    "launch_handler": { "client_mode": "navigate-existing" },
+    "handle_links": "preferred",
+    "edge_side_panel": { "preferred_width": 420 },
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "/endurance/assets/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/endurance/assets/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/endurance/assets/icon-192-maskable.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/endurance/assets/icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/endurance/assets/gtec-icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "/endurance/assets/gtec-icon-maskable.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Standings",
+            "short_name": "Standings",
+            "url": "/endurance/standings/",
+            "icons": [{ "src": "/endurance/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+        },
+        {
+            "name": "Calendar",
+            "short_name": "Calendar",
+            "url": "/endurance/calendar/",
+            "icons": [{ "src": "/endurance/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+        },
+        {
+            "name": "Results",
+            "short_name": "Results",
+            "url": "/endurance/results/",
+            "icons": [{ "src": "/endurance/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+        },
+        {
+            "name": "My Profile",
+            "short_name": "Profile",
+            "url": "/endurance/profile/",
+            "icons": [{ "src": "/endurance/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+        }
+    ]
+}
