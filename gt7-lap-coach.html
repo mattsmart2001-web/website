@@ -16,31 +16,31 @@ html,body{width:100%;min-height:100%;background:var(--bg);color:var(--wht);font-
 body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");opacity:.018;pointer-events:none;z-index:9999;}
 .mono{font-family:'JetBrains Mono',monospace;}
 header{padding:.7rem 1.4rem .6rem;border-bottom:1px solid var(--bor);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(7,8,13,.92);backdrop-filter:blur(8px);z-index:10;}
-.eyebrow{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.35em;color:var(--blu);text-transform:uppercase;margin-bottom:.1rem;}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.35em;color:var(--blu);text-transform:uppercase;margin-bottom:.1rem;}
 h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.2rem,2.5vw,1.9rem);letter-spacing:.08em;line-height:1;}
 h1 em{font-style:normal;color:var(--blu);text-shadow:0 0 20px rgba(26,180,255,.45);}
-.hdr-sub{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.14em;color:var(--mut);margin-top:.08rem;}
+.hdr-sub{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.14em;color:var(--mut);margin-top:.08rem;}
 .hdr-r{display:flex;align-items:center;gap:1rem;}
-.status-pill{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.18em;display:flex;align-items:center;gap:.4rem;padding:.28rem .65rem;border-radius:20px;border:1px solid var(--bor);background:rgba(13,15,24,.8);}
+.status-pill{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.18em;display:flex;align-items:center;gap:.4rem;padding:.28rem .65rem;border-radius:20px;border:1px solid var(--bor);background:rgba(13,15,24,.8);}
 .status-pill .dot{width:5px;height:5px;border-radius:50%;background:var(--mut);}
 .status-pill.connecting{border-color:rgba(255,195,26,.3);color:var(--gold);} .status-pill.connecting .dot{background:var(--gold);animation:pulse 1s ease-in-out infinite;}
 .status-pill.bridge{border-color:rgba(0,229,160,.3);color:var(--grn);} .status-pill.bridge .dot{background:var(--grn);}
 .status-pill.live{border-color:rgba(255,45,59,.5);color:var(--red);} .status-pill.live .dot{background:var(--red);animation:pulse .8s ease-in-out infinite;}
 .status-pill.file{border-color:rgba(26,180,255,.4);color:var(--blu);} .status-pill.file .dot{background:var(--blu);}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
-.back-link{font-family:'JetBrains Mono',monospace;font-size:.44rem;letter-spacing:.14em;color:var(--mut);text-decoration:none;}
+.back-link{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.14em;color:var(--mut);text-decoration:none;}
 .back-link:hover{color:var(--wht);}
 main{max-width:1180px;margin:0 auto;padding:1.6rem 1.2rem 4rem;}
 .card{background:var(--sur);border:1px solid var(--bor);border-radius:8px;padding:1.4rem 1.5rem;position:relative;overflow:hidden;}
-.card h2{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.06em;margin-bottom:.3rem;}
+.card h2{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.06em;margin-bottom:.3rem;}
 .card h2 em{font-style:normal;color:var(--blu);}
-.card p{font-family:'JetBrains Mono',monospace;font-size:.52rem;line-height:1.7;color:var(--mut);}
+.card p{font-family:'Rajdhani',sans-serif;font-size:1.05rem;line-height:1.55;color:#aab0c4;}
 .setup-steps{display:flex;flex-direction:column;gap:.7rem;margin:1.2rem 0 1.6rem;}
 .step{display:flex;align-items:flex-start;gap:.85rem;}
-.step-num{flex:0 0 22px;height:22px;background:rgba(26,180,255,.1);border:1px solid rgba(26,180,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.44rem;color:var(--blu);font-weight:700;}
-.step-txt{font-family:'JetBrains Mono',monospace;font-size:.5rem;line-height:1.55;color:var(--wht);}
-.step-txt code{background:var(--dim);border:1px solid var(--bor);border-radius:3px;padding:.05rem .3rem;color:var(--gold);font-size:.44rem;}
-.btn{display:inline-flex;align-items:center;gap:.45rem;font-family:'JetBrains Mono',monospace;font-size:.48rem;letter-spacing:.12em;padding:.55rem 1.1rem;border-radius:5px;border:1px solid;cursor:pointer;text-decoration:none;transition:background .2s,border-color .2s;text-transform:uppercase;background:transparent;color:var(--mut);border-color:var(--bor);}
+.step-num{flex:0 0 26px;height:26px;background:rgba(26,180,255,.1);border:1px solid rgba(26,180,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.44rem;color:var(--blu);font-weight:700;}
+.step-txt{font-family:'Rajdhani',sans-serif;font-size:1.05rem;line-height:1.5;color:var(--wht);}
+.step-txt code{background:var(--dim);border:1px solid var(--bor);border-radius:3px;padding:.05rem .3rem;color:var(--gold);font-family:'JetBrains Mono',monospace;font-size:.72rem;}
+.btn{display:inline-flex;align-items:center;gap:.45rem;font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.12em;padding:.55rem 1.1rem;border-radius:5px;border:1px solid;cursor:pointer;text-decoration:none;transition:background .2s,border-color .2s;text-transform:uppercase;background:transparent;color:var(--mut);border-color:var(--bor);}
 .btn:hover{border-color:var(--wht);color:var(--wht);}
 .btn-primary{border-color:var(--blu);background:rgba(26,180,255,.1);color:var(--blu);} .btn-primary:hover{background:rgba(26,180,255,.2);color:var(--blu);}
 .btn-gold{border-color:var(--gold);background:rgba(255,195,26,.1);color:var(--gold);} .btn-gold:hover{background:rgba(255,195,26,.2);color:var(--gold);}
@@ -48,40 +48,40 @@ main{max-width:1180px;margin:0 auto;padding:1.6rem 1.2rem 4rem;}
 .row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;} @media(max-width:860px){.grid2{grid-template-columns:1fr;}}
 .hidden{display:none !important;}
-label.sel{font-family:'JetBrains Mono',monospace;font-size:.46rem;letter-spacing:.12em;color:var(--mut);display:flex;align-items:center;gap:.5rem;}
-select,input[type=text]{background:var(--pan);border:1px solid var(--bor);color:var(--wht);font-family:'JetBrains Mono',monospace;font-size:.5rem;padding:.4rem .5rem;border-radius:4px;}
+label.sel{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.12em;color:var(--mut);display:flex;align-items:center;gap:.5rem;}
+select,input[type=text]{background:var(--pan);border:1px solid var(--bor);color:var(--wht);font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.4rem .5rem;border-radius:4px;}
 input[type=file]{display:none;}
 /* recorder */
 .laps{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0;}
 .lapchip{min-width:92px;padding:.5rem .7rem;border:1px solid var(--bor);border-radius:6px;background:var(--pan);}
-.lapchip .n{font-family:'JetBrains Mono',monospace;font-size:.42rem;letter-spacing:.2em;color:var(--mut);}
+.lapchip .n{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.2em;color:var(--mut);}
 .lapchip .t{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.04em;line-height:1.1;}
 .lapchip.best .t{color:var(--blu);} .lapchip.live{border-color:rgba(255,45,59,.5);} .lapchip.live .t{color:var(--red);}
 .bigcount{font-family:'Bebas Neue',sans-serif;font-size:3.4rem;line-height:1;} .bigcount small{font-size:1.2rem;color:var(--mut);}
 /* report */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin:1rem 0 1.4rem;}
 .stat{background:var(--pan);border:1px solid var(--bor);border-radius:6px;padding:.7rem .9rem;}
-.stat .l{font-family:'JetBrains Mono',monospace;font-size:.42rem;letter-spacing:.2em;color:var(--mut);text-transform:uppercase;}
-.stat .v{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1.05;margin-top:.15rem;} .stat .v.blu{color:var(--blu);} .stat .v.gold{color:var(--gold);}
-.stat .s{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--mut);margin-top:.1rem;}
+.stat .l{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.2em;color:var(--mut);text-transform:uppercase;}
+.stat .v{font-family:'Bebas Neue',sans-serif;font-size:2rem;line-height:1.05;margin-top:.15rem;} .stat .v.blu{color:var(--blu);} .stat .v.gold{color:var(--gold);}
+.stat .s{font-family:'Rajdhani',sans-serif;font-size:.9rem;color:var(--mut);margin-top:.1rem;}
 .sec{margin-top:1.4rem;}
-.sec h3{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;letter-spacing:.06em;margin-bottom:.5rem;}
+.sec h3{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;letter-spacing:.06em;margin-bottom:.5rem;}
 .sec h3 em{font-style:normal;color:var(--gold);}
-.sec .note{font-family:'JetBrains Mono',monospace;font-size:.46rem;color:var(--mut);line-height:1.6;margin-bottom:.6rem;}
+.sec .note{font-family:'Rajdhani',sans-serif;font-size:1rem;color:#aab0c4;line-height:1.5;margin-bottom:.7rem;}
 svg text{font-family:'JetBrains Mono',monospace;}
 .advice{display:grid;grid-template-columns:1fr;gap:.7rem;}
 .adv{background:var(--pan);border:1px solid var(--bor);border-left:3px solid var(--blu);border-radius:6px;padding:.9rem 1.1rem;}
 .adv.pedal{border-left-color:var(--red);} .adv.corner{border-left-color:var(--gold);} .adv.caveat{border-left-color:var(--mut);} .adv.exit{border-left-color:var(--grn);} .adv.brush{border-left-color:var(--gold);}
-.adv h4{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.05em;margin-bottom:.25rem;}
-.adv p{font-family:'Rajdhani',sans-serif;font-size:.95rem;line-height:1.5;color:var(--wht);}
+.adv h4{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.05em;margin-bottom:.25rem;}
+.adv p{font-family:'Rajdhani',sans-serif;font-size:1.1rem;line-height:1.55;color:var(--wht);}
 .corners{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.8rem;}
 .cc{background:var(--pan);border:1px solid var(--bor);border-radius:6px;padding:.8rem .9rem;}
-.cc h4{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.05em;} .cc h4 span{color:var(--mut);font-size:.8rem;letter-spacing:.1em;margin-left:.5rem;font-family:'JetBrains Mono',monospace;}
-.cc .kv{display:grid;grid-template-columns:auto 1fr;gap:.15rem .6rem;font-family:'JetBrains Mono',monospace;font-size:.44rem;margin-top:.4rem;}
-.cc .kv b{color:var(--mut);font-weight:400;letter-spacing:.1em;} .cc .kv span{color:var(--wht);}
-.legend{display:flex;gap:1rem;font-family:'JetBrains Mono',monospace;font-size:.42rem;letter-spacing:.14em;color:var(--mut);margin:.3rem 0 .5rem;}
+.cc h4{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.05em;} .cc h4 span{color:var(--mut);font-size:.68rem;letter-spacing:.1em;margin-left:.5rem;font-family:'JetBrains Mono',monospace;}
+.cc .kv{display:grid;grid-template-columns:auto 1fr;gap:.2rem .7rem;font-family:'Rajdhani',sans-serif;font-size:.95rem;margin-top:.5rem;}
+.cc .kv b{color:var(--mut);font-weight:600;letter-spacing:.08em;font-family:'JetBrains Mono',monospace;font-size:.62rem;align-self:center;} .cc .kv span{color:var(--wht);}
+.legend{display:flex;gap:1rem;font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.14em;color:var(--mut);margin:.3rem 0 .5rem;}
 .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:.35rem;border-radius:2px;}
-.foot{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--mut);margin-top:2rem;line-height:1.7;}
+.foot{font-family:'Rajdhani',sans-serif;font-size:.95rem;color:var(--mut);margin-top:2rem;line-height:1.6;}
 </style>
 </head>
 <body>
@@ -93,6 +93,7 @@ svg text{font-family:'JetBrains Mono',monospace;}
   </div>
   <div class="hdr-r">
     <div class="status-pill connecting" id="statusPill"><span class="dot"></span><span id="statusTxt">LOOKING FOR CONNECTOR</span></div>
+    <a class="back-link" href="#" id="homeBtn">↺ START OVER</a>
     <a class="back-link" href="index.html#tools">← TOOLS</a>
   </div>
 </header>
@@ -105,12 +106,16 @@ svg text{font-family:'JetBrains Mono',monospace;}
   <div class="setup-steps">
     <div class="step"><div class="step-num">1</div><div class="step-txt">Run <code>GT7-Live-Connector</code> (the same one the dashboard uses). In GT7: Settings → Assists → Send Vehicle Data → On.</div></div>
     <div class="step"><div class="step-num">2</div><div class="step-txt">Pick a track and a car, go to Time Trial or Practice, and drive. Every completed lap is counted below. Out-laps and laps where you leave the track are kept too; the analysis uses them all and tells you which was best.</div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-txt">At your target the report builds itself. Keep driving and it refreshes. You can also analyse early once you have three laps.</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-txt">After three laps the report builds itself, and it refreshes every time you cross the line after that. The target is just the number you are aiming for; keep going past it and the report keeps improving.</div></div>
   </div>
   <div class="row">
     <a class="btn btn-primary" href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.exe">Download Connector</a>
     <label class="sel">TARGET <select id="target"><option>5</option><option selected>10</option><option>15</option><option>20</option></select> LAPS</label>
+    <label class="sel">TRACK <input type="text" id="trackName" placeholder="leave blank to detect" size="22"></label>
     <label class="sel">CAR <input type="text" id="carName" placeholder="e.g. Megane Trophy Gr.4" size="22"></label>
+  </div>
+  <div class="row" style="margin-top:1rem">
+    <button class="btn btn-gold" id="startBtn">Start logging</button>
     <label class="btn" for="csvInput">Or load logger CSV files</label><input type="file" id="csvInput" multiple accept=".csv">
   </div>
   <p style="margin-top:1rem" id="waitTxt">Looking for the connector at localhost:8765…</p>
@@ -125,15 +130,20 @@ svg text{font-family:'JetBrains Mono',monospace;}
     </div>
     <div class="row">
       <button class="btn btn-gold" id="analyseBtn" disabled>Analyse now</button>
-      <button class="btn" id="resetBtn">Reset</button>
+      <button class="btn" id="resetBtn">Start over</button>
     </div>
   </div>
   <div class="laps" id="lapList"></div>
-  <p id="recNote">Waiting for the first completed lap. The lap you are on now shows in red.</p>
+  <p id="recNote">Waiting for the first completed lap. The lap you are on now shows in red. The report appears on its own after three laps and updates every lap after that.</p>
 </section>
 
 <!-- REPORT -->
 <section id="report" class="hidden" style="margin-top:1rem">
+  <div class="card" id="liveStrip" style="padding:.8rem 1.2rem;margin-bottom:1rem;display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap">
+    <div class="bigcount" style="font-size:2.4rem"><span id="lapDone2">0</span><small> / <span id="lapTarget2">10</span></small></div>
+    <div class="laps" id="lapList2" style="margin:0;flex:1"></div>
+    <div class="row"><button class="btn" id="dlBtn">Download laps</button><button class="btn" id="resetBtn2">Start over</button></div>
+  </div>
   <div class="card">
     <div class="row" style="justify-content:space-between;align-items:flex-start">
       <div>
@@ -141,10 +151,7 @@ svg text{font-family:'JetBrains Mono',monospace;}
         <h2 id="repTitle">Your laps</h2>
         <p id="repSub"></p>
       </div>
-      <div class="row">
-        <button class="btn" id="dlBtn">Download laps</button>
-        <button class="btn" id="againBtn">Log more</button>
-      </div>
+      <div class="row" id="repNote" style="font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--mut);letter-spacing:.1em"></div>
     </div>
     <div class="stats" id="stats"></div>
 
@@ -163,13 +170,20 @@ svg text{font-family:'JetBrains Mono',monospace;}
     </div>
 
     <div class="sec">
+      <h3>Where your laps <em>differ</em></h3>
+      <div class="note">Time between your best and worst lap at each corner. Tall bars are corners you have not settled yet. Gold is the corner that opens onto the longest straight, where exit speed is worth most.</div>
+      <div id="lostBox"></div>
+    </div>
+
+    <div class="sec">
       <h3>What to <em>try next session</em></h3>
+      <div class="note">Ranked by how much time each one is likely worth. Everything here is measured from your own telemetry.</div>
       <div class="advice" id="advice"></div>
     </div>
 
     <div class="sec">
       <h3>Every braking corner, <em>pedal and numbers</em></h3>
-      <div class="note">Brake pressure against metres before the apex, every lap, best in blue. A wall is a stamp; a slope is a squeeze. The line ending early is you off the pedal before the turn-in.</div>
+      <div class="note">Brake in blue and throttle in green against distance from the apex, your best lap bold and the others faint. A vertical wall is a stamp; a slope is a squeeze. The brake ending before the apex line is you off the pedal before the turn-in, and the gap before the green rises is coasting.</div>
       <div class="corners" id="corners"></div>
     </div>
   </div>
@@ -182,8 +196,8 @@ svg text{font-family:'JetBrains Mono',monospace;}
 (function(){
 const $ = id => document.getElementById(id);
 const WS_URL = 'ws://localhost:8765';
-let ws = null, mode = 'live';
-const rec = { laps: [], cur: null, lastCount: null, lastPid: null, carId: null, lastLapMs: null };
+let ws = null, mode = 'live', analysing = false, dirty = false, started = false;
+const rec = { laps: [], cur: null, lastCount: null, lastPid: null, carId: null };
 let result = null;
 
 // ---------- status ----------
@@ -208,49 +222,66 @@ function handle(m){
 function onPacket(d){
   if(d.paused) return;
   setStatus('live','GT7 LIVE');
-  if($('recorder').classList.contains('hidden')) showRecorder();
+  if(!started){ waitTxt('GT7 is live. Fill in the car (and the track if you like), then press Start logging.'); return; }
+  if(!$('setup').classList.contains('hidden')) showRecorder();
   if(d.vehicleId) rec.carId = d.vehicleId;
   const pid = d.packetId; if(rec.lastPid === pid) return; rec.lastPid = pid;
   if(rec.lastCount === null){ rec.lastCount = d.lapCount; rec.cur = null; }
   if(d.lapCount !== rec.lastCount){
-    // the lap just completed: its time arrives in lastLap
     if(rec.cur && rec.cur.samples.length > 200 && d.lastLap > 0){
       rec.cur.ms = d.lastLap; rec.cur.name = 'Lap ' + (rec.laps.length + 1);
       rec.laps.push(rec.cur); renderLaps();
-      if(rec.laps.length >= +$('target').value) analyse();
+      if(rec.laps.length >= 3) scheduleAnalysis();
     }
     rec.cur = { samples: [], ms: null }; rec.lastCount = d.lapCount;
+    if(rec.laps.length === 0) $('recNote').textContent = 'Lap 1 is being recorded from the line.';
   }
-  if(d.lapCount >= 1 && rec.cur === null) rec.cur = { samples: [], ms: null };
+  // a lap only counts if it was recorded from the line: whatever lap is in
+  // progress when Start is pressed is discarded, so the first chip is a full lap
   if(rec.cur){
     rec.cur.samples.push({ t: pid / 60, x: d.posX, z: d.posZ, v: (d.speed || 0) * 0.621371, thr: d.throttle || 0, brk: d.brake || 0 });
     if(rec.cur.samples.length % 30 === 0) renderLaps();
   }
 }
+// the analysis takes a fraction of a second; run it off the packet path so nothing is dropped
+function scheduleAnalysis(){ dirty = true; if(!analysing){ analysing = true; setTimeout(() => { analysing = false; if(dirty){ dirty = false; analyse(); } }, 50); } }
 
 // ---------- recorder UI ----------
 function fmtMs(ms){ const m = Math.floor(ms / 60000), s = (ms % 60000) / 1000; return m + ':' + s.toFixed(3).padStart(6, '0'); }
-function showRecorder(){ $('setup').classList.add('hidden'); $('recorder').classList.remove('hidden'); $('lapTarget').textContent = $('target').value; }
-function renderLaps(){
-  const L = $('lapList'); L.innerHTML = '';
-  const best = rec.laps.length ? Math.min(...rec.laps.map(l => l.ms)) : null;
-  rec.laps.forEach((l, i) => { const d = document.createElement('div'); d.className = 'lapchip' + (l.ms === best ? ' best' : ''); d.innerHTML = `<div class="n">LAP ${i+1}</div><div class="t">${fmtMs(l.ms)}</div>`; L.appendChild(d); });
-  if(rec.cur && rec.cur.samples.length){ const d = document.createElement('div'); d.className = 'lapchip live'; const s = rec.cur.samples; d.innerHTML = `<div class="n">LAP ${rec.laps.length+1}</div><div class="t">${fmtMs((s[s.length-1].t - s[0].t) * 1000)}</div>`; L.appendChild(d); }
-  $('lapDone').textContent = rec.laps.length; $('lapTarget').textContent = $('target').value;
-  $('analyseBtn').disabled = rec.laps.length < 3;
-  $('recNote').textContent = rec.laps.length < 3 ? 'Three laps is the minimum for a report. ' + (rec.laps.length ? '' : 'Waiting for the first completed lap.') : 'Analyse now, or keep going to ' + $('target').value + ' and it builds itself.';
+function showRecorder(){ $('setup').classList.add('hidden'); if($('report').classList.contains('hidden')) $('recorder').classList.remove('hidden'); $('lapTarget').textContent = $('target').value; }
+function lapChips(){
+  const best = rec.laps.length ? Math.min(...rec.laps.map(l => l.ms)) : null; let h = '';
+  rec.laps.forEach((l, i) => { const d = best !== null ? l.ms - best : 0; h += `<div class="lapchip${l.ms === best ? ' best' : ''}"><div class="n">LAP ${i+1}${l.ms === best ? ' · BEST' : (d ? ' · +' + (d/1000).toFixed(2) : '')}</div><div class="t">${fmtMs(l.ms)}</div></div>`; });
+  if(mode === 'live' && rec.cur && rec.cur.samples.length){ const s = rec.cur.samples; h += `<div class="lapchip live"><div class="n">LAP ${rec.laps.length+1} · LIVE</div><div class="t">${fmtMs((s[s.length-1].t - s[0].t) * 1000)}</div></div>`; }
+  return h;
 }
+function renderLaps(){
+  const h = lapChips(); $('lapList').innerHTML = h; $('lapList2').innerHTML = h;
+  $('lapDone').textContent = rec.laps.length; $('lapTarget').textContent = $('target').value;
+  $('lapDone2').textContent = rec.laps.length; $('lapTarget2').textContent = $('target').value;
+  $('analyseBtn').disabled = rec.laps.length < 3;
+  $('recNote').textContent = rec.laps.length === 0 ? (rec.cur ? 'Lap 1 is being recorded from the line. The lap you are on now shows in red.' : 'Cross the line to start lap 1. The lap you are on now is not counted.') : rec.laps.length < 3 ? (3 - rec.laps.length) + ' more lap' + (rec.laps.length === 2 ? '' : 's') + ' and the report builds itself.' : 'Report building…';
+}
+function resetAll(){
+  // back to the start screen: laps dropped, nothing records until Start is pressed again
+  rec.laps = []; rec.cur = null; rec.lastCount = null; rec.lastPid = null; result = null; started = false;
+  renderLaps(); $('report').classList.add('hidden'); $('recorder').classList.add('hidden'); $('setup').classList.remove('hidden');
+  if(mode === 'file'){ mode = 'live'; $('csvInput').value = ''; connect(); }
+  waitTxt(ws && ws.readyState === WebSocket.OPEN ? 'Connector found. Fill in the car, then press Start logging.' : 'Looking for the connector at localhost:8765…');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('startBtn').onclick = () => { started = true; rec.lastCount = null; rec.cur = null; showRecorder(); renderLaps(); };
+$('homeBtn').onclick = e => { e.preventDefault(); resetAll(); };
 $('analyseBtn').onclick = () => analyse();
-$('resetBtn').onclick = () => { rec.laps = []; rec.cur = null; rec.lastCount = null; renderLaps(); $('report').classList.add('hidden'); };
-$('againBtn').onclick = () => { $('report').classList.add('hidden'); $('recorder').classList.remove('hidden'); };
-$('target').onchange = () => { $('lapTarget').textContent = $('target').value; };
+$('resetBtn').onclick = resetAll; $('resetBtn2').onclick = resetAll;
+$('target').onchange = () => { $('lapTarget').textContent = $('target').value; $('lapTarget2').textContent = $('target').value; };
 
 // ---------- CSV loading (the SparksTheory logger's files) ----------
 $('csvInput').onchange = async (e) => {
   const files = [...e.target.files].filter(f => /\.csv$/i.test(f.name) && !/unknown/i.test(f.name));
   if(!files.length) return;
-  mode = 'file'; if(ws) try{ ws.onclose = null; ws.close(); }catch(_){}
-  setStatus('file', files.length + ' FILES'); rec.laps = [];
+  mode = 'file'; started = true; if(ws) try{ ws.onclose = null; ws.close(); }catch(_){}
+  setStatus('file', files.length + ' FILES LOADED'); rec.laps = [];
   for(const f of files.sort((a, b) => a.name.localeCompare(b.name))){
     const lap = LapCoach.parseLoggerCSV(await f.text(), f.name.replace(/\.csv$/i, ''));
     const s = lap.samples; lap.ms = Math.round((s[s.length-1].t - s[0].t) * 1000); rec.laps.push(lap);
@@ -259,85 +290,120 @@ $('csvInput').onchange = async (e) => {
 };
 
 // ---------- analysis and report ----------
-const TRACKS = [ // lap length fingerprints, metres; grows as laps are logged
-  [5686, 'Daytona Road Course'], [3848, 'Sardegna Road Track A'],
-];
-function trackName(L){ const hit = TRACKS.find(t => Math.abs(t[0] - L) / t[0] < 0.012); return hit ? hit[1] : 'Unrecognised track'; }
+const TRACKS = [ [5686, 'Daytona Road Course'], [3848, 'Sardegna Road Track A'] ];
+function trackName(L){ const typed = $('trackName').value.trim(); if(typed) return typed; const hit = TRACKS.find(t => Math.abs(t[0] - L) / t[0] < 0.012); return hit ? hit[1] : 'Unrecognised track'; }
 function analyse(){
   if(rec.laps.length < 3) return;
   const laps = rec.laps.map((l, i) => ({ name: l.name || ('Lap ' + (i+1)), samples: l.samples }));
-  try{ result = LapCoach.analyse(laps); }catch(err){ alert('Analysis failed: ' + err.message); return; }
+  try{ result = LapCoach.analyse(laps); }catch(err){ console.error(err); $('recNote').textContent = 'Analysis failed: ' + err.message; return; }
+  const first = $('report').classList.contains('hidden');
   renderReport(result);
-  $('recorder').classList.add('hidden'); $('report').classList.remove('hidden'); window.scrollTo({ top: 0, behavior: 'smooth' });
+  $('recorder').classList.add('hidden'); $('report').classList.remove('hidden');
+  if(first) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function fmtT(s){ const m = Math.floor(s / 60); return m + ':' + (s - m * 60).toFixed(3).padStart(6, '0'); }
 function renderReport(R){
   const car = $('carName').value.trim() || (rec.carId ? 'Car #' + rec.carId : 'Unknown car');
+  renderLaps();
   $('repTitle').innerHTML = `${trackName(R.lapLength)} <span style="color:var(--mut);font-size:.9rem;letter-spacing:.08em;font-family:'JetBrains Mono',monospace">${Math.round(R.lapLength)} m</span>`;
   $('repSub').textContent = `${R.names.length} laps, ${car}. Best ${fmtT(R.bestTime)} (${R.names[R.best]}).`;
+  $('repNote').textContent = mode === 'live' ? 'LIVE · UPDATES EVERY LAP' : 'FROM LOGGER FILES';
   const spread = Math.max(...R.times) - Math.min(...R.times);
   $('stats').innerHTML = [
     ['Best lap', fmtT(R.bestTime), 'blu', R.names[R.best]],
     ['Theoretical best', fmtT(R.theoretical), 'gold', 'best section of any lap, stitched'],
-    ['On the table', (R.bestTime - R.theoretical).toFixed(3) + 's', '', 'from your own laps'],
+    ['On the table', (R.bestTime - R.theoretical).toFixed(3) + 's', '', 'from your own laps alone'],
     ['Lap spread', spread.toFixed(3) + 's', '', 'best to worst'],
     ['Corners', R.corners.length, '', R.corners.filter(c => c.braking).length + ' braking'],
     ['Longest flat out', Math.round(R.longestRun.metres) + ' m', '', 'opens from ' + R.longestRun.opensFrom],
   ].map(([l, v, c, s]) => `<div class="stat"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
-  drawMap(R); drawSpeed(R); drawAdvice(R); drawCorners(R);
+  drawMap(R); drawSpeed(R); drawLost(R); drawAdvice(R); drawCorners(R);
 }
+const KIND = { slow: 'SLOW', medium: 'MEDIUM', fast: 'FAST' };
 function drawMap(R){
   const pts = R.map; const xs = pts.map(p => p[0]), zs = pts.map(p => p[1]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
-  const W = 520, H = 420, pad = 36, sc = Math.min((W - 2*pad) / (x1 - x0), (H - 2*pad) / (z1 - z0));
+  const W = 520, H = 440, pad = 40, sc = Math.min((W - 2*pad) / (x1 - x0), (H - 2*pad) / (z1 - z0));
   const ox = (W - (x1 - x0) * sc) / 2, oz = (H - (z1 - z0) * sc) / 2;
   const X = x => ox + (x - x0) * sc, Z = z => oz + (z - z0) * sc;
   const d = pts.map((p, i) => (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ',' + Z(p[1]).toFixed(1)).join(' ') + 'Z';
-  let g = `<path d="${d}" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="9" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#9aa0b8" stroke-width="2.5" stroke-linejoin="round"/>`;
-  // start line
-  g += `<circle cx="${X(pts[0][0])}" cy="${Z(pts[0][1])}" r="4" fill="#fff"/>`;
+  // the longest flat-out run, as a gold segment along the path
+  const inRun = s => { const a = R.longestRun.from, b = R.longestRun.to; return b <= R.lapLength ? (s >= a && s <= b) : (s >= a || s <= b - R.lapLength); };
+  let run = ''; let open = false;
+  R.mapS.forEach((s, i) => { const p = pts[i]; if(inRun(s)){ run += (open ? 'L' : 'M') + X(p[0]).toFixed(1) + ',' + Z(p[1]).toFixed(1) + ' '; open = true; } else open = false; });
+  let g = `<path d="${d}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="11" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#9aa0b8" stroke-width="2.5" stroke-linejoin="round"/>`;
+  g += `<path d="${run}" fill="none" stroke="rgba(255,195,26,.55)" stroke-width="6" stroke-linecap="round"/>`;
+  g += `<circle cx="${X(pts[0][0])}" cy="${Z(pts[0][1])}" r="4.5" fill="#fff"/><text x="${X(pts[0][0]) + 9}" y="${Z(pts[0][1]) - 8}" font-size="10" fill="#8b93a3">START</text>`;
   R.corners.forEach(c => {
     let k = 0; for(let i = 1; i < R.mapS.length; i++) if(Math.abs(R.mapS[i] - c.apex) < Math.abs(R.mapS[k] - c.apex)) k = i;
-    const p = pts[k]; const col = c.name === R.longestRun.opensFrom ? 'var(--gold)' : (c.braking ? 'var(--red)' : 'var(--blu)');
-    g += `<circle cx="${X(p[0])}" cy="${Z(p[1])}" r="7" fill="${col}" stroke="#07080d" stroke-width="2"/><text x="${X(p[0]) + 11}" y="${Z(p[1]) + 4}" font-size="11" fill="#eef0f8">${c.name}</text>`;
+    const p = pts[k]; const col = c.name === R.longestRun.opensFrom ? '#ffc31a' : (c.braking ? '#ff2d3b' : '#1ab4ff');
+    g += `<circle cx="${X(p[0])}" cy="${Z(p[1])}" r="8" fill="${col}" stroke="#07080d" stroke-width="2"/><text x="${X(p[0]) + 12}" y="${Z(p[1]) + 5}" font-size="13" font-weight="700" fill="#eef0f8">${c.name}</text><text x="${X(p[0]) + 12}" y="${Z(p[1]) + 18}" font-size="9" fill="#8b93a3">${Math.round(c.vminBest)} MPH</text>`;
   });
-  $('mapBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:420px">${g}</svg>`;
+  $('mapBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:440px">${g}</svg>`;
 }
 function drawSpeed(R){
-  const W = 560, H = 300, pl = 34, pr = 10, pt = 10, pb = 26; const n = R.S.length;
-  const vmax = Math.max(...R.speed.flat()) * 1.05, vmin = Math.min(...R.speed.flat()) * 0.85;
+  const W = 560, H = 320, pl = 38, pr = 10, pt = 14, pb = 30; const n = R.S.length;
+  let vmax = -1e9, vmin = 1e9; R.speed.forEach(v => v.forEach(s => { if(s > vmax) vmax = s; if(s < vmin) vmin = s; })); vmax *= 1.05; vmin *= 0.85;
   const X = i => pl + (W - pl - pr) * i / (n - 1), Y = v => pt + (H - pt - pb) * (1 - (v - vmin) / (vmax - vmin));
   let g = '';
-  for(let j = 0; j < 5; j++){ const v = vmin + (vmax - vmin) * j / 4; g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#1c1f2e"/><text x="${pl - 4}" y="${Y(v) + 3}" font-size="8" fill="#525870" text-anchor="end">${Math.round(v)}</text>`; }
-  R.corners.forEach(c => { const x = X(c.idx); g += `<line x1="${x}" x2="${x}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.25)" stroke-dasharray="3 3"/><text x="${x}" y="${H - 8}" font-size="8" fill="#ffc31a" text-anchor="middle">${c.name}</text>`; });
+  for(let j = 0; j < 5; j++){ const v = vmin + (vmax - vmin) * j / 4; g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#1c1f2e"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="10" fill="#525870" text-anchor="end">${Math.round(v)}</text>`; }
+  R.corners.forEach(c => { const x = X(c.idx); g += `<line x1="${x}" x2="${x}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.25)" stroke-dasharray="3 3"/><text x="${x}" y="${H - 10}" font-size="11" fill="#ffc31a" text-anchor="middle">${c.name}</text>`; });
   const line = (v, col, w) => `<polyline fill="none" stroke="${col}" stroke-width="${w}" points="${v.map((s, i) => (i % 2 ? '' : X(i).toFixed(1) + ',' + Y(s).toFixed(1) + ' ')).join('')}"/>`;
-  R.speed.forEach((v, i) => { if(i !== R.best) g += line(v, '#3a3f55', 1); });
-  g += line(R.speed[R.best], '#1ab4ff', 2);
-  g += `<text x="${W - pr}" y="${H - 8}" font-size="8" fill="#525870" text-anchor="end">mph by distance</text>`;
-  $('speedBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>`;
+  R.speed.forEach((v, i) => { if(i !== R.best) g += line(v, '#3a3f55', 1.2); });
+  g += line(R.speed[R.best], '#1ab4ff', 2.2);
+  g += `<g id="spdCursor" style="display:none"><line id="spdLine" y1="${pt}" y2="${H - pb}" stroke="rgba(255,255,255,.35)"/><rect id="spdBox" width="150" height="34" rx="4" fill="rgba(13,15,24,.92)" stroke="#1c1f2e"/><text id="spdT1" font-size="11" fill="#eef0f8"></text><text id="spdT2" font-size="10" fill="#8b93a3"></text></g>`;
+  const box = $('speedBox'); box.innerHTML = `<svg id="spdSvg" viewBox="0 0 ${W} ${H}" width="100%" style="cursor:crosshair">${g}</svg>`;
+  const svg = $('spdSvg');
+  svg.onmousemove = ev => {
+    const r = svg.getBoundingClientRect(); const x = (ev.clientX - r.left) * W / r.width;
+    const i = Math.max(0, Math.min(n - 1, Math.round((x - pl) / (W - pl - pr) * (n - 1))));
+    const cur = $('spdCursor'); cur.style.display = ''; $('spdLine').setAttribute('x1', X(i)); $('spdLine').setAttribute('x2', X(i));
+    const bx = Math.min(W - 160, X(i) + 8); $('spdBox').setAttribute('x', bx); $('spdBox').setAttribute('y', pt + 4);
+    const others = R.speed.map((v, k) => v[i]).filter((_, k) => k !== R.best);
+    $('spdT1').setAttribute('x', bx + 8); $('spdT1').setAttribute('y', pt + 18); $('spdT1').textContent = `${Math.round(R.S[i])} m · best ${Math.round(R.speed[R.best][i])} mph`;
+    $('spdT2').setAttribute('x', bx + 8); $('spdT2').setAttribute('y', pt + 31); $('spdT2').textContent = others.length ? `others ${Math.round(Math.min(...others))} to ${Math.round(Math.max(...others))} mph` : '';
+  };
+  svg.onmouseleave = () => { $('spdCursor').style.display = 'none'; };
+}
+function drawLost(R){
+  // time between your best and worst lap, corner by corner: where your laps differ
+  const rows = R.corners; const W = 560, H = 160, pl = 38, pr = 10, pt = 26, pb = 28;
+  const mx = Math.max(0.05, ...rows.map(r => r.sectMax - r.sectMin));
+  const bw = (W - pl - pr) / rows.length;
+  let g = '';
+  rows.forEach((r, i) => {
+    const h = (H - pt - pb) * (r.sectMax - r.sectMin) / mx; const col = r.name === R.longestRun.opensFrom ? '#ffc31a' : '#1ab4ff';
+    g += `<rect x="${pl + i * bw + bw * 0.2}" y="${H - pb - h}" width="${bw * 0.6}" height="${h}" rx="3" fill="${col}" opacity=".85"/>`;
+    g += `<text x="${pl + i * bw + bw / 2}" y="${H - pb - h - 5}" font-size="11" fill="#eef0f8" text-anchor="middle">${(r.sectMax - r.sectMin).toFixed(2)}s</text>`;
+    g += `<text x="${pl + i * bw + bw / 2}" y="${H - 10}" font-size="11" fill="#8b93a3" text-anchor="middle">${r.name}</text>`;
+  });
+  $('lostBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:220px;display:block">${g}</svg>`;
 }
 function drawAdvice(R){
-  $('advice').innerHTML = R.advice.map(a => `<div class="adv ${a.kind}"><h4>${a.head}</h4><p>${a.body}</p></div>`).join('');
+  $('advice').innerHTML = R.advice.map((a, i) => `<div class="adv ${a.kind}"><h4>${a.kind === 'caveat' ? '' : (i + 1) + '. '}${a.head}</h4><p>${a.body}</p></div>`).join('');
 }
 function drawCorners(R){
   const box = $('corners'); box.innerHTML = '';
   const DS = R.lapLength / (R.S.length - 1);
   R.corners.filter(c => c.braking).forEach(c => {
-    const W = 300, H = 110, pl = 6, pr = 6, pt = 8, pb = 16; const back = 220, fwd = 40;  // metres before/after apex shown
+    const W = 320, H = 130, pl = 6, pr = 6, pt = 10, pb = 18; const back = 220, fwd = 120;
     const X = m => pl + (W - pl - pr) * (back - m) / (back + fwd), Y = b => pt + (H - pt - pb) * (1 - b / 100);
-    let g = `<line x1="${X(0)}" x2="${X(0)}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.5)" stroke-dasharray="3 3"/><text x="${X(0)}" y="${H - 4}" font-size="8" fill="#ffc31a" text-anchor="middle">apex</text><text x="${X(back)}" y="${H - 4}" font-size="8" fill="#525870">${back} m out</text>`;
-    const trace = (bi, col, w) => { let pts = ''; for(let m = back; m >= -fwd; m -= DS){ const k = Math.round(((c.apex - m) / DS + R.S.length * 2) % R.S.length); pts += X(m).toFixed(1) + ',' + Y(R.brake[bi][k]).toFixed(1) + ' '; } return `<polyline fill="none" stroke="${col}" stroke-width="${w}" points="${pts}"/>`; };
-    R.brake.forEach((_, i) => { if(i !== R.best) g += trace(i, '#3a3f55', 1); }); g += trace(R.best, '#1ab4ff', 2);
+    let g = `<line x1="${X(0)}" x2="${X(0)}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.5)" stroke-dasharray="3 3"/><text x="${X(0)}" y="${H - 5}" font-size="10" fill="#ffc31a" text-anchor="middle">apex</text><text x="${X(back)}" y="${H - 5}" font-size="10" fill="#525870">${back} m before</text><text x="${X(-fwd)}" y="${H - 5}" font-size="10" fill="#525870" text-anchor="end">${fwd} m after</text>`;
+    const trace = (arr, bi, col, w) => { let pts = ''; for(let m = back; m >= -fwd; m -= DS){ const k = Math.round(((c.apex - m) / DS + R.S.length * 2) % R.S.length); pts += X(m).toFixed(1) + ',' + Y(arr[bi][k]).toFixed(1) + ' '; } return `<polyline fill="none" stroke="${col}" stroke-width="${w}" points="${pts}"/>`; };
+    R.brake.forEach((_, i) => { if(i !== R.best){ g += trace(R.brake, i, '#3a3f55', 1); g += trace(R.throttle, i, 'rgba(0,229,160,.18)', 1); } });
+    g += trace(R.throttle, R.best, '#00e5a0', 1.8); g += trace(R.brake, R.best, '#1ab4ff', 2.2);
     const b = c.brakeBest; const f = x => x === null ? '–' : Math.round(x) + ' m';
+    const ap = x => { const r = Math.round(x); return r === 0 ? 'at the apex' : Math.abs(r) + ' m ' + (r > 0 ? 'after' : 'before') + ' apex'; };
     const el = document.createElement('div'); el.className = 'cc';
-    el.innerHTML = `<h4>${c.name}<span>${Math.round(c.apex)} M FROM THE LINE${c.name === R.longestRun.opensFrom ? ' · ONTO THE LONG STRAIGHT' : ''}</span></h4>
+    el.innerHTML = `<h4>${c.name}<span>${KIND[c.kind]} · ${Math.round(c.apex)} M FROM THE LINE${c.name === R.longestRun.opensFrom ? ' · ONTO THE LONG STRAIGHT' : ''}</span></h4>
+      <div class="legend" style="margin:.3rem 0 0"><span><i style="background:#1ab4ff"></i>BRAKE</span><span><i style="background:#00e5a0"></i>THROTTLE</span><span><i style="background:#3a3f55"></i>OTHER LAPS</span></div>
       <svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>
       <div class="kv">
-        <b>MIN SPEED</b><span>${Math.round(c.vminBest)} mph best, ${Math.round(c.vminMin)} to ${Math.round(c.vminMax)} across laps</span>
-        <b>BRAKE TOUCH</b><span>${f(b.touch)} before apex${c.touchMin !== null ? ' (' + Math.round(c.touchMin) + ' to ' + Math.round(c.touchMax) + ')' : ''}</span>
-        <b>FULL PRESSURE</b><span>${b.full === null ? 'never reached' : f(b.full) + ' before apex'}</span>
-        <b>OFF THE BRAKE</b><span>${b.off === null ? '–' : f(b.off) + ' before apex'}</span>
-        <b>FULL THROTTLE</b><span>${c.flatBest === null ? '–' : Math.round(c.flatBest) + ' m after apex'}</span>
+        <b>MIN SPEED</b><span>${Math.round(c.vminBest)} mph on your best, ${Math.round(c.vminMin)} to ${Math.round(c.vminMax)} across laps</span>
+        <b>LIFT</b><span>${b.lift === null ? '–' : f(b.lift) + ' before apex'}${b.liftGap !== null && b.liftGap > 10 ? ', ' + Math.round(b.liftGap) + ' m before the brake' : ''}</span>
+        <b>BRAKE</b><span>touch ${f(b.touch)}, full ${b.full === null ? 'never' : f(b.full)}, off ${f(b.off)} before apex${c.touchMin !== null ? ' · touch point wanders ' + Math.round(c.touchMax - c.touchMin) + ' m' : ''}</span>
+        <b>THROTTLE</b><span>${b.pick === null ? '–' : 'picks up ' + ap(b.pick)}${b.tfull !== null ? ', full ' + ap(b.tfull) : ''}${b.midLift ? ' · lifted again mid-exit' : ''}</span>
+        <b>COASTING</b><span>${b.coast === null ? '–' : Math.round(b.coast) + ' m with neither pedal'}${b.overlap > 8 ? ' · ' + Math.round(b.overlap) + ' m with both' : ''}</span>
         <b>SECTION</b><span>${c.sectBest.toFixed(2)} s best, +${(c.sectMax - c.sectMin).toFixed(2)} s on your worst lap</span>
       </div>`;
     box.appendChild(el);
