@@ -70,10 +70,10 @@
 
   // ---------- projection ----------
   function buildReference(lap) {
-    const xs = Float64Array.from(lap, s => s.x), zs = Float64Array.from(lap, s => s.z);
+    const xs = Float64Array.from(lap, s => s.x), zs = Float64Array.from(lap, s => s.z), ys = Float64Array.from(lap, s => s.y || 0);
     const rs = cumdist(xs, zs); const LAP = rs[rs.length - 1];
     const S = new Float64Array(N); for (let i = 0; i < N; i++) S[i] = LAP * i / (N - 1);
-    return { xs, zs, rs, LAP, S, DS: LAP / (N - 1), nearest: makeIndex(xs, zs, 25) };
+    return { xs, ys, zs, rs, LAP, S, DS: LAP / (N - 1), nearest: makeIndex(xs, zs, 25) };
   }
   function profile(ref, lap) {
     const n = lap.length; const raw = new Float64Array(n); const off = new Float64Array(n);
@@ -238,6 +238,8 @@
       names, times, best: bi, lapLength: ref.LAP, S: Array.from(ref.S),
       map: Array.from({ length: Math.ceil(ref.xs.length / 5) }, (_, i) => [ref.xs[i * 5], ref.zs[i * 5]]),
       mapS: Array.from({ length: Math.ceil(ref.rs.length / 5) }, (_, i) => ref.rs[i * 5]),
+      // the best lap's line on the S grid, with elevation, for the 3D map
+      path: { x: Array.from(interp(ref.S, ref.rs, ref.xs)), y: Array.from(interp(ref.S, ref.rs, ref.ys)), z: Array.from(interp(ref.S, ref.rs, ref.zs)) },
       corners: rows, theoretical: theo, bestTime: times[bi],
       longestRun: { from: runFrom, to: runTo, metres: runTo - runFrom, opensFrom: compounding },
       flatShare, top,
@@ -338,7 +340,7 @@
     const samples = [];
     for (let i = 1; i < lines.length; i++) {
       const c = lines[i].split(","); if (c.length < head.length) continue;
-      samples.push({ t: +c[ix.t_s], x: +c[ix.x], z: +c[ix.z], v: ix.speed_mph !== undefined ? +c[ix.speed_mph] : +c[ix.speed_kph] * 0.621371, thr: +c[ix.throttle_pct], brk: +c[ix.brake_pct] });
+      samples.push({ t: +c[ix.t_s], x: +c[ix.x], y: ix.y !== undefined ? +c[ix.y] : 0, z: +c[ix.z], v: ix.speed_mph !== undefined ? +c[ix.speed_mph] : +c[ix.speed_kph] * 0.621371, thr: +c[ix.throttle_pct], brk: +c[ix.brake_pct] });
     }
     return { name: name || "lap", samples };
   }

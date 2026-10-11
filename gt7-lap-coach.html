@@ -81,6 +81,28 @@ svg text{font-family:'JetBrains Mono',monospace;}
 .cc .kv b{color:var(--mut);font-weight:600;letter-spacing:.08em;font-family:'JetBrains Mono',monospace;font-size:.62rem;align-self:center;} .cc .kv span{color:var(--wht);}
 .legend{display:flex;gap:1rem;font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.14em;color:var(--mut);margin:.3rem 0 .5rem;}
 .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:.35rem;border-radius:2px;}
+/* 3D map */
+.map3{display:grid;grid-template-columns:3fr 2fr;gap:1rem;} @media(max-width:860px){.map3{grid-template-columns:1fr;}}
+.m3wrap{position:relative;background:radial-gradient(ellipse at 50% 60%,#0e1120 0%,#07080d 75%);border:1px solid var(--bor);border-radius:8px;overflow:hidden;height:540px;touch-action:none;user-select:none;} @media(max-width:860px){.m3wrap{height:400px;}}
+.m3wrap canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;} .m3wrap canvas.drag{cursor:grabbing;} .m3wrap canvas.pick{cursor:pointer;}
+.m3ctl{position:absolute;top:.6rem;display:flex;gap:.35rem;z-index:2;} .m3ctl.tl{left:.6rem;} .m3ctl.tr{right:.6rem;}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.14em;padding:.35rem .6rem;border-radius:4px;border:1px solid var(--bor);background:rgba(13,15,24,.85);color:var(--mut);cursor:pointer;text-transform:uppercase;} .chip:hover{color:var(--wht);border-color:#3a3f55;} .chip.on{color:var(--blu);border-color:rgba(26,180,255,.5);background:rgba(26,180,255,.1);} .chip.gold{color:var(--gold);border-color:rgba(255,195,26,.5);background:rgba(255,195,26,.1);}
+.m3hint{position:absolute;bottom:.55rem;left:0;right:0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:.2em;color:var(--mut);pointer-events:none;}
+.m3legend{position:absolute;bottom:1.6rem;left:.7rem;display:flex;gap:.8rem;font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:.12em;color:var(--mut);pointer-events:none;} .m3legend i{display:inline-block;width:12px;height:3px;border-radius:2px;vertical-align:middle;margin-right:.3rem;}
+.m3hud{position:absolute;right:.6rem;bottom:1.6rem;background:rgba(13,15,24,.88);border:1px solid var(--bor);border-radius:6px;padding:.5rem .7rem;min-width:118px;pointer-events:none;}
+.m3hud .t{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.14em;color:var(--mut);} .m3hud .v{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;line-height:1;color:var(--wht);} .m3hud .v small{font-size:.75rem;color:var(--mut);letter-spacing:.1em;}
+.m3hud .bars{display:flex;gap:4px;margin-top:.35rem;height:6px;} .m3hud .bars i{display:block;height:6px;border-radius:3px;width:0%;flex:none;transition:width .05s linear;} .m3hud .b{background:var(--blu);} .m3hud .g{background:var(--grn);}
+.m3panel{background:var(--pan);border:1px solid var(--bor);border-radius:8px;padding:1rem 1.1rem;min-height:300px;max-height:540px;overflow:auto;scrollbar-width:thin;scrollbar-color:#2a2d3e transparent;} @media(max-width:860px){.m3panel{max-height:none;}}
+.m3panel .eyebrow{color:var(--mut);} .m3panel h4{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.05em;line-height:1;} .m3panel h4 em{font-style:normal;color:var(--gold);font-size:1rem;letter-spacing:.12em;font-family:'JetBrains Mono',monospace;margin-left:.5rem;}
+.m3panel .nav{display:flex;gap:.35rem;margin-left:auto;} .m3panel .nav .chip{padding:.3rem .5rem;}
+.m3panel .tiles{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.8rem 0;} .m3panel .tile{background:var(--sur);border:1px solid var(--bor);border-radius:6px;padding:.55rem .7rem;}
+.m3panel .tile .l{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:.18em;color:var(--mut);text-transform:uppercase;} .m3panel .tile .v{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1.05;margin-top:.1rem;} .m3panel .tile .v.blu{color:var(--blu);} .m3panel .tile .v.gold{color:var(--gold);} .m3panel .tile .v.grn{color:var(--grn);} .m3panel .tile .s{font-family:'Rajdhani',sans-serif;font-size:.85rem;color:var(--mut);}
+.m3panel .story{font-family:'Rajdhani',sans-serif;font-size:1.02rem;line-height:1.5;color:var(--wht);margin:.5rem 0;} .m3panel .story b{color:var(--blu);font-weight:600;} .m3panel .story b.g{color:var(--grn);} .m3panel .story b.y{color:var(--gold);}
+.m3panel .tryh{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.2em;color:var(--mut);margin:.9rem 0 .4rem;}
+.m3panel .try{border-left:3px solid var(--gold);padding:.4rem .7rem;margin-bottom:.5rem;background:var(--sur);border-radius:0 6px 6px 0;} .m3panel .try h5{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.05em;} .m3panel .try p{font-family:'Rajdhani',sans-serif;font-size:.98rem;line-height:1.45;color:#c5cad8;}
+.m3panel .clist{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.8rem;} .m3panel .cbtn{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.05em;padding:.3rem .65rem;border:1px solid var(--bor);border-radius:5px;background:var(--sur);color:var(--wht);cursor:pointer;} .m3panel .cbtn small{display:block;font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.12em;color:var(--mut);} .m3panel .cbtn:hover{border-color:var(--blu);} .m3panel .cbtn.gold{border-color:rgba(255,195,26,.45);}
+.m3panel .cbtn.on{border-color:var(--blu);background:rgba(26,180,255,.1);}
+@media(max-width:600px){.m3ctl.tr{top:2.5rem;right:auto;left:.6rem;} .m3hint{display:none;} .m3legend{bottom:.6rem;flex-wrap:wrap;gap:.5rem;right:.7rem;} .m3hud{top:auto;bottom:.5rem;left:.6rem;right:.6rem;min-width:0;padding:.35rem .6rem;display:flex;align-items:center;gap:.7rem;} .m3hud .v{font-size:1.4rem;} .m3hud .bars{flex:1;margin-top:0;} .m3legend{bottom:3.4rem;}}
 .foot{font-family:'Rajdhani',sans-serif;font-size:.95rem;color:var(--mut);margin-top:2rem;line-height:1.6;}
 </style>
 </head>
@@ -155,24 +177,34 @@ svg text{font-family:'JetBrains Mono',monospace;}
     </div>
     <div class="stats" id="stats"></div>
 
-    <div class="grid2">
-      <div class="sec">
-        <h3>The track, <em>as you drove it</em></h3>
-        <div class="note">Corners found from your best lap's speed trace. Numbers run from the start line. Gold is the corner that opens onto the longest flat-out run.</div>
-        <div id="mapBox"></div>
+    <div class="sec">
+      <h3>The track, <em>in three dimensions</em></h3>
+      <div class="note">Your best lap as a ribbon, with the hills in it. Drag to turn it, scroll or pinch to zoom, and tap a corner for its numbers. Press play to watch the lap run.</div>
+      <div class="map3">
+        <div class="m3wrap" id="m3wrap">
+          <canvas id="m3c"></canvas>
+          <div class="m3ctl tl"><button class="chip on" data-mode="speed">SPEED</button><button class="chip" data-mode="pedals">PEDALS</button><button class="chip" id="m3relief">RELIEF</button></div>
+          <div class="m3ctl tr"><button class="chip" id="m3play">&#9654; PLAY LAP</button><button class="chip on" id="m3spin">SPIN</button></div>
+          <div class="m3hud hidden" id="m3hud"><div class="t" id="m3t">0:00.000</div><div class="v"><span id="m3v">0</span><small> MPH</small></div><div class="bars"><i class="b" id="m3b"></i><i class="g" id="m3g"></i></div></div>
+          <div class="m3legend" id="m3legend"></div>
+          <div class="m3hint">DRAG TO ROTATE · SCROLL TO ZOOM · TAP A CORNER</div>
+        </div>
+        <div class="m3panel" id="m3panel"></div>
       </div>
+    </div>
+
+    <div class="grid2">
       <div class="sec">
         <h3>Speed, <em>lap on lap</em></h3>
         <div class="note">Every lap by position on the track, so they sit on top of each other. Blue is your best. Where the lines fan out is where your laps differ.</div>
         <div class="legend"><span><i style="background:var(--blu)"></i>BEST LAP</span><span><i style="background:#3a3f55"></i>OTHER LAPS</span></div>
         <div id="speedBox"></div>
       </div>
-    </div>
-
-    <div class="sec">
-      <h3>Where your laps <em>differ</em></h3>
-      <div class="note">Time between your best and worst lap at each corner. Tall bars are corners you have not settled yet. Gold is the corner that opens onto the longest straight, where exit speed is worth most.</div>
-      <div id="lostBox"></div>
+      <div class="sec">
+        <h3>Where your laps <em>differ</em></h3>
+        <div class="note">Time between your best and worst lap at each corner. Tall bars are corners you have not settled yet. Gold is the corner that opens onto the longest straight, where exit speed is worth most.</div>
+        <div id="lostBox"></div>
+      </div>
     </div>
 
     <div class="sec">
@@ -239,7 +271,7 @@ function onPacket(d){
   // a lap only counts if it was recorded from the line: whatever lap is in
   // progress when Start is pressed is discarded, so the first chip is a full lap
   if(rec.cur){
-    rec.cur.samples.push({ t: pid / 60, x: d.posX, z: d.posZ, v: (d.speed || 0) * 0.621371, thr: d.throttle || 0, brk: d.brake || 0 });
+    rec.cur.samples.push({ t: pid / 60, x: d.posX, y: d.posY || 0, z: d.posZ, v: (d.speed || 0) * 0.621371, thr: d.throttle || 0, brk: d.brake || 0 });
     if(rec.cur.samples.length % 30 === 0) renderLaps();
   }
 }
@@ -320,26 +352,202 @@ function renderReport(R){
   drawMap(R); drawSpeed(R); drawLost(R); drawAdvice(R); drawCorners(R);
 }
 const KIND = { slow: 'SLOW', medium: 'MEDIUM', fast: 'FAST' };
+// ---------- the 3D track ----------
+// Canvas renderer, no libraries. The best lap's line on the S grid (R.path) is
+// drawn as a ribbon with real elevation, coloured by speed or by pedal state.
+// Drag turns it, wheel or pinch zooms, a tap on a corner marker selects it and
+// the panel beside the map shows that corner's numbers and the advice that
+// names it. Play runs a car dot round the lap at real speed.
+const M3 = { R: null, yaw: 0.65, pitch: 1.0, zoom: 1.15, relief: 1, reliefAuto: 1, mode: 'speed', sel: null, hover: null, spin: true,
+  play: false, playT: 0, lastTs: 0, drag: null, moved: 0, pointers: new Map(), pinch: null, marks: [], dirty: true, raf: 0 };
+const m3c = $('m3c'), m3ctx = m3c.getContext('2d');
+function lerpCol(a, b, t){ return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+const SPEED_STOPS = [[75,59,255],[26,180,255],[238,240,248],[255,195,26]];
+function speedCol(t){ t = Math.max(0, Math.min(1, t)) * 3; const i = Math.min(2, Math.floor(t)); const c = lerpCol(SPEED_STOPS[i], SPEED_STOPS[i + 1], t - i); return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; }
 function drawMap(R){
-  const pts = R.map; const xs = pts.map(p => p[0]), zs = pts.map(p => p[1]);
-  const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
-  const W = 520, H = 440, pad = 40, sc = Math.min((W - 2*pad) / (x1 - x0), (H - 2*pad) / (z1 - z0));
-  const ox = (W - (x1 - x0) * sc) / 2, oz = (H - (z1 - z0) * sc) / 2;
-  const X = x => ox + (x - x0) * sc, Z = z => oz + (z - z0) * sc;
-  const d = pts.map((p, i) => (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ',' + Z(p[1]).toFixed(1)).join(' ') + 'Z';
-  // the longest flat-out run, as a gold segment along the path
-  const inRun = s => { const a = R.longestRun.from, b = R.longestRun.to; return b <= R.lapLength ? (s >= a && s <= b) : (s >= a || s <= b - R.lapLength); };
-  let run = ''; let open = false;
-  R.mapS.forEach((s, i) => { const p = pts[i]; if(inRun(s)){ run += (open ? 'L' : 'M') + X(p[0]).toFixed(1) + ',' + Z(p[1]).toFixed(1) + ' '; open = true; } else open = false; });
-  let g = `<path d="${d}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="11" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#9aa0b8" stroke-width="2.5" stroke-linejoin="round"/>`;
-  g += `<path d="${run}" fill="none" stroke="rgba(255,195,26,.55)" stroke-width="6" stroke-linecap="round"/>`;
-  g += `<circle cx="${X(pts[0][0])}" cy="${Z(pts[0][1])}" r="4.5" fill="#fff"/><text x="${X(pts[0][0]) + 9}" y="${Z(pts[0][1]) - 8}" font-size="10" fill="#8b93a3">START</text>`;
-  R.corners.forEach(c => {
-    let k = 0; for(let i = 1; i < R.mapS.length; i++) if(Math.abs(R.mapS[i] - c.apex) < Math.abs(R.mapS[k] - c.apex)) k = i;
-    const p = pts[k]; const col = c.name === R.longestRun.opensFrom ? '#ffc31a' : (c.braking ? '#ff2d3b' : '#1ab4ff');
-    g += `<circle cx="${X(p[0])}" cy="${Z(p[1])}" r="8" fill="${col}" stroke="#07080d" stroke-width="2"/><text x="${X(p[0]) + 12}" y="${Z(p[1]) + 5}" font-size="13" font-weight="700" fill="#eef0f8">${c.name}</text><text x="${X(p[0]) + 12}" y="${Z(p[1]) + 18}" font-size="9" fill="#8b93a3">${Math.round(c.vminBest)} MPH</text>`;
-  });
-  $('mapBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:440px">${g}</svg>`;
+  M3.R = R; M3.sel = null; M3.hover = null; M3.play = false; M3.playT = 0; M3.zoom = m3c.clientWidth < 500 ? 0.8 : 1.05;
+  const P = R.path, n = P.x.length;
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for(let i = 0; i < n; i++){ const x = P.x[i], y = P.y[i], z = P.z[i]; if(x < x0) x0 = x; if(x > x1) x1 = x; if(z < z0) z0 = z; if(z > z1) z1 = z; if(y < y0) y0 = y; if(y > y1) y1 = y; }
+  M3.cx = (x0 + x1) / 2; M3.cz = (z0 + z1) / 2; M3.cy = y0; M3.ext = Math.max(x1 - x0, z1 - z0);
+  let r = 0; for(let i = 0; i < n; i++){ const d = (P.x[i] - M3.cx) ** 2 + (P.z[i] - M3.cz) ** 2; if(d > r) r = d; } M3.rad = Math.sqrt(r);
+  M3.elev = y1 - y0;
+  // exaggerate the hills so they read, but never past 3x
+  M3.reliefAuto = M3.elev > 2 ? Math.max(1, Math.min(3, 0.12 * M3.ext / M3.elev)) : 1;
+  M3.relief = M3.reliefAuto; $('m3relief').classList.toggle('hidden', M3.elev < 2); $('m3relief').classList.toggle('on', M3.reliefAuto > 1.05); $('m3relief').textContent = M3.reliefAuto > 1.05 ? 'RELIEF ×' + M3.reliefAuto.toFixed(1) : 'RELIEF';
+  // per-point colour for both modes
+  const v = R.speed[R.best], th = R.throttle[R.best], br = R.brake[R.best];
+  let vmin = 1e9, vmax = -1e9; for(let i = 0; i < n; i++){ if(v[i] < vmin) vmin = v[i]; if(v[i] > vmax) vmax = v[i]; }
+  M3.colSpeed = Array.from({ length: n }, (_, i) => speedCol((v[i] - vmin) / (vmax - vmin)));
+  M3.colPedal = Array.from({ length: n }, (_, i) => br[i] > 10 ? '#1ab4ff' : th[i] >= 95 ? '#00e5a0' : th[i] > 10 ? '#0b6e52' : '#525870');
+  M3.vmin = vmin; M3.vmax = vmax;
+  // corner marker indices and the zone each one owns on the ribbon
+  const DS = R.lapLength / (n - 1);
+  M3.corners = R.corners.map(c => { const b = c.brakeBest || {}; const back = Math.max(80, b.lift || 0, b.touch || 0) + 20, fwd = Math.max(60, b.tfull || 0) + 20;
+    return { c, i: Math.round(c.apex / DS) % n, from: Math.round((c.apex - back) / DS), to: Math.round((c.apex + fwd) / DS) }; });
+  m3Legend(); m3Panel();
+  M3.dirty = true; if(!M3.raf) M3.raf = requestAnimationFrame(m3Frame);
+}
+function m3Legend(){
+  $('m3legend').innerHTML = M3.mode === 'speed'
+    ? `<span><i style="background:${speedCol(0)}"></i>${Math.round(M3.vmin)} MPH</span><span><i style="background:${speedCol(.5)}"></i></span><span><i style="background:${speedCol(1)}"></i>${Math.round(M3.vmax)} MPH</span>`
+    : `<span><i style="background:#1ab4ff"></i>BRAKING</span><span><i style="background:#00e5a0"></i>FLAT OUT</span><span><i style="background:#0b6e52"></i>PART THROTTLE</span><span><i style="background:#525870"></i>COASTING</span>`;
+}
+function m3Cam(){
+  const W = m3c.clientWidth, H = m3c.clientHeight;
+  const cosY = Math.cos(M3.yaw), sinY = Math.sin(M3.yaw), cosP = Math.cos(M3.pitch), sinP = Math.sin(M3.pitch);
+  const s = Math.min(W, H) * 0.44 / M3.rad * M3.zoom; const persp = M3.rad * 3.2;
+  return { W, H, cosY, sinY, cosP, sinP, s, persp, ox: W / 2, oy: H / 2 + H * 0.04 };
+}
+function m3Proj(cam, x, y, z){
+  const dx = x - M3.cx, dz = z - M3.cz, dy = (y - M3.cy) * M3.relief - M3.elev * M3.relief * 0.5;
+  const u = dx * cam.cosY - dz * cam.sinY, w = dx * cam.sinY + dz * cam.cosY;
+  const near = w * cam.cosP + dy * cam.sinP; const f = cam.persp / (cam.persp - near);
+  return [cam.ox + u * cam.s * f, cam.oy + (w * cam.sinP - dy * cam.cosP) * cam.s * f, near, f];
+}
+function m3Frame(ts){
+  M3.raf = requestAnimationFrame(m3Frame);
+  if(!M3.R || $('report').classList.contains('hidden')) return;
+  const dt = M3.lastTs ? Math.min(0.1, (ts - M3.lastTs) / 1000) : 0; M3.lastTs = ts;
+  if(M3.spin && !M3.drag && !M3.sel){ M3.yaw += dt * 0.12; M3.dirty = true; }
+  if(M3.play){ M3.playT += dt; const T = M3.R.t[M3.R.best]; if(M3.playT > T[T.length - 1]) M3.playT = 0; M3.dirty = true; m3Hud(); }
+  if(!M3.dirty) return; M3.dirty = false;
+  m3Draw();
+}
+function m3Draw(){
+  const R = M3.R, P = R.path, n = P.x.length, cam = m3Cam();
+  const dpr = window.devicePixelRatio || 1;
+  if(m3c.width !== Math.round(cam.W * dpr) || m3c.height !== Math.round(cam.H * dpr)){ m3c.width = Math.round(cam.W * dpr); m3c.height = Math.round(cam.H * dpr); }
+  const g = m3ctx; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, cam.W, cam.H);
+  // project the ribbon and its ground shadow
+  const pts = new Array(n), gnd = new Array(n);
+  for(let i = 0; i < n; i++){ pts[i] = m3Proj(cam, P.x[i], P.y[i], P.z[i]); gnd[i] = m3Proj(cam, P.x[i], M3.cy, P.z[i]); }
+  const cols = M3.mode === 'speed' ? M3.colSpeed : M3.colPedal;
+  const inZone = i => { if(!M3.sel) return false; const z = M3.corners[M3.sel]; const k = ((i - z.from) % n + n) % n; return k <= ((z.to - z.from) % n + n) % n; };
+  // ground shadow
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  g.beginPath(); for(let i = 0; i < n; i++){ const p = gnd[i]; if(i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); } g.closePath();
+  g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 14 * cam.s / (Math.min(cam.W, cam.H) * 0.44 / M3.rad); g.stroke();
+  g.strokeStyle = 'rgba(26,180,255,.07)'; g.lineWidth = 1; g.stroke();
+  // curtain walls, back to front, so the hills have volume
+  if(M3.elev > 2){
+    const step = 2; const walls = [];
+    for(let i = 0; i < n - step; i += step){ const d = (pts[i][2] + pts[i + step][2]) / 2; walls.push([d, i]); }
+    walls.sort((a, b) => a[0] - b[0]);
+    for(const [, i] of walls){ const j = i + step; const h = (pts[i][1] - gnd[i][1]);
+      if(Math.abs(h) < 1.5) continue;
+      g.beginPath(); g.moveTo(gnd[i][0], gnd[i][1]); g.lineTo(pts[i][0], pts[i][1]); g.lineTo(pts[j][0], pts[j][1]); g.lineTo(gnd[j][0], gnd[j][1]); g.closePath();
+      g.fillStyle = inZone(i) ? 'rgba(255,195,26,.16)' : 'rgba(26,180,255,.07)'; g.fill(); }
+  }
+  // ribbon segments, back to front
+  const segs = []; for(let i = 0; i < n - 1; i++) segs.push([pts[i][2], i]); segs.sort((a, b) => a[0] - b[0]);
+  const base = 7 * M3.zoom ** 0.5;
+  for(const [, i] of segs){ const a = pts[i], b = pts[i + 1]; const w = base * a[3];
+    if(M3.sel !== null && inZone(i)){ g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.strokeStyle = 'rgba(255,195,26,.45)'; g.lineWidth = w + 9; g.stroke(); }
+    g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.strokeStyle = cols[i]; g.lineWidth = w; g.globalAlpha = M3.sel !== null && !inZone(i) ? 0.55 : 1; g.stroke(); g.globalAlpha = 1; }
+  // start line
+  const s0 = pts[0]; g.fillStyle = '#fff'; g.beginPath(); g.arc(s0[0], s0[1], 3.5, 0, 7); g.fill();
+  g.font = '600 10px JetBrains Mono, monospace'; g.fillStyle = '#8b93a3'; g.textAlign = 'left'; g.fillText('START', s0[0] + 7, s0[1] + 16);
+  // corner markers: a stalk up from the apex to a floating disc with the name
+  M3.marks = [];
+  const order = M3.corners.map((c, k) => [pts[c.i][2], k]).sort((a, b) => a[0] - b[0]);
+  for(const [, k] of order){ const z = M3.corners[k], c = z.c, p = pts[z.i]; const gold = c.name === R.longestRun.opensFrom; const on = M3.sel === k, hov = M3.hover === k;
+    const lift = 26 * p[3]; const mx = p[0], my = p[1] - lift;
+    const col = on ? '#ffc31a' : gold ? '#ffc31a' : c.braking ? '#ff2d3b' : '#1ab4ff'; const dim = M3.sel !== null && !on ? 0.45 : 1;
+    g.globalAlpha = dim; g.strokeStyle = 'rgba(238,240,248,.45)'; g.lineWidth = 1; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(mx, my); g.stroke();
+    const rr = (on ? 12 : hov ? 10 : 8) * Math.min(1.2, p[3]);
+    if(on){ g.beginPath(); g.arc(mx, my, rr + 6, 0, 7); g.strokeStyle = 'rgba(255,195,26,.5)'; g.lineWidth = 2; g.stroke(); }
+    g.beginPath(); g.arc(mx, my, rr, 0, 7); g.fillStyle = col; g.fill(); g.strokeStyle = '#07080d'; g.lineWidth = 2; g.stroke();
+    g.font = `700 ${on ? 15 : 13}px Rajdhani, sans-serif`; g.fillStyle = '#eef0f8'; g.textAlign = 'left'; g.fillText(c.name, mx + rr + 5, my + 5);
+    g.font = '9px JetBrains Mono, monospace'; g.fillStyle = '#8b93a3'; g.fillText(Math.round(c.vminBest) + ' MPH', mx + rr + 5, my + 17);
+    g.globalAlpha = 1; M3.marks.push({ k, x: mx, y: my, r: rr + 6 }); }
+  // the car, when playing
+  if(M3.play){ const i = m3PlayIndex(); const p = pts[i];
+    g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 3; g.beginPath(); for(let k = 60; k >= 0; k--){ const q = pts[((i - k) % n + n) % n]; if(k === 60) g.moveTo(q[0], q[1]); else g.lineTo(q[0], q[1]); } g.stroke();
+    g.beginPath(); g.arc(p[0], p[1], 9, 0, 7); g.fillStyle = 'rgba(255,255,255,.25)'; g.fill();
+    g.beginPath(); g.arc(p[0], p[1], 5, 0, 7); g.fillStyle = '#fff'; g.fill(); }
+}
+function m3PlayIndex(){ const T = M3.R.t[M3.R.best]; let lo = 0, hi = T.length - 1; while(lo < hi){ const m = (lo + hi) >> 1; if(T[m] < M3.playT) lo = m + 1; else hi = m; } return lo; }
+function m3Hud(){ const R = M3.R, i = m3PlayIndex(); $('m3t').textContent = fmtT(M3.playT); $('m3v').textContent = Math.round(R.speed[R.best][i]); $('m3b').style.width = R.brake[R.best][i] + '%'; $('m3g').style.width = R.throttle[R.best][i] + '%';
+  // keep the speed chart's cursor on the car too
+  const cur = $('spdCursor'); if(cur){ cur.style.display = ''; const W = 560, pl = 38, pr = 10, n = R.S.length; const x = pl + (W - pl - pr) * i / (n - 1); $('spdLine').setAttribute('x1', x); $('spdLine').setAttribute('x2', x); const bx = Math.min(W - 160, x + 8); $('spdBox').setAttribute('x', bx); $('spdBox').setAttribute('y', 18); $('spdT1').setAttribute('x', bx + 8); $('spdT1').setAttribute('y', 32); $('spdT1').textContent = `${Math.round(R.S[i])} m · ${Math.round(R.speed[R.best][i])} mph`; $('spdT2').setAttribute('x', bx + 8); $('spdT2').setAttribute('y', 45); $('spdT2').textContent = fmtT(M3.playT); } }
+function m3Select(k, scroll){ M3.sel = k; M3.dirty = true; m3Panel(); if(scroll) $('m3wrap').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+function m3Panel(){
+  const R = M3.R, box = $('m3panel'); if(!R) return;
+  const adviceFor = name => R.advice.filter(a => a.kind !== 'caveat' && (a.corners ? a.corners.includes(name) : new RegExp('\\b' + name + '\\b').test(a.head + ' ' + a.body)));
+  if(M3.sel === null){
+    const spreadC = R.corners.slice().sort((a, b) => (b.sectMax - b.sectMin) - (a.sectMax - a.sectMin))[0];
+    box.innerHTML = `<div class="eyebrow">Tap a corner</div><h4>Your lap, corner by corner</h4>
+      <div class="story">Best lap <b>${fmtT(R.bestTime)}</b>. The longest flat-out run is <b class="y">${Math.round(R.longestRun.metres)} m</b> and it opens from <b class="y">${R.longestRun.opensFrom}</b>, so that exit is worth more than any other. Your laps vary most at <b>${spreadC.name}</b>, by ${(spreadC.sectMax - spreadC.sectMin).toFixed(2)} s.</div>
+      <div class="clist">${R.corners.map((c, k) => `<button class="cbtn${c.name === R.longestRun.opensFrom ? ' gold' : ''}" data-k="${k}">${c.name}<small>${KIND[c.kind]} · ${Math.round(c.vminBest)} MPH</small></button>`).join('')}</div>
+      <div class="story" style="color:var(--mut);font-size:.92rem;margin-top:.9rem">${M3.elev > 2 ? `The track climbs and falls ${Math.round(M3.elev)} m over the lap; the ribbon shows it. ` : ''}Red markers are braking corners, blue are taken on a lift, gold opens the long straight.</div>`;
+  } else {
+    const c = R.corners[M3.sel], b = c.brakeBest || {}, k = M3.sel, N = R.corners.length;
+    const f = x => x === null || x === undefined ? null : Math.round(x);
+    const ap = x => { const r = Math.round(x); return r === 0 ? 'at the apex' : Math.abs(r) + ' m ' + (r > 0 ? 'after' : 'before') + ' the apex'; };
+    const gold = c.name === R.longestRun.opensFrom;
+    let story = '';
+    if(c.braking){
+      story += b.lift !== null && b.lift !== undefined ? `You lift <b>${f(b.lift)} m</b> before the apex${b.liftGap > 10 ? `, ${f(b.liftGap)} m before you touch the brake` : ''}. ` : '';
+      story += b.touch !== null && b.touch !== undefined ? `The brake comes on at <b>${f(b.touch)} m</b>${b.full !== null && b.full !== undefined ? `, reaches full at <b>${f(b.full)} m</b>` : ', <b>never reaches full pressure</b>'} and is released <b>${f(b.off)} m</b> before the apex. ` : 'No real braking on your best lap here. ';
+      if(b.coast > 8) story += `That leaves <b class="y">${f(b.coast)} m</b> with neither pedal. `;
+      if(b.overlap > 8) story += `Brake and throttle overlap for ${f(b.overlap)} m. `;
+    } else story += `Taken on a lift, no real braking. `;
+    if(b.pick !== null && b.pick !== undefined) story += `Throttle picks up <b class="g">${ap(b.pick)}</b>${b.tfull !== null && b.tfull !== undefined ? ` and is flat <b class="g">${ap(b.tfull)}</b>` : ' and never goes fully flat before the next corner'}${b.midLift ? ', with a lift again on the way out' : ''}.`;
+    if(c.touchMin !== null && c.touchMax - c.touchMin > 12) story += ` Your braking point here moves by <b class="y">${Math.round(c.touchMax - c.touchMin)} m</b> from lap to lap.`;
+    const adv = adviceFor(c.name);
+    box.innerHTML = `<div class="row" style="align-items:center"><div><div class="eyebrow">${KIND[c.kind]} corner · ${Math.round(c.apex)} m from the line</div><h4>${c.name}${gold ? '<em>ONTO THE LONG STRAIGHT</em>' : ''}</h4></div>
+      <div class="nav"><button class="chip" id="m3prev">&#9664;</button><button class="chip" id="m3next">&#9654;</button><button class="chip" id="m3clear">ALL</button></div></div>
+      <div class="tiles">
+        <div class="tile"><div class="l">Min speed</div><div class="v blu">${Math.round(c.vminBest)}<small style="font-size:.9rem;color:var(--mut)"> MPH</small></div><div class="s">${Math.round(c.vminMin)} to ${Math.round(c.vminMax)} across laps</div></div>
+        <div class="tile"><div class="l">Brake point</div><div class="v">${c.braking && b.touch !== null && b.touch !== undefined ? f(b.touch) + '<small style="font-size:.9rem;color:var(--mut)"> M</small>' : '–'}</div><div class="s">${c.braking && b.touch !== null && b.touch !== undefined ? 'before the apex' + (c.touchMin !== null ? ', wanders ' + Math.round(c.touchMax - c.touchMin) + ' m' : '') : 'no braking here'}</div></div>
+        <div class="tile"><div class="l">Section</div><div class="v ${gold ? 'gold' : ''}">${c.sectBest.toFixed(2)}<small style="font-size:.9rem;color:var(--mut)"> S</small></div><div class="s">+${(c.sectMax - c.sectMin).toFixed(2)} s on your worst lap</div></div>
+        <div class="tile"><div class="l">Exit speed</div><div class="v grn">${Math.round(c.exitBest)}<small style="font-size:.9rem;color:var(--mut)"> MPH</small></div><div class="s">120 m past the apex, ${Math.round(c.exitMin)} to ${Math.round(c.exitMax)}</div></div>
+      </div>
+      <div class="story">${story}</div>
+      <div id="m3trace"></div>
+      <div class="tryh">WHAT TO TRY HERE</div>
+      ${adv.length ? adv.map(a => `<div class="try"><h5>${a.head}</h5><p>${a.body}</p></div>`).join('') : `<div class="try" style="border-left-color:var(--grn)"><h5>Nothing stands out</h5><p>Your laps agree through ${c.name} and the pedal shape is clean. Spend the session elsewhere.</p></div>`}`;
+    $('m3trace').innerHTML = cornerTraceSvg(R, c);
+    $('m3prev').onclick = () => m3Select((k + N - 1) % N); $('m3next').onclick = () => m3Select((k + 1) % N); $('m3clear').onclick = () => m3Select(null);
+  }
+  box.querySelectorAll('.cbtn').forEach(el => el.onclick = () => m3Select(+el.dataset.k));
+}
+// pointer handling: drag rotates, wheel and pinch zoom, a tap picks a corner
+m3c.addEventListener('pointerdown', e => { m3c.setPointerCapture(e.pointerId); M3.pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if(M3.pointers.size === 1){ M3.drag = { x: e.clientX, y: e.clientY, yaw: M3.yaw, pitch: M3.pitch }; M3.moved = 0; m3c.classList.add('drag'); }
+  else if(M3.pointers.size === 2){ const [a, b] = [...M3.pointers.values()]; M3.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), zoom: M3.zoom }; M3.drag = null; } });
+m3c.addEventListener('pointermove', e => {
+  if(M3.pointers.has(e.pointerId)) M3.pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if(M3.pinch && M3.pointers.size === 2){ const [a, b] = [...M3.pointers.values()]; M3.zoom = Math.max(0.5, Math.min(4, M3.pinch.zoom * Math.hypot(a[0] - b[0], a[1] - b[1]) / M3.pinch.d)); M3.dirty = true; return; }
+  if(M3.drag){ const dx = e.clientX - M3.drag.x, dy = e.clientY - M3.drag.y; M3.moved = Math.max(M3.moved, Math.abs(dx), Math.abs(dy));
+    if(M3.moved > 4){ M3.spin = false; $('m3spin').classList.remove('on'); }
+    M3.yaw = M3.drag.yaw + dx * 0.008; M3.pitch = Math.max(0.2, Math.min(1.5, M3.drag.pitch + dy * 0.006)); M3.dirty = true; return; }
+  const r = m3c.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top; let h = null;
+  for(const m of M3.marks) if(Math.hypot(m.x - x, m.y - y) < m.r + 4) h = m.k;
+  if(h !== M3.hover){ M3.hover = h; M3.dirty = true; m3c.classList.toggle('pick', h !== null); } });
+function m3Up(e){ M3.pointers.delete(e.pointerId); if(M3.pointers.size < 2) M3.pinch = null;
+  if(M3.drag && M3.moved <= 4){ const r = m3c.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top; let hit = null;
+    for(const m of M3.marks) if(Math.hypot(m.x - x, m.y - y) < m.r + 6) hit = m.k;
+    m3Select(hit === M3.sel ? null : hit); }
+  if(M3.pointers.size === 0){ M3.drag = null; m3c.classList.remove('drag'); } }
+m3c.addEventListener('pointerup', m3Up); m3c.addEventListener('pointercancel', m3Up);
+m3c.addEventListener('wheel', e => { e.preventDefault(); M3.zoom = Math.max(0.5, Math.min(4, M3.zoom * Math.exp(-e.deltaY * 0.0012))); M3.dirty = true; }, { passive: false });
+document.querySelectorAll('[data-mode]').forEach(el => el.onclick = () => { M3.mode = el.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === el)); m3Legend(); M3.dirty = true; });
+$('m3relief').onclick = () => { M3.relief = M3.relief > 1.05 ? 1 : M3.reliefAuto; $('m3relief').classList.toggle('on', M3.relief > 1.05); $('m3relief').textContent = M3.relief > 1.05 ? 'RELIEF ×' + M3.relief.toFixed(1) : 'RELIEF'; M3.dirty = true; };
+$('m3spin').onclick = () => { M3.spin = !M3.spin; $('m3spin').classList.toggle('on', M3.spin); M3.dirty = true; };
+$('m3play').onclick = () => { M3.play = !M3.play; if(M3.play){ M3.playT = 0; M3.spin = false; $('m3spin').classList.remove('on'); } $('m3play').classList.toggle('gold', M3.play); $('m3play').innerHTML = M3.play ? '&#9632; STOP' : '&#9654; PLAY LAP'; $('m3hud').classList.toggle('hidden', !M3.play); if(!M3.play){ const cur = $('spdCursor'); if(cur) cur.style.display = 'none'; } M3.dirty = true; };
+window.addEventListener('resize', () => { M3.dirty = true; });
+// the pedal trace for one corner, shared by the panel and the corner cards
+function cornerTraceSvg(R, c){
+  const DS = R.lapLength / (R.S.length - 1);
+  const W = 320, H = 130, pl = 6, pr = 6, pt = 10, pb = 18; const back = 220, fwd = 120;
+  const X = m => pl + (W - pl - pr) * (back - m) / (back + fwd), Y = b => pt + (H - pt - pb) * (1 - b / 100);
+  let g = `<line x1="${X(0)}" x2="${X(0)}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.5)" stroke-dasharray="3 3"/><text x="${X(0)}" y="${H - 5}" font-size="10" fill="#ffc31a" text-anchor="middle">apex</text><text x="${X(back)}" y="${H - 5}" font-size="10" fill="#525870">${back} m before</text><text x="${X(-fwd)}" y="${H - 5}" font-size="10" fill="#525870" text-anchor="end">${fwd} m after</text>`;
+  const trace = (arr, bi, col, w) => { let pts = ''; for(let m = back; m >= -fwd; m -= DS){ const k = Math.round(((c.apex - m) / DS + R.S.length * 2) % R.S.length); pts += X(m).toFixed(1) + ',' + Y(arr[bi][k]).toFixed(1) + ' '; } return `<polyline fill="none" stroke="${col}" stroke-width="${w}" points="${pts}"/>`; };
+  R.brake.forEach((_, i) => { if(i !== R.best){ g += trace(R.brake, i, '#3a3f55', 1); g += trace(R.throttle, i, 'rgba(0,229,160,.18)', 1); } });
+  g += trace(R.throttle, R.best, '#00e5a0', 1.8); g += trace(R.brake, R.best, '#1ab4ff', 2.2);
+  return `<div class="legend" style="margin:.3rem 0 0"><span><i style="background:#1ab4ff"></i>BRAKE</span><span><i style="background:#00e5a0"></i>THROTTLE</span><span><i style="background:#3a3f55"></i>OTHER LAPS</span></div><svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>`;
 }
 function drawSpeed(R){
   const W = 560, H = 320, pl = 38, pr = 10, pt = 14, pb = 30; const n = R.S.length;
@@ -384,20 +592,13 @@ function drawAdvice(R){
 }
 function drawCorners(R){
   const box = $('corners'); box.innerHTML = '';
-  const DS = R.lapLength / (R.S.length - 1);
-  R.corners.filter(c => c.braking).forEach(c => {
-    const W = 320, H = 130, pl = 6, pr = 6, pt = 10, pb = 18; const back = 220, fwd = 120;
-    const X = m => pl + (W - pl - pr) * (back - m) / (back + fwd), Y = b => pt + (H - pt - pb) * (1 - b / 100);
-    let g = `<line x1="${X(0)}" x2="${X(0)}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.5)" stroke-dasharray="3 3"/><text x="${X(0)}" y="${H - 5}" font-size="10" fill="#ffc31a" text-anchor="middle">apex</text><text x="${X(back)}" y="${H - 5}" font-size="10" fill="#525870">${back} m before</text><text x="${X(-fwd)}" y="${H - 5}" font-size="10" fill="#525870" text-anchor="end">${fwd} m after</text>`;
-    const trace = (arr, bi, col, w) => { let pts = ''; for(let m = back; m >= -fwd; m -= DS){ const k = Math.round(((c.apex - m) / DS + R.S.length * 2) % R.S.length); pts += X(m).toFixed(1) + ',' + Y(arr[bi][k]).toFixed(1) + ' '; } return `<polyline fill="none" stroke="${col}" stroke-width="${w}" points="${pts}"/>`; };
-    R.brake.forEach((_, i) => { if(i !== R.best){ g += trace(R.brake, i, '#3a3f55', 1); g += trace(R.throttle, i, 'rgba(0,229,160,.18)', 1); } });
-    g += trace(R.throttle, R.best, '#00e5a0', 1.8); g += trace(R.brake, R.best, '#1ab4ff', 2.2);
+  R.corners.forEach((c, k) => {
+    if(!c.braking) return;
     const b = c.brakeBest; const f = x => x === null ? '–' : Math.round(x) + ' m';
     const ap = x => { const r = Math.round(x); return r === 0 ? 'at the apex' : Math.abs(r) + ' m ' + (r > 0 ? 'after' : 'before') + ' apex'; };
-    const el = document.createElement('div'); el.className = 'cc';
+    const el = document.createElement('div'); el.className = 'cc'; el.style.cursor = 'pointer'; el.title = 'Show on the 3D map';
     el.innerHTML = `<h4>${c.name}<span>${KIND[c.kind]} · ${Math.round(c.apex)} M FROM THE LINE${c.name === R.longestRun.opensFrom ? ' · ONTO THE LONG STRAIGHT' : ''}</span></h4>
-      <div class="legend" style="margin:.3rem 0 0"><span><i style="background:#1ab4ff"></i>BRAKE</span><span><i style="background:#00e5a0"></i>THROTTLE</span><span><i style="background:#3a3f55"></i>OTHER LAPS</span></div>
-      <svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>
+      ${cornerTraceSvg(R, c)}
       <div class="kv">
         <b>MIN SPEED</b><span>${Math.round(c.vminBest)} mph on your best, ${Math.round(c.vminMin)} to ${Math.round(c.vminMax)} across laps</span>
         <b>LIFT</b><span>${b.lift === null ? '–' : f(b.lift) + ' before apex'}${b.liftGap !== null && b.liftGap > 10 ? ', ' + Math.round(b.liftGap) + ' m before the brake' : ''}</span>
@@ -406,14 +607,15 @@ function drawCorners(R){
         <b>COASTING</b><span>${b.coast === null ? '–' : Math.round(b.coast) + ' m with neither pedal'}${b.overlap > 8 ? ' · ' + Math.round(b.overlap) + ' m with both' : ''}</span>
         <b>SECTION</b><span>${c.sectBest.toFixed(2)} s best, +${(c.sectMax - c.sectMin).toFixed(2)} s on your worst lap</span>
       </div>`;
+    el.onclick = () => m3Select(k, true);
     box.appendChild(el);
   });
 }
 // ---------- download ----------
 $('dlBtn').onclick = () => {
-  const head = 't_s,x,z,speed_mph,throttle_pct,brake_pct\n';
+  const head = 't_s,x,y,z,speed_mph,throttle_pct,brake_pct\n';
   rec.laps.forEach((l, i) => {
-    const csv = head + l.samples.map(s => `${s.t.toFixed(3)},${s.x.toFixed(3)},${s.z.toFixed(3)},${s.v.toFixed(2)},${s.thr.toFixed(1)},${s.brk.toFixed(1)}`).join('\n');
+    const csv = head + l.samples.map(s => `${s.t.toFixed(3)},${s.x.toFixed(3)},${(s.y || 0).toFixed(3)},${s.z.toFixed(3)},${s.v.toFixed(2)},${s.thr.toFixed(1)},${s.brk.toFixed(1)}`).join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `lap_${String(i+1).padStart(2,'0')}_${l.ms ? fmtMs(l.ms).replace(':','m') : 'x'}.csv`; a.click();
   });
 };
