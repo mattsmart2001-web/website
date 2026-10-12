@@ -173,11 +173,20 @@ svg text{font-family:'JetBrains Mono',monospace;}
       </div>
     </div>
     <div id="memOpen" class="hidden">
-      <p>Unlocked. To get a reference lap: open the leaderboard for the race or time trial you are driving, watch a top ten driver's replay, and run <code>RUN_REPLAY_LOGGER.bat</code> while it plays. Load the file it writes below, together with your own laps.</p>
-      <div class="row" style="margin-top:.7rem">
-        <label class="btn btn-primary" for="refInput">Load a reference lap</label><input type="file" id="refInput" accept=".csv">
+      <p>Unlocked. GT7 sends telemetry while a replay plays, just as it does while you drive, so you can record a fast driver's lap with the connector you already have.</p>
+      <div class="setup-steps" style="margin:.9rem 0 1rem">
+        <div class="step"><div class="step-num">1</div><div class="step-txt">In GT7, open the leaderboard for the race or time trial you are driving and start a top ten driver's replay. Any of them will do; they are all a long way up the road.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-txt">Press <b>Capture from a replay</b> below, then let the replay run. The page waits for the car to cross the line and records the lap from there, so it does not matter where you join it.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-txt">It keeps the quickest complete lap it sees, and stops on its own after two. If the replay only holds one lap, press Stop when it has finished. Then drive your own laps and the report will measure you against theirs.</div></div>
+      </div>
+      <div class="row">
+        <button class="btn btn-primary" id="capBtn">Capture from a replay</button>
         <label class="sel">THEIR NAME <input type="text" id="refName" placeholder="e.g. Damien Chafe" size="18"></label>
         <span id="refMsg" class="mem-msg"></span>
+      </div>
+      <div class="row" style="margin-top:.6rem">
+        <label class="btn" for="refInput">Or load a reference from a CSV</label><input type="file" id="refInput" accept=".csv">
+        <span class="mem-msg">IF YOU ALREADY HAVE ONE FROM THE LAP LOGGER</span>
       </div>
     </div>
   </div>
@@ -216,6 +225,10 @@ svg text{font-family:'JetBrains Mono',monospace;}
       <div class="row" id="repNote" style="font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--mut);letter-spacing:.1em"></div>
     </div>
     <div class="stats" id="stats"></div>
+    <div class="card hidden" id="noCorners" style="border-left:3px solid var(--gold)">
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.06em">No corners found in these laps</h3>
+      <div class="note">Nothing in this data looks like a corner, so there is nothing to report on. That usually means the laps were not recorded on track: a replay, a menu, or a session that stopped part way through. Press Start over and log some laps from the line.</div>
+    </div>
 
     <div class="sec">
       <h3>The track, <em>in three dimensions</em></h3>
@@ -231,6 +244,18 @@ svg text{font-family:'JetBrains Mono',monospace;}
         </div>
         <div class="m3panel" id="m3panel"></div>
       </div>
+    </div>
+
+    <div class="card hidden" id="otherCar" style="margin:0 0 1rem;border-left:3px solid var(--gold);font-family:'Rajdhani',sans-serif;font-size:1.02rem;color:var(--wht)"></div>
+    <div class="members hidden" id="refBar" style="margin:0 0 1.2rem">
+      <div class="mem-head"><span class="mem-dot on"></span><span id="refBarTitle">REFERENCE LAP</span></div>
+      <div class="row">
+        <button class="btn btn-primary" id="capBtn2">Capture from a replay</button>
+        <label class="sel">THEIR NAME <input type="text" id="refName2" placeholder="e.g. Damien Chafe" size="18"></label>
+        <label class="btn" for="refInput2">Or load a CSV</label><input type="file" id="refInput2" accept=".csv">
+        <span id="refMsg2" class="mem-msg"></span>
+      </div>
+      <p style="margin-top:.6rem;font-size:.95rem" id="refBarHelp">Start a top ten driver's replay in GT7, press capture, and let it run. The page waits for the car to cross the line and keeps the quickest complete lap it sees. Press Stop when the replay has finished.</p>
     </div>
 
     <div class="sec hidden" id="refSec">
@@ -278,7 +303,7 @@ svg text{font-family:'JetBrains Mono',monospace;}
 const $ = id => document.getElementById(id);
 const WS_URL = 'ws://localhost:8765';
 let ws = null, mode = 'live', analysing = false, dirty = false, started = false;
-const rec = { laps: [], cur: null, lastCount: null, lastPid: null, carId: null };
+const rec = { laps: [], cur: null, lastCount: null, lastPid: null, carId: null, paused: false };
 let result = null;
 
 // ---------- status ----------
@@ -303,7 +328,18 @@ function handle(m){
 function onPacket(d){
   if(d.paused) return;
   setStatus('live','GT7 LIVE');
+  // Capturing a reference takes the packets instead of the driver's own laps.
+  // GT7 streams telemetry while a replay plays exactly as it does while you
+  // drive, so a member can record a top ten driver's lap with the connector
+  // they already have, and never needs a second tool or a file.
+  if(cap){ capturePacket(d); return; }
+  if(rec.paused) return;
   if(!started){ waitTxt('GT7 is live. Fill in the car (and the track if you like), then press Start logging.'); return; }
+  // The car changing mid-session almost always means the driver has gone to
+  // watch a replay, and GT7 streams that exactly as it streams driving. Without
+  // this the replay is quietly recorded as their own laps and the report turns
+  // to nonsense, which is worse than stopping and saying so.
+  if(d.vehicleId && rec.carId && d.vehicleId !== rec.carId){ otherCar(); return; }
   if(!$('setup').classList.contains('hidden')) showRecorder();
   if(d.vehicleId) rec.carId = d.vehicleId;
   const pid = d.packetId; if(rec.lastPid === pid) return; rec.lastPid = pid;
@@ -327,6 +363,17 @@ function onPacket(d){
 // the analysis takes a fraction of a second; run it off the packet path so nothing is dropped
 function scheduleAnalysis(){ dirty = true; if(!analysing){ analysing = true; setTimeout(() => { analysing = false; if(dirty){ dirty = false; analyse(); } }, 50); } }
 
+function otherCar(){
+  if(rec.paused) return;
+  rec.paused = true; rec.cur = null;
+  const n = rec.laps.length;
+  const where = $('report').classList.contains('hidden') ? 'recNote' : 'recNote';
+  const msg = `A different car is on track, so logging has stopped${n ? ' with ' + n + ' lap' + (n === 1 ? '' : 's') + ' kept' : ''}. If you are watching a replay, ${unlocked ? 'use Capture from a replay to record it as a reference.' : 'that is a members feature.'} If you have changed car, press Start over to begin a new session.`;
+  if($(where)) $(where).textContent = msg;
+  const bar = $('otherCar'); if(bar){ bar.textContent = msg; bar.classList.remove('hidden'); }
+  setStatus('file', 'LOGGING PAUSED');
+}
+
 // ---------- recorder UI ----------
 function fmtMs(ms){ const m = Math.floor(ms / 60000), s = (ms % 60000) / 1000; return m + ':' + s.toFixed(3).padStart(6, '0'); }
 function showRecorder(){ $('setup').classList.add('hidden'); if($('report').classList.contains('hidden')) $('recorder').classList.remove('hidden'); $('lapTarget').textContent = $('target').value; }
@@ -345,7 +392,8 @@ function renderLaps(){
 }
 function resetAll(){
   // back to the start screen: laps dropped, nothing records until Start is pressed again
-  rec.laps = []; rec.cur = null; rec.lastCount = null; rec.lastPid = null; result = null; started = false;
+  rec.laps = []; rec.cur = null; rec.lastCount = null; rec.lastPid = null; rec.carId = null; rec.paused = false; result = null; started = false;
+  const ob = $('otherCar'); if(ob) ob.classList.add('hidden');
   renderLaps(); $('report').classList.add('hidden'); $('recorder').classList.add('hidden'); $('setup').classList.remove('hidden');
   if(mode === 'file'){ mode = 'live'; $('csvInput').value = ''; connect(); }
   waitTxt(ws && ws.readyState === WebSocket.OPEN ? 'Connector found. Fill in the car, then press Start logging.' : 'Looking for the connector at localhost:8765…');
@@ -368,7 +416,8 @@ const MEMBER_HASH = '626c07fee865ecd706fd212dc5f34c87497ecc2df8fe5e859e1692afefe
 let unlocked = false, reference = null;
 // a logger filename is a timestamp, which is a poor thing to call a driver
 function refLabel(fileName){
-  const typed = ($('refName').value || '').trim();
+  // the two fields mirror each other, so take one rather than both
+  const typed = (($('refName2') && $('refName2').value.trim()) || ($('refName') && $('refName').value.trim()) || '');
   if(typed) return typed;
   const base = fileName.replace(/\.csv$/i, '');
   return /^replay[_-]?\d/i.test(base) || /^\d+$/.test(base) ? 'The reference lap' : base;
@@ -383,6 +432,7 @@ function setUnlocked(on){
   $('memTitle').textContent = on ? 'MEMBERS: REFERENCE LAP COMPARISON UNLOCKED' : 'MEMBERS: COMPARE AGAINST A FASTER DRIVER';
   $('memLocked').classList.toggle('hidden', on);
   $('memOpen').classList.toggle('hidden', !on);
+  if($('refBar')) $('refBar').classList.toggle('hidden', !on);
 }
 async function tryCode(code, quiet){
   if(!code) return false;
@@ -394,23 +444,82 @@ async function tryCode(code, quiet){
 }
 $('memBtn').onclick = () => tryCode($('memCode').value);
 $('memCode').onkeydown = e => { if(e.key === 'Enter') tryCode($('memCode').value); };
-$('refName').oninput = () => { if(reference){ reference.name = refLabel(''); if(result) analyse(); } };
+['refName', 'refName2'].forEach(id => { const e = $(id); if(e) e.oninput = () => {
+  ['refName', 'refName2'].forEach(o => { if(o !== id && $(o)) $(o).value = e.value; });
+  if(reference){ reference.name = refLabel(''); if(result) analyse(); } }; });
 (async () => { try{ await tryCode(localStorage.getItem('lapCoachMember'), true); }catch(_){} })();
 
-$('refInput').onchange = async (e) => {
+// ---------- capturing a reference lap from a replay ----------
+let cap = null;
+function capturePacket(d){
+  const pid = d.packetId; if(cap.lastPid === pid) return; cap.lastPid = pid;
+  if(d.vehicleId && cap.cur) cap.cur.carId = d.vehicleId;
+  if(cap.lastCount === null){ cap.lastCount = d.lapCount; cap.cur = null; }
+  if(d.lapCount !== cap.lastCount){
+    // the lap that was already running when capture started is thrown away,
+    // because a replay can be joined anywhere and a part lap is not a lap
+    if(cap.cur && cap.cur.samples.length > 600){
+      const ss = cap.cur.samples;
+      const gap = Math.hypot(ss[0].x - ss[ss.length-1].x, ss[0].z - ss[ss.length-1].z);
+      if(gap < 150) cap.laps.push({ samples: ss, carId: cap.cur.carId });
+    }
+    cap.cur = { samples: [], carId: null }; cap.lastCount = d.lapCount;
+  }
+  if(cap.cur) cap.cur.samples.push({ t: pid / 60, x: d.posX, y: d.posY || 0, z: d.posZ, v: (d.speed || 0) * 0.621371, thr: d.throttle || 0, brk: d.brake || 0 });
+  capStatus();
+  if(cap.laps.length >= 2) stopCapture(true);
+}
+// the controls exist on the setup screen and again in the report, because a
+// driver usually goes looking for a reference after seeing their own report,
+// by which point the setup screen is long gone
+function refMsgSet(txt, cls){ ['refMsg', 'refMsg2'].forEach(id => { const e = $(id); if(e){ e.textContent = txt; e.className = 'mem-msg' + (cls ? ' ' + cls : ''); } }); }
+function capBtnSet(txt, gold){ ['capBtn', 'capBtn2'].forEach(id => { const e = $(id); if(e){ e.textContent = txt; e.classList.toggle('btn-gold', !!gold); e.classList.toggle('btn-primary', !gold); } }); }
+function capStatus(){
+  if(!cap) return;
+  const n = cap.cur ? cap.cur.samples.length : 0;
+  const best = cap.laps.length ? Math.min.apply(null, cap.laps.map(l => l.samples[l.samples.length-1].t - l.samples[0].t)) : null;
+  refMsgSet(cap.laps.length ? `${cap.laps.length} LAP${cap.laps.length > 1 ? 'S' : ''} CAPTURED, BEST ${fmtT(best)} · PRESS STOP WHEN THE REPLAY IS DONE` :
+    cap.cur ? `RECORDING THEIR LAP FROM THE LINE · ${(n / 60).toFixed(1)}s` :
+    'WATCHING. PLAY THE REPLAY AND WAIT FOR IT TO CROSS THE LINE', 'good');
+}
+function startCapture(){
+  if(!unlocked) return;
+  // laps loaded from files close the socket, so bring it back for the capture
+  if(mode === 'file' || !ws || ws.readyState !== WebSocket.OPEN){ mode = 'live'; connect(); }
+  cap = { laps: [], cur: null, lastCount: null, lastPid: null };
+  capBtnSet('Stop capturing', true);
+  capStatus();
+}
+function stopCapture(auto){
+  if(!cap) return;
+  const got = cap.laps.slice();
+  cap = null;
+  capBtnSet('Capture from a replay', false);
+  if(!got.length){ refMsgSet(auto ? '' : 'NO COMPLETE LAP CAPTURED', auto ? '' : 'bad'); return; }
+  got.sort((a, b) => (a.samples[a.samples.length-1].t - a.samples[0].t) - (b.samples[b.samples.length-1].t - b.samples[0].t));
+  const ss = got[0].samples, t0 = ss[0].t;
+  reference = { name: refLabel(''), samples: ss.map(q => ({ t: q.t - t0, x: q.x, y: q.y, z: q.z, v: q.v, thr: q.thr, brk: q.brk })), carId: got[0].carId };
+  const secs = ss[ss.length-1].t - ss[0].t;
+  refMsgSet(`CAPTURED ${reference.name.toUpperCase()} · ${fmtT(secs)}`, 'good');
+  if(result) analyse();
+}
+['capBtn', 'capBtn2'].forEach(id => { const e = $(id); if(e) e.onclick = () => { if(cap) stopCapture(false); else startCapture(); }; });
+
+const onRefFile = async (e) => {
   const f = e.target.files[0]; if(!f) return;
   const msg = $('refMsg');
   try{
     const parsed = LapCoach.parseLoggerCSV(await f.text(), f.name.replace(/\.csv$/i, ''));
     const lap = parsed.multi ? LapCoach.bestLapFromReplay(parsed, f.name.replace(/\.csv$/i, '')) : parsed;
-    if(!lap || lap.samples.length < 300){ msg.textContent = 'NO COMPLETE LAP IN THAT FILE'; msg.className = 'mem-msg bad'; return; }
+    if(!lap || lap.samples.length < 300){ refMsgSet('NO COMPLETE LAP IN THAT FILE', 'bad'); return; }
     lap.name = refLabel(f.name);
     reference = lap;
     const secs = lap.samples[lap.samples.length - 1].t - lap.samples[0].t;
-    msg.textContent = `LOADED ${lap.name.toUpperCase()} · ${fmtT(secs)}`; msg.className = 'mem-msg good';
+    refMsgSet(`LOADED ${lap.name.toUpperCase()} · ${fmtT(secs)}`, 'good');
     if(result) analyse();
-  }catch(err){ msg.textContent = 'COULD NOT READ THAT FILE'; msg.className = 'mem-msg bad'; }
+  }catch(err){ refMsgSet('COULD NOT READ THAT FILE', 'bad'); }
 };
+['refInput', 'refInput2'].forEach(id => { const e = $(id); if(e) e.onchange = onRefFile; });
 
 // ---------- CSV loading (the SparksTheory logger's files) ----------
 $('csvInput').onchange = async (e) => {
@@ -465,6 +574,17 @@ function renderReport(R){
     ['Longest flat out', Math.round(R.longestRun.metres) + ' m', '', 'opens from ' + R.longestRun.opensFrom],
   ].map(([l, v, c, s]) => `<div class="stat"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
   RES = R.lapLength / (R.S.length - 1);
+  // A lap with no corners in it is not a lap worth reporting on: usually the
+  // packets came from a replay, a menu, or a session that was cut short. Say so
+  // rather than drawing half a report around nothing.
+  if(!R.corners.length){
+    $('noCorners').classList.remove('hidden');
+    ['refSec','refBad'].forEach(id => $(id).classList.add('hidden'));
+    ['mapBox','speedBox','lostBox','corners','advice','deltaBox'].forEach(id => { const e = $(id); if(e) e.innerHTML = ''; });
+    $('m3panel').innerHTML = '';
+    return;
+  }
+  $('noCorners').classList.add('hidden');
   drawMap(R); drawDelta(R); drawSpeed(R); drawLost(R); drawAdvice(R); drawCorners(R);
 }
 const KIND = { slow: 'SLOW', medium: 'MEDIUM', fast: 'FAST' };
@@ -797,7 +917,10 @@ function drawDelta(R){
   $('refSec').classList.remove('hidden');
   $('refWho').textContent = F.name;
   $('refNote').innerHTML = `Both laps laid over the same piece of road, so you are compared with what they were doing in the same place rather than at the same moment. The line is how far behind you are: it climbs where you lose time and falls where you gain.` +
-    (F.lagFix ? ` Their lap came from a replay, where GT7 sends the pedals ${F.lagFix.seconds.toFixed(2)}s late, and that has been corrected.` : '');
+    (F.lagFix ? ` Their lap came from a replay, where GT7 sends the pedals ${F.lagFix.seconds.toFixed(2)}s late, and that has been corrected.` : '') +
+    // both cars are known only when both came through the connector
+    (reference && reference.carId && rec.carId && reference.carId !== rec.carId
+      ? ` <span style="color:var(--gold)">Careful: that lap was set in a different car from yours, so some of the difference below is the machinery rather than the driving.</span>` : '');
 
   const W = boxW('deltaBox', 320, 1180), H = 260, pl = 50, pr = 14, pt = 18, pb = 40;
   const n = R.S.length, d = F.delta;
