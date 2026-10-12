@@ -169,6 +169,26 @@ svg text{font-family:'JetBrains Mono',monospace;}
 .orline label:hover{color:var(--wht);border-bottom-color:var(--mut);}
 .howto .setup-steps{margin:.8rem 0 0;gap:.9rem;}
 .howto .step-txt b{color:var(--wht);font-weight:600;}
+.lvlbar{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin:.2rem 0 .8rem;}
+.lvlgap{font-family:'Rajdhani',sans-serif;font-size:1.05rem;color:#aab0c4;}
+.lvlrows{display:flex;flex-direction:column;gap:.35rem;margin-top:.8rem;}
+.lvlrow{display:grid;grid-template-columns:52px 70px 1fr;gap:.6rem;align-items:baseline;background:var(--pan);border:1px solid var(--bor);border-radius:5px;padding:.45rem .7rem;cursor:pointer;}
+.lvlrow b{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.05em;}
+.lvlrow .t{font-family:'JetBrains Mono',monospace;font-size:.78rem;}
+.lvlrow .w{font-family:'Rajdhani',sans-serif;font-size:1rem;color:#aab0c4;}
+@media(max-width:600px){.lvlrow{grid-template-columns:44px 64px;row-gap:.2rem;} .lvlrow .w{grid-column:1 / -1;}}
+.cmark{cursor:pointer;} .cmark line{transition:stroke .12s;} .cmark text{transition:fill .12s;}
+.cmark.focus line{stroke:rgba(255,195,26,.75);} .cmark.focus text{fill:#fff;}
+.cmark.focus path,.cmark.focus rect:not([fill=transparent]){opacity:1;}
+.cc.focus{border-color:var(--gold);box-shadow:0 0 0 1px rgba(255,195,26,.25);}
+.lvlrow.focus{border-color:var(--gold);}
+.m3col{display:flex;flex-direction:column;gap:.55rem;min-width:0;}
+.m3scrub{display:flex;align-items:center;gap:.6rem;}
+.m3scrub .chip{flex:0 0 auto;min-width:34px;text-align:center;}
+.m3scrub input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;background:linear-gradient(90deg,var(--dim),var(--bor));outline:none;}
+.m3scrub input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--wht);border:2px solid #07080d;cursor:pointer;box-shadow:0 0 8px rgba(255,255,255,.45);}
+.m3scrub input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--wht);border:2px solid #07080d;cursor:pointer;}
+.m3at{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.1em;color:var(--mut);min-width:58px;text-align:right;}
 .foot{font-family:'Rajdhani',sans-serif;font-size:.95rem;color:var(--mut);margin-top:2rem;line-height:1.6;}
 </style>
 </head>
@@ -312,6 +332,7 @@ svg text{font-family:'JetBrains Mono',monospace;}
       <h3>The track, <em>in three dimensions</em></h3>
       <div class="note">Your best lap as a ribbon, with the hills in it. Drag to turn it, scroll or pinch to zoom, and tap a corner for its numbers. Press play to watch the lap run.</div>
       <div class="map3">
+        <div class="m3col">
         <div class="m3wrap" id="m3wrap">
           <canvas id="m3c"></canvas>
           <div class="m3ctl tl"><button class="chip on" data-mode="speed">SPEED</button><button class="chip" data-mode="pedals">PEDALS</button><button class="chip" id="m3relief">RELIEF</button></div>
@@ -319,6 +340,12 @@ svg text{font-family:'JetBrains Mono',monospace;}
           <div class="m3hud hidden" id="m3hud"><div class="t" id="m3t">0:00.000</div><div class="v"><span id="m3v">0</span><small> MPH</small></div><div class="bars"><i class="b" id="m3b"></i><i class="g" id="m3g"></i></div></div>
           <div class="m3legend" id="m3legend"></div>
           <div class="m3hint">DRAG TO ROTATE · SCROLL TO ZOOM · TAP A CORNER</div>
+        </div>
+        <div class="m3scrub" id="m3scrub">
+          <button class="chip" id="m3play2">&#9654;</button>
+          <input type="range" id="m3range" min="0" max="1000" value="0" step="1" aria-label="position round the lap">
+          <span class="m3at mono" id="m3at">0 m</span>
+        </div>
         </div>
         <div class="m3panel" id="m3panel"></div>
       </div>
@@ -356,6 +383,17 @@ svg text{font-family:'JetBrains Mono',monospace;}
         <h3>Where your laps <em>differ</em></h3>
         <div class="note">Time between your best and worst lap at each corner. Tall bars are corners you have not settled yet. Gold is the corner that opens onto the longest straight, where exit speed is worth most.</div>
         <div id="lostBox"></div>
+      </div>
+      <div class="sec" id="lvlSec">
+        <h3>Lap against <em>lap</em></h3>
+        <div class="note">Pick any two of your laps and see exactly where they parted company. Both are already laid over the same piece of road, so this compares what you did in the same place rather than at the same moment.</div>
+        <div class="lvlbar">
+          <label class="sel">COMPARE <select id="lvlA"></select></label>
+          <label class="sel">AGAINST <select id="lvlB"></select></label>
+          <span id="lvlGap" class="lvlgap"></span>
+        </div>
+        <div id="lvlBox"></div>
+        <div id="lvlTable"></div>
       </div>
     </div>
 
@@ -666,7 +704,7 @@ function renderReport(R){
     return;
   }
   $('noCorners').classList.add('hidden');
-  drawMap(R); drawDelta(R); drawSpeed(R); drawLost(R); drawAdvice(R); drawCorners(R);
+  drawMap(R); drawDelta(R); drawSpeed(R); drawLost(R); lvlFill(R); drawLvl(R); drawAdvice(R); drawCorners(R); focusK = null; wireFocus();
 }
 const KIND = { slow: 'SLOW', medium: 'MEDIUM', fast: 'FAST' };
 let RES = 1;   // metres per point on the reference grid: the floor on every distance shown
@@ -687,7 +725,8 @@ function lerpCol(a, b, t){ return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]
 const SPEED_STOPS = [[26,72,140],[26,150,230],[70,212,248],[198,241,255]];
 function speedCol(t){ t = Math.max(0, Math.min(1, t)) * 3; const i = Math.min(2, Math.floor(t)); const c = lerpCol(SPEED_STOPS[i], SPEED_STOPS[i + 1], t - i); return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; }
 function drawMap(R){
-  M3.R = R; M3.sel = null; M3.hover = null; M3.play = false; M3.playT = 0; M3.zoom = 1; M3.fit = 0;
+  M3.R = R; M3.sel = null; M3.hover = null; M3.play = false; M3.scrubbed = false; M3.playT = 0; M3.zoom = 1; M3.fit = 0;
+  const rg = $('m3range'); if(rg) rg.value = 0;
   const P = R.path, n = P.x.length;
   let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9, y0 = 1e9, y1 = -1e9;
   for(let i = 0; i < n; i++){ const x = P.x[i], y = P.y[i], z = P.z[i]; if(x < x0) x0 = x; if(x > x1) x1 = x; if(z < z0) z0 = z; if(z > z1) z1 = z; if(y < y0) y0 = y; if(y > y1) y1 = y; }
@@ -756,7 +795,8 @@ function m3Frame(ts){
   if(!M3.R || $('report').classList.contains('hidden')) return;
   const dt = M3.lastTs ? Math.min(0.1, (ts - M3.lastTs) / 1000) : 0; M3.lastTs = ts;
   if(M3.spin && !M3.drag && !M3.sel){ M3.yaw += dt * 0.12; M3.dirty = true; }
-  if(M3.play){ M3.playT += dt; const T = M3.R.t[M3.R.best]; if(M3.playT > T[T.length - 1]) M3.playT = 0; M3.dirty = true; m3Hud(); }
+  if(M3.play){ M3.playT += dt; const T = M3.R.t[M3.R.best]; if(M3.playT > T[T.length - 1]) M3.playT = 0; M3.dirty = true; m3Hud();
+    const r = $('m3range'); if(r) r.value = Math.round(1000 * M3.playT / T[T.length - 1]); }
   if(!M3.dirty) return; M3.dirty = false;
   m3Draw();
 }
@@ -831,13 +871,14 @@ function m3Draw(){
     g.closePath(); g.strokeStyle = 'rgba(255,106,213,.85)'; g.lineWidth = 2.4; g.setLineDash([7, 5]); g.stroke(); g.setLineDash([]);
   }
   // the car, when playing
-  if(M3.play){ const i = m3PlayIndex(); const p = pts[i];
+  if(M3.play || M3.scrubbed){ const i = m3PlayIndex(); const p = pts[i];
     g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 3; g.beginPath(); for(let k = 60; k >= 0; k--){ const q = pts[((i - k) % n + n) % n]; if(k === 60) g.moveTo(q[0], q[1]); else g.lineTo(q[0], q[1]); } g.stroke();
     g.beginPath(); g.arc(p[0], p[1], 9, 0, 7); g.fillStyle = 'rgba(255,255,255,.25)'; g.fill();
     g.beginPath(); g.arc(p[0], p[1], 5, 0, 7); g.fillStyle = '#fff'; g.fill(); }
 }
 function m3PlayIndex(){ const T = M3.R.t[M3.R.best]; let lo = 0, hi = T.length - 1; while(lo < hi){ const m = (lo + hi) >> 1; if(T[m] < M3.playT) lo = m + 1; else hi = m; } return lo; }
 function m3Hud(){ const R = M3.R, i = m3PlayIndex(); $('m3t').textContent = fmtT(M3.playT); $('m3v').textContent = Math.round(R.speed[R.best][i]); $('m3b').style.width = R.brake[R.best][i] + '%'; $('m3g').style.width = R.throttle[R.best][i] + '%';
+  const at = $('m3at'); if(at) at.textContent = Math.round(R.S[i]) + ' m';
   // keep the speed chart's cursor on the car too
   const cur = $('spdCursor'); if(cur){ cur.style.display = ''; const W = 560, pl = 38, pr = 10, n = R.S.length; const x = pl + (W - pl - pr) * i / (n - 1); $('spdLine').setAttribute('x1', x); $('spdLine').setAttribute('x2', x); const bx = Math.min(W - 160, x + 8); $('spdBox').setAttribute('x', bx); $('spdBox').setAttribute('y', 18); $('spdT1').setAttribute('x', bx + 8); $('spdT1').setAttribute('y', 32); $('spdT1').textContent = `${Math.round(R.S[i])} m · ${Math.round(R.speed[R.best][i])} mph`; $('spdT2').setAttribute('x', bx + 8); $('spdT2').setAttribute('y', 45); $('spdT2').textContent = fmtT(M3.playT); } }
 function m3Select(k, scroll){ M3.sel = k; M3.dirty = true; m3Panel(); if(scroll) $('m3wrap').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
@@ -910,11 +951,33 @@ document.querySelectorAll('[data-mode]').forEach(el => el.onclick = () => { M3.m
 $('m3relief').onclick = () => { M3.relief = M3.relief > 1.05 ? 1 : M3.reliefAuto; $('m3relief').classList.toggle('on', M3.relief > 1.05); $('m3relief').textContent = M3.relief > 1.05 ? 'RELIEF ×' + M3.relief.toFixed(1) : 'RELIEF'; M3.dirty = true; };
 $('m3spin').onclick = () => { M3.spin = !M3.spin; $('m3spin').classList.toggle('on', M3.spin); M3.dirty = true; };
 $('m3ref').onclick = () => { M3.refLine = !M3.refLine; $('m3ref').classList.toggle('on', M3.refLine); M3.dirty = true; };
-$('m3play').onclick = () => { M3.play = !M3.play; if(M3.play){ M3.playT = 0; M3.spin = false; $('m3spin').classList.remove('on'); } $('m3play').classList.toggle('gold', M3.play); $('m3play').innerHTML = M3.play ? '&#9632; STOP' : '&#9654; PLAY LAP'; $('m3hud').classList.toggle('hidden', !M3.play); if(!M3.play){ const cur = $('spdCursor'); if(cur) cur.style.display = 'none'; } M3.dirty = true; };
+function m3SetPlay(on){
+  M3.play = on;
+  if(on){ M3.spin = false; $('m3spin').classList.remove('on'); }
+  $('m3play').classList.toggle('gold', on); $('m3play').innerHTML = on ? '&#9632; STOP' : '&#9654; PLAY LAP';
+  $('m3play2').classList.toggle('gold', on); $('m3play2').innerHTML = on ? '&#9632;' : '&#9654;';
+  $('m3hud').classList.remove('hidden');
+  if(!on && !M3.scrubbed){ const cur = $('spdCursor'); if(cur) cur.style.display = 'none'; }
+  M3.dirty = true;
+}
+$('m3play').onclick = () => { if(!M3.play){ M3.playT = 0; M3.scrubbed = false; } m3SetPlay(!M3.play); };
+$('m3play2').onclick = () => { if(!M3.play){ M3.playT = 0; M3.scrubbed = false; } m3SetPlay(!M3.play); };
+// Dragging the car to a spot is how you answer "what was I doing there", which
+// pressing play and waiting cannot. Scrubbing pauses playback rather than
+// fighting it.
+$('m3range').oninput = () => {
+  if(!M3.R) return;
+  const T = M3.R.t[M3.R.best], total = T[T.length - 1];
+  if(M3.play) m3SetPlay(false);
+  M3.scrubbed = true;
+  M3.playT = total * (+$('m3range').value) / 1000;
+  $('m3hud').classList.remove('hidden');
+  M3.dirty = true; m3Hud();
+};
 let rsz = 0;
 window.addEventListener('resize', () => {
   M3.dirty = true;
-  clearTimeout(rsz); rsz = setTimeout(() => { if(result && !$('report').classList.contains('hidden')){ drawSpeed(result); drawLost(result); drawDelta(result); drawCorners(result); if(M3.sel !== null) m3Panel(); } }, 180);
+  clearTimeout(rsz); rsz = setTimeout(() => { if(result && !$('report').classList.contains('hidden')){ drawSpeed(result); drawLost(result); drawDelta(result); drawLvl(result); drawCorners(result); if(M3.sel !== null) m3Panel(); } }, 180);
 });
 // the pedal trace for one corner, shared by the panel and the corner cards
 function cornerTraceSvg(R, c){
@@ -939,7 +1002,10 @@ function drawSpeed(R){
   const X = i => pl + (W - pl - pr) * i / (n - 1), Y = v => pt + (H - pt - pb) * (1 - (v - vmin) / (vmax - vmin));
   let g = '';
   for(let j = 0; j < 5; j++){ const v = vmin + (vmax - vmin) * j / 4; g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#1c1f2e"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="10" fill="#525870" text-anchor="end">${Math.round(v)}</text>`; }
-  R.corners.forEach(c => { const x = X(c.idx); g += `<line x1="${x}" x2="${x}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.16)"/><text x="${x}" y="${H - pb + 14}" font-size="11" fill="#ffc31a" text-anchor="middle">${c.name}</text>`; });
+  R.corners.forEach((c, k) => { const x = X(c.idx);
+    g += `<g class="cmark" data-k="${k}"><rect x="${(x - 14).toFixed(1)}" y="${pt}" width="28" height="${H - pb - pt}" fill="transparent"/>` +
+      `<line x1="${x}" x2="${x}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.16)"/>` +
+      `<text x="${x}" y="${H - pb + 14}" font-size="11" fill="#ffc31a" text-anchor="middle">${c.name}</text></g>`; });
   const line = (v, col, w) => `<polyline fill="none" stroke="${col}" stroke-width="${w}" points="${v.map((s, i) => (i % 2 ? '' : X(i).toFixed(1) + ',' + Y(s).toFixed(1) + ' ')).join('')}"/>`;
   R.speed.forEach((v, i) => { if(i !== R.best) g += line(v, '#3a3f55', 1.2); });
   g += line(R.speed[R.best], '#1ab4ff', 2.2);
@@ -984,9 +1050,10 @@ function drawLost(R){
     const w = Math.max(2, X(v) - pl);
     // rounded only at the data end, square against the baseline
     const rr = Math.min(4, w);
-    g += `<path d="M${pl},${y} h${w - rr} a${rr},${rr} 0 0 1 ${rr},${rr} v${h - 2 * rr} a${rr},${rr} 0 0 1 ${-rr},${rr} h${-(w - rr)} z" fill="${col}" opacity=".9"><title>${r.name}: ${v.toFixed(2)} s between your best and worst lap${gold ? ', and it opens onto the longest straight' : ''}</title></path>`;
-    g += `<text x="${pl - 8}" y="${y + h / 2 + 4}" font-size="12" fill="#eef0f8" text-anchor="end">${r.name}</text>`;
-    g += `<text x="${X(v) + 8}" y="${y + h / 2 + 4}" font-size="12" fill="${gold ? '#ffc31a' : '#8b93a3'}">${v.toFixed(2)}s</text>`;
+    g += `<g class="cmark" data-k="${i}"><rect x="0" y="${y - 5}" width="${W}" height="${h + 10}" fill="transparent"/>` +
+      `<path d="M${pl},${y} h${w - rr} a${rr},${rr} 0 0 1 ${rr},${rr} v${h - 2 * rr} a${rr},${rr} 0 0 1 ${-rr},${rr} h${-(w - rr)} z" fill="${col}" opacity=".9"><title>${r.name}: ${v.toFixed(2)} s between your best and worst lap${gold ? ', and it opens onto the longest straight' : ''}</title></path>` +
+      `<text x="${pl - 8}" y="${y + h / 2 + 4}" font-size="12" fill="#eef0f8" text-anchor="end">${r.name}</text>` +
+      `<text x="${X(v) + 8}" y="${y + h / 2 + 4}" font-size="12" fill="${gold ? '#ffc31a' : '#8b93a3'}">${v.toFixed(2)}s</text></g>`;
   });
   $('lostBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet" style="display:block">${g}</svg>`;
 }
@@ -1004,7 +1071,7 @@ function drawDelta(R){
       ? ` <span style="color:var(--gold)">Careful: that lap was set in a different car from yours, so some of the difference below is the machinery rather than the driving.</span>` : '');
 
   const W = boxW('deltaBox', 320, 1180), H = 260, pl = 50, pr = 14, pt = 18, pb = 40;
-  const n = R.S.length, d = F.delta;
+  const n = R.S.length, d = smoothDelta(F.delta);
   let lo = 0, hi = 0; for(let i = 0; i < n; i++){ if(d[i] < lo) lo = d[i]; if(d[i] > hi) hi = d[i]; }
   const span = Math.max(0.15, hi - lo) * 1.15, mid = (hi + lo) / 2;
   const y0 = mid - span / 2, y1 = mid + span / 2;
@@ -1015,9 +1082,10 @@ function drawDelta(R){
          `<text x="${pl - 6}" y="${(Y(v) + 4).toFixed(1)}" font-size="10" fill="#525870" text-anchor="end">${v > 0 ? '+' : ''}${v.toFixed(2)}</text>`; }
   // the line through zero is the one that matters, so it is drawn differently
   g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="#3a3f55" stroke-width="1.5"/>`;
-  R.corners.forEach(c => { const i = Math.round(c.apex / R.lapLength * (n - 1)); const x = X(i);
-    g += `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.16)"/>` +
-         `<text x="${x.toFixed(1)}" y="${H - pb + 14}" font-size="11" fill="#ffc31a" text-anchor="middle">${c.name}</text>`; });
+  R.corners.forEach((c, k) => { const i = Math.round(c.apex / R.lapLength * (n - 1)); const x = X(i);
+    g += `<g class="cmark" data-k="${k}"><rect x="${(x - 14).toFixed(1)}" y="${pt}" width="28" height="${H - pb - pt}" fill="transparent"/>` +
+      `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.16)"/>` +
+      `<text x="${x.toFixed(1)}" y="${H - pb + 14}" font-size="11" fill="#ffc31a" text-anchor="middle">${c.name}</text></g>`; });
   // fill between the delta and zero: red where it is above, green where below
   const build = sign => { let path = '', open = false;
     for(let i = 0; i < n; i++){
@@ -1061,6 +1129,117 @@ function drawDelta(R){
     ['Their flat out', Math.round(F.flatShare) + '%', '', 'yours ' + Math.round(R.flatShare[R.best]) + '%'],
   ].map(([l, v, c, sub]) => `<div class="stat"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${sub}</div></div>`).join('');
 }
+// ---------- one focused corner, shared by every chart ----------
+// A report made of separate pictures makes you hold the corner in your head
+// while your eye travels between them. Marking the same corner everywhere at
+// once removes that work: point at T3 on any chart and T3 lights up on all of
+// them, including the track.
+let focusK = null;
+// A delta between two laps is a difference of two interpolated time traces, so
+// where the projection jumps it can show a spike of a tenth that appears and
+// vanishes within a couple of metres. No car does that. A short moving average
+// removes those without touching the real steps at the corners.
+function smoothDelta(d){
+  const n = d.length, h = 4, out = new Array(n);
+  for(let i = 0; i < n; i++){
+    let sum = 0, c = 0;
+    for(let k = -h; k <= h; k++){ const j = i + k; if(j >= 0 && j < n){ sum += d[j]; c++; } }
+    out[i] = sum / c;
+  }
+  out[0] = d[0]; out[n - 1] = d[n - 1];
+  return out;
+}
+function setFocus(k){
+  if(focusK === k) return;
+  focusK = k;
+  document.querySelectorAll('[data-k]').forEach(el => el.classList.toggle('focus', k !== null && +el.dataset.k === k));
+  if(M3.R){ M3.hover = k; M3.dirty = true; }
+}
+function wireFocus(){
+  document.querySelectorAll('#report [data-k]').forEach(el => {
+    if(el.dataset.wired) return; el.dataset.wired = '1';
+    el.addEventListener('mouseenter', () => setFocus(+el.dataset.k));
+    el.addEventListener('mouseleave', () => setFocus(null));
+    el.addEventListener('click', () => m3Select(+el.dataset.k, true));
+  });
+}
+
+// ---------- lap against lap ----------
+// Every lap is already projected onto the same reference line, so the gap
+// between any two of them at any point on the track is a subtraction. Nothing
+// needs re-analysing, which is why this works on a phone while you are sat in
+// the garage wondering what you did differently.
+let lvlA = null, lvlB = null;
+function lvlFill(R){
+  const sel = (id, pick) => {
+    const e = $(id); e.innerHTML = R.names.map((n, i) =>
+      `<option value="${i}"${i === pick ? ' selected' : ''}>${n}${i === R.best ? ' (best)' : ''} · ${fmtT(R.times[i])}</option>`).join('');
+  };
+  // default to the best against the worst, which is the question people ask
+  let worst = 0; R.times.forEach((t, i) => { if(t > R.times[worst]) worst = i; });
+  if(lvlA === null || lvlA >= R.names.length) lvlA = R.best;
+  if(lvlB === null || lvlB >= R.names.length || lvlB === lvlA) lvlB = worst === R.best ? (R.best + 1) % R.names.length : worst;
+  sel('lvlA', lvlA); sel('lvlB', lvlB);
+  $('lvlA').onchange = () => { lvlA = +$('lvlA').value; drawLvl(R); };
+  $('lvlB').onchange = () => { lvlB = +$('lvlB').value; drawLvl(R); };
+}
+function drawLvl(R){
+  if(R.names.length < 2){ $('lvlSec').classList.add('hidden'); return; }
+  $('lvlSec').classList.remove('hidden');
+  const a = lvlA, b = lvlB, n = R.S.length;
+  if(a === b){ $('lvlBox').innerHTML = '<div class="note">Pick two different laps.</div>'; $('lvlTable').innerHTML = ''; $('lvlGap').textContent = ''; return; }
+  const ta = R.t[a], tb = R.t[b];
+  const raw = new Array(n); for(let i = 0; i < n; i++) raw[i] = ta[i] - tb[i];
+  const d = smoothDelta(raw);
+  const gap = R.times[a] - R.times[b];
+  $('lvlGap').innerHTML = `${R.names[a]} is <b style="color:${gap <= 0 ? 'var(--grn)' : 'var(--red)'}">${Math.abs(gap).toFixed(3)}s</b> ${gap > 0 ? 'slower' : 'quicker'}`;
+
+  const W = boxW('lvlBox', 320, 1180), H = 230, pl = 50, pr = 14, pt = 18, pb = 40;
+  let lo = 0, hi = 0; for(let i = 0; i < n; i++){ if(d[i] < lo) lo = d[i]; if(d[i] > hi) hi = d[i]; }
+  const span = Math.max(0.12, hi - lo) * 1.15, mid = (hi + lo) / 2, y0 = mid - span / 2, y1 = mid + span / 2;
+  const X = i => pl + (W - pl - pr) * i / (n - 1), Y = v => pt + (H - pt - pb) * (1 - (v - y0) / (y1 - y0));
+  let g = '';
+  for(let k = 0; k <= 4; k++){ const v = y0 + (y1 - y0) * k / 4;
+    g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="#1c1f2e"/>` +
+         `<text x="${pl - 6}" y="${(Y(v) + 4).toFixed(1)}" font-size="10" fill="#525870" text-anchor="end">${v > 0 ? '+' : ''}${v.toFixed(2)}</text>`; }
+  g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="#3a3f55" stroke-width="1.5"/>`;
+  R.corners.forEach((c, k) => { const i = Math.round(c.apex / R.lapLength * (n - 1)); const x = X(i);
+    g += `<g class="cmark" data-k="${k}"><rect x="${(x - 14).toFixed(1)}" y="${pt}" width="28" height="${H - pb - pt}" fill="transparent"/>` +
+      `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.16)"/>` +
+      `<text x="${x.toFixed(1)}" y="${H - pb + 14}" font-size="11" fill="#ffc31a" text-anchor="middle">${c.name}</text></g>`; });
+  const build = sign => { let path = '', open = false;
+    for(let i = 0; i < n; i++){
+      const v = d[i] * sign > 0 ? d[i] : 0;
+      if(v === 0 && !open) continue;
+      if(!open){ path += `M${X(i).toFixed(1)},${Y(0).toFixed(1)} `; open = true; }
+      path += `L${X(i).toFixed(1)},${Y(d[i]).toFixed(1)} `;
+      if(v === 0){ path += `L${X(i).toFixed(1)},${Y(0).toFixed(1)} Z `; open = false; }
+    }
+    if(open) path += `L${X(n - 1).toFixed(1)},${Y(0).toFixed(1)} Z`;
+    return path; };
+  g += `<path d="${build(1)}" fill="rgba(255,45,59,.22)"/><path d="${build(-1)}" fill="rgba(0,229,160,.22)"/>`;
+  let line = ''; for(let i = 0; i < n; i += 2) line += X(i).toFixed(1) + ',' + Y(d[i]).toFixed(1) + ' ';
+  g += `<polyline fill="none" stroke="#eef0f8" stroke-width="2" points="${line}"/>`;
+  g += `<text x="${pl - 6}" y="${pt - 6}" font-size="10" fill="#525870" text-anchor="end">SEC</text>`;
+  $('lvlBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet" style="display:block">${g}</svg>`;
+
+  // the corners where the two laps actually differ, biggest first
+  const rows = R.corners.map((c, k) => ({ c, k, dt: c.sect[a] - c.sect[b],
+      dv: c.vmin[a] - c.vmin[b], dbr: (c.brake[a].touch === null || c.brake[b].touch === null) ? null : c.brake[a].touch - c.brake[b].touch,
+      dex: c.exit[a] - c.exit[b] }))
+    .filter(r => Math.abs(r.dt) > 0.02).sort((x, y) => Math.abs(y.dt) - Math.abs(x.dt)).slice(0, 4);
+  const sgn = (v, u, dp) => `${v > 0 ? '+' : ''}${v.toFixed(dp === undefined ? 1 : dp)}${u}`;
+  $('lvlTable').innerHTML = rows.length
+    ? `<div class="lvlrows">${rows.map(r => {
+        const bits = [];
+        if(r.dbr !== null && Math.abs(r.dbr) > 4) bits.push(`braked ${Math.abs(Math.round(r.dbr))} m ${r.dbr > 0 ? 'earlier' : 'later'}`);
+        if(Math.abs(r.dv) > 1) bits.push(`${sgn(r.dv, ' mph')} at the apex`);
+        if(Math.abs(r.dex) > 1) bits.push(`${sgn(r.dex, ' mph')} on the way out`);
+        return `<div class="lvlrow focusable" data-k="${r.k}"><b>${r.c.name}</b><span class="t" style="color:${r.dt > 0 ? 'var(--red)' : 'var(--grn)'}">${sgn(r.dt, 's', 2)}</span><span class="w">${bits.length ? bits.join(', ') : 'much the same, the difference is spread through the corner'}</span></div>`;
+      }).join('')}</div>`
+    : `<div class="note">These two laps are within a few hundredths of each other everywhere. Nothing to pull apart.</div>`;
+  wireFocus();
+}
 function drawAdvice(R){
   // faults are numbered because the order is the point; what is already working
   // and the caveat are not faults and are not numbered
@@ -1085,7 +1264,7 @@ function drawCorners(R){
     // only report lap-to-lap movement that is bigger than the grid can resolve
     const wob = c.touchMin === null ? null : c.touchMax - c.touchMin;
     const shown = wob !== null && wob >= Math.max(3, RES * 2);
-    const el = document.createElement('div'); el.className = 'cc'; el.style.cursor = 'pointer'; el.title = 'Show on the 3D map';
+    const el = document.createElement('div'); el.className = 'cc focusable'; el.dataset.k = k; el.style.cursor = 'pointer'; el.title = 'Show on the 3D map';
     el.innerHTML = `<div class="cch"><h4>${c.name}<span>${KIND[c.kind]} · ${Math.round(c.apex)} M FROM THE LINE</span></h4>${c.name === R.longestRun.opensFrom ? '<em class="onto">ONTO THE LONG STRAIGHT</em>' : ''}</div>
       ${cornerTraceSvg(R, c)}
       <div class="kv">
@@ -1105,7 +1284,6 @@ function drawCorners(R){
           parts.push(`exit ${Math.round(o.exit)} mph (${d(o.exit, c.exitBest, '', 1)})`);
           return `<b class="vs">THEM</b><span class="vs">${parts.join(' · ')} · <b style="color:${lost > 0.02 ? 'var(--pnk)' : 'var(--grn)'}">${Math.abs(lost).toFixed(2)} s ${lost > 0 ? 'quicker' : 'slower'}</b> here</span>`; })()}
       </div>`;
-    el.onclick = () => m3Select(k, true);
     box.appendChild(el);
   });
 }
