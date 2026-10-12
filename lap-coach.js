@@ -132,7 +132,20 @@
     const sk = keep.map(i => s[i]);
     const col = f => interp(ref.S, sk, keep.map(i => f(lap[i])));
     const t = col(p => p.t); const t0 = t[0]; for (let i = 0; i < N; i++) t[i] -= t0;
-    return { t, v: col(p => p.v), thr: col(p => p.thr), brk: col(p => p.brk), offline: interp(ref.S, sk, keep.map(i => off[i])) };
+    const out = { t, v: col(p => p.v), thr: col(p => p.thr), brk: col(p => p.brk), offline: interp(ref.S, sk, keep.map(i => off[i])) };
+    if (lap[0].gear !== null && lap[0].gear !== undefined) {
+      // nearest sample rather than an interpolation: half way between third and
+      // fourth is not a gear
+      const g = new Float64Array(N), r = new Float64Array(N);
+      let j = 0;
+      for (let i = 0; i < N; i++) {
+        while (j < sk.length - 2 && sk[j + 1] < ref.S[i]) j++;
+        const k = keep[(j + 1 < sk.length && Math.abs(sk[j + 1] - ref.S[i]) < Math.abs(sk[j] - ref.S[i])) ? j + 1 : j];
+        g[i] = lap[k].gear; r[i] = lap[k].rpm === null ? 0 : lap[k].rpm;
+      }
+      out.gear = g; out.rpm = r;
+    }
+    return out;
   }
 
   // ---------- corners ----------
@@ -269,6 +282,82 @@
     const liftGap = (lift !== null && touch !== null) ? Math.max(0, lift - touch) : null; // metres between throttle lift and brake touch
     return { lift, touch, full, off, peak, trail, pick, tfull, midLift, coast, overlap, liftGap };
   }
+  // How the car is actually being driven through a corner, beyond the pedals:
+  // how hard it is stopped, whether the brake trace is steady or hunting,
+  // whether it is accelerating once past the apex, and what the gearbox is
+  // doing. These are the measurements the technique rules are built on.
+  function dynamics(ref, corners, p, i, bp) {
+    const c = corners[i], DS = ref.DS, ap = at(ref, c.apex_s);
+    const W = k => ((k % N) + N) % N;
+    const back = Math.round(Math.min(500, 260) / DS), fwd = Math.round(220 / DS);
+
+    // peak deceleration through the braking zone, in g. Speed is in mph on a
+    // distance grid, so dv/dt comes from v dv/ds.
+    let peakG = null, entryV = null;
+    if (bp.touch !== null && bp.off !== null) {
+      const j0 = Math.round((c.apex_s - bp.touch) / DS), j1 = Math.round((c.apex_s - bp.off) / DS);
+      entryV = p.v[W(j0)];
+      // over a baseline of about fifteen metres, not point to point: the grid
+      // is under a metre, and dividing the noise in an interpolated speed
+      // trace by that returns three g for a car that can pull two
+      const h = Math.max(2, Math.round(7.5 / DS));
+      let worst = 0;
+      for (let j = j0; j <= j1; j++) {
+        const a = p.v[W(j - h)] * 0.44704, b = p.v[W(j + h)] * 0.44704;   // m/s
+        const mid = p.v[W(j)] * 0.44704;
+        const g = -(mid * (b - a) / (2 * h * DS)) / 9.81;
+        if (g > worst) worst = g;
+      }
+      peakG = worst;
+    }
+
+    // how many times the brake pressure changes direction while it is applied:
+    // a steady squeeze and release reverses once or twice, pumping reverses
+    // many times, and it is the clearest sign of a driver guessing
+    let reversals = 0;
+    if (bp.touch !== null) {
+      const j0 = Math.round((c.apex_s - bp.touch) / DS), j1 = Math.round((c.apex_s - (bp.off === null ? 0 : bp.off)) / DS);
+      let dir = 0, last = p.brk[W(j0)];
+      const stepN = Math.max(1, Math.round(6 / DS));                      // ignore wobble under ~6 m
+      for (let j = j0; j <= j1; j += stepN) {
+        const nowv = p.brk[W(j)], d = nowv - last;
+        if (Math.abs(d) < 4) continue;                                    // and under 4% of pedal
+        const nd = d > 0 ? 1 : -1;
+        if (dir !== 0 && nd !== dir) reversals++;
+        dir = nd; last = nowv;
+      }
+    }
+
+    // metres past the apex before the car is genuinely accelerating again. A
+    // long stall is the signature of an apex taken too early: the exit has been
+    // spent on steering, so the throttle cannot be used.
+    let stall = null;
+    {
+      const vmn = p.v[ap];
+      let j = 0;
+      for (; j <= fwd; j++) if (p.v[W(ap + j)] > vmn * 1.05) break;
+      stall = j > fwd ? null : j * DS;
+    }
+
+    // gearbox, when the source carries it
+    let upshiftAfterApex = null, limiter = 0;
+    if (p.gear) {
+      const lim = Math.round(60 / DS);
+      for (let j = 1; j <= lim; j++) {
+        const a = p.gear[W(ap + j - 1)], b = p.gear[W(ap + j)];
+        if (b > a && upshiftAfterApex === null && p.thr[W(ap + j)] < 95) upshiftAfterApex = j * DS;
+      }
+      if (p.rpm) {
+        let top = 0; for (let k = 0; k < N; k++) if (p.rpm[k] > top) top = p.rpm[k];
+        for (let j = -back; j <= fwd; j++) {
+          const k = W(ap + j);
+          if (p.thr[k] >= 95 && p.rpm[k] > top * 0.985) limiter += DS;
+        }
+      }
+    }
+    return { peakG, entryV, reversals, stall, upshiftAfterApex, limiter };
+  }
+
   function vmin(ref, corners, p, i) {
     const ap = at(ref, corners[i].apex_s), w = Math.round(100 / ref.DS); let m = Infinity;
     for (let j = -w; j < w; j++) m = Math.min(m, p.v[(ap + j + N) % N]);
@@ -321,6 +410,7 @@
       const vs = P.map(p => vmin(ref, corners, p, i));
       const fs = P.map(p => flatPoint(ref, corners, p, i));
       const bp = P.map(p => brakeProfile(ref, corners, p, i));
+      const dy = P.map((p, k) => dynamics(ref, corners, p, i, bp[k]));
       const st = P.map(p => sectionTime(ref, p, bounds[i][0], bounds[i][1]));
       theo += Math.min(...st);
       const k = at(ref, c.apex_s + 120);
@@ -332,6 +422,12 @@
         kind, coastMed: med(bp.map(b => b.coast)), liftGapMed: med(bp.map(b => b.liftGap)), overlapMed: med(bp.map(b => b.overlap)),
         pickMed: med(bp.map(b => b.pick)), tfullMed: med(bp.map(b => b.tfull)), midLifts: bp.filter(b => b.midLift).length,
         offMed: med(bp.map(b => b.off)), trailMed: med(bp.map(b => b.trail)), peakMed: med(bp.map(b => b.peak)),
+        dyn: dy, dynBest: dy[bi],
+        peakG: med(dy.map(d => d.peakG)), entryV: med(dy.map(d => d.entryV)),
+        reversalsMed: med(dy.map(d => d.reversals)), stallMed: med(dy.map(d => d.stall)),
+        upshifts: dy.filter(d => d.upshiftAfterApex !== null).length,
+        limiterMed: med(dy.map(d => d.limiter)),
+        lineDev: (() => { const o = P.map(p => p.offline[at(ref, c.apex_s)]); return Math.max.apply(null, o) - Math.min.apply(null, o); })(),
         name: c.name, apex: c.apex_s, braking: c.braking, idx: c.i,
         vmin: vs, vminBest: vs[bi], vminMin: Math.min(...vs), vminMax: Math.max(...vs),
         brake: bp, brakeBest: bp[bi], touchMin: touches.length ? Math.min(...touches) : null, touchMax: touches.length ? Math.max(...touches) : null,
@@ -381,107 +477,213 @@
   function advise(R, opts) {
     const out = []; const rows = R.corners; const bi = R.best;
     const braking = rows.filter(r => r.braking);
-    const spread = Math.max(...R.times) - Math.min(...R.times);
+    const slow = braking.filter(r => r.kind === "slow");
+    const spread = Math.max.apply(null, R.times) - Math.min.apply(null, R.times);
     const onTable = R.bestTime - R.theoretical;
     const nm = r => r.name + (r.name === R.longestRun.opensFrom ? " (the corner onto the long straight)" : "");
+    const list = rs => rs.map(r => r.name).join(", ");
+    const add = o => { out.push(o); return o; };
 
-    // consistency
+    // ---------- the whole lap ----------
     if (R.times.length >= 3) {
-      if (spread < 0.8) out.push({ kind: "consistency", score: 1, head: "You are consistent", body:
+      if (spread < 0.8) add({ kind: "good", score: 1, head: "You are consistent", body:
         `Your ${R.times.length} laps sit within ${fmt(spread, 2)} seconds of each other, and a lap built from your best version of every section would be only ${fmt(onTable, 2)} quicker than your best. Tidying up will not find much. The time is in changing something, and the cards below say what.` });
-      else out.push({ kind: "consistency", score: onTable * 2, head: "Consistency is the cheapest time on the table", body:
-        `Your laps spread by ${fmt(spread, 2)} seconds, and a lap built from your best version of every section would be ${fmt(onTable, 2)} quicker than your best. Before changing technique, find the corners that vary (they are marked below) and do your best version of each every lap. Fast drivers are not fast because of one heroic lap; they are fast because every lap is nearly the same.` });
+      else add({ kind: "consistency", score: onTable * 2, head: "Consistency is the cheapest time on the table", body:
+        `Your laps spread by ${fmt(spread, 2)} seconds, and a lap built from your best version of every section would be ${fmt(onTable, 2)} quicker than your best. Before changing technique, find the corners that vary, which are marked below, and do your best version of each one every lap.`,
+        why: `A fast lap is not one heroic effort, it is the same lap repeated. Chasing a personal best on every lap is the most common way to get slower: you arrive at each corner with a different entry speed, so you never learn what the car does, and you spend the session reacting instead of building a reference. Drive at about ninety five percent until a corner comes out the same three times in a row, then push that corner and leave the rest alone. Repeatability is also what makes everything else in this report measurable, because a habit only shows up once the noise is gone.` });
     }
-    // How the brake is used. Reaching peak pressure quickly is correct, not a
-    // fault: the tyre has most grip when the car is upright and straight, so
-    // the hard part of the stop belongs at the start of the zone. What costs
-    // time is dumping the pedal at turn-in, never loading it properly, or
-    // feeding it in so slowly that the first stretch of the zone does nothing.
+
+    // ---------- the brake ----------
     const withZone = braking.filter(r => r.brakeBest.touch !== null && r.brakeBest.off !== null && r.brakeBest.touch - r.brakeBest.off > 15);
     const dumped = withZone.filter(r => r.trailMed !== null && r.trailMed < 0.35);
     const dumpedFires = dumped.length >= Math.max(1, Math.ceil(withZone.length / 3));
+    const WHY_TRAIL = `Braking throws the car's weight onto the front tyres, and a tyre with weight on it can grip harder. That is why the front of the car turns best while the brake is still doing something. If the pedal is gone before you turn in, the nose goes light at the exact moment you ask it to change direction, so the car pushes straight on and you have to wait for it to settle before you can use the throttle. Easing the last of the pressure off as you turn keeps that weight where you need it and lets you carry more speed into the corner for the same speed at the apex. It is the single technique that separates quick drivers from the rest, and it is worth more than any braking point.`;
     if (dumpedFires) {
-      out.push({ kind: "pedal", score: 3 + 0.4 * dumped.length, head: "You come off the brake too quickly", body:
-        `At ${dumped.length} of your ${withZone.length} braking corners (${dumped.map(r => r.name).join(", ")}) the pressure comes off in a short, sharp movement rather than being eased away. The moment the brake is gone the weight comes off the front tyres, and that is the exact moment you are asking them to turn, so the car runs wide and you have to wait for it. Keep your braking point and the first hard part of the stop exactly as they are. Change only the last part: bleed the pedal away slowly as you turn in, so there is still a little pressure on at the apex. That is trail braking, and it is where most of the gap to the front of a leaderboard lives.`,
-        corners: dumped.map(r => r.name) });
+      add({ kind: "pedal", score: 3 + 0.4 * dumped.length, head: "You come off the brake too quickly", body:
+        `At ${dumped.length} of your ${withZone.length} braking corners (${list(dumped)}) the pressure comes off in a short, sharp movement rather than being eased away. Keep your braking point and the first hard part of the stop exactly as they are. Change only the last part: bleed the pedal away slowly as you turn in, so there is still a little pressure on at the apex.`,
+        why: WHY_TRAIL, corners: dumped.map(r => r.name) });
     }
     const slowOn = braking.filter(r => r.brakeBest.touch !== null && r.brakeBest.full !== null && r.brakeBest.touch - r.brakeBest.full > 28 && r.kind !== "fast");
     if (slowOn.length) {
       const r = slowOn[0];
-      out.push({ kind: "pedal", score: 2 + 0.3 * slowOn.length, head: `You feed the brake in slowly at ${r.name}`, body:
-        `Into ${nm(r)} it takes about ${Math.round(r.brakeBest.touch - r.brakeBest.full)} metres from first touch to full pressure${slowOn.length > 1 ? `, and the same at ${slowOn.slice(1, 4).map(x => x.name).join(", ")}` : ""}. The car is upright and straight at the start of a braking zone, which is when the tyres can take the most, so that is where the pressure should already be. A squeeze that long wastes the strongest part of the stop and means you had to start it earlier than you needed to. Build to full in the first couple of car lengths, then ease it off as you turn.`,
+      add({ kind: "pedal", score: 2 + 0.3 * slowOn.length, head: `You feed the brake in slowly at ${r.name}`, body:
+        `Into ${nm(r)} it takes about ${Math.round(r.brakeBest.touch - r.brakeBest.full)} metres from first touch to full pressure${slowOn.length > 1 ? `, and the same at ${list(slowOn.slice(1, 4))}` : ""}. Build to full in the first couple of car lengths, then ease it off as you turn.`,
+        why: `A tyre can only do so much at once, and braking and cornering both spend the same budget. At the start of a braking zone the car is upright and pointing straight, so almost all of that budget is available for stopping, and that is where the hardest braking belongs. By the time you are turning, most of the budget has gone to cornering and there is little left for the brake. A long squeeze at the start wastes the one part of the corner where the car could have been stopping hardest, which forces you to begin braking earlier than you needed to.`,
         corners: slowOn.map(r => r.name) });
     }
     const never = braking.filter(r => r.brakeBest.full === null && r.kind === "slow" && r.coastMed !== null && r.coastMed > 15);
     if (never.length) {
       const r = never[0];
-      out.push({ kind: "pedal", score: 1.8, head: `The brake never gets to full pressure at ${r.name}`, body:
-        `Into ${nm(r)} the pedal never reaches full, and there are about ${Math.round(r.coastMed)} metres afterwards where neither pedal is doing anything. Those two go together: a stop that is too gentle has to start early and finish early, which leaves the car rolling to the apex with nothing loading the tyres. Brake later and harder into the same apex speed and that empty stretch disappears.`,
+      add({ kind: "pedal", score: 1.8, head: `The brake never reaches full pressure at ${r.name}`, body:
+        `Into ${nm(r)} the pedal never gets to full, and there are about ${Math.round(r.coastMed)} metres afterwards where neither pedal is doing anything. Brake later and harder into the same apex speed and that empty stretch disappears.`,
+        why: `Those two findings are the same fault seen from both ends. A stop that is too gentle has to start early, and because it started early it also finishes early, which leaves the car rolling to the apex with nothing loading the tyres. Drivers usually get here by moving the braking point earlier after a scare, then never moving it back. The fix is not to brake harder at the same place, which only means arriving at the apex too slowly: it is to brake later and harder, and arrive at the same apex speed having spent less road doing it.`,
         corners: never.map(r => r.name) });
     }
-    // and say so when the shape of it is already right, so the report is a
-    // reading of what you do rather than a list of faults
-    // one ordinary corner out of six should not cancel the note: it is the
-    // overall shape being right that is worth telling someone
-    const good = withZone.filter(r => r.trailMed !== null && r.trailMed >= 0.55);
-    if (good.length >= Math.ceil(withZone.length * 0.6) && !dumpedFires) {
-      out.push({ kind: "good", score: 0.4, head: "Your braking shape is already right", body:
-        `At ${good.length} of your ${withZone.length} braking corners you load the pedal quickly and then ease it away over most of the zone, which is what trail braking looks like and is the hardest part of this to learn.${good.length < withZone.length ? ` The exception${withZone.length - good.length > 1 ? 's are' : ' is'} ${withZone.filter(r => !good.includes(r)).map(r => r.name).join(" and ")}, where the pedal comes away faster.` : ""} Nothing below is about how you use the pedal; it is about where you use it and what happens on the way out.` });
+    // peak deceleration against what this driver demonstrably gets from this car
+    const stoppers = braking.filter(r => r.peakMed !== null && r.peakMed >= 70 && r.peakG !== null && r.entryV !== null);
+    if (stoppers.length >= 2) {
+      const weak = stoppers.map(r => {
+        // compare only against corners entered at the same speed or slower, where
+        // there is no more downforce to help, so the comparison is conservative
+        const peers = stoppers.filter(q => q !== r && q.entryV <= r.entryV + 10);
+        if (!peers.length) return null;
+        const best = Math.max.apply(null, peers.map(q => q.peakG));
+        return r.peakG < best * 0.85 ? { r, best, gap: best - r.peakG } : null;
+      }).filter(Boolean).sort((a, b) => b.gap - a.gap);
+      if (weak.length) {
+        const w = weak[0];
+        add({ kind: "pedal", score: 1.6 + w.gap, head: `There is more braking available at ${w.r.name}`, body:
+          `Into ${nm(w.r)} you reach about ${w.r.peakG.toFixed(1)}g of deceleration, but elsewhere on this lap, from the same speed or slower, you stop the same car at ${w.best.toFixed(1)}g. The grip is clearly there. Either the braking point is early enough that you never need all of it, or you are not loading the pedal as hard here as you do elsewhere.`,
+          why: `Peak deceleration is the one braking number you can judge without a reference lap, because the car is the comparison. If the same car stops harder somewhere else on the same lap at a similar speed, then the difference is you rather than the machinery. The usual cause is a corner that feels intimidating, so the pedal goes on earlier and softer and the stop is spread over more road than it needs. Move the braking point later in small steps and let the pedal pressure come up to match what you already achieve elsewhere.`,
+          corners: [w.r.name] });
+      }
     }
-    // coasting: the car doing nothing between brake and throttle
-    // Coasting costs time, and the same stretch of road costs far more of it in
-    // a hairpin than in a fast sweeper, so judge it in seconds rather than
-    // metres: twenty metres is a second at 45 mph and a third of that at 135.
+    const hunting = braking.filter(r => r.reversalsMed !== null && r.reversalsMed >= 3);
+    if (hunting.length) {
+      const r = hunting[0];
+      add({ kind: "pedal", score: 1.4 + 0.2 * hunting.length, head: `The brake pressure hunts at ${r.name}`, body:
+        `Through the braking zone into ${nm(r)} the pedal pressure changes direction about ${r.reversalsMed} times${hunting.length > 1 ? `, and the same happens at ${list(hunting.slice(1, 3))}` : ""}. A settled stop goes on, holds, and comes off. Pressure that goes up and down is you adjusting to what the car is doing instead of knowing what it will do.`,
+        why: `Every change of brake pressure moves weight around the car, and a car whose weight keeps moving never settles enough to be driven precisely. Hunting on the pedal almost always means the braking point was a guess, so the first pressure was wrong and everything after it is a correction. The cure is a fixed visual reference rather than better reactions: pick something at the side of the track, a marker board, a change in the kerb, a shadow, and brake at it every lap. Once the start of the zone is the same every time, the pressure can be a plan instead of a reaction.`,
+        corners: hunting.map(r => r.name) });
+    }
+    const wanders = braking.filter(r => r.touchMin !== null && r.touchMax - r.touchMin > 20).sort((a, b) => (b.touchMax - b.touchMin) - (a.touchMax - a.touchMin));
+    if (wanders.length) {
+      const r = wanders[0];
+      add({ kind: "corner", score: 1.5 + 0.02 * (r.touchMax - r.touchMin), head: `Your braking point at ${r.name} moves ${Math.round(r.touchMax - r.touchMin)} metres`, body:
+        `Between your laps the first touch of the brake into ${nm(r)} moves by about ${Math.round(r.touchMax - r.touchMin)} metres${wanders.length > 1 ? `, and there is similar movement at ${list(wanders.slice(1, 3))}` : ""}. That is most of a car length and a half of difference in where the corner starts, which is enough to change everything that follows it.`,
+        why: `A braking point is not a feeling, it is a place. Drivers who are quick are not reacting faster, they are arriving at the same spot every lap and so the rest of the corner is the same too. Pick a fixed object at the side of the track rather than a distance, because distance is impossible to judge at speed and an object is not. If you cannot find one, count the marker boards. Once the point stops moving you will find you can move it later deliberately, which is the only safe way to find the real limit.`,
+        corners: wanders.map(r => r.name) });
+    }
+
+    // ---------- the middle of the corner ----------
     const coastSecs = r => r.coastMed === null ? 0 : r.coastMed / Math.max(8, r.vminBest * 0.44704);
     const coasters = braking.filter(r => coastSecs(r) > 0.3 && r.coastMed > 12).sort((a, b) => coastSecs(b) - coastSecs(a));
     if (coasters.length) {
       const r = coasters[0];
-      out.push({ kind: "coast", score: 1.5 + 2.5 * coastSecs(r), head: `${r.name}: ${Math.round(r.coastMed)} metres of coasting, about ${coastSecs(r).toFixed(1)}s`, body:
-        `Into ${nm(r)} there is a stretch of about ${Math.round(r.coastMed)} metres where neither pedal is doing anything: you are off the brake and not yet on the throttle${coasters.length > 1 ? `, and the same happens at ${coasters.slice(1, 4).map(x => x.name).join(", ")}` : ""}. At the speed you are going through there that is roughly ${coastSecs(r).toFixed(1)} seconds of the lap with nothing being asked of the car. A car that is coasting is only losing speed. The fix is to make the two ends meet: carry the brake deeper, release it as you turn, and pick the throttle up the moment the release is finished. The slowest point of the corner should be a moment, not a stretch.`, corners: coasters.map(r => r.name) });
+      add({ kind: "coast", score: 1.5 + 2.5 * coastSecs(r), head: `${r.name}: ${Math.round(r.coastMed)} metres of coasting, about ${coastSecs(r).toFixed(1)}s`, body:
+        `Into ${nm(r)} there is a stretch of about ${Math.round(r.coastMed)} metres where neither pedal is doing anything${coasters.length > 1 ? `, and the same happens at ${list(coasters.slice(1, 4))}` : ""}. At the speed you go through there that is roughly ${coastSecs(r).toFixed(1)} seconds with nothing being asked of the car. Carry the brake deeper, release it as you turn, and pick the throttle up as the release finishes.`,
+        why: `A car that is neither braking nor driving is not doing anything useful: it is losing speed to drag and tyre scrub without that loss buying you any cornering. The slowest point of a corner should be an instant, not a stretch. Coasting is usually a symptom rather than a habit of its own, and the cause is at one end or the other: either the brake came off too early, or the throttle went on too late because the car was not pointed where you wanted it. Fix whichever end the corner cards say is yours, and the gap closes from that side.`,
+        corners: coasters.map(r => r.name) });
     }
-    // lifting long before braking
     const lifters = braking.filter(r => r.liftGapMed !== null && r.liftGapMed > 20).sort((a, b) => b.liftGapMed - a.liftGapMed);
     if (lifters.length) {
       const r = lifters[0];
-      out.push({ kind: "lift", score: 1 + 0.03 * r.liftGapMed, head: `Lifting ${Math.round(r.liftGapMed)} metres before you brake into ${r.name}`, body:
-        `You come off the throttle about ${Math.round(r.liftGapMed)} metres before the brake touches into ${nm(r)}${lifters.length > 1 ? ` (also ${lifters.slice(1, 4).map(x => x.name).join(", ")})` : ""}. Those metres are flat-out road you are giving away: at the speed you arrive there it is roughly ${fmt(r.liftGapMed / (r.exitBest * 0.44704 * 1.4), 2)} seconds a lap. Stay flat until your braking point and move your foot across in one motion. If the braking point then feels early, it is: that is the next thing to move.`, corners: lifters.map(r => r.name) });
+      add({ kind: "lift", score: 1 + 0.03 * r.liftGapMed, head: `Lifting ${Math.round(r.liftGapMed)} metres before you brake into ${r.name}`, body:
+        `You come off the throttle about ${Math.round(r.liftGapMed)} metres before the brake touches into ${nm(r)}${lifters.length > 1 ? ` (also ${list(lifters.slice(1, 4))})` : ""}. At the speed you arrive there that is roughly ${fmt(r.liftGapMed / Math.max(8, r.exitBest * 0.44704 * 1.4), 2)} seconds a lap. Stay flat until your braking point and move your foot across in one motion.`,
+        why: `The gap between lifting and braking is road you are travelling at less than full speed for no reason. It usually appears because the braking point is not certain, so the lift is an insurance policy that buys thinking time. That makes it a symptom of the same problem as a wandering braking point, and the same fix works: a fixed reference to brake at, so there is nothing to decide on the way in. If the braking point then feels early once you stay flat to it, that is useful information rather than a problem, and it is the next thing to move.`,
+        corners: lifters.map(r => r.name) });
     }
-    // pedal overlap
-    const overl = braking.filter(r => r.overlapMed !== null && r.overlapMed > 12).sort((a, b) => b.overlapMed - a.overlapMed);
+    const overl = braking.filter(r => r.overlapMed !== null && r.overlapMed > 25).sort((a, b) => b.overlapMed - a.overlapMed);
     if (overl.length) {
       const r = overl[0];
-      out.push({ kind: "overlap", score: 0.8 + 0.02 * r.overlapMed, head: `Brake and throttle together at ${r.name}`, body:
-        `For about ${Math.round(r.overlapMed)} metres into ${nm(r)} the brake and the throttle are both pressed. One is fighting the other, and the car gets neither the braking nor the drive. Finish the release before the throttle goes on; if you are left-foot braking, this is the habit to watch.`, corners: overl.map(r => r.name) });
+      add({ kind: "overlap", score: 0.9 + 0.02 * r.overlapMed, head: `Brake and throttle together for ${Math.round(r.overlapMed)} metres at ${r.name}`, body:
+        `Into ${nm(r)} the brake and the throttle are both pressed for about ${Math.round(r.overlapMed)} metres. A brief overlap as one hands over to the other is normal and fine. This is longer than that, and over that distance the two are working against each other.`,
+        why: `A short crossover between the pedals is deliberate in a lot of fast driving, and on a rear wheel drive car a touch of throttle against the brake can even help settle the back. What costs time is a long overlap, because the engine is pushing while the brakes are holding: the car gets neither the full stop nor the full drive, and the tyres do the arguing. If you brake with your left foot this is the habit to watch, since there is nothing forcing one foot off before the other arrives.`,
+        corners: overl.map(r => r.name) });
     }
-    // tentative exits: a long way from first throttle to full
+    const vmins = braking.filter(r => r.vminMax - r.vminMin > 5).sort((a, b) => (b.vminMax - b.vminMin) - (a.vminMax - a.vminMin));
+    if (vmins.length && !wanders.length) {
+      const r = vmins[0];
+      add({ kind: "corner", score: 1.2, head: `Your apex speed at ${r.name} varies by ${Math.round(r.vminMax - r.vminMin)} mph`, body:
+        `Your braking points are fairly settled, but the slowest point of ${nm(r)} ranges from ${Math.round(r.vminMin)} to ${Math.round(r.vminMax)} mph across your laps. When the braking point is consistent and the apex speed is not, the variation is coming from how you release the pedal rather than where you press it.`,
+        why: `Entry speed is set by the shape of the release, not the start of the stop. Two laps that begin braking in the same place can arrive at the apex several miles an hour apart if one bled the pressure away faster than the other. That makes apex speed a good test of whether your trail braking is repeatable: if the number moves around, the release is still being improvised. Try holding a deliberate, slow, even release for a few laps, even if it feels slow, and watch the apex speed settle before you try to raise it.`,
+        corners: [r.name] });
+    }
+
+    // ---------- the exit ----------
+    const stalled = slow.filter(r => r.stallMed !== null && r.stallMed > 30).sort((a, b) => b.stallMed - a.stallMed);
+    if (stalled.length) {
+      const r = stalled[0];
+      add({ kind: "exit", score: 1.7 + 0.01 * r.stallMed, head: `${r.name}: the car cannot accelerate for ${Math.round(r.stallMed)} metres past the apex`, body:
+        `Out of ${nm(r)} it takes about ${Math.round(r.stallMed)} metres past the slowest point before the car is genuinely gaining speed${stalled.length > 1 ? `, and the same at ${list(stalled.slice(1, 3))}` : ""}. That is the signature of an apex taken too early: the car reaches the inside of the corner while it is still pointed across the track, so the exit has to be spent steering instead of accelerating.`,
+        why: `An early apex feels good and is slow. Turning in early puts the car on the inside kerb quickly, but it leaves the car aimed at the outside of the exit, so you have to hold steering lock on just when you want to be straightening and feeding in power. A late apex does the opposite: you give up a little entry speed, the car is pointed down the road sooner, and you can be on the throttle earlier and harder. Because the exit of a corner feeds a straight, and the straight is long, a late apex wins every time a corner leads onto one. Work backwards from where you want the car at the exit, and let that decide the turn-in.`,
+        corners: stalled.map(r => r.name) });
+    }
     const tent = braking.filter(r => r.pickMed !== null && r.tfullMed !== null && (r.tfullMed - r.pickMed) > (r.kind === "slow" ? 120 : 80)).sort((a, b) => (b.tfullMed - b.pickMed) - (a.tfullMed - a.pickMed));
     if (tent.length) {
       const r = tent[0];
-      out.push({ kind: "exit", score: 1.2 + 0.005 * (r.tfullMed - r.pickMed), head: `Slow to full throttle out of ${r.name}`, body:
-        `Out of ${nm(r)} it takes you about ${Math.round(r.tfullMed - r.pickMed)} metres to get from first throttle to full. Progressive is right, but that is a long squeeze${r.midLifts ? `, and on ${r.midLifts} of your laps the throttle came back off part way, which usually means the car ran wide and you corrected` : ""}. Most often the cause is upstream: an apex that is slightly too early leaves the car pointed at the exit kerb, so you cannot commit. Try turning in a car length later so the car is straighter when you ask for the power.`, corners: tent.map(r => r.name) });
+      add({ kind: "exit", score: 1.2 + 0.005 * (r.tfullMed - r.pickMed), head: `Slow to full throttle out of ${r.name}`, body:
+        `Out of ${nm(r)} it takes about ${Math.round(r.tfullMed - r.pickMed)} metres to get from first throttle to full. Progressive is right, but that is a long squeeze.`,
+        why: `A long throttle squeeze is almost never a throttle problem. If the car is pointed down the road you can take the power quickly; if it is not, you cannot, and no amount of bravery with your right foot changes that. So the cause is usually upstream, at the turn-in or the apex, and the fix is to arrive at the exit with the car straighter rather than to force more throttle into the same corner. Try turning in a car length later so the car is pointed where you want it sooner, and the squeeze will shorten on its own.`,
+        corners: tent.map(r => r.name) });
     }
-    // the corner that varies most, and the one onto the long straight
-    const byVar = [...braking].sort((a, b) => (b.sectMax - b.sectMin) - (a.sectMax - a.sectMin));
+    const relift = braking.filter(r => r.midLifts >= Math.max(2, Math.ceil(R.times.length / 3)));
+    if (relift.length) {
+      const r = relift.sort((a, b) => b.midLifts - a.midLifts)[0];
+      add({ kind: "exit", score: 1.3, head: `You lift again on the way out of ${r.name}`, body:
+        `On ${r.midLifts} of your ${R.times.length} laps the throttle comes back off part way through the exit of ${nm(r)} after you had already picked it up. That is the car running out of road or running out of grip, and either way the lap has already lost the time by then.`,
+        why: `Having to lift on an exit means the throttle went on before the car could take it. Occasionally that is simple greed, but far more often it is an apex that was too early, which leaves the car heading for the outside of the track with steering still applied, so adding power pushes it wide and you have to back out. Treat a second lift as a message about the entry rather than the exit. If it only happens on some laps, it is also telling you which entry was different, which is worth more than the lap time it cost.`,
+        corners: relift.map(r => r.name) });
+    }
+    const gearLow = braking.filter(r => r.upshifts >= Math.max(2, Math.ceil(R.times.length / 2)));
+    if (gearLow.length) {
+      const r = gearLow.sort((a, b) => b.upshifts - a.upshifts)[0];
+      add({ kind: "exit", score: 1.1, head: `You change up mid-exit at ${r.name}`, body:
+        `On ${r.upshifts} of your ${R.times.length} laps you take an upshift within sixty metres of the apex of ${nm(r)}, while the throttle is still only part open${gearLow.length > 1 ? `, and the same at ${list(gearLow.slice(1, 3))}` : ""}. That usually means the corner is being taken a gear lower than it wants.`,
+        why: `A gear that is too low runs out of revs just as you need to be feeding power in, so the shift lands in the middle of the part of the corner where the car is least settled. Each shift interrupts the drive and sends a small shock through the car at the exact moment the rear tyres are working hardest. A gear higher often feels lazy for the first few metres and is quicker by the end of the following straight, because the power arrives smoothly and stays. Try the corner one gear up and compare the speed at the end of the next straight rather than how it feels at the apex.`,
+        corners: gearLow.map(r => r.name) });
+    }
+    const revd = rows.filter(r => r.limiterMed !== null && r.limiterMed > 60);
+    if (revd.length) {
+      const r = revd.sort((a, b) => b.limiterMed - a.limiterMed)[0];
+      add({ kind: "exit", score: 0.8, head: `You are sitting on the rev limiter near ${r.name}`, body:
+        `For about ${Math.round(r.limiterMed)} metres around ${nm(r)} the engine is at its limit with the throttle wide open. Once the needle is against the stop, more road is not making you any faster.`,
+        why: `Bouncing off the limiter is dead road: the engine cannot make more speed, so every metre spent there is a metre you could have covered faster in the next gear. It usually means the shift is going in late out of habit, or that the corner before it was taken a gear low and the whole sequence is one gear out. Change up as the needle reaches the limit rather than after it, and if that leaves the engine below its best power, the corner before probably wants a higher gear too.`,
+        corners: [r.name] });
+    }
+
+    // ---------- where to spend the practice ----------
+    const byVar = braking.slice().sort((a, b) => (b.sectMax - b.sectMin) - (a.sectMax - a.sectMin));
     if (byVar.length) {
       const r = byVar[0]; const comp = rows.find(x => x.name === R.longestRun.opensFrom);
-      let body = `${r.name}, apex about ${Math.round(r.apex)} m from the line, taken at ${Math.round(r.vminBest)} mph on your best lap, varies most between laps: ${fmt(r.sectMax - r.sectMin, 2)} seconds between your best and worst, and your minimum speed there wanders from ${Math.round(r.vminMin)} to ${Math.round(r.vminMax)} mph.`;
-      if (r.touchMin !== null && r.touchMax - r.touchMin > 15) body += ` Your braking point there moves by ${Math.round(r.touchMax - r.touchMin)} metres lap to lap, so pick one fixed reference at the side of the track and brake at it every time.`;
-      if (comp && comp.name === r.name) body += ` It also opens onto the longest flat-out stretch on the lap (${Math.round(R.longestRun.metres)} m), so whatever speed you carry out of it is still with you a long way down the road. Nail this corner every lap before you touch anything else.`;
-      else if (comp) body += ` Separately, ${comp.name} opens onto the longest flat-out stretch on the lap (${Math.round(R.longestRun.metres)} m): a small gain in exit speed there is worth more than the same gain anywhere else, so it is the corner to spend practice on.`;
-      out.push({ kind: "corner", score: 2 + 2 * (r.sectMax - r.sectMin), head: `Priority corner: ${r.name}`, body, corners: [r.name] });
+      let body = `${r.name}, apex about ${Math.round(r.apex)} m from the line and taken at ${Math.round(r.vminBest)} mph on your best lap, varies most between your laps: ${fmt(r.sectMax - r.sectMin, 2)} seconds between your best and worst, with the slowest point ranging from ${Math.round(r.vminMin)} to ${Math.round(r.vminMax)} mph.`;
+      if (comp && comp.name === r.name) body += ` It also opens onto the longest flat-out stretch on the lap (${Math.round(R.longestRun.metres)} m), so whatever speed you carry out of it stays with you a long way down the road. Nail this corner every lap before you touch anything else.`;
+      else if (comp) body += ` Separately, ${comp.name} opens onto the longest flat-out stretch on the lap (${Math.round(R.longestRun.metres)} m), so the same gain in exit speed is worth more there than anywhere else.`;
+      add({ kind: "corner", score: 2 + 2 * (r.sectMax - r.sectMin), head: `Priority corner: ${r.name}`, body,
+        why: `Not every corner is worth the same, and practising them equally is how sessions get used up without the lap time moving. Two things make a corner worth more than its neighbours. The first is how much it varies, because a corner you already do the same way every lap has little left in it, while one that swings by half a second is giving time away on most laps. The second is what follows it: a corner that opens onto a long straight carries its exit speed all the way down that straight, so a mile an hour gained there is worth several times the same gain into a corner that leads to another corner. When those two point at the same corner, as they sometimes do, that is the one to spend the whole session on.`,
+        corners: [r.name] });
     }
-    // brushed corners
+    const liney = braking.filter(r => r.lineDev !== null && r.lineDev > 1.5).sort((a, b) => b.lineDev - a.lineDev);
+    if (liney.length && R.times.length >= 4) {
+      const r = liney[0];
+      add({ kind: "corner", score: 0.9, head: `Your line through ${r.name} moves about ${r.lineDev.toFixed(1)} m`, body:
+        `Across your laps the car passes the apex of ${nm(r)} up to ${r.lineDev.toFixed(1)} metres apart from one lap to the next${liney.length > 1 ? `, and there is similar spread at ${list(liney.slice(1, 3))}` : ""}. That is roughly half a car width of difference in where you put it.`,
+        why: `The line is the frame that everything else hangs on. If the car is in a different place at the apex each lap then the braking point, the entry speed and the exit all have to be different too, and none of them can be practised properly. It is also the cheapest thing to make repeatable, because unlike a braking point it does not require any bravery: pick the piece of kerb you want to touch and touch it every lap at whatever speed you like, then build the speed back up once the line stops moving.`,
+        corners: liney.map(r => r.name) });
+    }
     const brushed = braking.filter(r => r.brakeBest.touch !== null && r.brakeBest.full === null && r.brakeBest.off !== null && r.brakeBest.off > 50 && !never.some(n => n.name === r.name));
     if (brushed.length) {
       const r = brushed[0];
-      out.push({ kind: "brush", score: 0.9, head: `${r.name}: a brush, not a brake`, body:
-        `Into ${nm(r)} you touch the brake ${Math.round(r.brakeBest.touch)} metres out, never reach full pressure, and are off it ${Math.round(r.brakeBest.off)} metres before the apex. That reads like a habit rather than a decision. A corner like this is usually either flat with a lift, or a short, firm brake much later. Try both and let the minimum speed on the next report tell you which.`, corners: [r.name] });
+      add({ kind: "brush", score: 0.9, head: `${r.name}: a brush, not a brake`, body:
+        `Into ${nm(r)} you touch the brake ${Math.round(r.brakeBest.touch)} metres out, never reach full pressure, and are off it ${Math.round(r.brakeBest.off)} metres before the apex. A corner like this is usually either flat with a lift, or a short firm brake much later.`,
+        why: `A long gentle brush of the pedal is often a habit left over from the first few laps at a track, when the corner was unknown and a dab felt safer than nothing. It is the worst of both: it is not enough to meaningfully slow the car, but it is enough to unsettle it and to cost you the speed you would have carried by staying flat. Try the corner both ways in a practice session, flat with a lift and then a late firm brake, and let the minimum speed and the section time on the next report tell you which the corner actually wants.`,
+        corners: [r.name] });
     }
-    // caveat always last
-    out.sort((a, b) => b.score - a.score);
-    out.push({ kind: "caveat", score: -1, head: "What this can and cannot say", body:
+
+    // ---------- what is already right ----------
+    const good = withZone.filter(r => r.trailMed !== null && r.trailMed >= 0.55);
+    if (good.length >= Math.ceil(withZone.length * 0.6) && !dumpedFires) {
+      add({ kind: "good", score: 0.4, head: "Your braking shape is already right", body:
+        `At ${good.length} of your ${withZone.length} braking corners you load the pedal quickly and then ease it away over most of the zone, which is what trail braking looks like and is the hardest part of this to learn.${good.length < withZone.length ? ` The exception${withZone.length - good.length > 1 ? "s are" : " is"} ${list(withZone.filter(r => good.indexOf(r) < 0))}, where the pedal comes away faster.` : ""} Nothing above is about how you use the pedal; it is about where you use it and what happens on the way out.` });
+    }
+    if (R.flatShare && R.flatShare[bi] > 55) {
+      add({ kind: "good", score: 0.3, head: `You are flat out for ${Math.round(R.flatShare[bi])}% of the lap`, body:
+        `On your best lap the throttle is wide open for ${Math.round(R.flatShare[bi])}% of the distance, with the longest unbroken run ${Math.round(R.longestRun.metres)} metres out of ${R.longestRun.opensFrom}. That is a high number and it means the corners, not the straights, are where the rest of your time is.` });
+    }
+
+    // Faults get ranked and trimmed; things that are already right are not
+    // faults and do not belong in a list headed "smaller things to work on".
+    const faults = out.filter(a => a.kind !== "good").sort((a, b) => b.score - a.score);
+    const working = out.filter(a => a.kind === "good").sort((a, b) => b.score - a.score);
+    // a ranked list only helps if it is short enough to act on in one session
+    const KEEP = 6;
+    const shown = faults.slice(0, KEEP), rest = faults.slice(KEEP);
+    if (rest.length) shown.push({ kind: "more", score: -0.4, head: `${rest.length} smaller thing${rest.length > 1 ? "s" : ""} further down the list`, body:
+      `Also measured, in order: ${rest.map(a => a.head.charAt(0).toLowerCase() + a.head.slice(1)).join("; ")}. These are worth less than the ones above, so they are listed rather than explained. They will move up on their own once the bigger ones are fixed.` });
+    shown.push.apply(shown, working);
+    shown.push({ kind: "caveat", score: -1, head: "What this can and cannot say", body:
       `${R.times.length} laps on your own show what you do and how much it varies. They cannot show where you are slow against a faster driver: that needs a reference lap in the same car on the same track, which is the next thing this tool will do. Everything above is measured from your own telemetry; nothing is guessed.` });
-    return out;
+    return shown;
   }
 
   // ---------- CSV from the SparksTheory logger ----------
@@ -491,7 +693,10 @@
     const samples = [];
     for (let i = 1; i < lines.length; i++) {
       const c = lines[i].split(","); if (c.length < head.length) continue;
-      samples.push({ t: +c[ix.t_s], x: +c[ix.x], y: ix.y !== undefined ? +c[ix.y] : 0, z: +c[ix.z], v: ix.speed_mph !== undefined ? +c[ix.speed_mph] : +c[ix.speed_kph] * 0.621371, thr: +c[ix.throttle_pct], brk: +c[ix.brake_pct] });
+      samples.push({ t: +c[ix.t_s], x: +c[ix.x], y: ix.y !== undefined ? +c[ix.y] : 0, z: +c[ix.z],
+        v: ix.speed_mph !== undefined ? +c[ix.speed_mph] : +c[ix.speed_kph] * 0.621371,
+        thr: +c[ix.throttle_pct], brk: +c[ix.brake_pct],
+        gear: ix.gear !== undefined ? +c[ix.gear] : null, rpm: ix.rpm !== undefined ? +c[ix.rpm] : null });
     }
     return { name: name || "lap", samples };
   }

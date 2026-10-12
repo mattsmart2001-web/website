@@ -539,7 +539,7 @@ function m3Panel(){
       <div class="story">Best lap <b>${fmtT(R.bestTime)}</b>. The longest flat-out run is <b class="y">${Math.round(R.longestRun.metres)} m</b> and it opens from <b class="y">${R.longestRun.opensFrom}</b>, so that exit is worth more than any other. Your laps vary most at <b>${spreadC.name}</b>, by ${(spreadC.sectMax - spreadC.sectMin).toFixed(2)} s.</div>
       <div class="clist">${R.corners.map((c, k) => `<button class="cbtn${c.name === R.longestRun.opensFrom ? ' gold' : ''}" data-k="${k}">${c.name}<small>${KIND[c.kind]} · ${Math.round(c.vminBest)} MPH</small><small class="sp">${(c.sectMax - c.sectMin).toFixed(2)}s SPREAD</small></button>`).join('')}</div>
       <div class="story" style="color:var(--mut);font-size:.92rem;margin-top:.9rem">${M3.elev > 2 ? `The track climbs and falls ${Math.round(M3.elev)} m over the lap; the ribbon shows it. ` : ''}Red markers are braking corners, blue are taken on a lift, gold opens the long straight.</div>
-      ${(() => { const a = R.advice.find(x => x.kind !== 'caveat' && x.kind !== 'consistency' && x.kind !== 'good') || R.advice[0];
+      ${(() => { const a = R.advice.find(x => x.kind !== 'caveat' && x.kind !== 'good' && x.kind !== 'more') || R.advice[0];
         return a ? `<div class="tryh">FIRST THING TO WORK ON</div><div class="try"><h5>${a.head}</h5><p>${a.body.length > 165 ? a.body.slice(0, 165).replace(/\s+\S*$/, '') + '…' : a.body}</p><button class="chip" id="m3all" style="margin-top:.5rem">READ ALL THE ADVICE</button></div>` : ''; })()}`;
     const jump = $('m3all'); if(jump) jump.onclick = () => $('advice').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } else {
@@ -674,7 +674,17 @@ function drawLost(R){
   $('lostBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet" style="display:block">${g}</svg>`;
 }
 function drawAdvice(R){
-  $('advice').innerHTML = R.advice.map((a, i) => `<div class="adv ${a.kind}"><h4>${a.kind === 'caveat' ? '' : (i + 1) + '. '}${a.head}</h4><p>${a.body}</p></div>`).join('');
+  // faults are numbered because the order is the point; what is already working
+  // and the caveat are not faults and are not numbered
+  let n = 0;
+  $('advice').innerHTML = R.advice.map((a, i) => {
+    const counted = a.kind !== 'caveat' && a.kind !== 'good' && a.kind !== 'more';
+    if(counted) n++;
+    const first = a.kind === 'good' && (i === 0 || R.advice[i - 1].kind !== 'good');
+    return (first ? `<div class="advh">WHAT IS ALREADY WORKING</div>` : '') +
+      `<div class="adv ${a.kind}"><h4>${counted ? n + '. ' : ''}${a.head}</h4><p>${a.body}</p>` +
+      (a.why ? `<details class="why"><summary>Why this matters</summary><p>${a.why}</p></details>` : '') + `</div>`;
+  }).join('');
 }
 function drawCorners(R){
   const box = $('corners'); box.innerHTML = '';
