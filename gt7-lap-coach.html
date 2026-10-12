@@ -9,7 +9,7 @@
 :root{
   --bg:#07080d;--sur:#0d0f18;--pan:#0f1119;--bor:#1c1f2e;
   --red:#ff2d3b;--gold:#ffc31a;--grn:#00e5a0;--blu:#1ab4ff;
-  --wht:#eef0f8;--mut:#525870;--dim:#2a2d3e;
+  --wht:#eef0f8;--mut:#525870;--dim:#2a2d3e;--pnk:#ff6ad5;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{width:100%;min-height:100%;background:var(--bg);color:var(--wht);font-family:'Rajdhani',sans-serif;}
@@ -62,7 +62,7 @@ input[type=file]{display:none;}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:.6rem;margin:1rem 0 1.4rem;}
 .stat{background:var(--pan);border:1px solid var(--bor);border-radius:6px;padding:.7rem .9rem;}
 .stat .l{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.2em;color:var(--mut);text-transform:uppercase;}
-.stat .v{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;line-height:1.05;margin-top:.15rem;} .stat .v.blu{color:var(--blu);} .stat .v.gold{color:var(--gold);}
+.stat .v{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;line-height:1.05;margin-top:.15rem;} .stat .v.blu{color:var(--blu);} .stat .v.gold{color:var(--gold);} .stat .v.pnk{color:var(--pnk);} .stat .v.grn{color:var(--grn);}
 .stat .s{font-family:'Rajdhani',sans-serif;font-size:.9rem;color:var(--mut);margin-top:.1rem;}
 .sec{margin-top:1.4rem;}
 .sec h3{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;letter-spacing:.06em;margin-bottom:.5rem;}
@@ -79,8 +79,9 @@ svg text{font-family:'JetBrains Mono',monospace;}
 .cc h4{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.05em;} .cc h4 span{color:var(--mut);font-size:.68rem;letter-spacing:.1em;margin-left:.5rem;font-family:'JetBrains Mono',monospace;}
 .cc .cch{min-height:2.9rem;} .cc .onto{display:inline-block;font-style:normal;font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.14em;color:var(--gold);border:1px solid rgba(255,195,26,.35);border-radius:3px;padding:.05rem .3rem;}
 .cc .kv{display:grid;grid-template-columns:72px 1fr;gap:.25rem .7rem;font-family:'Rajdhani',sans-serif;font-size:.95rem;margin-top:.5rem;align-items:start;}
+.cc .kv b.vs{color:var(--pnk);} .cc .kv span.vs{color:#c5cad8;border-top:1px solid var(--bor);padding-top:.3rem;margin-top:.15rem;} .cc .kv b.vs{border-top:1px solid var(--bor);padding-top:.35rem;margin-top:.15rem;}
 .cc .kv b{color:var(--mut);font-weight:600;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;font-size:.58rem;line-height:1.5;padding-top:.12rem;} .cc .kv span{color:var(--wht);}
-.legend{display:flex;gap:1rem;font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.14em;color:var(--mut);margin:.3rem 0 .5rem;}
+.legend{display:flex;gap:.8rem;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.14em;color:var(--mut);margin:.3rem 0 .5rem;}
 .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:.35rem;border-radius:2px;}
 /* 3D map */
 .map3{display:grid;grid-template-columns:3fr 2fr;gap:1rem;} @media(max-width:860px){.map3{grid-template-columns:1fr;}}
@@ -117,6 +118,11 @@ svg text{font-family:'JetBrains Mono',monospace;}
   main{padding:1rem .8rem 3rem;} .card{padding:1rem .9rem;}
   .card h2{font-size:1.5rem;} .sec h3{font-size:1.3rem;}
 }
+.members{margin-top:1.4rem;border:1px solid var(--bor);border-left:3px solid var(--pnk);border-radius:6px;padding:.9rem 1.1rem;background:rgba(255,106,213,.04);}
+.mem-head{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.2em;color:var(--pnk);display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;}
+.mem-dot{width:6px;height:6px;border-radius:50%;background:var(--mut);} .mem-dot.on{background:var(--pnk);}
+.members p{font-size:1rem;} .mem-msg{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.1em;color:var(--mut);}
+.mem-msg.bad{color:var(--red);} .mem-msg.good{color:var(--pnk);}
 .foot{font-family:'Rajdhani',sans-serif;font-size:.95rem;color:var(--mut);margin-top:2rem;line-height:1.6;}
 </style>
 </head>
@@ -155,6 +161,26 @@ svg text{font-family:'JetBrains Mono',monospace;}
     <label class="btn" for="csvInput">Or load logger CSV files</label><input type="file" id="csvInput" multiple accept=".csv">
   </div>
   <p style="margin-top:1rem" id="waitTxt">Looking for the connector at localhost:8765…</p>
+
+  <div class="members" id="members">
+    <div class="mem-head"><span class="mem-dot" id="memDot"></span><span id="memTitle">MEMBERS: COMPARE AGAINST A FASTER DRIVER</span></div>
+    <div id="memLocked">
+      <p>Channel members can load a reference lap and have the report measure you against it corner by corner: where the time goes, who brakes later, who carries more speed, and what to change. Your code is in the members-only post on the channel.</p>
+      <div class="row" style="margin-top:.7rem">
+        <input type="text" id="memCode" placeholder="members code" size="20">
+        <button class="btn btn-gold" id="memBtn">Unlock</button>
+        <span id="memMsg" class="mem-msg"></span>
+      </div>
+    </div>
+    <div id="memOpen" class="hidden">
+      <p>Unlocked. To get a reference lap: open the leaderboard for the race or time trial you are driving, watch a top ten driver's replay, and run <code>RUN_REPLAY_LOGGER.bat</code> while it plays. Load the file it writes below, together with your own laps.</p>
+      <div class="row" style="margin-top:.7rem">
+        <label class="btn btn-primary" for="refInput">Load a reference lap</label><input type="file" id="refInput" accept=".csv">
+        <label class="sel">THEIR NAME <input type="text" id="refName" placeholder="e.g. Damien Chafe" size="18"></label>
+        <span id="refMsg" class="mem-msg"></span>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- RECORDER -->
@@ -198,7 +224,7 @@ svg text{font-family:'JetBrains Mono',monospace;}
         <div class="m3wrap" id="m3wrap">
           <canvas id="m3c"></canvas>
           <div class="m3ctl tl"><button class="chip on" data-mode="speed">SPEED</button><button class="chip" data-mode="pedals">PEDALS</button><button class="chip" id="m3relief">RELIEF</button></div>
-          <div class="m3ctl tr"><button class="chip" id="m3play">&#9654; PLAY LAP</button><button class="chip on" id="m3spin">SPIN</button></div>
+          <div class="m3ctl tr"><button class="chip hidden" id="m3ref">THEIR LINE</button><button class="chip" id="m3play">&#9654; PLAY LAP</button><button class="chip on" id="m3spin">SPIN</button></div>
           <div class="m3hud hidden" id="m3hud"><div class="t" id="m3t">0:00.000</div><div class="v"><span id="m3v">0</span><small> MPH</small></div><div class="bars"><i class="b" id="m3b"></i><i class="g" id="m3g"></i></div></div>
           <div class="m3legend" id="m3legend"></div>
           <div class="m3hint">DRAG TO ROTATE · SCROLL TO ZOOM · TAP A CORNER</div>
@@ -206,6 +232,15 @@ svg text{font-family:'JetBrains Mono',monospace;}
         <div class="m3panel" id="m3panel"></div>
       </div>
     </div>
+
+    <div class="sec hidden" id="refSec">
+      <h3>Against <em id="refWho">the reference</em></h3>
+      <div class="note" id="refNote"></div>
+      <div class="legend"><span><i style="background:#eef0f8"></i>TIME BEHIND THEM</span><span><i style="background:rgba(255,45,59,.5)"></i>LOSING</span><span><i style="background:rgba(0,229,160,.5)"></i>GAINING</span></div>
+      <div id="deltaBox"></div>
+      <div id="refStats" class="stats" style="margin-top:1rem"></div>
+    </div>
+    <div class="sec hidden card" id="refBad" style="border-left:3px solid var(--gold)"></div>
 
     <div>
       <div class="sec">
@@ -322,16 +357,79 @@ $('analyseBtn').onclick = () => analyse();
 $('resetBtn').onclick = resetAll; $('resetBtn2').onclick = resetAll;
 $('target').onchange = () => { $('lapTarget').textContent = $('target').value; $('lapTarget2').textContent = $('target').value; };
 
+// ---------- members ----------
+// The code is checked against a hash rather than held in the page, so reading
+// the source does not hand anyone the code. It is a members' perk and not a
+// vault: anyone determined enough to edit the page can get past it, and that is
+// a fair trade for a page that needs no server and no accounts.
+// TO CHANGE THE CODE: run this in any terminal with node, and paste the result.
+//   node -e "const c=require('crypto');console.log(c.createHash('sha256').update('YOUR-NEW-CODE'.trim().toUpperCase()).digest('hex'))"
+const MEMBER_HASH = '626c07fee865ecd706fd212dc5f34c87497ecc2df8fe5e859e1692afefe21d27';
+let unlocked = false, reference = null;
+// a logger filename is a timestamp, which is a poor thing to call a driver
+function refLabel(fileName){
+  const typed = ($('refName').value || '').trim();
+  if(typed) return typed;
+  const base = fileName.replace(/\.csv$/i, '');
+  return /^replay[_-]?\d/i.test(base) || /^\d+$/.test(base) ? 'The reference lap' : base;
+}
+async function sha256(txt){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function setUnlocked(on){
+  unlocked = on;
+  $('memDot').classList.toggle('on', on);
+  $('memTitle').textContent = on ? 'MEMBERS: REFERENCE LAP COMPARISON UNLOCKED' : 'MEMBERS: COMPARE AGAINST A FASTER DRIVER';
+  $('memLocked').classList.toggle('hidden', on);
+  $('memOpen').classList.toggle('hidden', !on);
+}
+async function tryCode(code, quiet){
+  if(!code) return false;
+  let ok = false;
+  try{ ok = (await sha256(code.trim().toUpperCase())) === MEMBER_HASH; }catch(_){ ok = false; }
+  if(ok){ try{ localStorage.setItem('lapCoachMember', code.trim()); }catch(_){} setUnlocked(true); }
+  else if(!quiet){ const m = $('memMsg'); m.textContent = 'NOT A VALID CODE'; m.className = 'mem-msg bad'; }
+  return ok;
+}
+$('memBtn').onclick = () => tryCode($('memCode').value);
+$('memCode').onkeydown = e => { if(e.key === 'Enter') tryCode($('memCode').value); };
+$('refName').oninput = () => { if(reference){ reference.name = refLabel(''); if(result) analyse(); } };
+(async () => { try{ await tryCode(localStorage.getItem('lapCoachMember'), true); }catch(_){} })();
+
+$('refInput').onchange = async (e) => {
+  const f = e.target.files[0]; if(!f) return;
+  const msg = $('refMsg');
+  try{
+    const parsed = LapCoach.parseLoggerCSV(await f.text(), f.name.replace(/\.csv$/i, ''));
+    const lap = parsed.multi ? LapCoach.bestLapFromReplay(parsed, f.name.replace(/\.csv$/i, '')) : parsed;
+    if(!lap || lap.samples.length < 300){ msg.textContent = 'NO COMPLETE LAP IN THAT FILE'; msg.className = 'mem-msg bad'; return; }
+    lap.name = refLabel(f.name);
+    reference = lap;
+    const secs = lap.samples[lap.samples.length - 1].t - lap.samples[0].t;
+    msg.textContent = `LOADED ${lap.name.toUpperCase()} · ${fmtT(secs)}`; msg.className = 'mem-msg good';
+    if(result) analyse();
+  }catch(err){ msg.textContent = 'COULD NOT READ THAT FILE'; msg.className = 'mem-msg bad'; }
+};
+
 // ---------- CSV loading (the SparksTheory logger's files) ----------
 $('csvInput').onchange = async (e) => {
   const files = [...e.target.files].filter(f => /\.csv$/i.test(f.name) && !/unknown/i.test(f.name));
   if(!files.length) return;
   mode = 'file'; started = true; if(ws) try{ ws.onclose = null; ws.close(); }catch(_){}
-  setStatus('file', files.length + ' FILES LOADED'); rec.laps = [];
+  rec.laps = []; let found = 0;
   for(const f of files.sort((a, b) => a.name.localeCompare(b.name))){
-    const lap = LapCoach.parseLoggerCSV(await f.text(), f.name.replace(/\.csv$/i, ''));
-    const s = lap.samples; lap.ms = Math.round((s[s.length-1].t - s[0].t) * 1000); rec.laps.push(lap);
+    const parsed = LapCoach.parseLoggerCSV(await f.text(), f.name.replace(/\.csv$/i, ''));
+    // a file with a lap column is a whole replay, which is somebody else's lap
+    if(parsed.multi){
+      const lap = LapCoach.bestLapFromReplay(parsed, f.name.replace(/\.csv$/i, ''));
+      if(lap){ lap.name = refLabel(f.name); reference = lap; found++;
+        const msg = $('refMsg'); if(msg){ msg.textContent = `LOADED ${lap.name.toUpperCase()}`; msg.className = 'mem-msg good'; } }
+      continue;
+    }
+    const s = parsed.samples; parsed.ms = Math.round((s[s.length-1].t - s[0].t) * 1000); rec.laps.push(parsed);
   }
+  setStatus('file', rec.laps.length + ' LAPS LOADED' + (found ? ' + REFERENCE' : ''));
   showRecorder(); renderLaps(); analyse();
 };
 
@@ -341,7 +439,7 @@ function trackName(L){ const typed = $('trackName').value.trim(); if(typed) retu
 function analyse(){
   if(rec.laps.length < 3) return;
   const laps = rec.laps.map((l, i) => ({ name: l.name || ('Lap ' + (i+1)), samples: l.samples }));
-  try{ result = LapCoach.analyse(laps); }catch(err){ console.error(err); $('recNote').textContent = 'Analysis failed: ' + err.message; return; }
+  try{ result = LapCoach.analyse(laps, unlocked && reference ? { reference } : {}); }catch(err){ console.error(err); $('recNote').textContent = 'Analysis failed: ' + err.message; return; }
   const first = $('report').classList.contains('hidden');
   // show it before drawing: the charts measure their container to draw at real
   // pixel size, and a hidden container measures zero
@@ -367,7 +465,7 @@ function renderReport(R){
     ['Longest flat out', Math.round(R.longestRun.metres) + ' m', '', 'opens from ' + R.longestRun.opensFrom],
   ].map(([l, v, c, s]) => `<div class="stat"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
   RES = R.lapLength / (R.S.length - 1);
-  drawMap(R); drawSpeed(R); drawLost(R); drawAdvice(R); drawCorners(R);
+  drawMap(R); drawDelta(R); drawSpeed(R); drawLost(R); drawAdvice(R); drawCorners(R);
 }
 const KIND = { slow: 'SLOW', medium: 'MEDIUM', fast: 'FAST' };
 let RES = 1;   // metres per point on the reference grid: the floor on every distance shown
@@ -408,6 +506,8 @@ function drawMap(R){
   const DS = R.lapLength / (n - 1);
   M3.corners = R.corners.map(c => { const b = c.brakeBest || {}; const back = Math.max(80, b.lift || 0, b.touch || 0) + 20, fwd = Math.max(60, b.tfull || 0) + 20;
     return { c, i: Math.round(c.apex / DS) % n, from: Math.round((c.apex - back) / DS), to: Math.round((c.apex + fwd) / DS) }; });
+  const hasRef = !!(R.ref && R.ref.ok);
+  M3.refLine = hasRef; $('m3ref').classList.toggle('hidden', !hasRef); $('m3ref').classList.toggle('on', hasRef);
   m3Legend(); m3Panel();
   M3.dirty = true; if(!M3.raf) M3.raf = requestAnimationFrame(m3Frame);
 }
@@ -519,6 +619,16 @@ function m3Draw(){
       g.textAlign = 'left';
     }
     g.globalAlpha = 1; M3.marks.push({ k, x: mx, y: my, r: rr + 6 }); }
+  // the reference lap's line, so you can see where theirs differs from yours
+  if(M3.R.ref && M3.R.ref.ok && M3.refLine){
+    const Q = M3.R.ref.path, m = Q.x.length;
+    let open = false; g.beginPath();
+    for(let i = 0; i < m; i += 2){
+      const q = m3Proj(cam, Q.x[i], Q.y[i], Q.z[i]);
+      if(open) g.lineTo(q[0], q[1]); else { g.moveTo(q[0], q[1]); open = true; }
+    }
+    g.closePath(); g.strokeStyle = 'rgba(255,106,213,.85)'; g.lineWidth = 2.4; g.setLineDash([7, 5]); g.stroke(); g.setLineDash([]);
+  }
   // the car, when playing
   if(M3.play){ const i = m3PlayIndex(); const p = pts[i];
     g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 3; g.beginPath(); for(let k = 60; k >= 0; k--){ const q = pts[((i - k) % n + n) % n]; if(k === 60) g.moveTo(q[0], q[1]); else g.lineTo(q[0], q[1]); } g.stroke();
@@ -598,11 +708,12 @@ m3c.addEventListener('wheel', e => { e.preventDefault(); M3.zoom = Math.max(0.5,
 document.querySelectorAll('[data-mode]').forEach(el => el.onclick = () => { M3.mode = el.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === el)); m3Legend(); M3.dirty = true; });
 $('m3relief').onclick = () => { M3.relief = M3.relief > 1.05 ? 1 : M3.reliefAuto; $('m3relief').classList.toggle('on', M3.relief > 1.05); $('m3relief').textContent = M3.relief > 1.05 ? 'RELIEF ×' + M3.relief.toFixed(1) : 'RELIEF'; M3.dirty = true; };
 $('m3spin').onclick = () => { M3.spin = !M3.spin; $('m3spin').classList.toggle('on', M3.spin); M3.dirty = true; };
+$('m3ref').onclick = () => { M3.refLine = !M3.refLine; $('m3ref').classList.toggle('on', M3.refLine); M3.dirty = true; };
 $('m3play').onclick = () => { M3.play = !M3.play; if(M3.play){ M3.playT = 0; M3.spin = false; $('m3spin').classList.remove('on'); } $('m3play').classList.toggle('gold', M3.play); $('m3play').innerHTML = M3.play ? '&#9632; STOP' : '&#9654; PLAY LAP'; $('m3hud').classList.toggle('hidden', !M3.play); if(!M3.play){ const cur = $('spdCursor'); if(cur) cur.style.display = 'none'; } M3.dirty = true; };
 let rsz = 0;
 window.addEventListener('resize', () => {
   M3.dirty = true;
-  clearTimeout(rsz); rsz = setTimeout(() => { if(result && !$('report').classList.contains('hidden')){ drawSpeed(result); drawLost(result); drawCorners(result); if(M3.sel !== null) m3Panel(); } }, 180);
+  clearTimeout(rsz); rsz = setTimeout(() => { if(result && !$('report').classList.contains('hidden')){ drawSpeed(result); drawLost(result); drawDelta(result); drawCorners(result); if(M3.sel !== null) m3Panel(); } }, 180);
 });
 // the pedal trace for one corner, shared by the panel and the corner cards
 function cornerTraceSvg(R, c){
@@ -614,7 +725,12 @@ function cornerTraceSvg(R, c){
   const trace = (arr, bi, col, w) => { let pts = ''; for(let m = back; m >= -fwd; m -= DS){ const k = Math.round(((c.apex - m) / DS + R.S.length * 2) % R.S.length); pts += X(m).toFixed(1) + ',' + Y(arr[bi][k]).toFixed(1) + ' '; } return `<polyline fill="none" stroke="${col}" stroke-width="${w}" points="${pts}"/>`; };
   R.brake.forEach((_, i) => { if(i !== R.best){ g += trace(R.brake, i, '#3a3f55', 1); g += trace(R.throttle, i, 'rgba(0,229,160,.16)', 1); } });
   g += trace(R.throttle, R.best, 'rgba(0,229,160,.8)', 1.5); g += trace(R.brake, R.best, '#1ab4ff', 2.6);
-  return `<div class="legend" style="margin:.3rem 0 0"><span><i style="background:#1ab4ff"></i>BRAKE</span><span><i style="background:#00e5a0"></i>THROTTLE</span><span><i style="background:#3a3f55"></i>OTHER LAPS</span></div><svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>`;
+  const F = R.ref;
+  if(F && F.ok){
+    const one = (arr, col, w, dash) => { let pts = ''; for(let m = back; m >= -fwd; m -= DS){ const k = Math.round(((c.apex - m) / DS + R.S.length * 2) % R.S.length); pts += X(m).toFixed(1) + ',' + Y(arr[k]).toFixed(1) + ' '; } return `<polyline fill="none" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" points="${pts}"/>`; };
+    g += one(F.brake, '#ff6ad5', 2, '5 4');
+  }
+  return `<div class="legend" style="margin:.3rem 0 0"><span><i style="background:#1ab4ff"></i>BRAKE</span><span><i style="background:#00e5a0"></i>THROTTLE</span><span><i style="background:#3a3f55"></i>OTHER LAPS</span>${F && F.ok ? '<span><i style="background:#ff6ad5"></i>THEIR BRAKE</span>' : ''}</div><svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>`;
 }
 function drawSpeed(R){
   const W = boxW('speedBox', 320, 1180), H = 340, pl = 44, pr = 14, pt = 20, pb = 40; const n = R.S.length;
@@ -673,6 +789,74 @@ function drawLost(R){
   });
   $('lostBox').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet" style="display:block">${g}</svg>`;
 }
+function drawDelta(R){
+  const F = R.ref;
+  $('refSec').classList.add('hidden'); $('refBad').classList.add('hidden');
+  if(!F) return;
+  if(!F.ok){ $('refBad').classList.remove('hidden'); $('refBad').innerHTML = `<h3 style="margin-bottom:.3rem">That reference lap does not fit</h3><div class="note">${F.why} Load a lap from the same track, driven in the same car, and the comparison will work.</div>`; return; }
+  $('refSec').classList.remove('hidden');
+  $('refWho').textContent = F.name;
+  $('refNote').innerHTML = `Both laps laid over the same piece of road, so you are compared with what they were doing in the same place rather than at the same moment. The line is how far behind you are: it climbs where you lose time and falls where you gain.` +
+    (F.lagFix ? ` Their lap came from a replay, where GT7 sends the pedals ${F.lagFix.seconds.toFixed(2)}s late, and that has been corrected.` : '');
+
+  const W = boxW('deltaBox', 320, 1180), H = 260, pl = 50, pr = 14, pt = 18, pb = 40;
+  const n = R.S.length, d = F.delta;
+  let lo = 0, hi = 0; for(let i = 0; i < n; i++){ if(d[i] < lo) lo = d[i]; if(d[i] > hi) hi = d[i]; }
+  const span = Math.max(0.15, hi - lo) * 1.15, mid = (hi + lo) / 2;
+  const y0 = mid - span / 2, y1 = mid + span / 2;
+  const X = i => pl + (W - pl - pr) * i / (n - 1), Y = v => pt + (H - pt - pb) * (1 - (v - y0) / (y1 - y0));
+  let g = '';
+  for(let k = 0; k <= 4; k++){ const v = y0 + (y1 - y0) * k / 4;
+    g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="#1c1f2e"/>` +
+         `<text x="${pl - 6}" y="${(Y(v) + 4).toFixed(1)}" font-size="10" fill="#525870" text-anchor="end">${v > 0 ? '+' : ''}${v.toFixed(2)}</text>`; }
+  // the line through zero is the one that matters, so it is drawn differently
+  g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="#3a3f55" stroke-width="1.5"/>`;
+  R.corners.forEach(c => { const i = Math.round(c.apex / R.lapLength * (n - 1)); const x = X(i);
+    g += `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.16)"/>` +
+         `<text x="${x.toFixed(1)}" y="${H - pb + 14}" font-size="11" fill="#ffc31a" text-anchor="middle">${c.name}</text>`; });
+  // fill between the delta and zero: red where it is above, green where below
+  const build = sign => { let path = '', open = false;
+    for(let i = 0; i < n; i++){
+      const v = d[i] * sign > 0 ? d[i] : 0;
+      if(v === 0 && !open) continue;
+      if(!open){ path += `M${X(i).toFixed(1)},${Y(0).toFixed(1)} `; open = true; }
+      path += `L${X(i).toFixed(1)},${Y(d[i]).toFixed(1)} `;
+      if(v === 0){ path += `L${X(i).toFixed(1)},${Y(0).toFixed(1)} Z `; open = false; }
+    }
+    if(open) path += `L${X(n - 1).toFixed(1)},${Y(0).toFixed(1)} Z`;
+    return path; };
+  g += `<path d="${build(1)}" fill="rgba(255,45,59,.22)"/><path d="${build(-1)}" fill="rgba(0,229,160,.22)"/>`;
+  let line = ''; for(let i = 0; i < n; i += 2) line += X(i).toFixed(1) + ',' + Y(d[i]).toFixed(1) + ' ';
+  g += `<polyline fill="none" stroke="#eef0f8" stroke-width="2" points="${line}"/>`;
+  g += `<text x="${pl - 6}" y="${pt - 6}" font-size="10" fill="#525870" text-anchor="end">SEC</text>`;
+  g += `<text x="${W - pr}" y="${H - 4}" font-size="10" fill="#525870" text-anchor="end">METRES FROM THE START LINE</text>`;
+  g += `<g id="dlCur" style="display:none"><line id="dlLine" y1="${pt}" y2="${H - pb}" stroke="rgba(255,255,255,.35)"/><rect id="dlBox" width="196" height="46" rx="4" fill="rgba(13,15,24,.94)" stroke="#1c1f2e"/><text id="dlT1" font-size="11" fill="#eef0f8"></text><text id="dlT2" font-size="10" fill="#8b93a3"></text><text id="dlT3" font-size="10" fill="#ff6ad5"></text></g>`;
+  $('deltaBox').innerHTML = `<svg id="dlSvg" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet" style="cursor:crosshair;display:block">${g}</svg>`;
+  const svg = $('dlSvg');
+  svg.onmousemove = ev => {
+    const r = svg.getBoundingClientRect(); const x = (ev.clientX - r.left) * W / r.width;
+    const i = Math.max(0, Math.min(n - 1, Math.round((x - pl) / (W - pl - pr) * (n - 1))));
+    $('dlCur').style.display = ''; $('dlLine').setAttribute('x1', X(i)); $('dlLine').setAttribute('x2', X(i));
+    const bx = Math.min(W - 202, X(i) + 8); $('dlBox').setAttribute('x', bx); $('dlBox').setAttribute('y', pt + 4);
+    $('dlT1').setAttribute('x', bx + 8); $('dlT1').setAttribute('y', pt + 18);
+    $('dlT1').textContent = `${Math.round(R.S[i])} m · ${d[i] > 0 ? '+' : ''}${d[i].toFixed(2)}s`;
+    $('dlT2').setAttribute('x', bx + 8); $('dlT2').setAttribute('y', pt + 31);
+    $('dlT2').textContent = `you ${Math.round(R.speed[R.best][i])} mph, brake ${Math.round(R.brake[R.best][i])}%`;
+    $('dlT3').setAttribute('x', bx + 8); $('dlT3').setAttribute('y', pt + 43);
+    $('dlT3').textContent = `them ${Math.round(F.speed[i])} mph, brake ${Math.round(F.brake[i])}%`;
+  };
+  svg.onmouseleave = () => { $('dlCur').style.display = 'none'; };
+
+  const worst = R.corners.map((c, i) => [F.lost[i], c.name]).sort((a, b) => b[0] - a[0])[0];
+  $('refStats').innerHTML = [
+    ['Their lap', fmtT(F.time), 'pnk', F.name],
+    ['Your best', fmtT(R.bestTime), 'blu', R.names[R.best]],
+    ['Gap', (F.gap > 0 ? '+' : '') + F.gap.toFixed(3) + 's', F.gap > 0 ? '' : 'grn', F.gap > 0 ? 'behind' : 'ahead'],
+    ['Worst corner', worst[1], 'gold', (worst[0] > 0 ? '+' : '') + worst[0].toFixed(2) + 's there'],
+    ['Their top speed', Math.round(F.top) + ' mph', '', 'yours ' + Math.round(R.top[R.best]) + ' mph'],
+    ['Their flat out', Math.round(F.flatShare) + '%', '', 'yours ' + Math.round(R.flatShare[R.best]) + '%'],
+  ].map(([l, v, c, sub]) => `<div class="stat"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${sub}</div></div>`).join('');
+}
 function drawAdvice(R){
   // faults are numbered because the order is the point; what is already working
   // and the caveat are not faults and are not numbered
@@ -708,6 +892,14 @@ function drawCorners(R){
         <b>THROTTLE</b><span>${b.pick === null ? '–' : 'picks up ' + ap(b.pick)}${b.tfull !== null ? ', full ' + ap(b.tfull) : ''}${b.midLift ? ' · lifted again mid-exit' : ''}</span>
         <b>COASTING</b><span>${b.coast === null ? '–' : Math.round(b.coast) + ' m with neither pedal'}${b.overlap > 8 ? ' · ' + Math.round(b.overlap) + ' m with both' : ''}</span>
         <b>SECTION</b><span>${c.sectBest.toFixed(2)} s best, +${(c.sectMax - c.sectMin).toFixed(2)} s on your worst lap</span>
+        ${(() => { const F = R.ref; if(!F || !F.ok) return '';
+          const o = F.corners[k], ob = o.brake, lost = F.lost[k];
+          const d = (a, b, u, dp) => (a === null || b === null || a === undefined || b === undefined) ? null : `${a - b > 0 ? '+' : ''}${(a - b).toFixed(dp === undefined ? 0 : dp)}${u}`;
+          const parts = [];
+          const db = d(ob.touch, b.touch, ' m'); if(db) parts.push(`brake ${Math.round(ob.touch)} m (${db})`);
+          parts.push(`apex ${Math.round(o.vmin)} mph (${d(o.vmin, c.vminBest, '', 1)})`);
+          parts.push(`exit ${Math.round(o.exit)} mph (${d(o.exit, c.exitBest, '', 1)})`);
+          return `<b class="vs">THEM</b><span class="vs">${parts.join(' · ')} · <b style="color:${lost > 0.02 ? 'var(--pnk)' : 'var(--grn)'}">${Math.abs(lost).toFixed(2)} s ${lost > 0 ? 'quicker' : 'slower'}</b> here</span>`; })()}
       </div>`;
     el.onclick = () => m3Select(k, true);
     box.appendChild(el);

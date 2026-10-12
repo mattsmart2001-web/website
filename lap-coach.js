@@ -464,8 +464,71 @@
       t: P.map(p => Array.from(p.t)),
       offline: P.map(p => p.offline.reduce((a, b) => b > a ? b : a, -Infinity)),
     };
+    // ---------- a reference lap, if one was supplied ----------
+    // Everything above measures the driver against themselves. This measures
+    // them against somebody quicker, by putting that lap on the same reference
+    // line and comparing at every point on the track rather than at every
+    // instant in time, so the two laps stay in step all the way round.
+    if (opts.reference && opts.reference.samples && opts.reference.samples.length > 300) {
+      result.ref = compareTo(ref, corners, bounds, B, P[bi], opts.reference, result);
+    }
     result.advice = advise(result, opts);
     return result;
+  }
+
+  // ---------- comparison against a reference lap ----------
+  function compareTo(ref, corners, bounds, B, bestP, reference, result) {
+    // the reference almost always comes from a replay, where the pedals arrive
+    // late, and it is corrected on its own: the driver's own laps are usually
+    // live and in step, so a shared correction would be wrong for both
+    let samples = reference.samples;
+    const lag = pedalLag(samples);
+    let lagFix = null;
+    if (lag.r > 0.5 && lag.lag >= 6) { samples = applyLag(samples, lag.lag); lagFix = { samples: lag.lag, seconds: lag.lag / 60 }; }
+
+    // is this even the same track? the projection will happily return nonsense
+    // for a lap from somewhere else, so refuse instead of inventing a comparison
+    const xs = Float64Array.from(samples, q => q.x), zs = Float64Array.from(samples, q => q.z);
+    const own = cumdist(xs, zs); const ownLap = own[own.length - 1];
+    if (Math.abs(ownLap - ref.LAP) / ref.LAP > 0.05) {
+      return { ok: false, why: `That lap is ${Math.round(ownLap)} m round and yours is ${Math.round(ref.LAP)} m, so it is from a different track.` };
+    }
+    const p = profile(ref, samples);
+    let offSum = 0; for (let i = 0; i < N; i++) offSum += p.offline[i];
+    const meanOff = offSum / N;
+    if (meanOff > 12) {
+      return { ok: false, why: `That lap does not follow the same piece of road as yours (about ${Math.round(meanOff)} m away from your line on average), so it is from a different track or a different layout.` };
+    }
+
+    const time = samples[samples.length - 1].t - samples[0].t;
+    // the delta: how far ahead or behind you are at each point on the track,
+    // both laps zeroed at the line. Rising means you are losing time.
+    const delta = new Array(N);
+    for (let i = 0; i < N; i++) delta[i] = B.t[i] - p.t[i];
+
+    const rows = corners.map((c, i) => {
+      const bp = brakeProfile(ref, corners, p, i);
+      const dy = dynamics(ref, corners, p, i, bp);
+      const k = at(ref, c.apex_s + 120);
+      return {
+        name: c.name,
+        vmin: vmin(ref, corners, p, i), brake: bp, dyn: dy,
+        sect: sectionTime(ref, p, bounds[i][0], bounds[i][1]),
+        exit: p.v[k],
+      };
+    });
+    // time lost per corner, against the same section bounds
+    const lost = corners.map((c, i) => result.corners[i].sectBest - rows[i].sect);
+
+    let topR = -Infinity; for (let i = 0; i < N; i++) if (p.v[i] > topR) topR = p.v[i];
+    let flatR = 0; for (let i = 0; i < N; i++) if (p.thr[i] >= 95) flatR++;
+    return {
+      ok: true, name: reference.name || "Reference", time, lagFix,
+      gap: result.bestTime - time, delta,
+      speed: Array.from(p.v), brake: Array.from(p.brk), throttle: Array.from(p.thr), t: Array.from(p.t),
+      path: { x: Array.from(interp(ref.S, own, xs)), y: Array.from(interp(ref.S, own, Float64Array.from(samples, q => q.y || 0))), z: Array.from(interp(ref.S, own, zs)) },
+      corners: rows, lost, top: topR, flatShare: 100 * flatR / N, meanOff,
+    };
   }
 
   // ---------- advice ----------
@@ -681,9 +744,91 @@
     if (rest.length) shown.push({ kind: "more", score: -0.4, head: `${rest.length} smaller thing${rest.length > 1 ? "s" : ""} further down the list`, body:
       `Also measured, in order: ${rest.map(a => a.head.charAt(0).toLowerCase() + a.head.slice(1)).join("; ")}. These are worth less than the ones above, so they are listed rather than explained. They will move up on their own once the bigger ones are fixed.` });
     shown.push.apply(shown, working);
+    // a reference comparison answers the question the driver actually asked, so
+    // it leads, and the self-measured findings follow it as context
+    if (R.ref && R.ref.ok) {
+      const cmp = compareAdvice(R).sort((a, b) => b.score - a.score);
+      shown.unshift.apply(shown, cmp);
+    }
     shown.push({ kind: "caveat", score: -1, head: "What this can and cannot say", body:
       `${R.times.length} laps on your own show what you do and how much it varies. They cannot show where you are slow against a faster driver: that needs a reference lap in the same car on the same track, which is the next thing this tool will do. Everything above is measured from your own telemetry; nothing is guessed.` });
     return shown;
+  }
+
+  // ---------- advice against a reference lap ----------
+  // Measured against somebody quicker, the useful question is not "what do you
+  // do" but "what do they do differently, and where does it actually cost you".
+  // Ranked by time, because a corner where they are a tenth up matters more
+  // than one where their technique differs and the clock does not notice.
+  function compareAdvice(R) {
+    const F = R.ref, out = [];
+    if (!F || !F.ok) return out;
+    const n = R.corners.length;
+    const ranked = R.corners.map((c, i) => ({ c, i, lost: F.lost[i], them: F.corners[i] }))
+      .filter(x => x.lost > 0.08).sort((a, b) => b.lost - a.lost);
+    const nm = c => c.name + (c.name === R.longestRun.opensFrom ? " (the corner onto the long straight)" : "");
+
+    out.push({ kind: "refhead", score: 100, head: `${F.gap > 0 ? "You are " + fmt(F.gap, 3) + " seconds behind" : "You are " + fmt(-F.gap, 3) + " seconds ahead of"} ${F.name}`, body:
+      ranked.length
+        ? `Against your best lap, the difference is concentrated at ${ranked.slice(0, 3).map(x => `${x.c.name} (${fmt(x.lost, 2)}s)`).join(", ")}${ranked.length > 3 ? `, with the rest spread thinly` : ""}. Everywhere else you are within a few hundredths, which is worth knowing before you change anything: most of your lap is already their pace.`
+        : `The difference is spread evenly round the lap rather than sitting in one or two corners, which usually means a small, consistent difference in how the car is being driven rather than a specific mistake.`,
+      why: `Both laps are laid over the same piece of road rather than lined up by time, so at every point on the track you are being compared with what they were doing in the same place. That is what makes the corner by corner numbers meaningful: without it, one earlier braking point shifts everything after it and the rest of the lap looks different when it is not. The gap you see is the real one, and the corner differences below add up to it.` });
+
+    ranked.slice(0, 3).forEach(x => {
+      const b = x.c.brakeBest, t = x.them.brake;
+      const dBrake = (t.touch !== null && b.touch !== null) ? t.touch - b.touch : null;   // positive: they brake earlier
+      const dApex = x.them.vmin - x.c.vminBest;
+      const dExit = x.them.exit - x.c.exitBest;
+      const dPick = (t.pick !== null && b.pick !== null) ? b.pick - t.pick : null;        // positive: they pick up earlier
+      const bits = [];
+      if (dBrake !== null && dBrake < -8) bits.push(`they brake about ${Math.round(-dBrake)} metres later than you`);
+      else if (dBrake !== null && dBrake > 8) bits.push(`they actually brake ${Math.round(dBrake)} metres earlier than you`);
+      else if (dBrake !== null) bits.push(`you both brake within a few metres of the same place`);
+      if (dApex > 1.5) bits.push(`they carry ${fmt(dApex, 1)} mph more through the slowest part`);
+      else if (dApex < -1.5) bits.push(`you are actually ${fmt(-dApex, 1)} mph quicker at the apex`);
+      if (dPick !== null && dPick > 8) bits.push(`they are back on the throttle about ${Math.round(dPick)} metres earlier`);
+      if (dExit > 1.5) bits.push(`and they are ${fmt(dExit, 1)} mph up by the time the corner has finished`);
+
+      let read = "";
+      if (dBrake !== null && dBrake > -8 && dApex > 1.5) read = `The braking point is not the difference here: you are both getting on the brake in the same place. They are simply carrying more speed through the middle, which comes from how the pedal is released rather than when it is pressed.`;
+      else if (dBrake !== null && dBrake < -8 && dApex > 1.5) read = `They brake later and still arrive quicker, which means the braking itself is harder and shorter rather than just later. Moving your braking point without also loading the pedal harder will only get you to the apex too fast.`;
+      else if (dBrake !== null && dBrake < -8) read = `They brake later and arrive at the same speed you do, so the whole stop is being done in less road. That is a harder initial press, not a braver entry.`;
+      else if (dExit > 1.5 || (dPick !== null && dPick > 8)) read = `The entry is close to theirs. The difference is on the way out, which usually points at where the car is pointed at the apex rather than at anything you are doing with your feet.`;
+      else read = `No single input stands out, so the difference here is small and spread through the corner.`;
+
+      out.push({ kind: "ref", score: 10 + x.lost, head: `${x.c.name}: you lose ${fmt(x.lost, 2)}s here`, body:
+        `Through ${nm(x.c)} you lose ${fmt(x.lost, 2)} seconds. ${bits.length ? (bits.length > 1 ? bits.slice(0, -1).join(", ") + " and " + bits[bits.length - 1] : bits[0]).replace(/^./, m => m.toUpperCase()) + ". " : ""}${read}`,
+        corners: [x.c.name] });
+    });
+
+    // a difference that is the same everywhere is a different kind of message
+    const brakeDiffs = R.corners.map((c, i) => {
+      const t = F.corners[i].brake, b = c.brakeBest;
+      return (t.touch !== null && b.touch !== null) ? b.touch - t.touch : null;
+    }).filter(d => d !== null);
+    if (brakeDiffs.length >= 3) {
+      const later = brakeDiffs.filter(d => d > 8).length;
+      if (later >= Math.ceil(brakeDiffs.length * 0.6)) {
+        const med = brakeDiffs.slice().sort((a, b) => a - b)[Math.floor(brakeDiffs.length / 2)];
+        out.push({ kind: "ref", score: 9, head: `They brake later nearly everywhere, by about ${Math.round(med)} metres`, body:
+          `At ${later} of the ${brakeDiffs.length} corners measured, they get on the brake later than you, with a typical difference of about ${Math.round(med)} metres. A difference that shows up at nearly every corner is not about any one corner: it is a standing margin you are leaving yourself everywhere.`,
+          why: `A consistent margin like this is almost never courage, it is certainty. A driver who knows exactly what the car will do from a given speed does not need insurance, so their braking point sits where the car's limit is rather than a safe distance in front of it. The number to take from this is not the metres, it is that the same gap appears everywhere: fixing it is one habit rather than five corners. Move your braking point later in small steps at one corner until the car tells you where the limit actually is, and the rest will follow once you believe it.` });
+      } else if (brakeDiffs.filter(d => Math.abs(d) <= 8).length >= Math.ceil(brakeDiffs.length * 0.6)) {
+        out.push({ kind: "ref", score: 8, head: "You brake in the same places they do", body:
+          `At most corners your braking point is within a few metres of theirs. Wherever the gap is coming from, it is not that they are braver on the way in, and chasing a later braking point is likely to cost you more than it finds.`,
+          why: `This is a more useful finding than it looks, because the braking point is the first thing most drivers try to change and it is usually already right. When the braking points match and the lap times do not, the difference is in the shape of what happens next: how hard the pedal goes on, how slowly it comes off, and how early the car can take power on the way out. Those are harder to feel and they are where the time actually is.` });
+      }
+    }
+    // the corner onto the longest straight, where exit speed is worth the most
+    const comp = R.corners.findIndex(c => c.name === R.longestRun.opensFrom);
+    if (comp >= 0 && F.corners[comp]) {
+      const dExit = F.corners[comp].exit - R.corners[comp].exitBest;
+      if (dExit > 1) out.push({ kind: "ref", score: 7 + dExit * 0.2, head: `They leave ${R.corners[comp].name} ${fmt(dExit, 1)} mph quicker, onto the longest straight`, body:
+        `Out of ${R.corners[comp].name} they are ${fmt(dExit, 1)} mph up on you by the time the corner has finished, and that corner opens onto the longest flat-out stretch on the lap (${Math.round(R.longestRun.metres)} m). A speed advantage at the start of a run that long is still being paid out at the end of it.`,
+        why: `Exit speed from the corner before a long straight is the single most valuable thing on a lap, because you carry the difference for every metre of the straight rather than for the length of the corner. It is also why the corner before a straight is worth practising far more than one that leads into another corner. If you only have time to change one thing, change this one, and be willing to give up a little entry speed to get the car pointed down the road sooner.`,
+        corners: [R.corners[comp].name] });
+    }
+    return out;
   }
 
   // ---------- CSV from the SparksTheory logger ----------
@@ -696,11 +841,42 @@
       samples.push({ t: +c[ix.t_s], x: +c[ix.x], y: ix.y !== undefined ? +c[ix.y] : 0, z: +c[ix.z],
         v: ix.speed_mph !== undefined ? +c[ix.speed_mph] : +c[ix.speed_kph] * 0.621371,
         thr: +c[ix.throttle_pct], brk: +c[ix.brake_pct],
-        gear: ix.gear !== undefined ? +c[ix.gear] : null, rpm: ix.rpm !== undefined ? +c[ix.rpm] : null });
+        gear: ix.gear !== undefined ? +c[ix.gear] : null, rpm: ix.rpm !== undefined ? +c[ix.rpm] : null,
+        lap: ix.lap !== undefined ? +c[ix.lap] : null });
     }
-    return { name: name || "lap", samples };
+    return { name: name || "lap", samples, multi: ix.lap !== undefined };
   }
 
-  const api = { analyse, parseLoggerCSV, findCorners, buildReference, profile, pedalLag };
+  // The replay logger writes one file holding a whole replay, with a lap column,
+  // while the lap logger writes one file per lap. So a file with a lap column in
+  // it is somebody's replay, which is how a driver captures a reference lap: they
+  // watch a top ten replay from the leaderboard and log it. Take the quickest
+  // complete lap out of it.
+  function bestLapFromReplay(parsed, name) {
+    if (!parsed.multi) return null;
+    const by = new Map();
+    for (const s of parsed.samples) {
+      if (s.lap === null) continue;
+      if (!by.has(s.lap)) by.set(s.lap, []);
+      by.get(s.lap).push(s);
+    }
+    let best = null;
+    for (const [n, ss] of by) {
+      if (ss.length < 600) continue;                       // a part lap, or the pit exit
+      const dur = ss[ss.length - 1].t - ss[0].t;
+      // a complete lap starts and finishes at the line, so the first and last
+      // samples should be close together on track
+      const gap = Math.hypot(ss[0].x - ss[ss.length - 1].x, ss[0].z - ss[ss.length - 1].z);
+      if (gap > 120) continue;
+      if (!best || dur < best.dur) best = { n, ss, dur };
+    }
+    if (!best) return null;
+    const t0 = best.ss[0].t;
+    return { name: name || ("replay lap " + best.n), samples: best.ss.map(s => {
+      const q = {}; for (const k in s) q[k] = s[k]; q.t = s.t - t0; return q;
+    }) };
+  }
+
+  const api = { analyse, parseLoggerCSV, bestLapFromReplay, findCorners, buildReference, profile, pedalLag };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.LapCoach = api;
 })(typeof window !== "undefined" ? window : globalThis);
