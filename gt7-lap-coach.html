@@ -209,7 +209,9 @@ body.ov #ovWrap{display:inline-flex;flex-direction:column;align-items:flex-start
 #ovLaps{display:flex;gap:calc(.36rem * var(--ovs,1));}
 body.ov[data-dir="v"] #ovLaps{flex-direction:column;}
 .ovchip{min-width:calc(104px * var(--ovs,1));padding:calc(.34rem * var(--ovs,1)) calc(.58rem * var(--ovs,1)) calc(.4rem * var(--ovs,1));border:1px solid rgba(238,240,248,.16);border-radius:calc(7px * var(--ovs,1));background:rgba(7,8,13,.80);backdrop-filter:blur(6px);box-shadow:0 calc(3px * var(--ovs,1)) calc(14px * var(--ovs,1)) rgba(0,0,0,.65);}
-.ovchip .n{font-family:'JetBrains Mono',Consolas,'DejaVu Sans Mono',monospace;font-size:calc(.48rem * var(--ovs,1));letter-spacing:.14em;color:var(--mut);white-space:nowrap;}
+/* white rather than the muted grey the on page chips use: over gameplay the grey
+   disappears, and the size difference against the time carries the hierarchy anyway */
+.ovchip .n{font-family:'JetBrains Mono',Consolas,'DejaVu Sans Mono',monospace;font-size:calc(.48rem * var(--ovs,1));letter-spacing:.14em;color:var(--wht);white-space:nowrap;}
 /* JetBrains Mono rather than Bebas for the time: it is genuinely tabular, so the
    digits do not shuffle sideways as a lap timer counts, which Bebas does on video */
 .ovchip .t{font-family:'JetBrains Mono',Consolas,'DejaVu Sans Mono',monospace;font-weight:700;font-size:calc(1.12rem * var(--ovs,1));letter-spacing:-.01em;line-height:1.15;color:var(--wht);margin-top:calc(.1rem * var(--ovs,1));font-variant-numeric:tabular-nums;}
@@ -241,6 +243,8 @@ body.ov.key #ovLabel,.obs-prev.key #ovLabel{text-shadow:none;background:#07080d;
 .obs-prev-in{display:inline-flex;flex-direction:column;align-items:flex-start;gap:calc(.34rem * var(--ovs,1));transform-origin:top left;}
 .obs-prev-in .row-chips{display:flex;gap:calc(.36rem * var(--ovs,1));}
 .obs-prev-in.v .row-chips{flex-direction:column;}
+.obs-more{align-self:center;font-family:'JetBrains Mono',monospace;font-size:calc(.5rem * var(--ovs,1));letter-spacing:.16em;color:var(--mut);white-space:nowrap;padding-left:calc(.3rem * var(--ovs,1));}
+.obs-prev-in.v .obs-more{align-self:flex-start;padding:calc(.2rem * var(--ovs,1)) 0 0;}
 .obs-prev-cap{position:absolute;right:.5rem;bottom:.4rem;font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:.2em;color:var(--dim);}
 .obs-url{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}
 .obs-url input{flex:1;min-width:260px;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--blu);background:var(--pan);border:1px solid var(--bor);border-radius:6px;padding:.55rem .7rem;}
@@ -329,7 +333,7 @@ body.ov.key #ovLabel,.obs-prev.key #ovLabel{text-shadow:none;background:#07080d;
         <label class="sel">SIZE <select id="obSize"><option value="1">Small</option><option value="1.3">Medium</option><option value="1.6" selected>Large</option><option value="2">Huge</option></select></label>
         <label class="sel">BACKGROUND <select id="obBg"><option value="none" selected>Transparent</option><option value="green">Green screen</option><option value="black">Black</option></select></label>
         <label class="sel">LAYOUT <select id="obDir"><option value="h" selected>A row</option><option value="v">A stack</option></select></label>
-        <label class="sel">LAPS SHOWN <select id="obMax"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="6">6</option></select></label>
+        <label class="sel">LAPS SHOWN <select id="obMax"><option value="3">3</option><option value="4">4</option><option value="6">6</option><option value="8">8</option><option value="10" selected>10</option><option value="15">15</option><option value="20">20</option></select></label>
         <label class="obs-chk"><input type="checkbox" id="obLabel" checked> Show the RECORDING label</label>
         <label class="obs-chk"><input type="checkbox" id="obIdle"> Stay hidden until a lap starts</label>
       </div>
@@ -1390,7 +1394,9 @@ function drawCorners(R){
 // Parameters: bg (none|black|green|magenta), scale (0.5 to 4), dir (h|v),
 //             max (completed laps shown, 1 to 8), label=0 to drop the wordmark.
 const OVBG = { none: 'transparent', black: '#07080d', green: '#00b140', magenta: '#ff00ff' };
-const OVN = Math.max(1, Math.min(8, parseInt(OVQ.get('max') || '4', 10) || 4));
+// ten completed laps plus the one in progress is the default, because ten is what
+// the page itself aims at and eleven chips fit across a 1440p stream
+const OVN = Math.max(1, Math.min(20, parseInt(OVQ.get('max') || '10', 10) || 10));
 let ovChan = null, ovMir = null, ovStampAt = 0, ovSentAt = 0, ovSig = '';
 try{
   ovChan = new BroadcastChannel('sparks-lap-coach');
@@ -1490,36 +1496,49 @@ function obsPanel(){
     if(val('obSize') !== '1') p.push('scale=' + val('obSize'));
     if(val('obBg') !== 'none') p.push('bg=' + val('obBg'));
     if(val('obDir') !== 'h') p.push('dir=' + val('obDir'));
-    if(val('obMax') !== '4') p.push('max=' + val('obMax'));
+    if(val('obMax') !== '10') p.push('max=' + val('obMax'));
     if(!on('obLabel')) p.push('label=0');
     if(on('obIdle')) p.push('idle=0');
     return base + '?' + p.join('&');
   }
   function preview(){
     const s = parseFloat(val('obSize')), bg = val('obBg'), vert = val('obDir') === 'v';
-    const n = Math.min(3, parseInt(val('obMax'), 10));          // the preview never needs all of them
+    const want = parseInt(val('obMax'), 10);                    // completed laps the overlay keeps on screen
+    const n = Math.min(4, want);                                // the preview shows a few at a readable size
     const box = $('obPrev'), inner = $('obPrevIn');
     box.classList.toggle('alpha', bg === 'none');
     box.classList.toggle('key', bg !== 'none');
     box.style.background = bg === 'green' ? '#00b140' : bg === 'black' ? '#07080d' : '';
     inner.style.setProperty('--ovs', s);
     inner.classList.toggle('v', vert);
-    const demo = [{ n: 1, t: '1:26.757', d: ' · +0.72' }, { n: 2, t: '1:26.036', d: ' · BEST', best: true }, { n: 3, t: '1:26.384', d: ' · +0.35' }];
+    const demo = [{ n: 1, t: '1:26.757', d: ' · +0.72' }, { n: 2, t: '1:26.036', d: ' · BEST', best: true },
+                  { n: 3, t: '1:26.384', d: ' · +0.35' }, { n: 4, t: '1:26.591', d: ' · +0.56' }];
     let h = on('obLabel') ? '<div id="ovLabel" class="live"><span class="dot"></span><span>RECORDING</span></div>' : '';
     h += '<div class="row-chips">';
-    demo.slice(0, Math.max(1, n - 1)).forEach(c => {
+    demo.slice(0, Math.max(1, n)).forEach(c => {
       h += `<div class="ovchip${c.best ? ' best' : ''}"><div class="n">LAP ${c.n}${c.d}</div><div class="t">${c.t}</div></div>`;
     });
-    h += `<div class="ovchip live"><div class="n">LAP ${Math.max(2, n)}</div><div class="t">0:41.206</div></div></div>`;
+    h += `<div class="ovchip live"><div class="n">LAP ${n + 1}</div><div class="t">0:41.206</div></div>`;
+    if(want > n) h += `<div class="obs-more">+${want - n} more</div>`;
+    h += '</div>';
     inner.innerHTML = h;
     // the panel is narrower than a stream, so shrink the preview to fit rather
     // than letting a Huge overlay run off the edge of its own box
     inner.style.transform = 'none';
     const room = box.clientWidth - 32, wide = inner.scrollWidth;
     if(wide > room && wide > 0) inner.style.transform = `scale(${(room / wide).toFixed(3)})`;
-    // a rough browser source size: the strip plus a little air
-    const w = Math.ceil((vert ? inner.scrollWidth : inner.scrollWidth) + 24), hh = Math.ceil(inner.scrollHeight + 24);
-    $('obDims').textContent = `${Math.max(240, w)} x ${Math.max(90, hh)}`;
+    // The browser source size is worked out from one measured chip and the real
+    // lap count, not from the preview, because the preview deliberately shows
+    // fewer chips than the overlay will.
+    const chip = inner.querySelector('.ovchip'), lab = inner.querySelector('#ovLabel');
+    if(chip){
+      const cw = chip.offsetWidth, ch = chip.offsetHeight;
+      const gap = 5.76 * s, pad = 8 * s * 2, lh = lab ? lab.offsetHeight + 5.44 * s : 0;
+      const k = want + 1;                                        // the completed laps plus the one in progress
+      const w = vert ? cw + pad : k * cw + (k - 1) * gap + pad;
+      const hh = (vert ? k * ch + (k - 1) * gap : ch) + lh + pad;
+      $('obDims').textContent = `${Math.ceil(w)} x ${Math.ceil(hh)}`;
+    }
   }
   function sync(){ $('obUrl').value = build(); $('obOpen').href = build(); preview(); }
   ['obSize', 'obBg', 'obDir', 'obMax', 'obLabel', 'obIdle'].forEach(id => { g(id).onchange = sync; });
