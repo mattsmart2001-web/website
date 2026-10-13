@@ -161,7 +161,7 @@ svg text{font-family:'JetBrains Mono',monospace;}
 .field .inline{display:flex;align-items:center;gap:.5rem;} .field .inline select{width:auto;min-width:72px;}
 .field .inline span{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.18em;color:var(--mut);}
 .btn.big{justify-content:center;width:100%;padding:.75rem 1rem;font-size:.74rem;letter-spacing:.16em;margin-top:.2rem;}
-.btn.small{padding:.32rem .6rem;font-size:.56rem;margin-left:.1rem;vertical-align:middle;}
+.btn.small{padding:.34rem .7rem;font-size:.58rem;}
 .wait{display:flex;align-items:center;gap:.5rem;font-family:'Rajdhani',sans-serif;font-size:.95rem;color:#aab0c4;line-height:1.35;}
 .wait .mem-dot{flex:0 0 6px;background:var(--mut);} .wait .mem-dot.on{background:var(--grn);} .wait .mem-dot.live{background:var(--red);}
 .orline{border-top:1px solid var(--bor);padding-top:.7rem;}
@@ -189,6 +189,9 @@ svg text{font-family:'JetBrains Mono',monospace;}
 .m3scrub input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--wht);border:2px solid #07080d;cursor:pointer;box-shadow:0 0 8px rgba(255,255,255,.45);}
 .m3scrub input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--wht);border:2px solid #07080d;cursor:pointer;}
 .m3at{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.1em;color:var(--mut);min-width:58px;text-align:right;}
+.dlrow{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin-top:.5rem;}
+.dlalt{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase;text-decoration:none;border-bottom:1px dotted var(--dim);}
+.dlalt:hover{color:var(--wht);border-bottom-color:var(--mut);}
 .foot{font-family:'Rajdhani',sans-serif;font-size:.95rem;color:var(--mut);margin-top:2rem;line-height:1.6;}
 </style>
 </head>
@@ -254,7 +257,11 @@ svg text{font-family:'JetBrains Mono',monospace;}
     <div class="eyebrow">How it works</div>
     <div class="setup-steps">
       <div class="step"><div class="step-num">1</div><div class="step-txt"><b>Run the connector.</b> The same <code>GT7-Live-Connector</code> the telemetry dashboard uses, on the PC next to your console. If you already have it, you are ready.
-        <a class="btn btn-primary small" href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.exe">Download connector</a></div></div>
+        <div class="dlrow">
+          <a class="btn btn-primary small" href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.zip">Download connector</a>
+          <a class="dlalt" href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.exe" title="Single file, nothing to extract. Some browsers and antivirus software block a bare .exe.">single-file .exe</a>
+          <a class="dlalt" href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector-macOS-AppleSilicon.zip" title="For Apple Silicon Macs, any Mac from late 2020 on. Unzip, then right-click the app and choose Open.">Mac (Apple Silicon)</a>
+        </div></div></div>
       <div class="step"><div class="step-num">2</div><div class="step-txt"><b>Drive.</b> Pick a track and a car, go to Time Trial or Practice, and put some laps in. Scruffy laps and out-laps are kept as well; the report uses them all and tells you which was best.</div></div>
       <div class="step"><div class="step-num">3</div><div class="step-txt"><b>Read the report.</b> It builds itself after three laps and refreshes every time you cross the line. The target is only what you are aiming for, so keep going past it and it keeps improving.</div></div>
     </div>
