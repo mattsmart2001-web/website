@@ -389,11 +389,25 @@
       const good = found.filter(f => f.r > 0.5).map(f => f.lag).sort((a, b) => a - b);
       const med = good.length ? good[Math.floor(good.length / 2)] : 0;
       if (med >= 6) {
-        laps = laps.map(l => ({ name: l.name, samples: applyLag(l.samples, med) }));
+        laps = laps.map(l => ({ name: l.name, ms: l.ms, samples: applyLag(l.samples, med) }));
         lagFix = { samples: med, seconds: med / 60 };
       }
     }
-    const times = laps.map(l => l.samples[l.samples.length - 1].t - l.samples[0].t);
+    // Telemetry arrives at 60 Hz, so a lap measured from the samples is quantised
+    // to about 17 ms and cannot see the fraction of a frame either side of the
+    // line. That is enough to disagree with the game by a couple of hundredths,
+    // which looks like a bug to anyone reading both numbers. GT7 reports its own
+    // lap time to the millisecond, so where we have it, that is the lap time, and
+    // each lap's section times are scaled onto it so the sections still add up.
+    const sampled = laps.map(l => l.samples[l.samples.length - 1].t - l.samples[0].t);
+    const official = laps.map((l, i) => {
+      const s = typeof l.ms === "number" && isFinite(l.ms) ? l.ms / 1000 : null;
+      // a reported time that disagrees with the samples by more than two percent
+      // is stale or belongs to a different lap, so it is not trusted
+      return s !== null && s > 0 && sampled[i] > 0 && Math.abs(s - sampled[i]) / sampled[i] < 0.02 ? s : null;
+    });
+    const times = sampled.map((t, i) => official[i] === null ? t : official[i]);
+    const tScale = sampled.map((t, i) => t > 0 ? times[i] / t : 1);
     const bi = times.indexOf(Math.min(...times));
     const ref = buildReference(laps[bi].samples);
     const P = laps.map(l => profile(ref, l.samples));
@@ -411,7 +425,7 @@
       const fs = P.map(p => flatPoint(ref, corners, p, i));
       const bp = P.map(p => brakeProfile(ref, corners, p, i));
       const dy = P.map((p, k) => dynamics(ref, corners, p, i, bp[k]));
-      const st = P.map(p => sectionTime(ref, p, bounds[i][0], bounds[i][1]));
+      const st = P.map((p, k) => sectionTime(ref, p, bounds[i][0], bounds[i][1]) * tScale[k]);
       theo += Math.min(...st);
       const k = at(ref, c.apex_s + 120);
       const exits = P.map(p => p.v[k]);

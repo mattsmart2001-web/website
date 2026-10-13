@@ -762,7 +762,9 @@ const TRACKS = [ [5686, 'Daytona Road Course'], [3848, 'Sardegna Road Track A'] 
 function trackName(L){ const typed = $('trackName').value.trim(); if(typed) return typed; const hit = TRACKS.find(t => Math.abs(t[0] - L) / t[0] < 0.012); return hit ? hit[1] : 'Unrecognised track'; }
 function analyse(){
   if(rec.laps.length < 3) return;
-  const laps = rec.laps.map((l, i) => ({ name: l.name || ('Lap ' + (i+1)), samples: l.samples }));
+  // ms is the game's own lap time, which is finer than anything measurable from
+  // 60 Hz packets, so it has to reach the analyser rather than being dropped here
+  const laps = rec.laps.map((l, i) => ({ name: l.name || ('Lap ' + (i+1)), samples: l.samples, ms: l.ms }));
   try{ result = LapCoach.analyse(laps, unlocked && reference ? { reference } : {}); }catch(err){ console.error(err); $('recNote').textContent = 'Analysis failed: ' + err.message; return; }
   const first = $('report').classList.contains('hidden');
   // show it before drawing: the charts measure their container to draw at real
