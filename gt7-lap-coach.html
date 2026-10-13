@@ -759,8 +759,17 @@ $('csvInput').onchange = async (e) => {
 };
 
 // ---------- analysis and report ----------
-const TRACKS = [ [5686, 'Daytona Road Course'], [3848, 'Sardegna Road Track A'] ];
-function trackName(L){ const typed = $('trackName').value.trim(); if(typed) return typed; const hit = TRACKS.find(t => Math.abs(t[0] - L) / t[0] < 0.012); return hit ? hit[1] : 'Unrecognised track'; }
+// The track is named from the shape of the lap, not its length: a driven lap is
+// always shorter than the published figure and by a varying amount, so length
+// alone was never going to be reliable. What you type always wins.
+function trackName(L, result){
+  const typed = $('trackName').value.trim(); if(typed) return typed;
+  try{
+    const hit = result && LapCoach.identifyTrack(result.path, result.lapLength);
+    if(hit) return hit.name;
+  }catch(_){}
+  return 'Unrecognised track';
+}
 function analyse(){
   if(rec.laps.length < 3) return;
   // ms is the game's own lap time, which is finer than anything measurable from
@@ -778,7 +787,7 @@ function fmtT(s){ const m = Math.floor(s / 60); return m + ':' + (s - m * 60).to
 function renderReport(R){
   const car = $('carName').value.trim() || (rec.carId ? 'Car #' + rec.carId : 'Unknown car');
   renderLaps();
-  $('repTitle').innerHTML = `${trackName(R.lapLength)} <span style="color:var(--mut);font-size:.9rem;letter-spacing:.08em;font-family:'JetBrains Mono',monospace">${Math.round(R.lapLength)} m</span>`;
+  $('repTitle').innerHTML = `${trackName(R.lapLength, R)} <span style="color:var(--mut);font-size:.9rem;letter-spacing:.08em;font-family:'JetBrains Mono',monospace">${Math.round(R.lapLength)} m</span>`;
   $('repSub').innerHTML = `${R.names.length} laps, ${car}. Best ${fmtT(R.bestTime)} (${R.names[R.best]}).` +
     (R.lagFix ? ` <span style="color:var(--gold)">These laps were logged from a replay, where GT7 sends the pedals ${R.lagFix.seconds.toFixed(2)} s late. The pedal data has been shifted back to line up with the car, which is worth about ${Math.round(R.lagFix.seconds * R.top[R.best] * 0.447)} m on every braking point.</span>` : '');
   $('repNote').textContent = mode === 'live' ? 'LIVE · UPDATES EVERY LAP' : 'FROM LOGGER FILES';
