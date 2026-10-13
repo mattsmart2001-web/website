@@ -193,6 +193,33 @@ svg text{font-family:'JetBrains Mono',monospace;}
 .dlalt{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase;text-decoration:none;border-bottom:1px dotted var(--dim);}
 .dlalt:hover{color:var(--wht);border-bottom-color:var(--mut);}
 .foot{font-family:'Rajdhani',sans-serif;font-size:.95rem;color:var(--mut);margin-top:2rem;line-height:1.6;}
+/* ---------- overlay mode (?overlay=1) ----------
+   Strips the page to the lap strip so it can go straight into OBS as a browser
+   source over the game feed, or be window captured. Everything else is hidden
+   rather than removed, so the recorder logic underneath is untouched. */
+#ovWrap{display:none;}
+body.ov{background:transparent;}
+body.ov::after{display:none;}                      /* no film grain over footage */
+body.ov header,body.ov main{display:none !important;}
+body.ov #ovWrap{display:inline-flex;flex-direction:column;align-items:flex-start;gap:calc(.34rem * var(--ovs,1));padding:calc(.5rem * var(--ovs,1));}
+#ovLabel{font-family:'JetBrains Mono',Consolas,'DejaVu Sans Mono',monospace;font-size:calc(.56rem * var(--ovs,1));letter-spacing:.3em;color:var(--mut);text-transform:uppercase;display:flex;align-items:center;gap:calc(.42rem * var(--ovs,1));text-shadow:0 1px 4px rgba(0,0,0,.95);}
+#ovLabel .dot{width:calc(6px * var(--ovs,1));height:calc(6px * var(--ovs,1));border-radius:50%;background:var(--mut);}
+#ovLabel.live{color:var(--red);} #ovLabel.live .dot{background:var(--red);animation:pulse .8s ease-in-out infinite;}
+#ovLabel.hold{color:var(--blu);} #ovLabel.hold .dot{background:var(--blu);}
+#ovLaps{display:flex;gap:calc(.36rem * var(--ovs,1));}
+body.ov[data-dir="v"] #ovLaps{flex-direction:column;}
+.ovchip{min-width:calc(104px * var(--ovs,1));padding:calc(.34rem * var(--ovs,1)) calc(.58rem * var(--ovs,1)) calc(.4rem * var(--ovs,1));border:1px solid rgba(238,240,248,.16);border-radius:calc(7px * var(--ovs,1));background:rgba(7,8,13,.80);backdrop-filter:blur(6px);box-shadow:0 calc(3px * var(--ovs,1)) calc(14px * var(--ovs,1)) rgba(0,0,0,.65);}
+.ovchip .n{font-family:'JetBrains Mono',Consolas,'DejaVu Sans Mono',monospace;font-size:calc(.48rem * var(--ovs,1));letter-spacing:.14em;color:var(--mut);white-space:nowrap;}
+/* JetBrains Mono rather than Bebas for the time: it is genuinely tabular, so the
+   digits do not shuffle sideways as a lap timer counts, which Bebas does on video */
+.ovchip .t{font-family:'JetBrains Mono',Consolas,'DejaVu Sans Mono',monospace;font-weight:700;font-size:calc(1.12rem * var(--ovs,1));letter-spacing:-.01em;line-height:1.15;color:var(--wht);margin-top:calc(.1rem * var(--ovs,1));font-variant-numeric:tabular-nums;}
+.ovchip.best{border-color:rgba(26,180,255,.55);} .ovchip.best .t{color:var(--blu);}
+.ovchip.live{border-color:rgba(255,45,59,.62);} .ovchip.live .t{color:var(--red);}
+/* On a keyed background a translucent panel keys badly, and a soft drop shadow
+   spilling onto the key colour comes back as a dark halo round every chip once
+   the green is pulled. So on a key the panels go solid and lose their glow. */
+body.ov.key .ovchip{backdrop-filter:none;background:#07080d;box-shadow:none;}
+body.ov.key #ovLabel{text-shadow:none;}
 </style>
 </head>
 <body>
@@ -426,6 +453,10 @@ svg text{font-family:'JetBrains Mono',monospace;}
 const $ = id => document.getElementById(id);
 const WS_URL = 'ws://localhost:8765';
 let ws = null, mode = 'live', analysing = false, dirty = false, started = false;
+// overlay mode is decided before anything else, because it changes whether the
+// recorder starts on its own and whether the analysis runs at all
+const OVQ = new URLSearchParams(location.search);
+const OV = OVQ.has('overlay') && OVQ.get('overlay') !== '0';
 const rec = { laps: [], cur: null, lastCount: null, lastPid: null, carId: null, paused: false };
 let result = null;
 
@@ -483,11 +514,16 @@ function onPacket(d){
   // progress when Start is pressed is discarded, so the first chip is a full lap
   if(rec.cur){
     rec.cur.samples.push({ t: pid / 60, x: d.posX, y: d.posY || 0, z: d.posZ, v: (d.speed || 0) * 0.621371, thr: d.throttle || 0, brk: d.brake || 0 });
-    if(rec.cur.samples.length % 30 === 0) renderLaps();
+    ovStampAt = performance.now();
+    // the overlay repaints itself on an animation frame, so it does not want the
+    // half second throttle the on page chip row is happy with
+    if(!OV){ ovBroadcast(); if(rec.cur.samples.length % 30 === 0) renderLaps(); }
   }
 }
 // the analysis takes a fraction of a second; run it off the packet path so nothing is dropped
-function scheduleAnalysis(){ dirty = true; if(!analysing){ analysing = true; setTimeout(() => { analysing = false; if(dirty){ dirty = false; analyse(); } }, 50); } }
+// In overlay mode it is skipped entirely: nothing would be visible, and a chart
+// redraw every lap is a frame hitch in whatever is recording the overlay.
+function scheduleAnalysis(){ if(OV) return; dirty = true; if(!analysing){ analysing = true; setTimeout(() => { analysing = false; if(dirty){ dirty = false; analyse(); } }, 50); } }
 
 function otherCar(){
   if(rec.paused) return;
@@ -1294,6 +1330,103 @@ function drawCorners(R){
     box.appendChild(el);
   });
 }
+// ---------- overlay mode ----------
+// ?overlay=1 turns this page into nothing but the lap strip, for dropping over
+// gameplay. Two ways to use it:
+//   OBS browser source pointed at the URL. It connects to the connector itself
+//   and logs the laps, so it works with nothing else open.
+//   A browser window, window captured. If the full page is open in another tab
+//   of the same browser it mirrors that session instead of opening a second
+//   connection, so the report and the overlay always agree.
+// Parameters: bg (none|black|green|magenta), scale (0.5 to 4), dir (h|v),
+//             max (completed laps shown, 1 to 8), label=0 to drop the wordmark.
+const OVBG = { none: 'transparent', black: '#07080d', green: '#00b140', magenta: '#ff00ff' };
+const OVN = Math.max(1, Math.min(8, parseInt(OVQ.get('max') || '4', 10) || 4));
+let ovChan = null, ovMir = null, ovStampAt = 0, ovSentAt = 0, ovSig = '';
+try{
+  ovChan = new BroadcastChannel('sparks-lap-coach');
+  if(OV) ovChan.onmessage = e => { if(e.data && e.data.t === 'state'){ ovMir = e.data; ovStampAt = performance.now(); ovDropOwn(); } };
+}catch(_){}
+
+// the full page tells any overlay window what it has, cheaply, 20 times a second
+function ovBroadcast(){
+  if(!ovChan) return;
+  const now = performance.now(); if(now - ovSentAt < 50) return; ovSentAt = now;
+  const s = rec.cur && rec.cur.samples.length ? rec.cur.samples : null;
+  try{ ovChan.postMessage({ t: 'state', laps: rec.laps.map(l => l.ms),
+    live: s && mode === 'live' ? (s[s.length - 1].t - s[0].t) * 1000 : null, paused: rec.paused }); }catch(_){}
+}
+// once a real session is mirrored there is no reason to hold a second socket open
+function ovDropOwn(){
+  if(mode === 'mirror') return;
+  mode = 'mirror';
+  try{ if(ws) ws.close(); }catch(_){}
+  ws = null;
+}
+function ovInit(){
+  const scale = Math.max(0.5, Math.min(4, parseFloat(OVQ.get('scale') || '1') || 1));
+  const want = OVQ.get('bg') || 'none';
+  const bg = OVBG[want] === undefined ? OVBG.none : OVBG[want];
+  document.body.classList.add('ov');
+  if(bg !== 'transparent') document.body.classList.add('key');
+  document.body.dataset.dir = OVQ.get('dir') === 'v' ? 'v' : 'h';
+  document.documentElement.style.setProperty('--ovs', scale);
+  document.documentElement.style.background = bg;
+  document.body.style.background = bg;
+  const w = document.createElement('div');
+  w.id = 'ovWrap';
+  w.innerHTML = (OVQ.get('label') === '0' ? '' :
+    '<div id="ovLabel"><span class="dot"></span><span id="ovLabelTxt">LAP COACH</span></div>') + '<div id="ovLaps"></div>';
+  document.body.appendChild(w);
+  started = true;                       // there is no Start button to press here
+  requestAnimationFrame(ovLoop);
+}
+function ovLoop(){
+  // a mirror that has gone quiet means the other tab was closed, so take over
+  if(ovMir && performance.now() - ovStampAt > 3000){ ovMir = null; mode = 'live'; connect(); }
+  const laps = ovMir ? ovMir.laps : rec.laps.map(l => l.ms);
+  const paused = ovMir ? ovMir.paused : rec.paused;
+  let live = null;
+  if(ovMir) live = ovMir.live;
+  else if(rec.cur && rec.cur.samples.length){ const s = rec.cur.samples; live = (s[s.length - 1].t - s[0].t) * 1000; }
+  // count smoothly between 60 Hz packets, clamped so the timer freezes rather
+  // than running away if the feed stops
+  if(live !== null) live += Math.min(140, Math.max(0, performance.now() - ovStampAt));
+  ovPaint(laps, paused ? null : live, paused);
+  requestAnimationFrame(ovLoop);
+}
+function ovPaint(laps, live, paused){
+  // idle=0 keeps the whole thing off screen until there is something to show,
+  // for a scene the overlay just lives in rather than being switched on
+  if(OVQ.get('idle') === '0'){
+    const empty = !laps.length && live === null;
+    $('ovWrap').style.visibility = empty ? 'hidden' : 'visible';
+    if(empty) return;
+  }
+  const best = laps.length ? Math.min.apply(null, laps) : null;
+  const show = laps.slice(-OVN), off = laps.length - show.length;
+  // the chips are only rebuilt when a lap lands, so the ticking time is one
+  // text write per frame rather than an innerHTML churn sixty times a second
+  const sig = show.join(',') + '|' + (live === null ? '-' : 'L') + '|' + (paused ? 'p' : '') + '|' + laps.length;
+  if(sig !== ovSig){
+    ovSig = sig;
+    let h = '';
+    show.forEach((ms, i) => {
+      const n = off + i + 1, isBest = ms === best, d = best === null ? 0 : ms - best;
+      h += `<div class="ovchip${isBest ? ' best' : ''}"><div class="n">LAP ${n}${isBest ? ' · BEST' : (d ? ' · +' + (d / 1000).toFixed(2) : '')}</div><div class="t">${fmtMs(ms)}</div></div>`;
+    });
+    if(live !== null) h += `<div class="ovchip live"><div class="n">LAP ${laps.length + 1}</div><div class="t" id="ovLive">0:00.000</div></div>`;
+    $('ovLaps').innerHTML = h;
+    const lab = $('ovLabel');
+    if(lab){
+      lab.classList.toggle('live', live !== null);
+      lab.classList.toggle('hold', paused);
+      $('ovLabelTxt').textContent = paused ? 'LOGGING PAUSED' : live !== null ? 'RECORDING' : 'LAP COACH';
+    }
+  }
+  if(live !== null){ const e = $('ovLive'); if(e) e.textContent = fmtMs(live); }
+}
+
 // ---------- download ----------
 $('dlBtn').onclick = () => {
   const head = 't_s,x,y,z,speed_mph,throttle_pct,brake_pct\n';
@@ -1302,6 +1435,7 @@ $('dlBtn').onclick = () => {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `lap_${String(i+1).padStart(2,'0')}_${l.ms ? fmtMs(l.ms).replace(':','m') : 'x'}.csv`; a.click();
   });
 };
+if(OV) ovInit();
 connect();
 })();
 </script>
