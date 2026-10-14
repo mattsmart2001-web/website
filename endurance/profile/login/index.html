@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Driver Sign In | GTEC</title>
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+        }
+        .logo {
+            font-family: 'Anton', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 0.4rem;
+        }
+        .logo span { color: var(--gold); }
+        .logo .brand-logo { height: 22px; width: auto; vertical-align: middle; margin-left: 0.45em; }
+        .subtitle {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.62rem;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 2rem;
+            text-indent: 0.4em;
+        }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 0.45rem;
+        }
+        input {
+            display: block;
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 1.25rem;
+        }
+        input:focus { border-color: rgba(255,209,102,0.5); }
+        input::placeholder { color: var(--muted); opacity: 0.6; }
+        .btn {
+            width: 100%;
+            padding: 0.9rem;
+            background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+            color: #1a1300;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: filter 0.2s;
+            margin-top: 0.5rem;
+        }
+        .btn:hover { filter: brightness(1.08); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+        .error {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.4);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #fca5a5;
+            margin-bottom: 1.25rem;
+            display: none;
+        }
+        .info {
+            background: rgba(34,197,94,0.08);
+            border: 1px solid rgba(34,197,94,0.35);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #86efac;
+            margin-bottom: 1.25rem;
+            display: none;
+        }
+        .link-btn {
+            display: block;
+            width: 100%;
+            margin-top: 0.85rem;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .link-btn:hover { color: var(--text); }
+        .first-time {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255,209,102,0.06);
+            border: 1px solid rgba(255,209,102,0.2);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+        .first-time strong { color: var(--gold); font-family: 'Orbitron', sans-serif; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; display: block; margin-bottom: 0.4rem; }
+        .back {
+            display: block;
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+            text-decoration: none;
+        }
+        .back:hover { color: var(--text); }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">Gran Turismo<img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></div>
+    <div class="subtitle">Driver Sign In</div>
+
+    <div class="error" id="error"></div>
+    <div class="info" id="info"></div>
+
+    <form id="login-form">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+
+        <button class="btn" type="submit" id="submit-btn">Sign In</button>
+        <button class="link-btn" type="button" id="forgot-btn">Forgot password?</button>
+    </form>
+
+    <form id="reset-form" style="display:none">
+        <label for="reset-email">Email</label>
+        <input type="email" id="reset-email" required autocomplete="email" placeholder="you@example.com">
+        <button class="btn" type="submit" id="reset-submit-btn">Send reset link</button>
+        <button class="link-btn" type="button" id="back-to-login">← Back to sign in</button>
+    </form>
+
+    <div class="first-time">
+        <strong>First time?</strong>
+        Your team admin will send you a one-time claim link. Open that link to set your password and link your driver profile.
+    </div>
+
+    <a class="back" href="/endurance/">← Back to GTEC</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../../assets/gtec-config.js"></script>
+<script>
+    'use strict';
+    const { createClient } = window.supabase;
+    const cfg = window.GTEC_CONFIG;
+    const sb  = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+    // Already signed in → straight to portal
+    sb.auth.getSession().then(({ data }) => {
+        if (data.session) window.location.replace('../');
+    });
+
+    const loginForm = document.getElementById('login-form');
+    const resetForm = document.getElementById('reset-form');
+    const errEl     = document.getElementById('error');
+    const infoEl    = document.getElementById('info');
+
+    function showMessages(err = null, info = null) {
+        errEl.style.display  = err  ? 'block' : 'none';
+        infoEl.style.display = info ? 'block' : 'none';
+        if (err)  errEl.textContent  = err;
+        if (info) infoEl.textContent = info;
+    }
+
+    document.getElementById('forgot-btn').addEventListener('click', () => {
+        showMessages();
+        loginForm.style.display = 'none';
+        resetForm.style.display = '';
+        const email = document.getElementById('email').value.trim();
+        if (email) document.getElementById('reset-email').value = email;
+    });
+    document.getElementById('back-to-login').addEventListener('click', () => {
+        showMessages();
+        loginForm.style.display = '';
+        resetForm.style.display = 'none';
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn      = document.getElementById('submit-btn');
+        const email    = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        btn.disabled = true;
+        btn.textContent = 'Signing in…';
+        showMessages();
+
+        try {
+            const { error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            window.location.replace('../');
+        } catch (err) {
+            showMessages(err.message);
+            btn.disabled = false;
+            btn.textContent = 'Sign In';
+        }
+    });
+
+    resetForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn   = document.getElementById('reset-submit-btn');
+        const email = document.getElementById('reset-email').value.trim();
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        showMessages();
+        try {
+            const redirectTo = `${location.origin}/endurance/profile/reset/`;
+            const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+            if (error) throw error;
+            showMessages(null, `Reset link sent to ${email}. Check your inbox (and spam folder) — the link expires in 1 hour.`);
+            btn.textContent = 'Send reset link';
+            btn.disabled = false;
+        } catch (err) {
+            showMessages(err.message);
+            btn.disabled = false;
+            btn.textContent = 'Send reset link';
+        }
+    });
+</script>
+</body>
+</html>
