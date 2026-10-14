@@ -115,6 +115,21 @@
     });
   }
 
+  // ---------- units ----------
+  // Everything inside the analyser works in mph, because that is what the
+  // connector sends and because every threshold in here was tuned against it.
+  // Only the words the driver reads are converted. GT7 has its own units
+  // setting, so a report that disagrees with the number on the HUD a moment ago
+  // reads as wrong even when it is right.
+  let UNIT = "mph";
+  const KPH_PER_MPH = 1.609344;
+  function setUnits(u) { UNIT = u === "kph" ? "kph" : "mph"; return UNIT; }
+  function units() { return UNIT; }
+  const uval = v => UNIT === "kph" ? v * KPH_PER_MPH : v;          // a speed or a difference between two
+  const ulab = () => UNIT === "kph" ? "km/h" : "mph";
+  const uround = v => Math.round(uval(v));                          // "68 mph" / "109 km/h"
+  const ufmt = (v, dp) => uval(v).toFixed(dp);                      // when a decimal is wanted
+
   // ---------- projection ----------
   function buildReference(lap) {
     const xs = Float64Array.from(lap, s => s.x), zs = Float64Array.from(lap, s => s.z), ys = Float64Array.from(lap, s => s.y || 0);
@@ -661,8 +676,8 @@
     const vmins = braking.filter(r => r.vminMax - r.vminMin > 5).sort((a, b) => (b.vminMax - b.vminMin) - (a.vminMax - a.vminMin));
     if (vmins.length && !wanders.length) {
       const r = vmins[0];
-      add({ kind: "corner", score: 1.2, head: `Your apex speed at ${r.name} varies by ${Math.round(r.vminMax - r.vminMin)} mph`, body:
-        `Your braking points are fairly settled, but the slowest point of ${nm(r)} ranges from ${Math.round(r.vminMin)} to ${Math.round(r.vminMax)} mph across your laps. When the braking point is consistent and the apex speed is not, the variation is coming from how you release the pedal rather than where you press it.`,
+      add({ kind: "corner", score: 1.2, head: `Your apex speed at ${r.name} varies by ${uround(r.vminMax - r.vminMin)} ${ulab()}`, body:
+        `Your braking points are fairly settled, but the slowest point of ${nm(r)} ranges from ${uround(r.vminMin)} to ${uround(r.vminMax)} ${ulab()} across your laps. When the braking point is consistent and the apex speed is not, the variation is coming from how you release the pedal rather than where you press it.`,
         why: `Entry speed is set by the shape of the release, not the start of the stop. Two laps that begin braking in the same place can arrive at the apex several miles an hour apart if one bled the pressure away faster than the other. That makes apex speed a good test of whether your trail braking is repeatable: if the number moves around, the release is still being improvised. Try holding a deliberate, slow, even release for a few laps, even if it feels slow, and watch the apex speed settle before you try to raise it.`,
         corners: [r.name] });
     }
@@ -713,7 +728,7 @@
     const byVar = braking.slice().sort((a, b) => (b.sectMax - b.sectMin) - (a.sectMax - a.sectMin));
     if (byVar.length) {
       const r = byVar[0]; const comp = rows.find(x => x.name === R.longestRun.opensFrom);
-      let body = `${r.name}, apex about ${Math.round(r.apex)} m from the line and taken at ${Math.round(r.vminBest)} mph on your best lap, varies most between your laps: ${fmt(r.sectMax - r.sectMin, 2)} seconds between your best and worst, with the slowest point ranging from ${Math.round(r.vminMin)} to ${Math.round(r.vminMax)} mph.`;
+      let body = `${r.name}, apex about ${Math.round(r.apex)} m from the line and taken at ${uround(r.vminBest)} ${ulab()} on your best lap, varies most between your laps: ${fmt(r.sectMax - r.sectMin, 2)} seconds between your best and worst, with the slowest point ranging from ${uround(r.vminMin)} to ${uround(r.vminMax)} ${ulab()}.`;
       if (comp && comp.name === r.name) body += ` It also opens onto the longest flat-out stretch on the lap (${Math.round(R.longestRun.metres)} m), so whatever speed you carry out of it stays with you a long way down the road. Nail this corner every lap before you touch anything else.`;
       else if (comp) body += ` Separately, ${comp.name} opens onto the longest flat-out stretch on the lap (${Math.round(R.longestRun.metres)} m), so the same gain in exit speed is worth more there than anywhere else.`;
       add({ kind: "corner", score: 2 + 2 * (r.sectMax - r.sectMin), head: `Priority corner: ${r.name}`, body,
@@ -798,10 +813,10 @@
       if (dBrake !== null && dBrake < -8) bits.push(`they brake about ${Math.round(-dBrake)} metres later than you`);
       else if (dBrake !== null && dBrake > 8) bits.push(`they actually brake ${Math.round(dBrake)} metres earlier than you`);
       else if (dBrake !== null) bits.push(`you both brake within a few metres of the same place`);
-      if (dApex > 1.5) bits.push(`they carry ${fmt(dApex, 1)} mph more through the slowest part`);
-      else if (dApex < -1.5) bits.push(`you are actually ${fmt(-dApex, 1)} mph quicker at the apex`);
+      if (dApex > 1.5) bits.push(`they carry ${ufmt(dApex, 1)} ${ulab()} more through the slowest part`);
+      else if (dApex < -1.5) bits.push(`you are actually ${ufmt(-dApex, 1)} ${ulab()} quicker at the apex`);
       if (dPick !== null && dPick > 8) bits.push(`they are back on the throttle about ${Math.round(dPick)} metres earlier`);
-      if (dExit > 1.5) bits.push(`and they are ${fmt(dExit, 1)} mph up by the time the corner has finished`);
+      if (dExit > 1.5) bits.push(`and they are ${ufmt(dExit, 1)} ${ulab()} up by the time the corner has finished`);
 
       let read = "";
       if (dBrake !== null && dBrake > -8 && dApex > 1.5) read = `The braking point is not the difference here: you are both getting on the brake in the same place. They are simply carrying more speed through the middle, which comes from how the pedal is released rather than when it is pressed.`;
@@ -837,8 +852,8 @@
     const comp = R.corners.findIndex(c => c.name === R.longestRun.opensFrom);
     if (comp >= 0 && F.corners[comp]) {
       const dExit = F.corners[comp].exit - R.corners[comp].exitBest;
-      if (dExit > 1) out.push({ kind: "ref", score: 7 + dExit * 0.2, head: `They leave ${R.corners[comp].name} ${fmt(dExit, 1)} mph quicker, onto the longest straight`, body:
-        `Out of ${R.corners[comp].name} they are ${fmt(dExit, 1)} mph up on you by the time the corner has finished, and that corner opens onto the longest flat-out stretch on the lap (${Math.round(R.longestRun.metres)} m). A speed advantage at the start of a run that long is still being paid out at the end of it.`,
+      if (dExit > 1) out.push({ kind: "ref", score: 7 + dExit * 0.2, head: `They leave ${R.corners[comp].name} ${ufmt(dExit, 1)} ${ulab()} quicker, onto the longest straight`, body:
+        `Out of ${R.corners[comp].name} they are ${ufmt(dExit, 1)} ${ulab()} up on you by the time the corner has finished, and that corner opens onto the longest flat-out stretch on the lap (${Math.round(R.longestRun.metres)} m). A speed advantage at the start of a run that long is still being paid out at the end of it.`,
         why: `Exit speed from the corner before a long straight is the single most valuable thing on a lap, because you carry the difference for every metre of the straight rather than for the length of the corner. It is also why the corner before a straight is worth practicing far more than one that leads into another corner. If you only have time to change one thing, change this one, and be willing to give up a little entry speed to get the car pointed down the road sooner.`,
         corners: [R.corners[comp].name] });
     }
@@ -980,6 +995,7 @@
   }
 
   const api = { analyse, parseLoggerCSV, bestLapFromReplay, findCorners, buildReference, profile, pedalLag,
-                trackSignature, sigMatch, identifyTrack, makeTrackEntry, TRACKS };
+                trackSignature, sigMatch, identifyTrack, makeTrackEntry, TRACKS,
+                setUnits, units, toUnit: uval, unitLabel: ulab };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.LapCoach = api;
 })(typeof window !== "undefined" ? window : globalThis);

@@ -401,6 +401,10 @@ body.ov.key #ovLabel,.obs-prev.key #ovLabel{text-shadow:none;background:#07080d;
     <div class="laps" id="lapList2" style="margin:0;flex:1"></div>
     <div class="row"><button class="btn" id="dlBtn">Download laps</button><button class="btn" id="resetBtn2">Start over</button></div>
   </div>
+  <div class="card hidden" id="shapeBar" style="padding:.8rem 1.2rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;border-color:rgba(26,180,255,.35)">
+    <span id="shapeTxt" style="flex:1;min-width:280px;font-family:'Rajdhani',sans-serif;font-size:1rem;color:#aab0c4;line-height:1.5"></span>
+    <button class="btn btn-primary" id="shapeBtn">Share the shape</button>
+  </div>
   <div class="card">
     <div class="row" style="justify-content:space-between;align-items:flex-start">
       <div>
@@ -408,7 +412,13 @@ body.ov.key #ovLabel,.obs-prev.key #ovLabel{text-shadow:none;background:#07080d;
         <h2 id="repTitle">Your laps</h2>
         <p id="repSub"></p>
       </div>
-      <div class="row" id="repNote" style="font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--mut);letter-spacing:.1em"></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.55rem">
+        <div class="row" id="repNote" style="font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--mut);letter-spacing:.1em"></div>
+        <div class="row" style="gap:.3rem" id="unitPick" title="Speed units used throughout this report">
+          <button class="chip" data-unit="mph">MPH</button>
+          <button class="chip" data-unit="kph">KM/H</button>
+        </div>
+      </div>
     </div>
     <div class="stats" id="stats"></div>
     <div class="card hidden" id="noCorners" style="border-left:3px solid var(--gold)">
@@ -425,7 +435,7 @@ body.ov.key #ovLabel,.obs-prev.key #ovLabel{text-shadow:none;background:#07080d;
           <canvas id="m3c"></canvas>
           <div class="m3ctl tl"><button class="chip on" data-mode="speed">SPEED</button><button class="chip" data-mode="pedals">PEDALS</button><button class="chip" id="m3relief">RELIEF</button></div>
           <div class="m3ctl tr"><button class="chip hidden" id="m3ref">THEIR LINE</button><button class="chip" id="m3play">&#9654; PLAY LAP</button><button class="chip on" id="m3spin">SPIN</button></div>
-          <div class="m3hud hidden" id="m3hud"><div class="t" id="m3t">0:00.000</div><div class="v"><span id="m3v">0</span><small> MPH</small></div><div class="bars"><i class="b" id="m3b"></i><i class="g" id="m3g"></i></div></div>
+          <div class="m3hud hidden" id="m3hud"><div class="t" id="m3t">0:00.000</div><div class="v"><span id="m3v">0</span><small id="m3vu"> MPH</small></div><div class="bars"><i class="b" id="m3b"></i><i class="g" id="m3g"></i></div></div>
           <div class="m3legend" id="m3legend"></div>
           <div class="m3hint">DRAG TO ROTATE · SCROLL TO ZOOM · TAP A CORNER</div>
         </div>
@@ -513,6 +523,47 @@ const OVQ = new URLSearchParams(location.search);
 const OV = OVQ.has('overlay') && OVQ.get('overlay') !== '0';
 const rec = { laps: [], cur: null, lastCount: null, lastPid: null, carId: null, paused: false };
 let result = null;
+
+// ---------- speed units ----------
+// The analyser works in mph throughout; only what is shown is converted. GT7
+// has its own units setting, so most of the world is looking at a km/h HUD
+// while they drive, and a report that disagrees with the number they just saw
+// in the car reads as broken even when it is right.
+//
+// Nobody should have to go looking for this, so the first guess comes from the
+// browser's own region and only the three mph countries start on mph. A driver
+// who disagrees clicks once and the choice is remembered.
+const MPH_REGIONS = ['GB', 'US', 'MM', 'LR'];
+function guessUnit(){
+  try{
+    const saved = localStorage.getItem('lapcoach.units');
+    if(saved === 'mph' || saved === 'kph') return saved;
+    const locales = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || 'en-GB']);
+    for(const l of locales){
+      const r = String(l).toUpperCase().split(/[-_]/)[1];
+      if(r) return MPH_REGIONS.includes(r) ? 'mph' : 'kph';
+    }
+  }catch(_){}
+  return 'mph';
+}
+let UNIT = 'mph';
+const uv  = v => UNIT === 'kph' ? v * 1.609344 : v;    // a speed, or a difference between two
+const ur  = v => Math.round(uv(v));
+const uf  = (v, dp) => uv(v).toFixed(dp);
+const ul  = () => UNIT === 'kph' ? 'km/h' : 'mph';
+const UL  = () => UNIT === 'kph' ? 'KM/H' : 'MPH';
+function applyUnit(u, redraw){
+  UNIT = (u === 'kph') ? 'kph' : 'mph';
+  try{ localStorage.setItem('lapcoach.units', UNIT); }catch(_){}
+  if(window.LapCoach && LapCoach.setUnits) LapCoach.setUnits(UNIT);
+  document.querySelectorAll('[data-unit]').forEach(b => b.classList.toggle('on', b.dataset.unit === UNIT));
+  // the 3D readout only relabels itself while something is playing, so set it here too
+  const hudU = $('m3vu'); if(hudU) hudU.textContent = ' ' + UL();
+  // the coaching text has the unit written into its sentences, so the advice
+  // has to be built again rather than patched
+  if(redraw && result && rec.laps.length >= 3){ analyse(); }
+}
+UNIT = guessUnit();
 
 // ---------- status ----------
 function setStatus(cls, txt){ const p = $('statusPill'); p.className = 'status-pill ' + cls; $('statusTxt').textContent = txt; }
@@ -619,6 +670,8 @@ $('startBtn').onclick = () => { started = true; rec.lastCount = null; rec.cur = 
 $('homeBtn').onclick = e => { e.preventDefault(); resetAll(); };
 $('analyseBtn').onclick = () => analyse();
 $('resetBtn').onclick = resetAll; $('resetBtn2').onclick = resetAll;
+document.querySelectorAll('[data-unit]').forEach(b => { b.onclick = () => applyUnit(b.dataset.unit, true); });
+applyUnit(UNIT, false);
 $('target').onchange = () => { $('lapTarget').textContent = $('target').value; $('lapTarget2').textContent = $('target').value; };
 
 // ---------- members ----------
@@ -784,6 +837,49 @@ function analyse(){
   if(first) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function fmtT(s){ const m = Math.floor(s / 60); return m + ':' + (s - m * 60).toFixed(3).padStart(6, '0'); }
+
+// ---------- offering the track's shape to the library ----------
+//
+// Only ever offered, never automatic, and only when the track was not
+// recognised and the driver has typed a name for it. What would be sent is the
+// shape of the circuit: 256 numbers describing how hard the car turns at points
+// around the lap. No lap times, no speeds, no pedals, nothing about the driver.
+// It is the same information the page already uses to recognise Daytona, and it
+// is a property of the track rather than of the driving.
+let shapeOffered = null;
+function shareShape(R){
+  const bar = $('shapeBar'); if(!bar) return;
+  const typed = $('trackName').value.trim();
+  let known = null;
+  try{ known = LapCoach.identifyTrack(R.path, R.lapLength); }catch(_){}
+  // nothing to offer: either we already know this track, or nobody has named it
+  if(known || !typed || typed.length < 2){ bar.classList.add('hidden'); return; }
+  const key = typed.toLowerCase() + '|' + Math.round(R.lapLength);
+  if(shapeOffered === key) return;             // already showing this one
+  shapeOffered = key;
+  try{ if((localStorage.getItem('lapCoachShared') || '').split('~').indexOf(key) >= 0){ bar.classList.add('hidden'); return; } }catch(_){}
+  $('shapeTxt').innerHTML = `This looks like a track the coach does not know yet. Add <b>${typed.replace(/[<>&]/g, '')}</b> to the library so the next person who drives it gets it named? Only the shape of the circuit is sent, 256 numbers, no lap times and nothing about your driving.`;
+  $('shapeBtn').textContent = 'Share the shape';
+  $('shapeBtn').disabled = false;
+  bar.classList.remove('hidden');
+  $('shapeBtn').onclick = async () => {
+    const b = $('shapeBtn'); b.disabled = true; b.textContent = 'Sending…';
+    try{
+      const sig = LapCoach.trackSignature(R.path, R.lapLength);
+      const r = await fetch('/.netlify/functions/track-shape', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: typed, length: Math.round(R.lapLength),
+                               sig: sig.map(v => +v.toFixed(3)), corners: R.corners.length }) });
+      if(!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
+      $('shapeTxt').innerHTML = `Thank you. <b>${typed.replace(/[<>&]/g, '')}</b> has been sent for review, and once it is in the library the coach will name it automatically.`;
+      b.textContent = 'Sent';
+      try{ const prev = localStorage.getItem('lapCoachShared') || ''; localStorage.setItem('lapCoachShared', (prev ? prev + '~' : '') + key); }catch(_){}
+    }catch(e){
+      $('shapeTxt').textContent = 'That did not send: ' + e.message + '. Nothing has left your PC.';
+      b.textContent = 'Try again'; b.disabled = false;
+    }
+  };
+}
 function renderReport(R){
   const car = $('carName').value.trim() || (rec.carId ? 'Car #' + rec.carId : 'Unknown car');
   renderLaps();
@@ -791,6 +887,7 @@ function renderReport(R){
   $('repSub').innerHTML = `${R.names.length} laps, ${car}. Best ${fmtT(R.bestTime)} (${R.names[R.best]}).` +
     (R.lagFix ? ` <span style="color:var(--gold)">These laps were logged from a replay, where GT7 sends the pedals ${R.lagFix.seconds.toFixed(2)} s late. The pedal data has been shifted back to line up with the car, which is worth about ${Math.round(R.lagFix.seconds * R.top[R.best] * 0.447)} m on every braking point.</span>` : '');
   $('repNote').textContent = mode === 'live' ? 'LIVE · UPDATES EVERY LAP' : 'FROM LOGGER FILES';
+  shareShape(R);
   const spread = Math.max(...R.times) - Math.min(...R.times);
   $('stats').innerHTML = [
     ['Best lap', fmtT(R.bestTime), 'blu', R.names[R.best]],
@@ -862,7 +959,7 @@ function drawMap(R){
 function m3Legend(){
   if(M3.mode === 'speed'){
     const stops = [0, .25, .5, .75, 1].map(t => `${speedCol(t)} ${t * 100}%`).join(',');
-    $('m3legend').innerHTML = `<span class="ramp">${Math.round(M3.vmin)}<i style="background:linear-gradient(90deg,${stops})"></i>${Math.round(M3.vmax)} MPH</span>`;
+    $('m3legend').innerHTML = `<span class="ramp">${ur(M3.vmin)}<i style="background:linear-gradient(90deg,${stops})"></i>${ur(M3.vmax)} ${UL()}</span>`;
   } else {
     $('m3legend').innerHTML = `<span><i style="background:#1ab4ff"></i>BRAKING</span><span><i style="background:#00e5a0"></i>FLAT OUT</span><span><i style="background:#0b6e52"></i>PART THROTTLE</span><span><i style="background:#525870"></i>COASTING</span>`;
   }
@@ -964,7 +1061,7 @@ function m3Draw(){
       taken.push([bx, by]);
       g.textAlign = flip ? 'right' : 'left';
       g.font = `700 ${on ? 15 : 13}px Rajdhani, sans-serif`; g.fillStyle = '#eef0f8'; g.fillText(c.name, lx, my + 5);
-      if(!tight || on){ g.font = '9px JetBrains Mono, monospace'; g.fillStyle = '#8b93a3'; g.fillText(Math.round(c.vminBest) + ' MPH', lx, my + 17); }
+      if(!tight || on){ g.font = '9px JetBrains Mono, monospace'; g.fillStyle = '#8b93a3'; g.fillText(ur(c.vminBest) + ' ' + UL(), lx, my + 17); }
       g.textAlign = 'left';
     }
     g.globalAlpha = 1; M3.marks.push({ k, x: mx, y: my, r: rr + 6 }); }
@@ -985,10 +1082,10 @@ function m3Draw(){
     g.beginPath(); g.arc(p[0], p[1], 5, 0, 7); g.fillStyle = '#fff'; g.fill(); }
 }
 function m3PlayIndex(){ const T = M3.R.t[M3.R.best]; let lo = 0, hi = T.length - 1; while(lo < hi){ const m = (lo + hi) >> 1; if(T[m] < M3.playT) lo = m + 1; else hi = m; } return lo; }
-function m3Hud(){ const R = M3.R, i = m3PlayIndex(); $('m3t').textContent = fmtT(M3.playT); $('m3v').textContent = Math.round(R.speed[R.best][i]); $('m3b').style.width = R.brake[R.best][i] + '%'; $('m3g').style.width = R.throttle[R.best][i] + '%';
+function m3Hud(){ const R = M3.R, i = m3PlayIndex(); $('m3t').textContent = fmtT(M3.playT); $('m3v').textContent = ur(R.speed[R.best][i]); { const u = $('m3vu'); if(u) u.textContent = ' ' + UL(); } $('m3b').style.width = R.brake[R.best][i] + '%'; $('m3g').style.width = R.throttle[R.best][i] + '%';
   const at = $('m3at'); if(at) at.textContent = Math.round(R.S[i]) + ' m';
   // keep the speed chart's cursor on the car too
-  const cur = $('spdCursor'); if(cur){ cur.style.display = ''; const W = 560, pl = 38, pr = 10, n = R.S.length; const x = pl + (W - pl - pr) * i / (n - 1); $('spdLine').setAttribute('x1', x); $('spdLine').setAttribute('x2', x); const bx = Math.min(W - 160, x + 8); $('spdBox').setAttribute('x', bx); $('spdBox').setAttribute('y', 18); $('spdT1').setAttribute('x', bx + 8); $('spdT1').setAttribute('y', 32); $('spdT1').textContent = `${Math.round(R.S[i])} m · ${Math.round(R.speed[R.best][i])} mph`; $('spdT2').setAttribute('x', bx + 8); $('spdT2').setAttribute('y', 45); $('spdT2').textContent = fmtT(M3.playT); } }
+  const cur = $('spdCursor'); if(cur){ cur.style.display = ''; const W = 560, pl = 38, pr = 10, n = R.S.length; const x = pl + (W - pl - pr) * i / (n - 1); $('spdLine').setAttribute('x1', x); $('spdLine').setAttribute('x2', x); const bx = Math.min(W - 160, x + 8); $('spdBox').setAttribute('x', bx); $('spdBox').setAttribute('y', 18); $('spdT1').setAttribute('x', bx + 8); $('spdT1').setAttribute('y', 32); $('spdT1').textContent = `${Math.round(R.S[i])} m · ${ur(R.speed[R.best][i])} ${ul()}`; $('spdT2').setAttribute('x', bx + 8); $('spdT2').setAttribute('y', 45); $('spdT2').textContent = fmtT(M3.playT); } }
 function m3Select(k, scroll){ M3.sel = k; M3.dirty = true; m3Panel(); if(scroll) $('m3wrap').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 function m3Panel(){
   const R = M3.R, box = $('m3panel'); if(!R) return;
@@ -997,7 +1094,7 @@ function m3Panel(){
     const spreadC = R.corners.slice().sort((a, b) => (b.sectMax - b.sectMin) - (a.sectMax - a.sectMin))[0];
     box.innerHTML = `<div class="eyebrow">Tap a corner</div><h4>Your lap, corner by corner</h4>
       <div class="story">Best lap <b>${fmtT(R.bestTime)}</b>. The longest flat-out run is <b class="y">${Math.round(R.longestRun.metres)} m</b> and it opens from <b class="y">${R.longestRun.opensFrom}</b>, so that exit is worth more than any other. Your laps vary most at <b>${spreadC.name}</b>, by ${(spreadC.sectMax - spreadC.sectMin).toFixed(2)} s.</div>
-      <div class="clist">${R.corners.map((c, k) => `<button class="cbtn${c.name === R.longestRun.opensFrom ? ' gold' : ''}" data-k="${k}">${c.name}<small>${KIND[c.kind]} · ${Math.round(c.vminBest)} MPH</small><small class="sp">${(c.sectMax - c.sectMin).toFixed(2)}s SPREAD</small></button>`).join('')}</div>
+      <div class="clist">${R.corners.map((c, k) => `<button class="cbtn${c.name === R.longestRun.opensFrom ? ' gold' : ''}" data-k="${k}">${c.name}<small>${KIND[c.kind]} · ${ur(c.vminBest)} ${UL()}</small><small class="sp">${(c.sectMax - c.sectMin).toFixed(2)}s SPREAD</small></button>`).join('')}</div>
       <div class="story" style="color:var(--mut);font-size:.92rem;margin-top:.9rem">${M3.elev > 2 ? `The track climbs and falls ${Math.round(M3.elev)} m over the lap; the ribbon shows it. ` : ''}Red markers are braking corners, blue are taken on a lift, gold opens the long straight.</div>
       ${(() => { const a = R.advice.find(x => x.kind !== 'caveat' && x.kind !== 'good' && x.kind !== 'more') || R.advice[0];
         return a ? `<div class="tryh">FIRST THING TO WORK ON</div><div class="try"><h5>${a.head}</h5><p>${a.body.length > 165 ? a.body.slice(0, 165).replace(/\s+\S*$/, '') + '…' : a.body}</p><button class="chip" id="m3all" style="margin-top:.5rem">READ ALL THE ADVICE</button></div>` : ''; })()}`;
@@ -1021,10 +1118,10 @@ function m3Panel(){
     box.innerHTML = `<div class="row" style="align-items:center"><div><div class="eyebrow">${KIND[c.kind]} corner · ${Math.round(c.apex)} m from the line</div><h4>${c.name}${gold ? '<em>ONTO THE LONG STRAIGHT</em>' : ''}</h4></div>
       <div class="nav"><button class="chip" id="m3prev">&#9664;</button><button class="chip" id="m3next">&#9654;</button><button class="chip" id="m3clear">ALL</button></div></div>
       <div class="tiles">
-        <div class="tile"><div class="l">Min speed</div><div class="v blu">${Math.round(c.vminBest)}<small style="font-size:.9rem;color:var(--mut)"> MPH</small></div><div class="s">${Math.round(c.vminMin)} to ${Math.round(c.vminMax)} across laps</div></div>
+        <div class="tile"><div class="l">Min speed</div><div class="v blu">${ur(c.vminBest)}<small style="font-size:.9rem;color:var(--mut)"> ${UL()}</small></div><div class="s">${ur(c.vminMin)} to ${ur(c.vminMax)} across laps</div></div>
         <div class="tile"><div class="l">Brake point</div><div class="v">${c.braking && b.touch !== null && b.touch !== undefined ? f(b.touch) + '<small style="font-size:.9rem;color:var(--mut)"> M</small>' : '–'}</div><div class="s">${c.braking && b.touch !== null && b.touch !== undefined ? 'before the apex' + (c.touchMin !== null && c.touchMax - c.touchMin >= Math.max(3, RES * 2) ? ', moves ' + Math.round(c.touchMax - c.touchMin) + ' m' : '') : 'no braking here'}</div></div>
         <div class="tile"><div class="l">Section</div><div class="v ${gold ? 'gold' : ''}">${c.sectBest.toFixed(2)}<small style="font-size:.9rem;color:var(--mut)"> S</small></div><div class="s">+${(c.sectMax - c.sectMin).toFixed(2)} s on your worst lap</div></div>
-        <div class="tile"><div class="l">Exit speed</div><div class="v grn">${Math.round(c.exitBest)}<small style="font-size:.9rem;color:var(--mut)"> MPH</small></div><div class="s">120 m past the apex, ${Math.round(c.exitMin)} to ${Math.round(c.exitMax)}</div></div>
+        <div class="tile"><div class="l">Exit speed</div><div class="v grn">${ur(c.exitBest)}<small style="font-size:.9rem;color:var(--mut)"> ${UL()}</small></div><div class="s">120 m past the apex, ${ur(c.exitMin)} to ${ur(c.exitMax)}</div></div>
       </div>
       <div class="story">${story}</div>
       <div id="m3trace"></div>
@@ -1109,7 +1206,7 @@ function drawSpeed(R){
   let vmax = -1e9, vmin = 1e9; R.speed.forEach(v => v.forEach(s => { if(s > vmax) vmax = s; if(s < vmin) vmin = s; })); vmax *= 1.05; vmin *= 0.85;
   const X = i => pl + (W - pl - pr) * i / (n - 1), Y = v => pt + (H - pt - pb) * (1 - (v - vmin) / (vmax - vmin));
   let g = '';
-  for(let j = 0; j < 5; j++){ const v = vmin + (vmax - vmin) * j / 4; g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#1c1f2e"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="10" fill="#525870" text-anchor="end">${Math.round(v)}</text>`; }
+  for(let j = 0; j < 5; j++){ const v = vmin + (vmax - vmin) * j / 4; g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#1c1f2e"/><text x="${pl - 5}" y="${Y(v) + 4}" font-size="10" fill="#525870" text-anchor="end">${ur(v)}</text>`; }
   R.corners.forEach((c, k) => { const x = X(c.idx);
     g += `<g class="cmark" data-k="${k}"><rect x="${(x - 14).toFixed(1)}" y="${pt}" width="28" height="${H - pb - pt}" fill="transparent"/>` +
       `<line x1="${x}" x2="${x}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,195,26,.16)"/>` +
@@ -1119,7 +1216,7 @@ function drawSpeed(R){
   g += line(R.speed[R.best], '#1ab4ff', 2.2);
   g += `<g id="spdCursor" style="display:none"><line id="spdLine" y1="${pt}" y2="${H - pb}" stroke="rgba(255,255,255,.35)"/><rect id="spdBox" width="150" height="34" rx="4" fill="rgba(13,15,24,.92)" stroke="#1c1f2e"/><text id="spdT1" font-size="11" fill="#eef0f8"></text><text id="spdT2" font-size="10" fill="#8b93a3"></text></g>`;
   g += `<text x="${W - pr}" y="${H - 4}" font-size="10" fill="#525870" text-anchor="end">METRES FROM THE START LINE</text>`;
-  g += `<text x="${pl - 6}" y="${pt - 7}" font-size="10" fill="#525870" text-anchor="end">MPH</text>`;
+  g += `<text x="${pl - 6}" y="${pt - 7}" font-size="10" fill="#525870" text-anchor="end">${UL()}</text>`;
   const box = $('speedBox'); box.innerHTML = `<svg id="spdSvg" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet" style="cursor:crosshair;display:block">${g}</svg>`;
   const svg = $('spdSvg');
   svg.onmousemove = ev => {
@@ -1128,8 +1225,8 @@ function drawSpeed(R){
     const cur = $('spdCursor'); cur.style.display = ''; $('spdLine').setAttribute('x1', X(i)); $('spdLine').setAttribute('x2', X(i));
     const bx = Math.min(W - 162, X(i) + 8); $('spdBox').setAttribute('x', bx); $('spdBox').setAttribute('y', pt + 4);
     const others = R.speed.map((v, k) => v[i]).filter((_, k) => k !== R.best);
-    $('spdT1').setAttribute('x', bx + 8); $('spdT1').setAttribute('y', pt + 18); $('spdT1').textContent = `${Math.round(R.S[i])} m · best ${Math.round(R.speed[R.best][i])} mph`;
-    $('spdT2').setAttribute('x', bx + 8); $('spdT2').setAttribute('y', pt + 31); $('spdT2').textContent = others.length ? `others ${Math.round(Math.min(...others))} to ${Math.round(Math.max(...others))} mph` : '';
+    $('spdT1').setAttribute('x', bx + 8); $('spdT1').setAttribute('y', pt + 18); $('spdT1').textContent = `${Math.round(R.S[i])} m · best ${ur(R.speed[R.best][i])} ${ul()}`;
+    $('spdT2').setAttribute('x', bx + 8); $('spdT2').setAttribute('y', pt + 31); $('spdT2').textContent = others.length ? `others ${ur(Math.min(...others))} to ${ur(Math.max(...others))} ${ul()}` : '';
   };
   svg.onmouseleave = () => { $('spdCursor').style.display = 'none'; };
 }
@@ -1221,9 +1318,9 @@ function drawDelta(R){
     $('dlT1').setAttribute('x', bx + 8); $('dlT1').setAttribute('y', pt + 18);
     $('dlT1').textContent = `${Math.round(R.S[i])} m · ${d[i] > 0 ? '+' : ''}${d[i].toFixed(2)}s`;
     $('dlT2').setAttribute('x', bx + 8); $('dlT2').setAttribute('y', pt + 31);
-    $('dlT2').textContent = `you ${Math.round(R.speed[R.best][i])} mph, brake ${Math.round(R.brake[R.best][i])}%`;
+    $('dlT2').textContent = `you ${ur(R.speed[R.best][i])} ${ul()}, brake ${Math.round(R.brake[R.best][i])}%`;
     $('dlT3').setAttribute('x', bx + 8); $('dlT3').setAttribute('y', pt + 43);
-    $('dlT3').textContent = `them ${Math.round(F.speed[i])} mph, brake ${Math.round(F.brake[i])}%`;
+    $('dlT3').textContent = `them ${ur(F.speed[i])} ${ul()}, brake ${Math.round(F.brake[i])}%`;
   };
   svg.onmouseleave = () => { $('dlCur').style.display = 'none'; };
 
@@ -1233,7 +1330,7 @@ function drawDelta(R){
     ['Your best', fmtT(R.bestTime), 'blu', R.names[R.best]],
     ['Gap', (F.gap > 0 ? '+' : '') + F.gap.toFixed(3) + 's', F.gap > 0 ? '' : 'grn', F.gap > 0 ? 'behind' : 'ahead'],
     ['Worst corner', worst[1], 'gold', (worst[0] > 0 ? '+' : '') + worst[0].toFixed(2) + 's there'],
-    ['Their top speed', Math.round(F.top) + ' mph', '', 'yours ' + Math.round(R.top[R.best]) + ' mph'],
+    ['Their top speed', ur(F.top) + ' ' + ul(), '', 'yours ' + ur(R.top[R.best]) + ' ' + ul()],
     ['Their flat out', Math.round(F.flatShare) + '%', '', 'yours ' + Math.round(R.flatShare[R.best]) + '%'],
   ].map(([l, v, c, sub]) => `<div class="stat"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${sub}</div></div>`).join('');
 }
@@ -1341,8 +1438,8 @@ function drawLvl(R){
     ? `<div class="lvlrows">${rows.map(r => {
         const bits = [];
         if(r.dbr !== null && Math.abs(r.dbr) > 4) bits.push(`braked ${Math.abs(Math.round(r.dbr))} m ${r.dbr > 0 ? 'earlier' : 'later'}`);
-        if(Math.abs(r.dv) > 1) bits.push(`${sgn(r.dv, ' mph')} at the apex`);
-        if(Math.abs(r.dex) > 1) bits.push(`${sgn(r.dex, ' mph')} on the way out`);
+        if(Math.abs(r.dv) > 1) bits.push(`${sgn(uv(r.dv), ' ' + ul())} at the apex`);
+        if(Math.abs(r.dex) > 1) bits.push(`${sgn(uv(r.dex), ' ' + ul())} on the way out`);
         return `<div class="lvlrow focusable" data-k="${r.k}"><b>${r.c.name}</b><span class="t" style="color:${r.dt > 0 ? 'var(--red)' : 'var(--grn)'}">${sgn(r.dt, 's', 2)}</span><span class="w">${bits.length ? bits.join(', ') : 'much the same, the difference is spread through the corner'}</span></div>`;
       }).join('')}</div>`
     : `<div class="note">These two laps are within a few hundredths of each other everywhere. Nothing to pull apart.</div>`;
@@ -1376,7 +1473,7 @@ function drawCorners(R){
     el.innerHTML = `<div class="cch"><h4>${c.name}<span>${KIND[c.kind]} · ${Math.round(c.apex)} M FROM THE LINE</span></h4>${c.name === R.longestRun.opensFrom ? '<em class="onto">ONTO THE LONG STRAIGHT</em>' : ''}</div>
       ${cornerTraceSvg(R, c)}
       <div class="kv">
-        <b>MIN SPEED</b><span>${Math.round(c.vminBest)} mph on your best, ${Math.round(c.vminMin)} to ${Math.round(c.vminMax)} across laps</span>
+        <b>MIN SPEED</b><span>${ur(c.vminBest)} ${ul()} on your best, ${ur(c.vminMin)} to ${ur(c.vminMax)} across laps</span>
         <b>LIFT</b><span>${b.lift === null ? '–' : f(b.lift) + ' before apex'}${b.liftGap !== null && b.liftGap > 10 ? ', ' + Math.round(b.liftGap) + ' m before the brake' : ''}</span>
         <b>BRAKE</b><span>on ${f(b.touch)} before apex, full ${b.full === null ? 'never' : f(b.full)}, released ${bf(b.off)}${shown ? ' · braking point moves ' + Math.round(wob) + ' m lap to lap' : ''}</span>
         <b>RELEASE</b><span>${b.trail === null || zone === null ? '–' : (b.trail >= 0.55 ? 'gradual' : b.trail >= 0.35 ? 'moderate' : 'abrupt') + ', easing off over ' + Math.round(b.trail * zone) + ' m of the ' + Math.round(zone) + ' m zone'}</span>
@@ -1388,8 +1485,8 @@ function drawCorners(R){
           const d = (a, b, u, dp) => (a === null || b === null || a === undefined || b === undefined) ? null : `${a - b > 0 ? '+' : ''}${(a - b).toFixed(dp === undefined ? 0 : dp)}${u}`;
           const parts = [];
           const db = d(ob.touch, b.touch, ' m'); if(db) parts.push(`brake ${Math.round(ob.touch)} m (${db})`);
-          parts.push(`apex ${Math.round(o.vmin)} mph (${d(o.vmin, c.vminBest, '', 1)})`);
-          parts.push(`exit ${Math.round(o.exit)} mph (${d(o.exit, c.exitBest, '', 1)})`);
+          parts.push(`apex ${ur(o.vmin)} ${ul()} (${d(o.vmin, c.vminBest, '', 1)})`);
+          parts.push(`exit ${ur(o.exit)} ${ul()} (${d(o.exit, c.exitBest, '', 1)})`);
           return `<b class="vs">THEM</b><span class="vs">${parts.join(' · ')} · <b style="color:${lost > 0.02 ? 'var(--pnk)' : 'var(--grn)'}">${Math.abs(lost).toFixed(2)} s ${lost > 0 ? 'quicker' : 'slower'}</b> here</span>`; })()}
       </div>`;
     box.appendChild(el);
