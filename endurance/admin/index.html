@@ -946,6 +946,7 @@
 </div>
 
 <!-- Toasts -->
+<div id="readonly-bar" style="display:none;padding:0.6rem 1rem;background:rgba(255,209,102,0.1);border-bottom:1px solid rgba(255,209,102,0.3);color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;text-align:center">Read-only access — you can see everything here but cannot change it</div>
 <div class="toast-container" id="toasts"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -996,17 +997,22 @@ async function initAuth() {
     }
     currentUser = session.user;
 
-    const { data: role } = await sb.from('user_roles')
+    const { data: roleRows } = await sb.from('user_roles')
         .select('role')
         .eq('user_id', currentUser.id)
-        .eq('role', 'admin')
-        .maybeSingle();
+        .in('role', ['owner', 'admin', 'viewer']);
 
-    if (!role) {
+    const held = (roleRows || []).map(r => r.role);
+    if (!held.length) {
         await sb.auth.signOut();
         window.location.replace('./login.html');
         return;
     }
+    // The owner also carries an admin row, so admin covers "can change things".
+    IS_OWNER  = held.includes('owner');
+    IS_ADMIN  = held.includes('admin');
+    IS_VIEWER = !IS_ADMIN;          // viewer only, no write access anywhere
+    applyAccessLevel();
 
     document.getElementById('user-email').textContent = currentUser.email;
     document.getElementById('auth-loading').style.display = 'none';
@@ -1133,6 +1139,53 @@ function setupNav() {
     if (hash && hash !== 'dashboard') navigate(hash, false);
 }
 
+// ============================================================
+// Access level. The database is the real boundary: every write gate
+// requires the admin role exactly, so a viewer is refused even if they
+// skip this UI entirely. What follows is so a viewer is not clicking
+// buttons that would only fail.
+// ============================================================
+let IS_OWNER = false, IS_ADMIN = false, IS_VIEWER = false;
+
+function applyAccessLevel() {
+    // Admins manage viewers; only the owner sees admin and owner in the
+    // grant list, and only the owner can remove them. Viewers never see it.
+    document.querySelectorAll('.nav-link[data-section="admins"]').forEach(el => {
+        el.style.display = (IS_OWNER || IS_ADMIN) ? '' : 'none';
+    });
+    if (!IS_VIEWER) return;
+    // Messages are not a viewer's to read, and the panel would only error.
+    document.querySelectorAll('.nav-link[data-section="messages"]').forEach(el => {
+        el.style.display = 'none';
+    });
+    const bar = document.getElementById('readonly-bar');
+    if (bar) bar.style.display = '';
+}
+
+// Disable every control a viewer could type or click into, then allow
+// back the few that only read: searching, filtering, exporting, paging.
+// Deny-by-default means a control added later is disabled until someone
+// decides otherwise, rather than quietly becoming writable.
+const READ_ONLY_ALLOW = '.table-search, .btn-export, .nav-link, [data-readonly-ok]';
+function enforceReadOnly() {
+    if (!IS_VIEWER) return;
+    const root = document.getElementById('content');
+    if (!root) return;
+    root.querySelectorAll('button, input, select, textarea').forEach(el => {
+        if (el.matches(READ_ONLY_ALLOW) || el.closest('[data-readonly-ok]')) return;
+        if (el.type === 'search') return;
+        el.disabled = true;
+        el.title = 'Read-only access';
+    });
+    root.querySelectorAll('[onclick]').forEach(el => {
+        if (el.matches(READ_ONLY_ALLOW) || el.closest('[data-readonly-ok]')) return;
+        if (el.tagName === 'BUTTON' || el.tagName === 'A') {
+            el.removeAttribute('onclick');
+            el.classList.add('is-readonly');
+        }
+    });
+}
+
 async function navigate(section, pushHash = true) {
     clearInterval(_hcTimer);
     currentSection = section;
@@ -1191,6 +1244,7 @@ async function navigate(section, pushHash = true) {
         case 'activity':     await renderActivityLog(); break;
         case 'guide':        renderGuide(); break;
     }
+    enforceReadOnly();
 }
 
 
@@ -9743,64 +9797,85 @@ async function savePage(slug) {
 // 11d. Admins
 // ============================================================
 async function renderAdmins() {
-    const { data, error } = await sb.rpc('list_admins');
+    const { data, error } = await sb.rpc('admin_list_roles');
     if (error) { toast(error.message, 'error'); return; }
 
+    const badge = r => {
+        const cls = r === 'owner' ? 'badge-gold' : r === 'admin' ? 'badge-green' : 'badge-muted';
+        return `<span class="badge ${cls}">${esc(r)}</span>`;
+    };
+
     const rows = !data?.length
-        ? `<tr><td colspan="4"><div class="empty-state">No admins found — that shouldn't happen.</div></td></tr>`
+        ? `<tr><td colspan="4"><div class="empty-state">Nobody holds a console role yet.</div></td></tr>`
         : data.map(a => {
-            const isSelf = currentUser && a.admin_user_id === currentUser.id;
+            const isSelf = currentUser && a.user_id === currentUser.id;
+            const roles  = (a.roles || []);
+            // The owner hands out admin and owner; an admin manages viewers only.
+            const actions = roles.filter(r => IS_OWNER || r === 'viewer')
+                .filter(r => !(isSelf && r === 'owner'))
+                .map(r => `<button class="btn-icon danger" onclick="revokeConsoleRole('${esc(a.user_id)}','${esc(r)}','${esc(a.email)}')">Remove ${esc(r)}</button>`)
+                .join(' ');
             return `<tr>
-                <td><strong>${esc(a.admin_email)}</strong>${isSelf ? ' <span class="badge badge-gold">You</span>' : ''}</td>
-                <td class="td-muted" style="font-family:monospace;font-size:0.72rem">${esc(a.admin_user_id)}</td>
-                <td class="td-muted">${a.granted_at ? a.granted_at.slice(0,10) : '—'}</td>
-                <td><div class="row-actions">
-                    ${isSelf
-                        ? '<span class="td-muted" style="font-size:0.78rem">Cannot revoke self</span>'
-                        : `<button class="btn-icon danger" onclick="revokeAdmin('${a.admin_user_id}','${esc(a.admin_email)}')">Revoke</button>`}
-                </div></td>
+                <td><strong>${esc(a.email)}</strong>${isSelf ? ' <span class="badge badge-gold">You</span>' : ''}
+                    ${a.driver_name ? `<br><span class="td-muted" style="font-size:0.78rem">${esc(a.driver_name)}</span>` : ''}</td>
+                <td>${roles.map(badge).join(' ')}</td>
+                <td class="td-muted" style="font-family:monospace;font-size:0.72rem">${esc(a.user_id)}</td>
+                <td><div class="row-actions">${actions || '<span class="td-muted" style="font-size:0.78rem">—</span>'}</div></td>
             </tr>`;
         }).join('');
 
+    const roleOptions = IS_OWNER
+        ? `<option value="viewer">Viewer — sees everything, changes nothing</option>
+           <option value="admin">Admin — full access, cannot manage roles</option>
+           <option value="owner">Owner — full access plus role management</option>`
+        : `<option value="viewer">Viewer — sees everything, changes nothing</option>`;
+
     document.getElementById('content').innerHTML = `
         <div class="table-wrap" style="padding:1.25rem;margin-bottom:1rem">
-            <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem">Grant Admin Access</div>
-            <form onsubmit="grantAdminFromForm(event)" style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem">Grant Console Access</div>
+            <form onsubmit="grantConsoleRole(event)" style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
                 <input type="email" id="grant-email" placeholder="person@example.com" required
-                    style="flex:1;min-width:240px;padding:0.6rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem">
-                <button class="btn btn-primary" type="submit">Grant Admin</button>
+                    style="flex:1;min-width:220px;padding:0.6rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem">
+                <select id="grant-role" style="padding:0.6rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem">
+                    ${roleOptions}
+                </select>
+                <button class="btn btn-primary" type="submit">Grant</button>
             </form>
-            <div style="margin-top:0.75rem;font-size:0.78rem;color:var(--muted);line-height:1.5">
-                The person must first create an account in Supabase Auth (or sign up at <code>/endurance/admin/login</code>) — this just adds the admin role to their existing user.
+            <div style="margin-top:0.75rem;font-size:0.78rem;color:var(--muted);line-height:1.6">
+                They must already have a GTEC account and have logged in at least once, otherwise there is nothing to attach the role to.
+                ${IS_OWNER ? '' : '<br>Only the owner can grant admin or owner.'}
             </div>
         </div>
 
         <div class="table-wrap">
             <table><thead><tr>
-                <th>Email</th><th>User ID</th><th>Granted</th><th></th>
+                <th>Account</th><th>Roles</th><th>User ID</th><th></th>
             </tr></thead><tbody>${rows}</tbody></table>
         </div>`;
 }
 
-async function grantAdminFromForm(e) {
+async function grantConsoleRole(e) {
     e.preventDefault();
     const email = document.getElementById('grant-email').value.trim();
+    const role  = document.getElementById('grant-role').value;
     if (!email) return;
-    const { data, error } = await sb.rpc('grant_admin', { p_email: email });
-    if (error) { toast(error.message, 'error'); return; }
-    if (!data?.ok) { toast(data?.error || 'Could not grant admin.', 'error'); return; }
-    toast(`Admin granted to ${email}.`, 'success');
+    const { data, error } = await sb.rpc('admin_grant_role', { p_email: email, p_role: role });
+    if (error)      { toast(error.message, 'error'); return; }
+    if (!data?.ok)  { toast(data?.error || 'Could not grant that role.', 'error'); return; }
+    toast(`${email} is now ${role}.`, 'success');
     await renderAdmins();
 }
 
-async function revokeAdmin(userId, email) {
-    if (!confirm(`Revoke admin access for ${email}?`)) return;
-    const { data, error } = await sb.rpc('revoke_admin', { p_user_id: userId });
-    if (error) { toast(error.message, 'error'); return; }
-    if (!data?.ok) { toast(data?.error || 'Could not revoke.', 'error'); return; }
-    toast('Admin access revoked.', 'success');
+async function revokeConsoleRole(userId, role, email) {
+    if (!confirm(`Remove ${role} from ${email}?`)) return;
+    const { data, error } = await sb.rpc('admin_revoke_role', { p_user_id: userId, p_role: role });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not remove that role.', 'error'); return; }
+    toast(`${role} removed from ${email}.`, 'success');
     await renderAdmins();
 }
+
+
 
 
 // ============================================================
