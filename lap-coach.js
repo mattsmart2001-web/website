@@ -137,6 +137,47 @@
     const S = new Float64Array(N); for (let i = 0; i < N; i++) S[i] = LAP * i / (N - 1);
     return { xs, ys, zs, rs, LAP, S, DS: LAP / (N - 1), nearest: makeIndex(xs, zs, 25) };
   }
+  // How hard the car is actually cornering.
+  //
+  // Coasting is only wasted when the car is not doing anything with the grip it
+  // has. A driver balanced on the limit through a fast corner cannot brake
+  // without washing wide or accelerate without running out of road, so neither
+  // pedal is the correct input and the coast is the car working, not the driver
+  // idling. Telling those apart needs the cornering load, which the line and the
+  // speed already give: lateral g is v squared over the radius.
+  const G = 9.80665, MPH_MS = 0.44704;
+  function buildCurvature(ref, smoothM) {
+    const w = Math.max(6, smoothM || 12);          // metres either side; noise below this is line wobble
+    const wrap = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+    const idxAt = s => {                            // raw sample nearest an arc length
+      s = ((s % ref.LAP) + ref.LAP) % ref.LAP;
+      let lo = 0, hi = ref.rs.length - 1;
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (ref.rs[mid] < s) lo = mid + 1; else hi = mid; }
+      return lo;
+    };
+    const curv = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      const s = ref.S[i];
+      const a = idxAt(s - w), c = idxAt(s), b = idxAt(s + w);
+      const h1 = Math.atan2(ref.zs[c] - ref.zs[a], ref.xs[c] - ref.xs[a]);
+      const h2 = Math.atan2(ref.zs[b] - ref.zs[c], ref.xs[b] - ref.xs[c]);
+      curv[i] = Math.abs(wrap(h2 - h1)) / (2 * w);  // radians per metre, which is 1/radius
+    }
+    return curv;
+  }
+  // lateral g at every point of a lap, plus what this car and track could
+  // actually manage, taken as a high percentile so one noisy sample cannot
+  // become "the limit" and make every real corner look lazy by comparison
+  function lateralLoad(ref, p) {
+    const lat = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      const v = (p.v[i] || 0) * MPH_MS;
+      lat[i] = v * v * ref.curv[i] / G;
+    }
+    const sorted = Array.from(lat).sort((a, b) => a - b);
+    return { lat, max: sorted[Math.floor(sorted.length * 0.98)] || 0 };
+  }
+
   function profile(ref, lap) {
     const n = lap.length; const raw = new Float64Array(n); const off = new Float64Array(n);
     for (let i = 0; i < n; i++) { const [j, d] = ref.nearest(lap[i].x, lap[i].z); raw[i] = ref.rs[j]; off[i] = d; }
@@ -293,9 +334,19 @@
     }
     if (pickJ !== null) { let mx = 0; for (let j = pickJ; j < K.length && (tfull === null || -m(j) < tfull); j++) { mx = Math.max(mx, thr[j]); if (mx > 50 && thr[j] < mx * 0.6) { midLift = true; break; } } }
     const coast = (off !== null && pick !== null) ? Math.max(0, pick + off) : null;    // metres with neither pedal, brake-off to throttle-on
+    // What the car was doing during that coast, as a share of what it could do.
+    // Near 1 means a driver balanced on the limit with no grip spare for either
+    // pedal, which is correct driving. Near 0 means rolling in a straight line
+    // with the grip unused, which is the fault the coaching rule is actually for.
+    let coastLoad = null;
+    if (coast !== null && coast > 0 && offJ !== null && pickJ !== null && p.lat && p.latMax > 0.15) {
+      let sum = 0, n = 0;
+      for (let j = Math.max(0, offJ); j <= Math.min(K.length - 1, pickJ); j++) { sum += p.lat[K[j]]; n++; }
+      if (n) coastLoad = (sum / n) / p.latMax;
+    }
     let overlap = 0; for (let j = 0; j < K.length; j++) if (brk[j] > 10 && thr[j] > 10) overlap += DS;
     const liftGap = (lift !== null && touch !== null) ? Math.max(0, lift - touch) : null; // metres between throttle lift and brake touch
-    return { lift, touch, full, off, peak, trail, pick, tfull, midLift, coast, overlap, liftGap };
+    return { lift, touch, full, off, peak, trail, pick, tfull, midLift, coast, coastLoad, overlap, liftGap };
   }
   // How the car is actually being driven through a corner, beyond the pedals:
   // how hard it is stopped, whether the brake trace is steady or hunting,
@@ -425,7 +476,9 @@
     const tScale = sampled.map((t, i) => t > 0 ? times[i] / t : 1);
     const bi = times.indexOf(Math.min(...times));
     const ref = buildReference(laps[bi].samples);
+    ref.curv = buildCurvature(ref);
     const P = laps.map(l => profile(ref, l.samples));
+    P.forEach(p => { const L = lateralLoad(ref, p); p.lat = L.lat; p.latMax = L.max; });
     const B = P[bi];
     const corners = findCorners(ref, B);
     const apex = corners.map(c => c.apex_s);
@@ -448,7 +501,8 @@
       const med = a => { const f = a.filter(x => x !== null).sort((x, y) => x - y); return f.length ? f[Math.floor(f.length / 2)] : null; };
       const kind = vs[bi] < 70 ? "slow" : vs[bi] < 105 ? "medium" : "fast";
       return {
-        kind, coastMed: med(bp.map(b => b.coast)), liftGapMed: med(bp.map(b => b.liftGap)), overlapMed: med(bp.map(b => b.overlap)),
+        kind, coastMed: med(bp.map(b => b.coast)), coastLoadMed: med(bp.map(b => b.coastLoad)),
+        liftGapMed: med(bp.map(b => b.liftGap)), overlapMed: med(bp.map(b => b.overlap)),
         pickMed: med(bp.map(b => b.pick)), tfullMed: med(bp.map(b => b.tfull)), midLifts: bp.filter(b => b.midLift).length,
         offMed: med(bp.map(b => b.off)), trailMed: med(bp.map(b => b.trail)), peakMed: med(bp.map(b => b.peak)),
         dyn: dy, dynBest: dy[bi],
@@ -649,12 +703,19 @@
 
     // ---------- the middle of the corner ----------
     const coastSecs = r => r.coastMed === null ? 0 : r.coastMed / Math.max(8, r.vminBest * 0.44704);
-    const coasters = braking.filter(r => coastSecs(r) > 0.3 && r.coastMed > 12).sort((a, b) => coastSecs(b) - coastSecs(a));
+    // Coasting is only a fault when the grip is going unused. A driver balanced
+    // on the limit through a fast corner has nothing spare for either pedal, so
+    // neither pedal is the correct input and the coast is the car working rather
+    // than the driver idling. Measured as a share of what this car managed
+    // elsewhere on the lap; where it cannot be measured, the old rule stands.
+    const COAST_LOAD_OK = 0.6;
+    const idling = r => r.coastLoadMed === null || r.coastLoadMed === undefined || r.coastLoadMed < COAST_LOAD_OK;
+    const coasters = braking.filter(r => coastSecs(r) > 0.3 && r.coastMed > 12 && idling(r)).sort((a, b) => coastSecs(b) - coastSecs(a));
     if (coasters.length) {
       const r = coasters[0];
       add({ kind: "coast", score: 1.5 + 2.5 * coastSecs(r), head: `${r.name}: ${Math.round(r.coastMed)} metres of coasting, about ${coastSecs(r).toFixed(1)}s`, body:
-        `Into ${nm(r)} there is a stretch of about ${Math.round(r.coastMed)} metres where neither pedal is doing anything${coasters.length > 1 ? `, and the same happens at ${list(coasters.slice(1, 4))}` : ""}. At the speed you go through there that is roughly ${coastSecs(r).toFixed(1)} seconds with nothing being asked of the car. Carry the brake deeper, release it as you turn, and pick the throttle up as the release finishes.`,
-        why: `A car that is neither braking nor driving is not doing anything useful: it is losing speed to drag and tyre scrub without that loss buying you any cornering. The slowest point of a corner should be an instant, not a stretch. Coasting is usually a symptom rather than a habit of its own, and the cause is at one end or the other: either the brake came off too early, or the throttle went on too late because the car was not pointed where you wanted it. Fix whichever end the corner cards say is yours, and the gap closes from that side.`,
+        `Into ${nm(r)} there is a stretch of about ${Math.round(r.coastMed)} metres where neither pedal is doing anything${coasters.length > 1 ? `, and the same happens at ${list(coasters.slice(1, 4))}` : ""}. At the speed you go through there that is roughly ${coastSecs(r).toFixed(1)} seconds with nothing being asked of the car${r.coastLoadMed != null ? `, and the car is only using about ${Math.round(r.coastLoadMed * 100)} per cent of the cornering grip it showed elsewhere, so there is plenty spare for a pedal` : ""}. Carry the brake deeper, release it as you turn, and pick the throttle up as the release finishes.`,
+        why: `A car that is neither braking nor driving is not doing anything useful: it is losing speed to drag and tyre scrub without that loss buying you any cornering. This is only a fault while there is grip going spare, which is why it is not raised for corners where you are already at the limit: there, with every bit of grip turning the car, neither pedal is the right answer and the coast is correct. The slowest point of a corner should be an instant, not a stretch. Coasting is usually a symptom rather than a habit of its own, and the cause is at one end or the other: either the brake came off too early, or the throttle went on too late because the car was not pointed where you wanted it. Fix whichever end the corner cards say is yours, and the gap closes from that side.`,
         corners: coasters.map(r => r.name) });
     }
     const lifters = braking.filter(r => r.liftGapMed !== null && r.liftGapMed > 20).sort((a, b) => b.liftGapMed - a.liftGapMed);
