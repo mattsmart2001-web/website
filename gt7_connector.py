@@ -59,14 +59,30 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "2.7"   # shown in the tray so you can confirm which build is running
-GT7_PORT      = 33740
+VERSION       = "2.8"   # shown in the tray so you can confirm which build is running
+GT7_PORT_STD  = 33740   # the port GT7 itself sends telemetry to
+GT7_PORT      = GT7_PORT_STD   # what we actually listen on; see _resolve_udp_config
 SEND_PORT     = 33739
 WS_PORT       = 8765
 WS_HOST       = "0.0.0.0"
 TRIGGER_PORT  = 8767    # Stream Deck (or anything else) hits this to drop overlay obstacles
 HEARTBEAT_INT = 1.5    # GT7 stops streaming ~1-2s after the last heartbeat, so re-ping often
 HEARTBEAT_EVERY = 100  # also re-ping every N received packets to keep the stream alive
+
+# Only one program on a PC can hold port 33740, which is where GT7 always sends.
+# So a dashboard and this connector cannot both listen directly. Either can be
+# second in the chain instead, with the first forwarding a copy on:
+#
+#   FORWARD_TO    send a copy of every raw datagram somewhere else, so this
+#                 connector can be first and still feed a dashboard
+#   GT7_PORT      listen somewhere other than 33740, so it can be second and
+#                 take a forwarded copy from whatever owns 33740
+#
+# A connector that is second must not ping the console: the other app is already
+# doing that, and the console answers whoever asked, on 33740, which it owns.
+FORWARD_TO    = []     # list of (host, port) to copy every raw datagram to
+HEARTBEAT_ON  = True   # pinging the console; off by default on a forwarded port
+HEARTBEAT_EXPLICIT = False   # True once a user has chosen, so the port stops deciding
 
 # ═══════════════════════════════════════════════════════════════
 #  DECRYPTION
@@ -152,9 +168,16 @@ def _salsa_new(key, nonce):
         return _S20.new(key=key, nonce=nonce)
     return _PureSalsa20(key, nonce)
 
+G7S0 = 0x47375330          # b'G7S0' read little-endian, which is how it is stored
+
 def decrypt_packet(data: bytes) -> Optional[bytes]:
     if len(data) < 0x128:
         return None
+    # Some tools forward the stream already decoded. If the magic is sitting
+    # there in the clear there is nothing to decrypt, and trying would turn a
+    # perfectly good packet into noise.
+    if int.from_bytes(data[0:4], 'little') == G7S0:
+        return data
     seed = int.from_bytes(data[0x40:0x44], 'little')
     nonce = (seed ^ 0xDEADBEAF).to_bytes(4, 'little') + seed.to_bytes(4, 'little')
     if HAS_SALSA:
@@ -299,7 +322,7 @@ class GT7Packet:
 _clients = {}   # ws -> {"tel": Queue(maxsize=1) latest-frame-only, "evt": Queue small, never coalesced}
 # Live status so the web page (and tray tooltip) can tell whether the console
 # is actually sending telemetry, not just whether the bridge is up.
-_stats = {"packets": 0, "raw": 0, "ps5": None, "last": 0.0, "debug": None}
+_stats = {"packets": 0, "raw": 0, "ps5": None, "last": 0.0, "debug": None, "bindError": None}
 
 def _capture_debug(raw):
     """One-shot capture of the first datagram so undecodable formats can be
@@ -324,6 +347,11 @@ def _status_msg():
         "ps5": _stats["ps5"],
         "debug": _stats["debug"],
         "listening": True,
+        "udpPort": GT7_PORT,
+        "forwarded": GT7_PORT != GT7_PORT_STD,   # we are second in the chain
+        "heartbeat": HEARTBEAT_ON,
+        "forwardTo": [f"{h}:{p}" for h, p in FORWARD_TO],
+        "bindError": _stats["bindError"],
         "crypto": SALSA_BACKEND,   # "native", or "pure" if the compiled module would not load
     })
 
@@ -399,6 +427,211 @@ def _broadcast_event(kind: str):
             pass   # queue full (20 unsent events) - drop rather than block
 
 # ═══════════════════════════════════════════════════════════════
+#  SETTINGS PAGE
+# ═══════════════════════════════════════════════════════════════
+# Served by the connector itself, so there is one interface on every platform
+# and nothing extra in the build. It matters most on Linux, where there is no
+# tray icon at all and this is the only interface there has ever been.
+SETTINGS_HTML = r"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GT7 Live Connector</title>
+<style>
+:root{--bg:#07080d;--pan:#0d0f18;--bor:#1c1f2e;--mut:#8b93a3;--wht:#eef0f8;--blu:#1ab4ff;--grn:#35d07f;--red:#dc524c;--gold:#ffc31a;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--wht);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.55;}
+.wrap{max-width:760px;margin:0 auto;padding:1.5rem 1rem 4rem;}
+header{border-bottom:1px solid var(--bor);padding-bottom:1rem;margin-bottom:1.5rem;}
+.eyebrow{font-family:ui-monospace,'JetBrains Mono',Menlo,monospace;font-size:.6rem;letter-spacing:.22em;color:var(--blu);text-transform:uppercase;}
+h1{margin:.2rem 0 0;font-size:1.65rem;letter-spacing:-.01em;}
+h1 small{color:var(--mut);font-size:.8rem;font-weight:400;letter-spacing:.08em;margin-left:.5rem;}
+h2{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--mut);font-family:ui-monospace,'JetBrains Mono',Menlo,monospace;margin:0 0 .9rem;font-weight:600;}
+.card{background:var(--pan);border:1px solid var(--bor);border-radius:8px;padding:1.2rem;margin-bottom:1.1rem;}
+.live{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mut);flex:0 0 auto;}
+.dot.on{background:var(--grn);box-shadow:0 0 10px rgba(53,208,127,.7);}
+.dot.warn{background:var(--gold);}
+.dot.err{background:var(--red);}
+.state{font-size:1.05rem;font-weight:600;}
+.sub{color:var(--mut);font-size:.84rem;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:.6rem;margin-top:1rem;}
+.stat{background:#090b12;border:1px solid var(--bor);border-radius:6px;padding:.6rem .7rem;}
+.stat b{display:block;font-family:ui-monospace,'JetBrains Mono',Menlo,monospace;font-size:.54rem;letter-spacing:.14em;color:var(--mut);text-transform:uppercase;font-weight:600;}
+.stat span{font-size:1.15rem;font-variant-numeric:tabular-nums;}
+label{display:block;margin-bottom:1rem;}
+label .t{font-size:.9rem;font-weight:600;display:block;margin-bottom:.15rem;}
+label .h{color:var(--mut);font-size:.8rem;display:block;margin-bottom:.4rem;}
+input[type=text],select{width:100%;background:#090b12;border:1px solid var(--bor);border-radius:5px;color:var(--wht);
+  padding:.55rem .7rem;font-family:ui-monospace,'JetBrains Mono',Menlo,monospace;font-size:.88rem;}
+input[type=text]:focus,select:focus{outline:none;border-color:var(--blu);}
+.row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;}
+button{font-family:ui-monospace,'JetBrains Mono',Menlo,monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;
+  padding:.6rem 1.2rem;border-radius:5px;border:1px solid var(--bor);background:transparent;color:var(--mut);cursor:pointer;}
+button:hover{border-color:var(--wht);color:var(--wht);}
+button.primary{border-color:var(--blu);background:rgba(26,180,255,.12);color:var(--blu);}
+button.primary:hover{background:rgba(26,180,255,.22);}
+a{color:var(--blu);}
+.note{border-left:3px solid var(--gold);background:rgba(255,195,26,.07);padding:.7rem .9rem;border-radius:0 5px 5px 0;
+  font-size:.85rem;margin-top:.9rem;color:#e8dcb0;}
+.note.ok{border-color:var(--grn);background:rgba(53,208,127,.07);color:#bfe9d2;}
+.note.bad{border-color:var(--red);background:rgba(220,82,76,.08);color:#f0c4c2;}
+.hint{color:var(--mut);font-size:.8rem;margin-top:.8rem;}
+code{background:#090b12;border:1px solid var(--bor);border-radius:3px;padding:.08rem .35rem;font-size:.84em;}
+footer{color:var(--mut);font-size:.76rem;text-align:center;margin-top:1.5rem;}
+.hidden{display:none;}
+</style></head><body><div class="wrap">
+
+<header>
+  <div class="eyebrow">SparksTheory</div>
+  <h1>GT7 Live Connector <small id="ver"></small></h1>
+</header>
+
+<div class="card">
+  <div class="live"><i class="dot" id="dot"></i><span class="state" id="state">Checking…</span></div>
+  <div class="sub" id="detail"></div>
+  <div class="grid">
+    <div class="stat"><b>Listening on</b><span id="sPort">—</span></div>
+    <div class="stat"><b>Packets</b><span id="sPkt">0</span></div>
+    <div class="stat"><b>Console</b><span id="sIp" style="font-size:.9rem">—</span></div>
+    <div class="stat"><b>Pages open</b><span id="sCli">0</span></div>
+  </div>
+  <div class="note bad hidden" id="bindErr"></div>
+</div>
+
+<div class="card">
+  <h2>Sharing telemetry with another app</h2>
+  <p class="sub" style="margin-top:-.4rem">
+    Only one program on this computer can listen on port <b id="stdPort">33740</b>, which is where GT7 sends.
+    To run a dashboard at the same time, one of them passes a copy to the other.
+  </p>
+
+  <label>
+    <span class="t">Listen on this port instead</span>
+    <span class="h">Use this when your dashboard goes first and forwards a copy to you. Leave empty for normal use.</span>
+    <input type="text" id="udpPort" placeholder="33740" inputmode="numeric">
+  </label>
+
+  <label>
+    <span class="t">Send a copy to</span>
+    <span class="h">Use this when you go first. Your dashboard then listens on that port. Separate several with commas.</span>
+    <input type="text" id="forward" placeholder="127.0.0.1:33742">
+  </label>
+
+  <label>
+    <span class="t">Keep the console awake</span>
+    <span class="h">GT7 stops sending unless something keeps asking. Leave this on automatic unless you know you need otherwise.</span>
+    <select id="heartbeat">
+      <option value="auto">Automatic (on unless another app went first)</option>
+      <option value="on">Always on</option>
+      <option value="off">Always off</option>
+    </select>
+  </label>
+
+  <div class="row">
+    <button class="primary" id="save">Save</button>
+    <button id="reset">Back to normal</button>
+  </div>
+  <div id="msg"></div>
+</div>
+
+<div class="card">
+  <h2>Console</h2>
+  <label>
+    <span class="t">PlayStation address</span>
+    <span class="h">Normally found on its own. Only fill this in if your network blocks broadcast, or the console is on another subnet.</span>
+    <input type="text" id="consoleIp" placeholder="found automatically">
+  </label>
+  <div class="row"><button id="saveIp">Save address</button></div>
+  <div class="hint">Settings are stored in <code id="dir">…</code></div>
+</div>
+
+<footer>
+  Telemetry is served to pages on this computer at <code id="ws"></code>.
+  <br>Open the <a href="https://sparkstheory.co.uk/gt7-lap-coach.html" target="_blank" rel="noopener">GT7 Lap Coach</a>.
+</footer>
+
+</div><script>
+const $ = id => document.getElementById(id);
+let touched = false;
+['udpPort','forward','heartbeat','consoleIp'].forEach(id => {
+  $(id).addEventListener('input', () => touched = true);
+  $(id).addEventListener('change', () => touched = true);
+});
+
+function paint(s){
+  $('ver').textContent = 'v' + s.version;
+  $('stdPort').textContent = s.standardPort;
+  $('ws').textContent = 'ws://localhost:' + s.wsPort;
+  $('dir').textContent = s.settingsDir;
+  $('sPort').textContent = s.udpPort;
+  $('sPkt').textContent = s.packets.toLocaleString();
+  $('sIp').textContent = s.consoleIp || (s.udpPort === s.standardPort ? 'searching' : 'via another app');
+  $('sCli').textContent = s.clients;
+
+  const dot = $('dot');
+  dot.className = 'dot';
+  if(s.bindError){
+    dot.classList.add('err');
+    $('state').textContent = 'Cannot listen on that port';
+    $('detail').textContent = 'Something else is probably using it.';
+    $('bindErr').textContent = s.bindError;
+    $('bindErr').classList.remove('hidden');
+  } else {
+    $('bindErr').classList.add('hidden');
+    if(s.receiving){
+      dot.classList.add('on');
+      $('state').textContent = 'Receiving telemetry';
+      $('detail').textContent = 'Drive a lap and it will show up on the Lap Coach.';
+    } else if(s.udpPort !== s.standardPort){
+      dot.classList.add('warn');
+      $('state').textContent = 'Waiting on the other app';
+      $('detail').textContent = 'Listening on ' + s.udpPort + ' for a forwarded copy. If nothing arrives, check that the other program is running and is forwarding to this port.';
+    } else {
+      dot.classList.add('warn');
+      $('state').textContent = 'Waiting for the console';
+      $('detail').textContent = 'Start Gran Turismo 7 and drive. If it never connects, your network may be blocking broadcast, so try setting the console address below.';
+    }
+  }
+  if(!touched){
+    $('udpPort').value  = s.udpPort === s.standardPort ? '' : s.udpPort;
+    $('forward').value  = s.forward || '';
+    $('heartbeat').value = s.heartbeatExplicit ? (s.heartbeat ? 'on' : 'off') : 'auto';
+    $('consoleIp').value = (s.udpPort === s.standardPort ? (s.consoleIp || '') : '');
+  }
+}
+
+function say(text, cls){
+  $('msg').innerHTML = text ? '<div class="note ' + (cls || '') + '">' + text + '</div>' : '';
+}
+
+async function poll(){
+  try{ paint(await (await fetch('/api/status')).json()); }catch(e){
+    $('dot').className = 'dot err';
+    $('state').textContent = 'Connector not running';
+    $('detail').textContent = 'This page is served by the connector itself, so if it has quit, start it again.';
+  }
+}
+
+async function send(body, okText){
+  try{
+    const r = await fetch('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    touched = false;
+    say((d.notes && d.notes.length ? d.notes.join(' ') : okText), d.notes && d.notes.length ? '' : 'ok');
+    paint(d.status);
+  }catch(e){ say('Could not save: ' + e, 'bad'); }
+}
+
+$('save').onclick  = () => send({ udpPort: $('udpPort').value, forward: $('forward').value, heartbeat: $('heartbeat').value }, 'Saved, and in use now.');
+$('reset').onclick = () => { $('udpPort').value=''; $('forward').value=''; $('heartbeat').value='auto';
+                             send({ udpPort:'', forward:'', heartbeat:'auto' }, 'Back to normal: listening on the standard port.'); };
+$('saveIp').onclick = () => send({ consoleIp: $('consoleIp').value }, 'Address saved.');
+
+poll(); setInterval(poll, 1500);
+</script></body></html>
+"""
+
+# ═══════════════════════════════════════════════════════════════
 #  TRIGGER SERVER (Stream Deck -> overlay obstacles)
 # ═══════════════════════════════════════════════════════════════
 # A tiny, separate plain-HTTP server on its own thread/port, stdlib only, so
@@ -410,7 +643,41 @@ class _TriggerHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass   # keep the console/tray quiet
 
+    # The settings page writes files, so it answers only to this machine. The
+    # trigger stays open to the network, because a Stream Deck is often on a
+    # different PC and that behaviour is already out there in people's setups.
+    def _is_local(self):
+        try:
+            return self.client_address[0] in ('127.0.0.1', '::1', '::ffff:127.0.0.1')
+        except Exception:
+            return False
+
+    def _send(self, code, body, ctype='application/json'):
+        if isinstance(body, str):
+            body = body.encode('utf-8')
+        self.send_response(code)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except Exception:
+            pass
+
     def do_GET(self):
+        path = urllib.parse.urlparse(self.path).path
+        if path in ('/settings', '/settings/'):
+            if not self._is_local():
+                return self._send(403, 'Settings can only be opened on the computer running the connector.', 'text/plain')
+            return self._send(200, SETTINGS_HTML, 'text/html; charset=utf-8')
+        if path == '/api/status':
+            if not self._is_local():
+                return self._send(403, '{"error":"local only"}')
+            return self._send(200, json.dumps(_settings_snapshot()))
+        if path == '/favicon.ico':
+            return self._send(204, b'', 'image/x-icon')      # a browser asking, not a Stream Deck
+
+        # anything else is a trigger, exactly as before
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         kind = (qs.get('type') or ['wall'])[0]
         if _loop is not None:
@@ -420,6 +687,21 @@ class _TriggerHandler(http.server.BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(b'ok')
+
+    def do_POST(self):
+        path = urllib.parse.urlparse(self.path).path
+        if path != '/api/settings' or not self._is_local():
+            return self._send(403, '{"error":"local only"}')
+        try:
+            n = int(self.headers.get('Content-Length') or 0)
+            body = json.loads(self.rfile.read(min(n, 8192)) or b'{}')
+        except Exception:
+            return self._send(400, '{"error":"bad request"}')
+        try:
+            notes = _apply_settings(body if isinstance(body, dict) else {})
+        except Exception as e:
+            return self._send(500, json.dumps({"error": str(e)[:200]}))
+        self._send(200, json.dumps({"notes": notes, "status": _settings_snapshot()}))
 
 def _start_trigger_server():
     try:
@@ -467,10 +749,14 @@ async def _heartbeat(ip_ref):
             _hb('255.255.255.255')           # limited broadcast
             if sub:
                 _hb(sub)                     # subnet-directed broadcast (reaches more networks)
-    ping()
+    # The flag is read every tick rather than once, so turning the ping on or
+    # off in the settings page takes effect without a restart.
+    if HEARTBEAT_ON:
+        ping()
     while True:
         await asyncio.sleep(HEARTBEAT_INT)
-        ping()
+        if HEARTBEAT_ON:
+            ping()
 
 async def _status_loop():
     # Push a heartbeat of our own state to any connected page every 2s, so the
@@ -480,12 +766,37 @@ async def _status_loop():
         if _clients:
             _broadcast(_status_msg())
 
-async def _receiver(ps5_ip, ip_ref):
+_fwd_sock = None
+
+def _forward(raw):
+    """Pass a copy of the raw datagram on to anything else that wants it, so
+    this connector can own port 33740 and still let a dashboard run. Sent
+    exactly as it arrived, encrypted and all, because that is what the next
+    program along expects from the console."""
+    global _fwd_sock
+    if not FORWARD_TO:
+        return
+    try:
+        if _fwd_sock is None:
+            _fwd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        for dest in FORWARD_TO:
+            try:
+                _fwd_sock.sendto(raw, dest)
+            except Exception:
+                pass                          # one bad destination must not stop the others
+    except Exception:
+        pass
+
+def _bind_udp(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(('', GT7_PORT))
+    sock.bind(('', port))
     sock.setblocking(False)
+    return sock
+
+async def _receiver(ps5_ip, ip_ref):
+    sock, bound = None, None
     loop = asyncio.get_event_loop()
     last_id = -1
     detected = ps5_ip
@@ -494,6 +805,24 @@ async def _receiver(ps5_ip, ip_ref):
 
     while True:
         await asyncio.sleep(0)
+        # Changing the port in the settings page means letting go of one socket
+        # and taking another, which happens here rather than on a restart.
+        if bound != GT7_PORT:
+            if sock is not None:
+                try: sock.close()
+                except Exception: pass
+            try:
+                sock = _bind_udp(GT7_PORT)
+            except Exception as e:
+                _stats["bindError"] = f"Could not listen on UDP {GT7_PORT}: {e}"
+                await asyncio.sleep(2)
+                continue
+            _stats["bindError"] = None
+            bound = GT7_PORT
+            last_id = -1
+            # on a forwarded port the sender is another app, not the console
+            detected = ps5_ip if GT7_PORT == GT7_PORT_STD else None
+            _stats["ps5"] = detected
         try:
             raw, addr = await loop.run_in_executor(None, lambda: sock.recvfrom(4096))
         except BlockingIOError:
@@ -504,14 +833,18 @@ async def _receiver(ps5_ip, ip_ref):
             continue
 
         _stats["raw"] += 1                # a datagram arrived (before any decode)
+        _forward(raw)                     # before anything else, so a dashboard never waits on us
         if _stats["raw"] == 1:
             _capture_debug(raw)           # snapshot the first packet for diagnosis
 
-        if detected is None:
+        if detected is None and GT7_PORT == GT7_PORT_STD:
+            # On a forwarded port the sender is the app that forwarded it, not
+            # the console, so learning an address from it would be wrong.
             detected = addr[0]
             ip_ref[0] = detected
             _stats["ps5"] = detected
-            _hb(detected)
+            if HEARTBEAT_ON:
+                _hb(detected)
             _broadcast(json.dumps({"type":"gt7_detected","ip":detected}))
 
         dec = decrypt_packet(raw)
@@ -525,7 +858,7 @@ async def _receiver(ps5_ip, ip_ref):
         _stats["last"] = time.time()
         # Keep the console streaming: GT7 sends ~100 packets per heartbeat, then
         # stops. Re-ping every HEARTBEAT_EVERY packets so the feed never stalls.
-        if pkt.packet_id % HEARTBEAT_EVERY == 0:
+        if HEARTBEAT_ON and pkt.packet_id % HEARTBEAT_EVERY == 0:
             _hb(ip_ref[0] or detected or '255.255.255.255')
         if _clients:
             _broadcast(json.dumps(pkt.to_dict()))
@@ -536,8 +869,11 @@ async def _receiver(ps5_ip, ip_ref):
 # ═══════════════════════════════════════════════════════════════
 _loop = None
 
+_ip_ref_global = [None]
+
 async def _async_main(ps5_ip):
-    ip_ref = [ps5_ip]
+    ip_ref = _ip_ref_global
+    ip_ref[0] = ps5_ip
     server = await websockets.serve(_ws_handler, WS_HOST, WS_PORT)
     _start_trigger_server()
     if ps5_ip:
@@ -579,14 +915,231 @@ def _quit(icon, _item):
     sys.exit(0)
 
 
+def _config_dirs():
+    """Where a settings file might sit: next to the app, the working directory,
+    and the home folder. Home matters on macOS, where the .app bundle hides the
+    "next to it" spot."""
+    dirs = []
+    try:
+        dirs.append(os.path.dirname(sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__)))
+    except Exception:
+        pass
+    dirs.append(os.getcwd())
+    dirs.append(os.path.expanduser("~"))
+    return dirs
+
+def _read_setting(filename):
+    for base in _config_dirs():
+        try:
+            cfg = os.path.join(base, filename)
+            if os.path.exists(cfg):
+                with open(cfg, "r", encoding="utf-8") as fh:
+                    for line in fh:
+                        line = line.split("#")[0].strip()
+                        if line:
+                            return line
+        except Exception:
+            pass
+    return None
+
+def _flag(*names):
+    """Read --name value or --name=value from the command line."""
+    for i, a in enumerate(sys.argv[1:], start=1):
+        for n in names:
+            if a == n and i + 1 < len(sys.argv):
+                return sys.argv[i + 1].strip()
+            if a.startswith(n + "="):
+                return a.split("=", 1)[1].strip()
+    return None
+
+def _parse_dest(text, default_host="127.0.0.1"):
+    """'33742' or '127.0.0.1:33742' or '192.168.1.9:33742' -> (host, port)."""
+    text = text.strip()
+    if not text:
+        return None
+    if ":" in text:
+        host, _, port = text.rpartition(":")
+        host = host.strip() or default_host
+    else:
+        host, port = default_host, text
+    try:
+        port = int(port)
+    except ValueError:
+        return None
+    if not (1 <= port <= 65535):
+        return None
+    return (host, port)
+
+def _resolve_udp_config():
+    """Sort out which port to listen on, where to forward copies, and whether to
+    ping the console. Command line wins, then the environment, then a text file
+    next to the app, which is the one most people will actually use.
+
+    Advanced settings: nobody needs them until two programs want the same
+    stream, and then nothing else will do."""
+    global GT7_PORT, FORWARD_TO, HEARTBEAT_ON
+
+    port_txt = _flag("--port", "-p") or os.environ.get("GT7_UDP_PORT", "").strip() or _read_setting("gt7-udp-port.txt")
+    if port_txt:
+        try:
+            port = int(port_txt)
+            if 1 <= port <= 65535:
+                GT7_PORT = port
+        except ValueError:
+            pass
+
+    fwd_txt = _flag("--forward", "-f") or os.environ.get("GT7_FORWARD", "").strip() or _read_setting("gt7-forward.txt")
+    if fwd_txt:
+        FORWARD_TO = [d for d in (_parse_dest(part) for part in fwd_txt.replace(";", ",").split(",")) if d]
+
+    # A connector on a forwarded port must stay quiet by default: whatever owns
+    # 33740 is already pinging, and the console replies to that app, not to us.
+    global HEARTBEAT_EXPLICIT
+    HEARTBEAT_ON = (GT7_PORT == GT7_PORT_STD)
+    hb = _flag("--heartbeat") or os.environ.get("GT7_HEARTBEAT", "").strip() or _read_setting("gt7-heartbeat.txt")
+    if hb:
+        HEARTBEAT_ON = hb.lower() in ("1", "on", "yes", "true")
+        HEARTBEAT_EXPLICIT = True
+
+# ═══════════════════════════════════════════════════════════════
+#  SETTINGS: READING, WRITING, APPLYING
+# ═══════════════════════════════════════════════════════════════
+SETTINGS_FILES = {
+    "consoleIp": "gt7-console-ip.txt",
+    "udpPort":   "gt7-udp-port.txt",
+    "forward":   "gt7-forward.txt",
+    "heartbeat": "gt7-heartbeat.txt",
+}
+
+def _settings_dir():
+    """Somewhere we can actually write. Next to the app is the obvious place and
+    the one people find, but Program Files and a macOS .app bundle are both
+    read-only, so fall back to the home folder rather than failing silently."""
+    for base in _config_dirs():
+        try:
+            probe = os.path.join(base, ".gt7-write-test")
+            with open(probe, "w") as fh:
+                fh.write("x")
+            os.remove(probe)
+            return base
+        except Exception:
+            continue
+    return os.path.expanduser("~")
+
+def _write_setting(filename, value):
+    """An empty value removes the file, so clearing a box in the page really
+    does go back to the default rather than leaving a stale file behind."""
+    target = os.path.join(_settings_dir(), filename)
+    try:
+        if value is None or str(value).strip() == "":
+            for base in _config_dirs():                 # clear it wherever it is
+                try:
+                    old = os.path.join(base, filename)
+                    if os.path.exists(old):
+                        os.remove(old)
+                except Exception:
+                    pass
+            return True
+        with open(target, "w", encoding="utf-8") as fh:
+            fh.write(str(value).strip() + "\n")
+        return True
+    except Exception:
+        return False
+
+def _apply_settings(d):
+    """Take what the settings page sent, make it true now, and write it down so
+    it is still true next time. Returns what was actually applied, which is not
+    always what was asked for."""
+    global GT7_PORT, FORWARD_TO, HEARTBEAT_ON, HEARTBEAT_EXPLICIT
+    notes = []
+
+    if "udpPort" in d:
+        txt = str(d.get("udpPort") or "").strip()
+        if txt == "":
+            GT7_PORT = GT7_PORT_STD
+            _write_setting(SETTINGS_FILES["udpPort"], "")
+        else:
+            try:
+                port = int(txt)
+                if not (1 <= port <= 65535):
+                    raise ValueError
+                GT7_PORT = port
+                _write_setting(SETTINGS_FILES["udpPort"], port if port != GT7_PORT_STD else "")
+            except ValueError:
+                notes.append(f"{txt} is not a port number, so that was left alone.")
+
+    if "forward" in d:
+        txt = str(d.get("forward") or "").strip()
+        dests = [x for x in (_parse_dest(part) for part in txt.replace(";", ",").split(",")) if x]
+        if txt and not dests:
+            notes.append(f"Could not read \"{txt}\" as an address, so forwarding was left alone.")
+        else:
+            FORWARD_TO = dests
+            _write_setting(SETTINGS_FILES["forward"], ", ".join(f"{h}:{p}" for h, p in dests))
+
+    if "consoleIp" in d:
+        ip = str(d.get("consoleIp") or "").strip()
+        _write_setting(SETTINGS_FILES["consoleIp"], ip)
+        if ip:
+            _ip_ref_global[0] = ip
+            _stats["ps5"] = ip
+        notes.append("The console address is read when the connector starts, so restart it to use a new one.")
+
+    if "heartbeat" in d:
+        v = d.get("heartbeat")
+        if v in (None, "", "auto"):
+            HEARTBEAT_EXPLICIT = False
+            _write_setting(SETTINGS_FILES["heartbeat"], "")
+        else:
+            HEARTBEAT_EXPLICIT = True
+            HEARTBEAT_ON = bool(v) and str(v).lower() not in ("0", "off", "no", "false")
+            _write_setting(SETTINGS_FILES["heartbeat"], "on" if HEARTBEAT_ON else "off")
+
+    # With no explicit choice, the ping follows the port: on when we own 33740,
+    # off when something else does and is already pinging.
+    if not HEARTBEAT_EXPLICIT:
+        HEARTBEAT_ON = (GT7_PORT == GT7_PORT_STD)
+
+    return notes
+
+def _settings_snapshot():
+    fresh = (time.time() - _stats["last"]) < 3 if _stats["last"] else False
+    return {
+        "version": VERSION,
+        "udpPort": GT7_PORT,
+        "standardPort": GT7_PORT_STD,
+        "forward": ", ".join(f"{h}:{p}" for h, p in FORWARD_TO),
+        "heartbeat": HEARTBEAT_ON,
+        "heartbeatExplicit": HEARTBEAT_EXPLICIT,
+        "consoleIp": _stats["ps5"] or "",
+        "raw": _stats["raw"],
+        "packets": _stats["packets"],
+        "receiving": fresh,
+        "clients": len(_clients),
+        "crypto": SALSA_BACKEND,
+        "bindError": _stats["bindError"],
+        "settingsDir": _settings_dir(),
+        "wsPort": WS_PORT,
+    }
+
 def _resolve_ps5_ip():
     """Where to send the heartbeat. Broadcast is tried by default, but on
     networks that block broadcast (or a console on another subnet) you can
     point the connector straight at the console: pass the IP as an argument,
     set the GT7_PS5_IP environment variable, or drop a `gt7-console-ip.txt`
     file (one line, the console's IP) next to the app or in your home folder."""
-    if len(sys.argv) > 1 and sys.argv[1].strip():
-        return sys.argv[1].strip()
+    # The console IP is still accepted as a bare argument, but the new flags
+    # must not be mistaken for it: "--port 33742" is not an IP address.
+    skip = False
+    for a in sys.argv[1:]:
+        if skip:
+            skip = False
+            continue
+        if a.startswith("-"):
+            skip = ("=" not in a)          # "--port 33742" eats the next token, "--port=33742" does not
+            continue
+        if a.strip():
+            return a.strip()
     env = os.environ.get("GT7_PS5_IP", "").strip()
     if env:
         return env
@@ -626,11 +1179,25 @@ def _tray_status(icon):
         else:
             state = "nothing from console, is GT7 on track?"
         try:
-            icon.title = f"GT7 Live Connector v{VERSION}\nConsole: {ip}\nRaw: {raw}  Decoded: {p}\n{state}"
+            # On a forwarded port "searching for console" is the wrong story:
+            # we are waiting on another program, not on the PS5.
+            where = f"Console: {ip}" if GT7_PORT == GT7_PORT_STD else f"Listening on UDP {GT7_PORT} (forwarded)"
+            fwd = f"\nCopying to {', '.join(f'{h}:{q}' for h, q in FORWARD_TO)}" if FORWARD_TO else ""
+            icon.title = f"GT7 Live Connector v{VERSION}\n{where}{fwd}\nRaw: {raw}  Decoded: {p}\n{state}"
         except Exception:
             pass
 
+SETTINGS_URL = f"http://127.0.0.1:{TRIGGER_PORT}/settings"
+
+def _open_settings(icon=None, item=None):
+    try:
+        import webbrowser
+        webbrowser.open(SETTINGS_URL)
+    except Exception:
+        pass
+
 def main():
+    _resolve_udp_config()
     ps5_ip = _resolve_ps5_ip()
 
     # Start bridge in background thread
@@ -647,6 +1214,7 @@ def main():
                 pystray.MenuItem("Port: 8765", None, enabled=False),
                 pystray.MenuItem(f"Stream Deck trigger: {TRIGGER_PORT}", None, enabled=False),
                 pystray.Menu.SEPARATOR,
+                pystray.MenuItem("Settings…", _open_settings, default=True),
                 pystray.MenuItem("Quit", _quit),
             )
         )
@@ -655,6 +1223,12 @@ def main():
     else:
         # Fallback: no tray, just keep main thread alive
         print("GT7 Live Connector running on ws://localhost:8765")
+        print(f"Settings: {SETTINGS_URL}")
+        if GT7_PORT != GT7_PORT_STD:
+            print(f"Listening for telemetry on UDP {GT7_PORT} (forwarded from another app).")
+            print("Console heartbeat is " + ("on." if HEARTBEAT_ON else "off, as the other app is sending it."))
+        if FORWARD_TO:
+            print("Copying every packet on to " + ", ".join(f"{h}:{q}" for h, q in FORWARD_TO) + ".")
         print("Press Ctrl+C to stop.")
         try:
             while True:
