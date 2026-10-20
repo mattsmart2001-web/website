@@ -925,6 +925,7 @@
   function parseLoggerCSV(text, name) {
     const lines = text.trim().split(/\r?\n/); const head = lines[0].split(",");
     const ix = Object.fromEntries(head.map((h, i) => [h.trim(), i]));
+    const num = (c, j) => { if (j === undefined) return null; const v = c[j]; if (v === undefined || v === "") return null; const f = +v; return isFinite(f) ? f : null; };
     const samples = [];
     for (let i = 1; i < lines.length; i++) {
       const c = lines[i].split(","); if (c.length < head.length) continue;
@@ -932,6 +933,11 @@
         v: ix.speed_mph !== undefined ? +c[ix.speed_mph] : +c[ix.speed_kph] * 0.621371,
         thr: +c[ix.throttle_pct], brk: +c[ix.brake_pct],
         gear: ix.gear !== undefined ? +c[ix.gear] : null, rpm: ix.rpm !== undefined ? +c[ix.rpm] : null,
+        // Newer recordings carry the car's rotation and each wheel's speed.
+        // Older ones do not, and a blank column is not a zero, so anything
+        // missing stays null and every rule has to cope with that.
+        yaw:  num(c, ix.yaw), latG: num(c, ix.lat_g), longG: num(c, ix.long_g),
+        wfl:  num(c, ix.w_fl), wfr: num(c, ix.w_fr), wrl: num(c, ix.w_rl), wrr: num(c, ix.w_rr),
         lap: ix.lap !== undefined ? +c[ix.lap] : null });
     }
     return { name: name || "lap", samples, multi: ix.lap !== undefined };

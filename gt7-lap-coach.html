@@ -620,7 +620,19 @@ function onPacket(d){
   // a lap only counts if it was recorded from the line: whatever lap is in
   // progress when Start is pressed is discarded, so the first chip is a full lap
   if(rec.cur){
-    rec.cur.samples.push({ t: pid / 60, x: d.posX, y: d.posY || 0, z: d.posZ, v: (d.speed || 0) * 0.621371, thr: d.throttle || 0, brk: d.brake || 0 });
+    // The connector sends far more than this page used to keep. Gear and rpm
+    // were being dropped on live sessions, so the gear advice could only ever
+    // fire on an imported log, which is not where most people are. The wheel
+    // speeds and the car's rotation are kept because they are the raw material
+    // for wheelspin, lock-ups and rotation, and a lap driven today cannot be
+    // re-recorded tomorrow once it is gone.
+    rec.cur.samples.push({ t: pid / 60, x: d.posX, y: d.posY || 0, z: d.posZ,
+      v: (d.speed || 0) * 0.621371, thr: d.throttle || 0, brk: d.brake || 0,
+      gear: d.gear === undefined ? null : d.gear, rpm: d.rpm === undefined ? null : d.rpm,
+      yaw: d.rotYaw === undefined ? null : d.rotYaw,
+      latG: d.latG === undefined ? null : d.latG, longG: d.longG === undefined ? null : d.longG,
+      wfl: d.tyreRpsFL === undefined ? null : d.tyreRpsFL, wfr: d.tyreRpsFR === undefined ? null : d.tyreRpsFR,
+      wrl: d.tyreRpsRL === undefined ? null : d.tyreRpsRL, wrr: d.tyreRpsRR === undefined ? null : d.tyreRpsRR });
     ovStampAt = performance.now();
     // the overlay repaints itself on an animation frame, so it does not want the
     // half second throttle the on page chip row is happy with
@@ -1687,9 +1699,12 @@ function obsPanel(){
 
 // ---------- download ----------
 $('dlBtn').onclick = () => {
-  const head = 't_s,x,y,z,speed_mph,throttle_pct,brake_pct\n';
+  const n2 = (v, d) => (v === null || v === undefined || !isFinite(v)) ? '' : (+v).toFixed(d);
+  const head = 't_s,x,y,z,speed_mph,throttle_pct,brake_pct,gear,rpm,yaw,lat_g,long_g,w_fl,w_fr,w_rl,w_rr\n';
   rec.laps.forEach((l, i) => {
-    const csv = head + l.samples.map(s => `${s.t.toFixed(3)},${s.x.toFixed(3)},${(s.y || 0).toFixed(3)},${s.z.toFixed(3)},${s.v.toFixed(2)},${s.thr.toFixed(1)},${s.brk.toFixed(1)}`).join('\n');
+    const csv = head + l.samples.map(s => `${s.t.toFixed(3)},${s.x.toFixed(3)},${(s.y || 0).toFixed(3)},${s.z.toFixed(3)},${s.v.toFixed(2)},${s.thr.toFixed(1)},${s.brk.toFixed(1)},`
+      + `${n2(s.gear,0)},${n2(s.rpm,0)},${n2(s.yaw,4)},${n2(s.latG,3)},${n2(s.longG,3)},`
+      + `${n2(s.wfl,2)},${n2(s.wfr,2)},${n2(s.wrl,2)},${n2(s.wrr,2)}`).join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `lap_${String(i+1).padStart(2,'0')}_${l.ms ? fmtMs(l.ms).replace(':','m') : 'x'}.csv`; a.click();
   });
 };
