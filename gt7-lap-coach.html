@@ -821,7 +821,7 @@ function trackName(L, result){
     const hit = result && LapCoach.identifyTrack(result.path, result.lapLength);
     if(hit) return hit.name;
   }catch(_){}
-  return 'Unrecognised track';
+  return null;        // not known yet, which is a gap in the library, not a fault
 }
 function analyse(){
   if(rec.laps.length < 3) return;
@@ -883,8 +883,12 @@ function shareShape(R){
 function renderReport(R){
   const car = $('carName').value.trim() || (rec.carId ? 'Car #' + rec.carId : 'Unknown car');
   renderLaps();
-  $('repTitle').innerHTML = `${trackName(R.lapLength, R)} <span style="color:var(--mut);font-size:.9rem;letter-spacing:.08em;font-family:'JetBrains Mono',monospace">${Math.round(R.lapLength)} m</span>`;
+  const tName = trackName(R.lapLength, R);
+  $('repTitle').innerHTML = `${tName || '<span style="color:var(--mut)">Track not named yet</span>'} <span style="color:var(--mut);font-size:.9rem;letter-spacing:.08em;font-family:'JetBrains Mono',monospace">${Math.round(R.lapLength)} m</span>`;
   $('repSub').innerHTML = `${R.names.length} laps, ${car}. Best ${fmtT(R.bestTime)} (${R.names[R.best]}).` +
+    // Worth saying plainly: the game never sends the track's name, so this is a
+    // gap in a library that drivers fill, not the coach failing at something.
+    (!tName ? ` <span style="color:var(--mut)">GT7 never sends the track's name, so the coach recognises circuits by the shape of the lap you drove. This one is not in its library yet. Put the name in the <b>Track</b> box at the top and you can add it for everyone.</span>` : '') +
     (R.lagFix ? ` <span style="color:var(--gold)">These laps were logged from a replay, where GT7 sends the pedals ${R.lagFix.seconds.toFixed(2)} s late. The pedal data has been shifted back to line up with the car, which is worth about ${Math.round(R.lagFix.seconds * R.top[R.best] * 0.447)} m on every braking point.</span>` : '');
   $('repNote').textContent = mode === 'live' ? 'LIVE · UPDATES EVERY LAP' : 'FROM LOGGER FILES';
   shareShape(R);
