@@ -1148,10 +1148,10 @@ function setupNav() {
 let IS_OWNER = false, IS_ADMIN = false, IS_VIEWER = false;
 
 function applyAccessLevel() {
-    // Admins manage viewers; only the owner sees admin and owner in the
-    // grant list, and only the owner can remove them. Viewers never see it.
+    // Granting console access is the owner's alone, viewer included: a
+    // viewer reads personal data even though they change nothing.
     document.querySelectorAll('.nav-link[data-section="admins"]').forEach(el => {
-        el.style.display = (IS_OWNER || IS_ADMIN) ? '' : 'none';
+        el.style.display = IS_OWNER ? '' : 'none';
     });
     if (!IS_VIEWER) return;
     // Messages are not a viewer's to read, and the panel would only error.
@@ -9805,6 +9805,27 @@ async function renderAdmins() {
     const { data, error } = await sb.rpc('admin_list_roles');
     if (error) { toast(error.message, 'error'); return; }
 
+    // Granting, changing and removing access all sit with the owner, so a
+    // non-owner who reaches this panel sees who holds what and nothing more.
+    // Without this they would get buttons the database then refuses.
+    if (!IS_OWNER) {
+        document.getElementById('content').innerHTML = `
+            <div class="table-wrap" style="padding:1.25rem;margin-bottom:1rem">
+                <div style="font-size:0.85rem;color:var(--muted);line-height:1.6">
+                    Console access is managed by the owner. You can see who holds what below.
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table><thead><tr><th>Account</th><th>Roles</th></tr></thead><tbody>
+                ${(data || []).map(a => `<tr>
+                    <td><strong>${esc(a.email)}</strong>${a.driver_name ? `<br><span class="td-muted" style="font-size:0.78rem">${esc(a.driver_name)}</span>` : ''}</td>
+                    <td>${(a.roles || []).map(esc).join(', ')}</td>
+                </tr>`).join('') || '<tr><td colspan="2"><div class="empty-state">Nobody holds a console role yet.</div></td></tr>'}
+                </tbody></table>
+            </div>`;
+        return;
+    }
+
     const badge = r => {
         const cls = r === 'owner' ? 'badge-gold' : r === 'admin' ? 'badge-green' : 'badge-muted';
         return `<span class="badge ${cls}">${esc(r)}</span>`;
@@ -9815,9 +9836,9 @@ async function renderAdmins() {
         : data.map(a => {
             const isSelf = currentUser && a.user_id === currentUser.id;
             const roles  = (a.roles || []);
-            // The owner hands out admin and owner; an admin manages viewers only.
-            const actions = roles.filter(r => IS_OWNER || r === 'viewer')
-                .filter(r => !(isSelf && r === 'owner'))
+            // Your own owner row is not removable here: the database refuses it
+            // anyway, so offering the button would only produce an error.
+            const actions = roles.filter(r => !(isSelf && r === 'owner'))
                 .map(r => `<button class="btn-icon danger" onclick="revokeConsoleRole('${esc(a.user_id)}','${esc(r)}','${esc(a.email)}')">Remove ${esc(r)}</button>`)
                 .join(' ');
             return `<tr>
@@ -9829,11 +9850,10 @@ async function renderAdmins() {
             </tr>`;
         }).join('');
 
-    const roleOptions = IS_OWNER
-        ? `<option value="viewer">Viewer — sees everything, changes nothing</option>
-           <option value="admin">Admin — full access, cannot manage roles</option>
-           <option value="owner">Owner — full access plus role management</option>`
-        : `<option value="viewer">Viewer — sees everything, changes nothing</option>`;
+    const roleOptions =
+        `<option value="viewer">Viewer — sees everything, changes nothing</option>
+         <option value="admin">Admin — full access, cannot grant access</option>
+         <option value="owner">Owner — full access plus granting access</option>`;
 
     document.getElementById('content').innerHTML = `
         <div class="table-wrap" style="padding:1.25rem;margin-bottom:1rem">
@@ -9848,7 +9868,7 @@ async function renderAdmins() {
             </form>
             <div style="margin-top:0.75rem;font-size:0.78rem;color:var(--muted);line-height:1.6">
                 They must already have a GTEC account and have logged in at least once, otherwise there is nothing to attach the role to.
-                ${IS_OWNER ? '' : '<br>Only the owner can grant admin or owner.'}
+                <br>A viewer sees drivers' personal details, so granting, changing and removing access are all the owner's call.
             </div>
         </div>
 
