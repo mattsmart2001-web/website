@@ -26,11 +26,22 @@ from typing import Optional
 logging.disable(logging.CRITICAL)
 
 # ── Crypto ──
+# The compiled Salsa20 from pycryptodome is preferred, but it is a native .pyd
+# and on a minority of Windows machines it will not load: antivirus quarantines
+# it out of the unpacked folder, or Smart App Control refuses an unsigned DLL.
+# That raises OSError, not ImportError, at import time, so catching ImportError
+# alone killed the whole app before it did anything. Catch everything, and fall
+# back to the pure-Python implementation further down, which needs no DLL at
+# all. GT7 sends 60 packets a second and the fallback manages about 2000, so
+# nobody loses anything but a little headroom.
 try:
     from Crypto.Cipher import Salsa20 as _S20
-    HAS_SALSA = True
-except ImportError:
-    HAS_SALSA = False
+    _S20.new(key=b'\0' * 32, nonce=b'\0' * 8).decrypt(b'\0' * 8)   # prove it really loads
+    SALSA_BACKEND = "native"
+except Exception:
+    _S20 = None
+    SALSA_BACKEND = "pure"
+HAS_SALSA = True
 
 try:
     import websockets
@@ -48,7 +59,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "2.6"   # shown in the tray so you can confirm which build is running
+VERSION       = "2.7"   # shown in the tray so you can confirm which build is running
 GT7_PORT      = 33740
 SEND_PORT     = 33739
 WS_PORT       = 8765
@@ -66,6 +77,81 @@ HEARTBEAT_EVERY = 100  # also re-ping every N received packets to keep the strea
 # little-endian. Decrypted packets begin with the magic b'G7S0'.
 _KEY = b'Simulator Interface Packet GT7 ver 0.0'[:32]
 
+# ── Pure-Python Salsa20, used only when the compiled one will not load ──
+# Salsa20 is a stream cipher: it makes a keystream from (key, nonce, counter)
+# and XORs it with the data, so decrypting is the same operation as encrypting.
+_MASK  = 0xFFFFFFFF
+_SIGMA = b'expand 32-byte k'
+
+def _rotl(v, n):
+    return ((v << n) | (v >> (32 - n))) & _MASK
+
+def _salsa_core(state):
+    x = list(state)
+    for _ in range(10):                       # 20 rounds, two per pass
+        x[4]  ^= _rotl((x[0]  + x[12]) & _MASK, 7)
+        x[8]  ^= _rotl((x[4]  + x[0])  & _MASK, 9)
+        x[12] ^= _rotl((x[8]  + x[4])  & _MASK, 13)
+        x[0]  ^= _rotl((x[12] + x[8])  & _MASK, 18)
+        x[9]  ^= _rotl((x[5]  + x[1])  & _MASK, 7)
+        x[13] ^= _rotl((x[9]  + x[5])  & _MASK, 9)
+        x[1]  ^= _rotl((x[13] + x[9])  & _MASK, 13)
+        x[5]  ^= _rotl((x[1]  + x[13]) & _MASK, 18)
+        x[14] ^= _rotl((x[10] + x[6])  & _MASK, 7)
+        x[2]  ^= _rotl((x[14] + x[10]) & _MASK, 9)
+        x[6]  ^= _rotl((x[2]  + x[14]) & _MASK, 13)
+        x[10] ^= _rotl((x[6]  + x[2])  & _MASK, 18)
+        x[3]  ^= _rotl((x[15] + x[11]) & _MASK, 7)
+        x[7]  ^= _rotl((x[3]  + x[15]) & _MASK, 9)
+        x[11] ^= _rotl((x[7]  + x[3])  & _MASK, 13)
+        x[15] ^= _rotl((x[11] + x[7])  & _MASK, 18)
+        x[1]  ^= _rotl((x[0]  + x[3])  & _MASK, 7)
+        x[2]  ^= _rotl((x[1]  + x[0])  & _MASK, 9)
+        x[3]  ^= _rotl((x[2]  + x[1])  & _MASK, 13)
+        x[0]  ^= _rotl((x[3]  + x[2])  & _MASK, 18)
+        x[6]  ^= _rotl((x[5]  + x[4])  & _MASK, 7)
+        x[7]  ^= _rotl((x[6]  + x[5])  & _MASK, 9)
+        x[4]  ^= _rotl((x[7]  + x[6])  & _MASK, 13)
+        x[5]  ^= _rotl((x[4]  + x[7])  & _MASK, 18)
+        x[11] ^= _rotl((x[10] + x[9])  & _MASK, 7)
+        x[8]  ^= _rotl((x[11] + x[10]) & _MASK, 9)
+        x[9]  ^= _rotl((x[8]  + x[11]) & _MASK, 13)
+        x[10] ^= _rotl((x[9]  + x[8])  & _MASK, 18)
+        x[12] ^= _rotl((x[15] + x[14]) & _MASK, 7)
+        x[13] ^= _rotl((x[12] + x[15]) & _MASK, 9)
+        x[14] ^= _rotl((x[13] + x[12]) & _MASK, 13)
+        x[15] ^= _rotl((x[14] + x[13]) & _MASK, 18)
+    return struct.pack('<16I', *[(x[i] + state[i]) & _MASK for i in range(16)])
+
+class _PureSalsa20:
+    """Same shape as Crypto.Cipher.Salsa20's object, so the call sites below
+    do not need to know which one they are holding."""
+    def __init__(self, key, nonce):
+        if len(key) == 16:
+            key = key + key
+        k = struct.unpack('<8I', key)
+        n = struct.unpack('<2I', nonce)
+        c = struct.unpack('<4I', _SIGMA)
+        self._state = [c[0], k[0], k[1], k[2], k[3], c[1], n[0], n[1],
+                       0, 0, c[2], k[4], k[5], k[6], k[7], c[3]]
+
+    def decrypt(self, data):
+        out, counter = bytearray(), 0
+        while len(out) < len(data):
+            st = list(self._state)
+            st[8]  = counter & _MASK
+            st[9]  = (counter >> 32) & _MASK
+            out   += _salsa_core(st)
+            counter += 1
+        return bytes(a ^ b for a, b in zip(data, out))
+
+    encrypt = decrypt
+
+def _salsa_new(key, nonce):
+    if _S20 is not None:
+        return _S20.new(key=key, nonce=nonce)
+    return _PureSalsa20(key, nonce)
+
 def decrypt_packet(data: bytes) -> Optional[bytes]:
     if len(data) < 0x128:
         return None
@@ -73,7 +159,7 @@ def decrypt_packet(data: bytes) -> Optional[bytes]:
     nonce = (seed ^ 0xDEADBEAF).to_bytes(4, 'little') + seed.to_bytes(4, 'little')
     if HAS_SALSA:
         try:
-            dec = _S20.new(key=_KEY, nonce=nonce).decrypt(data)
+            dec = _salsa_new(_KEY, nonce).decrypt(data)
             # Magic 'G7S0' is stored little-endian, so the decoded bytes are
             # 30 53 37 47 -> int 0x47375330. (Comparing to b'G7S0' directly
             # checks the reverse byte order and wrongly rejects valid packets.)
@@ -223,7 +309,7 @@ def _capture_debug(raw):
         if HAS_SALSA and len(raw) >= 0x44:
             seed = int.from_bytes(raw[0x40:0x44], 'little')
             nonce = (seed ^ 0xDEADBEAF).to_bytes(4, 'little') + seed.to_bytes(4, 'little')
-            info["dec"] = _S20.new(key=_KEY, nonce=nonce).decrypt(raw)[:8].hex()
+            info["dec"] = _salsa_new(_KEY, nonce).decrypt(raw)[:8].hex()
         else:
             info["dec"] = "n/a"
     except Exception:
@@ -238,6 +324,7 @@ def _status_msg():
         "ps5": _stats["ps5"],
         "debug": _stats["debug"],
         "listening": True,
+        "crypto": SALSA_BACKEND,   # "native", or "pure" if the compiled module would not load
     })
 
 async def _client_sender(ws, tel_q, evt_q):

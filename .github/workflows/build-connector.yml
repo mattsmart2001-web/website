@@ -13,9 +13,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release tag to publish (e.g. v2.1). Leave blank to build without releasing."
+        description: "Release tag to publish (e.g. v2.5). Leave blank to build without releasing."
         required: false
-        default: "v2.1"
+        default: "v2.5"
   push:
     branches:
       - claude/add-signup-page-pBzI2
@@ -144,6 +144,91 @@ jobs:
           path: dist/GT7-Live-Connector-macOS-AppleSilicon.zip
           if-no-files-found: error
 
+  # Linux is console only on purpose. GNOME dropped legacy tray icons years ago,
+  # so a tray build would work on some desktops and quietly fail on others, and
+  # the connector already falls back to printing to the terminal when pystray is
+  # not importable. Leaving pystray and Pillow out also strips almost every
+  # native dependency, which is what keeps the binary portable across distros.
+  linux:
+    # Built on 22.04, not latest. A PyInstaller binary needs a glibc at least as
+    # old as the one it was built against, so building on 24.04 would lock out
+    # everyone still on Ubuntu 22.04 and Debian 11.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        # deliberately NOT -r requirements.txt: that would pull in pystray and
+        # Pillow and put a tray on a platform where it cannot be relied on
+        run: |
+          python -m pip install --upgrade pip
+          pip install websockets cryptography pycryptodome pyinstaller
+
+      - name: Build single-file binary
+        run: >
+          pyinstaller --onefile --noupx --distpath dist
+          --name "GT7-Live-Connector"
+          --collect-all Crypto
+          --hidden-import=Crypto.Cipher.Salsa20
+          --hidden-import=Crypto.Cipher._Salsa20
+          --exclude-module pystray
+          --exclude-module PIL
+          gt7_connector.py
+
+      - name: Smoke test it
+        # catches a build that produces a binary which cannot actually start
+        run: |
+          chmod +x dist/GT7-Live-Connector
+          ./dist/GT7-Live-Connector & sleep 10
+          python - <<'EOF'
+          import socket, sys
+          s = socket.socket(); s.settimeout(5)
+          try:
+              s.connect(("127.0.0.1", 8765))
+              print("connector is serving ws://localhost:8765")
+          except Exception as e:
+              print("FAILED to reach the websocket:", e); sys.exit(1)
+          EOF
+          kill %1 || true
+
+      - name: Add README and tar it up
+        # a tar.gz keeps the executable bit, which a bare binary download loses
+        run: |
+          mkdir -p pkg/GT7-Live-Connector
+          cp dist/GT7-Live-Connector pkg/GT7-Live-Connector/
+          cat > pkg/GT7-Live-Connector/README.txt <<'EOF'
+          GT7 LIVE CONNECTOR, LINUX
+
+          1) tar -xzf GT7-Live-Connector-Linux-x86_64.tar.gz
+          2) cd GT7-Live-Connector
+          3) chmod +x GT7-Live-Connector
+          4) ./GT7-Live-Connector
+
+          It runs in the terminal and prints "running on ws://localhost:8765".
+          Leave it open, then open the Lap Coach or Telemetry page in a browser
+          on the same machine. Ctrl+C stops it.
+
+          There is no tray icon on Linux. That is deliberate: too many desktops
+          no longer show one.
+
+          The machine running this only has to be on the same network as the
+          PS5, not connected to it. If your network blocks broadcast, put the
+          console's IP in a file called gt7-console-ip.txt next to the binary,
+          or pass it as an argument.
+          EOF
+          tar -czf dist/GT7-Live-Connector-Linux-x86_64.tar.gz -C pkg GT7-Live-Connector
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GT7-Live-Connector-linux
+          path: dist/GT7-Live-Connector-Linux-x86_64.tar.gz
+          if-no-files-found: error
+
   # Single publisher: waits for all OS builds, gathers their artifacts, and
   # uploads them to the release in one go. Publishing from one job (instead of
   # each OS job in parallel) avoids the asset-upload race that 404s.
@@ -152,7 +237,7 @@ jobs:
   # against the same tag and race, which can drop assets. The other branch still
   # builds (and tests) its artifacts above; it just skips the publish.
   release:
-    needs: [windows, macos]
+    needs: [windows, macos, linux]
     if: >
       (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/claude/add-signup-page-pBzI2')
@@ -168,14 +253,14 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_VERSION: "v2.4"
+          DEFAULT_VERSION: "v2.5"
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TAG="${{ github.event.inputs.version }}"
           else
             TAG="$DEFAULT_VERSION"
           fi
-          NOTES="Automated build of the GT7 Live Connector for Windows and macOS. Windows: the .zip (extract the whole folder, then run GT7-Live-Connector.exe inside) or the single-file .exe. macOS (Apple Silicon): the .zip (unzip, then right-click the app and Open the first time). Includes the telemetry decryption fix, freeze fix, and self-diagnosing status."
+          NOTES="Automated build of the GT7 Live Connector for Windows, macOS and Linux. Windows: the .zip (extract the whole folder, then run GT7-Live-Connector.exe inside) or the single-file .exe. macOS (Apple Silicon): the .zip (unzip, then right-click the app and Open the first time). Linux (x86_64): the .tar.gz (extract, chmod +x, run it in a terminal; console only, no tray). Includes the telemetry decryption fix, freeze fix, and self-diagnosing status. New in this build: if the compiled Salsa20 module will not load (antivirus quarantine, or Smart App Control blocking an unsigned DLL) the connector now falls back to a built-in pure-Python decoder instead of refusing to start."
           echo "Publishing $TAG with:"; ls -1 assets
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
             gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest
