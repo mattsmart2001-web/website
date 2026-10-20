@@ -59,7 +59,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "2.8"   # shown in the tray so you can confirm which build is running
+VERSION       = "2.9"   # shown in the tray so you can confirm which build is running
 GT7_PORT_STD  = 33740   # the port GT7 itself sends telemetry to
 GT7_PORT      = GT7_PORT_STD   # what we actually listen on; see _resolve_udp_config
 SEND_PORT     = 33739
@@ -346,6 +346,10 @@ def _capture_debug(raw):
 def _status_msg():
     return json.dumps({
         "type": "status",
+        # The page compares this with the build it expects, so it can tell the
+        # few people on an old connector and nobody else. A status message with
+        # no version in it is itself the answer: that connector predates this.
+        "version": VERSION,
         "packets": _stats["packets"],   # valid, decoded telemetry packets
         "raw": _stats["raw"],           # raw UDP datagrams received (before decode)
         "ps5": _stats["ps5"],

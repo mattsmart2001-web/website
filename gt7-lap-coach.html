@@ -266,6 +266,11 @@ body.ov.key #ovLabel,.obs-prev.key #ovLabel{text-shadow:none;background:#07080d;
   </div>
 </header>
 <main>
+  <div class="card hidden" id="connBar" style="padding:.7rem 1.1rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;border-color:rgba(255,195,26,.35)">
+    <span id="connTxt" style="flex:1;min-width:260px;font-family:'Rajdhani',sans-serif;font-size:.98rem;color:#aab0c4;line-height:1.5"></span>
+    <a class="btn btn-gold small" id="connGet" href="https://github.com/mattsmart2001-web/website/releases/latest" target="_blank" rel="noopener">Get the new one</a>
+    <button class="btn small" id="connHide">Not now</button>
+  </div>
 
 <!-- SETUP -->
 <section id="setup">
@@ -585,8 +590,40 @@ function connect(){
     ws.onerror = () => { try{ ws.close(); }catch(_){} };
   }catch(_){ setTimeout(connect, 2500); }
 }
+// The connector people downloaded on launch day has no settings page and
+// cannot share telemetry with a dashboard. Rather than put a notice at the top
+// of the page for everyone, including the majority who already have the
+// current build, ask the connector what it is and tell only the ones behind.
+const CONNECTOR_WANT = '2.9';
+const vnum = v => String(v || '').split('.').map(n => parseInt(n, 10) || 0);
+const behind = (have, want) => {
+  const a = vnum(have), b = vnum(want);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i] || 0) < (b[i] || 0)) return true;
+    if ((a[i] || 0) > (b[i] || 0)) return false;
+  }
+  return false;
+};
+let connNoticeDone = false;
+function connectorVersion(m){
+  if(OV || connNoticeDone) return;
+  // A status message without a version is an older build saying so by omission.
+  const have = m.version || null;
+  if(have && !behind(have, CONNECTOR_WANT)) return;
+  connNoticeDone = true;
+  try{ if(localStorage.getItem('lapCoachConnSeen') === CONNECTOR_WANT) return; }catch(_){}
+  const bar = $('connBar'); if(!bar) return;
+  $('connTxt').innerHTML = `Your connector is ${have ? `version <b>${String(have).replace(/[<>&]/g,'')}</b>` : 'an older build'}, and <b>${CONNECTOR_WANT}</b> is out. The new one has a settings page, and it can share the telemetry with a dashboard or a motion rig so both can run at once. Your laps work either way.`;
+  bar.classList.remove('hidden');
+  $('connHide').onclick = () => {
+    bar.classList.add('hidden');
+    try{ localStorage.setItem('lapCoachConnSeen', CONNECTOR_WANT); }catch(_){}
+  };
+}
+
 function handle(m){
   if(m.type === 'telemetry') onPacket(m);
+  else if(m.type === 'status') connectorVersion(m);
   else if(m.type === 'gt7_detected') setStatus('live','GT7 LIVE');
 }
 function onPacket(d){
