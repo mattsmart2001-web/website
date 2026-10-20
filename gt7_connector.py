@@ -322,7 +322,11 @@ class GT7Packet:
 _clients = {}   # ws -> {"tel": Queue(maxsize=1) latest-frame-only, "evt": Queue small, never coalesced}
 # Live status so the web page (and tray tooltip) can tell whether the console
 # is actually sending telemetry, not just whether the bridge is up.
-_stats = {"packets": 0, "raw": 0, "ps5": None, "last": 0.0, "debug": None, "bindError": None}
+# raw and packets are running totals for the tray and the page. The diagnosis
+# needs "since we started listening HERE" instead: after a port change, counts
+# from the old port would make a silent new one look healthy.
+_stats = {"packets": 0, "raw": 0, "ps5": None, "last": 0.0, "debug": None, "bindError": None,
+          "boundAt": 0.0, "rawAtBind": 0, "packetsAtBind": 0}
 
 def _capture_debug(raw):
     """One-shot capture of the first datagram so undecodable formats can be
@@ -498,7 +502,7 @@ footer{color:var(--mut);font-size:.76rem;text-align:center;margin-top:1.5rem;}
   <div class="note bad hidden" id="bindErr"></div>
 </div>
 
-<div class="card">
+<div class="card" id="share">
   <h2>Sharing telemetry with another app</h2>
   <p class="sub" style="margin-top:-.4rem">
     Only one program on this computer can listen on port <b id="stdPort">33740</b>, which is where GT7 sends.
@@ -582,10 +586,21 @@ function paint(s){
       dot.classList.add('on');
       $('state').textContent = 'Receiving telemetry';
       $('detail').textContent = 'Drive a lap and it will show up on the Lap Coach.';
+    } else if(s.undecodable){
+      dot.classList.add('warn');
+      $('state').textContent = 'Data is arriving but cannot be read';
+      $('detail').textContent = s.rawHere.toLocaleString() + ' packets have come in and none of them look like GT7 telemetry. If another app is forwarding to this port, check it is sending the raw stream rather than something it has already changed.';
     } else if(s.udpPort !== s.standardPort){
       dot.classList.add('warn');
       $('state').textContent = 'Waiting on the other app';
       $('detail').textContent = 'Listening on ' + s.udpPort + ' for a forwarded copy. If nothing arrives, check that the other program is running and is forwarding to this port.';
+    } else if(s.listeningFor > 20 && s.rawHere === 0){
+      // The one thing nobody guesses at: something else already owns the port.
+      dot.classList.add('warn');
+      $('state').textContent = 'Nothing is arriving';
+      $('detail').innerHTML = 'If you have a dashboard, motion rig or lap timer open, it has probably already taken port ' + s.standardPort +
+        ', and only one program can have it. <a href="#share">Set them to share it</a> and both will work.' +
+        '<br>If you are not running anything like that, start Gran Turismo 7 and drive. If it still never connects, your network may be blocking broadcast, so try setting the console address below.';
     } else {
       dot.classList.add('warn');
       $('state').textContent = 'Waiting for the console';
@@ -818,6 +833,9 @@ async def _receiver(ps5_ip, ip_ref):
                 await asyncio.sleep(2)
                 continue
             _stats["bindError"] = None
+            _stats["boundAt"] = time.time()
+            _stats["rawAtBind"] = _stats["raw"]
+            _stats["packetsAtBind"] = _stats["packets"]
             bound = GT7_PORT
             last_id = -1
             # on a forwarded port the sender is another app, not the console
@@ -1120,6 +1138,14 @@ def _settings_snapshot():
         "bindError": _stats["bindError"],
         "settingsDir": _settings_dir(),
         "wsPort": WS_PORT,
+        # How long we have been listening with nothing to show for it. Silence on
+        # the standard port usually means another program already has it, which
+        # is the one problem a user will never guess at on their own.
+        "listeningFor": round(time.time() - _stats["boundAt"], 1) if _stats["boundAt"] else 0,
+        "rawHere": _stats["raw"] - _stats["rawAtBind"],
+        # datagrams arriving but none of them decoding is a different fault
+        "undecodable": (_stats["raw"] - _stats["rawAtBind"]) > 20
+                       and (_stats["packets"] - _stats["packetsAtBind"]) == 0,
     }
 
 def _resolve_ps5_ip():
