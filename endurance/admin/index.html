@@ -1166,7 +1166,12 @@ function applyAccessLevel() {
 // back the few that only read: searching, filtering, exporting, paging.
 // Deny-by-default means a control added later is disabled until someone
 // decides otherwise, rather than quietly becoming writable.
-const READ_ONLY_ALLOW = '.table-search, .btn-export, .nav-link, [data-readonly-ok]';
+// Export is not a harmless read: applications and drivers carry emails,
+// Discord handles and dates of birth, and a CSV makes them portable. The
+// public data exports are safe in themselves, but judging thirteen of
+// them one by one is how one gets missed, so a viewer gets none and asks
+// an admin instead. Mark a specific export [data-readonly-ok] to allow it.
+const READ_ONLY_ALLOW = '.table-search, .nav-link, [data-readonly-ok]';
 function enforceReadOnly() {
     if (!IS_VIEWER) return;
     const root = document.getElementById('content');
