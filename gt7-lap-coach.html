@@ -403,7 +403,9 @@ body.ov.key #ovLabel,.obs-prev.key #ovLabel{text-shadow:none;background:#07080d;
   </div>
   <div class="card hidden" id="shapeBar" style="padding:.8rem 1.2rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;border-color:rgba(26,180,255,.35)">
     <span id="shapeTxt" style="flex:1;min-width:280px;font-family:'Rajdhani',sans-serif;font-size:1rem;color:#aab0c4;line-height:1.5"></span>
-    <button class="btn btn-primary" id="shapeBtn">Share the shape</button>
+    <input type="text" id="shapeName" placeholder="which track is this?" autocomplete="off"
+           style="flex:0 1 230px;background:#090b12;border:1px solid var(--bor);border-radius:5px;color:var(--wht);padding:.5rem .7rem;font-family:'JetBrains Mono',monospace;font-size:.82rem">
+    <button class="btn btn-primary" id="shapeBtn">Add it</button>
   </div>
   <div class="card">
     <div class="row" style="justify-content:space-between;align-items:flex-start">
@@ -849,20 +851,33 @@ function fmtT(s){ const m = Math.floor(s / 60); return m + ':' + (s - m * 60).to
 let shapeOffered = null;
 function shareShape(R){
   const bar = $('shapeBar'); if(!bar) return;
-  const typed = $('trackName').value.trim();
   let known = null;
   try{ known = LapCoach.identifyTrack(R.path, R.lapLength); }catch(_){}
-  // nothing to offer: either we already know this track, or nobody has named it
-  if(known || !typed || typed.length < 2){ bar.classList.add('hidden'); return; }
-  const key = typed.toLowerCase() + '|' + Math.round(R.lapLength);
-  if(shapeOffered === key) return;             // already showing this one
-  shapeOffered = key;
-  try{ if((localStorage.getItem('lapCoachShared') || '').split('~').indexOf(key) >= 0){ bar.classList.add('hidden'); return; } }catch(_){}
-  $('shapeTxt').innerHTML = `This looks like a track the coach does not know yet. Add <b>${typed.replace(/[<>&]/g, '')}</b> to the library so the next person who drives it gets it named? Only the shape of the circuit is sent, 256 numbers, no lap times and nothing about your driving.`;
-  $('shapeBtn').textContent = 'Share the shape';
+  // The offer used to need a name typed into the Track box before the session,
+  // but that box says "leave blank to detect", so the people who could help
+  // were the ones told not to fill it in, and the offer never appeared. Ask
+  // here instead, at the moment the gap is obvious, with the box in the bar.
+  if(known){ bar.classList.add('hidden'); return; }
+  const esc = t => t.replace(/[<>&]/g, '');
+  const lenKey = '|' + Math.round(R.lapLength);
+  try{
+    const done = (localStorage.getItem('lapCoachShared') || '').split('~');
+    if(done.some(d => d.endsWith(lenKey))){ bar.classList.add('hidden'); return; }   // already sent this circuit
+  }catch(_){}
+  if(shapeOffered === lenKey) return;          // already showing this one
+  shapeOffered = lenKey;
+
+  $('shapeTxt').innerHTML = `The coach does not know this circuit yet. Tell it what this one is and the next person who drives it gets it named. Only the shape is sent, 256 numbers, no lap times and nothing about your driving.`;
+  const box = $('shapeName');
+  box.value = $('trackName').value.trim();     // if they did type one up top, use it
+  box.disabled = false;
+  $('shapeBtn').textContent = 'Add it';
   $('shapeBtn').disabled = false;
   bar.classList.remove('hidden');
-  $('shapeBtn').onclick = async () => {
+
+  const send = async () => {
+    const typed = box.value.trim();
+    if(typed.length < 2){ box.focus(); return; }
     const b = $('shapeBtn'); b.disabled = true; b.textContent = 'Sending…';
     try{
       const sig = LapCoach.trackSignature(R.path, R.lapLength);
@@ -871,14 +886,19 @@ function shareShape(R){
         body: JSON.stringify({ name: typed, length: Math.round(R.lapLength),
                                sig: sig.map(v => +v.toFixed(3)), corners: R.corners.length }) });
       if(!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
-      $('shapeTxt').innerHTML = `Thank you. <b>${typed.replace(/[<>&]/g, '')}</b> has been sent for review, and once it is in the library the coach will name it automatically.`;
-      b.textContent = 'Sent';
-      try{ const prev = localStorage.getItem('lapCoachShared') || ''; localStorage.setItem('lapCoachShared', (prev ? prev + '~' : '') + key); }catch(_){}
+      $('shapeTxt').innerHTML = `Thank you. <b>${esc(typed)}</b> has been sent for review, and once it is in the library the coach will name it automatically.`;
+      box.disabled = true; b.textContent = 'Sent';
+      // the report should say the name straight away, rather than waiting on a
+      // review the driver will never see
+      if(!$('trackName').value.trim()){ $('trackName').value = typed; renderReport(R); }
+      try{ const prev = localStorage.getItem('lapCoachShared') || ''; localStorage.setItem('lapCoachShared', (prev ? prev + '~' : '') + typed.toLowerCase() + lenKey); }catch(_){}
     }catch(e){
       $('shapeTxt').textContent = 'That did not send: ' + e.message + '. Nothing has left your PC.';
       b.textContent = 'Try again'; b.disabled = false;
     }
   };
+  $('shapeBtn').onclick = send;
+  box.onkeydown = ev => { if(ev.key === 'Enter'){ ev.preventDefault(); send(); } };
 }
 function renderReport(R){
   const car = $('carName').value.trim() || (rec.carId ? 'Car #' + rec.carId : 'Unknown car');
@@ -888,7 +908,7 @@ function renderReport(R){
   $('repSub').innerHTML = `${R.names.length} laps, ${car}. Best ${fmtT(R.bestTime)} (${R.names[R.best]}).` +
     // Worth saying plainly: the game never sends the track's name, so this is a
     // gap in a library that drivers fill, not the coach failing at something.
-    (!tName ? ` <span style="color:var(--mut)">GT7 never sends the track's name, so the coach recognises circuits by the shape of the lap you drove. This one is not in its library yet. Put the name in the <b>Track</b> box at the top and you can add it for everyone.</span>` : '') +
+    (!tName ? ` <span style="color:var(--mut)">GT7 never sends the track's name, so the coach recognises circuits by the shape of the lap you drove. This one is not in its library yet. Tell it which track this is in the box just above and you will have added it for everyone.</span>` : '') +
     (R.lagFix ? ` <span style="color:var(--gold)">These laps were logged from a replay, where GT7 sends the pedals ${R.lagFix.seconds.toFixed(2)} s late. The pedal data has been shifted back to line up with the car, which is worth about ${Math.round(R.lagFix.seconds * R.top[R.best] * 0.447)} m on every braking point.</span>` : '');
   $('repNote').textContent = mode === 'live' ? 'LIVE · UPDATES EVERY LAP' : 'FROM LOGGER FILES';
   shareShape(R);
