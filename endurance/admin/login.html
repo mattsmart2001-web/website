@@ -178,16 +178,17 @@
             const { data, error } = await sb.auth.signInWithPassword({ email, password });
             if (error) throw error;
 
-            // Check for admin role
+            // Any of the three console roles may sign in. The console itself
+            // decides what each one can do, so this gate only asks whether
+            // they belong here at all.
             const { data: roles } = await sb.from('user_roles')
                 .select('role')
                 .eq('user_id', data.user.id)
-                .eq('role', 'admin')
-                .maybeSingle();
+                .in('role', ['owner', 'admin', 'viewer']);
 
-            if (!roles) {
+            if (!roles?.length) {
                 await sb.auth.signOut();
-                throw new Error('Your account does not have admin access.');
+                throw new Error('Your account does not have console access.');
             }
 
             window.location.replace('./');
