@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join the League: Apply to Race | GTEC GT7 Endurance Racing League</title>
+    <meta name="description" content="Join GTEC, the team-based Gran Turismo 7 (GT7) endurance racing league. Apply to race in the GT7 endurance championship; inaugural season starts October 2026.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/apply/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Open Graph / Twitter card -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="Apply to GTEC">
+    <meta property="og:description" content="Apply for a seat in the GTEC endurance championship. Run by SparksTheory.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/apply/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="Apply to GTEC">
+    <meta name="twitter:description" content="Apply for a seat in the GTEC endurance championship.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --border: rgba(255,255,255,0.08);
+            --input-bg: #0d1320;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav */
+        .gtec-nav { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 2rem; background: rgba(5,6,8,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand .accent { color: var(--gold); }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .apply:hover { transform: scale(1.04); box-shadow: 0 4px 18px rgba(255,209,102,0.5); }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; transition: color 0.2s, border-color 0.2s; }
+        .gtec-nav .back:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+        /* Hero */
+        .hero { max-width: 720px; margin: 0 auto; padding: 3.5rem 2rem 2rem; }
+        .hero-eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; letter-spacing: 0.45em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; text-indent: 0.45em; }
+        .hero-title { font-family: 'Anton', sans-serif; font-size: clamp(2.2rem, 6vw, 3.8rem); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 0.6rem; }
+        .hero-sub { color: var(--muted); font-size: 0.9rem; line-height: 1.6; max-width: 540px; }
+
+        /* Form container */
+        .form-wrap { max-width: 720px; margin: 0 auto; padding: 0 2rem 5rem; }
+
+        /* Type switcher */
+        .type-switch { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+        .type-btn { flex: 1; padding: 0.85rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-1); color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; text-align: center; }
+        .type-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(255,209,102,0.06); }
+        .type-btn:hover:not(.active) { border-color: rgba(255,255,255,0.18); color: var(--text); }
+
+        /* Form */
+        .form-section { margin-bottom: 1.75rem; }
+        .form-section-title { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 0.35em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .form-group.full { grid-column: 1 / -1; }
+        label { font-size: 0.78rem; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+        label .req { color: var(--gold); margin-left: 2px; }
+        input, select, textarea {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            padding: 0.65rem 0.85rem;
+            width: 100%;
+            transition: border-color 0.15s;
+            outline: none;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--gold); }
+        input::placeholder, textarea::placeholder { color: #3d4a5c; }
+        select option { background: #0d1320; }
+        textarea { resize: vertical; min-height: 100px; line-height: 1.55; }
+        .hint { font-size: 0.73rem; color: var(--muted); margin-top: 0.2rem; }
+        .hint--ok    { color: #4ade80; }
+        .hint--taken { color: #f87171; }
+
+        /* Team-only fields */
+        .team-only { display: none; }
+        body.type-team .team-only { display: flex; flex-direction: column; gap: 0.4rem; }
+        body.type-driver .driver-hint { display: block; }
+
+        /* Submit */
+        .form-footer { margin-top: 2rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .btn-submit {
+            padding: 0.9rem 2.5rem;
+            background: var(--gold);
+            color: var(--bg);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+        }
+        .btn-submit:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-submit:disabled { opacity: 0.4; cursor: default; transform: none; }
+        .form-note { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+
+        /* Error */
+        .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.84rem; color: #fca5a5; margin-bottom: 1rem; }
+        .window-notice {
+            background: rgba(255,209,102,0.06);
+            border: 1px solid rgba(255,209,102,0.25);
+            border-left: 3px solid var(--gold);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            color: var(--text);
+            font-size: 0.85rem;
+            line-height: 1.55;
+            margin-bottom: 1.5rem;
+        }
+        .window-notice strong { color: var(--gold); margin-right: 0.35rem; }
+
+        /* Thank you state */
+        .thankyou { text-align: center; padding: 5rem 2rem; }
+        .thankyou-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .thankyou h2 { font-family: 'Anton', sans-serif; font-size: 2rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.75rem; }
+        .thankyou p { color: var(--muted); font-size: 0.9rem; line-height: 1.65; max-width: 440px; margin: 0 auto 1rem; }
+        .thankyou a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+
+        @media (max-width: 580px) {
+            .gtec-nav { padding: 1rem; }
+            .hero { padding: 2rem 1rem 1.5rem; }
+            .form-wrap { padding: 0 1rem 3rem; }
+            .form-grid { grid-template-columns: 1fr; }
+            .form-group.full { grid-column: 1; }
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div class="hero">
+    <div class="hero-eyebrow">Join the Grid</div>
+    <h1 class="hero-title">Apply to Race</h1>
+    <p class="hero-sub">Register your interest for the GTEC championship. Applications are reviewed by our admin team. Accepted drivers will be contacted directly via email with a link to claim their driver profile. Make sure you join the SparksTheory Discord to stay up to date with all championship news.</p>
+</div>
+
+<div class="form-wrap">
+    <div id="form-area">
+        <!-- Type switch -->
+        <div class="type-switch">
+            <button class="type-btn active" id="btn-driver" onclick="setType('driver')">🏁 Driver Application</button>
+            <button class="type-btn" id="btn-team" onclick="setType('team')">🏎 Team Application</button>
+        </div>
+        <div id="window-notice" class="window-notice">
+            <strong>What happens next.</strong>
+            <span id="window-notice-body">Applications open. We'll review and be in touch.</span>
+        </div>
+
+        <div id="error-box" class="error-msg" style="display:none"></div>
+
+        <form id="apply-form" onsubmit="submitForm(event)">
+            <input type="hidden" name="type" id="field-type" value="driver">
+
+            <!-- Identity -->
+            <div class="form-section">
+                <div class="form-section-title">Identity</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="field-name">Display Name <span class="req">*</span></label>
+                        <input type="text" id="field-name" name="name" placeholder="Your racing name" required autocomplete="nickname">
+                    </div>
+                    <div class="form-group">
+                        <label for="field-email">Email <span class="req">*</span></label>
+                        <input type="email" id="field-email" name="email" placeholder="you@example.com" required autocomplete="email">
+                        <div class="hint">We'll send your acceptance and team comms here</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="field-psn">PSN ID <span class="req">*</span></label>
+                        <input type="text" id="field-psn" name="psn_id" placeholder="YourPSNHandle" required>
+                        <div class="hint">Your PlayStation Network username</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="field-discord">Discord Username <span class="req">*</span></label>
+                        <input type="text" id="field-discord" name="discord_username" placeholder="yourhandle" required>
+                        <div class="hint">Make sure you've joined the <a href="https://discord.gg/rMRNYNXnZx" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none">SparksTheory Discord</a>. Championship news and updates are posted there. Your profile claim link will arrive via email.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="field-nationality">Nationality</label>
+                        <select id="field-nationality" name="nationality"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="field-career-num">Preferred Career Number</label>
+                        <input type="number" id="field-career-num" name="preferred_career_number" placeholder="e.g. 7" min="1" max="999" oninput="checkCareerNumber(this)">
+                        <div class="hint" id="career-num-hint">Optional. We'll honour it if it's still available.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="field-timezone">Timezone <span class="req">*</span></label>
+                        <select id="field-timezone" name="timezone" required>
+                            <option value="">Select timezone…</option>
+                            <option>UTC-12:00 (Baker Island)</option>
+                            <option>UTC-11:00 (American Samoa, Niue)</option>
+                            <option>UTC-10:00 (Hawaii)</option>
+                            <option>UTC-9:30 (Marquesas Islands)</option>
+                            <option>UTC-9:00 (Alaska)</option>
+                            <option>UTC-8:00 (Pacific US / Canada)</option>
+                            <option>UTC-7:00 (Mountain US / Canada)</option>
+                            <option>UTC-6:00 (Central US / Canada)</option>
+                            <option>UTC-5:00 (Eastern US / Canada)</option>
+                            <option>UTC-4:00 (Atlantic Canada, Venezuela, Bolivia)</option>
+                            <option>UTC-3:30 (Newfoundland)</option>
+                            <option>UTC-3:00 (Brazil, Argentina, Uruguay)</option>
+                            <option>UTC-2:00 (South Georgia)</option>
+                            <option>UTC-1:00 (Azores, Cape Verde)</option>
+                            <option>UTC+0 (UK / Ireland / Portugal / West Africa)</option>
+                            <option>UTC+1 (Central Europe, West / Central Africa)</option>
+                            <option>UTC+2 (Eastern Europe, South Africa, Middle East)</option>
+                            <option>UTC+3 (Moscow, East Africa, Gulf)</option>
+                            <option>UTC+3:30 (Iran)</option>
+                            <option>UTC+4 (UAE, Oman, Armenia, Georgia)</option>
+                            <option>UTC+4:30 (Afghanistan)</option>
+                            <option>UTC+5 (Pakistan, Uzbekistan, Maldives)</option>
+                            <option>UTC+5:30 (India, Sri Lanka)</option>
+                            <option>UTC+5:45 (Nepal)</option>
+                            <option>UTC+6 (Bangladesh, Kazakhstan)</option>
+                            <option>UTC+6:30 (Myanmar, Cocos Islands)</option>
+                            <option>UTC+7 (Thailand, Vietnam, Indonesia West)</option>
+                            <option>UTC+8 (China, Singapore, Philippines, Malaysia, Australia West)</option>
+                            <option>UTC+8:45 (Australia: Eucla)</option>
+                            <option>UTC+9 (Japan, Korea)</option>
+                            <option>UTC+9:30 (Australia: Central)</option>
+                            <option>UTC+10 (Australia: Eastern, Papua New Guinea)</option>
+                            <option>UTC+10:30 (Lord Howe Island)</option>
+                            <option>UTC+11 (Solomon Islands, Vanuatu)</option>
+                            <option>UTC+12 (New Zealand, Fiji, Kamchatka)</option>
+                            <option>UTC+12:45 (Chatham Islands)</option>
+                            <option>UTC+13 (Tonga, Samoa)</option>
+                            <option>UTC+14 (Line Islands)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="field-dr">GT7 Driver Rating (DR)</label>
+                        <select id="field-dr" name="gt7_dr_rating">
+                            <option value="">Select…</option>
+                            <option>E</option>
+                            <option>D</option>
+                            <option>C</option>
+                            <option>B</option>
+                            <option>A</option>
+                            <option>A+</option>
+                            <option>S</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="field-sr">GT7 Sportsmanship Rating (SR)</label>
+                        <select id="field-sr" name="gt7_sr_rating">
+                            <option value="">Select…</option>
+                            <option>E</option>
+                            <option>D</option>
+                            <option>C</option>
+                            <option>B</option>
+                            <option>A</option>
+                            <option>S</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Championship preferences -->
+            <div class="form-section">
+                <div class="form-section-title">Championship Preferences</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="field-mfr">Preferred Manufacturer <span class="req">*</span></label>
+                        <select id="field-mfr" name="preferred_manufacturer_id" required>
+                            <option value="">Select…</option>
+                        </select>
+                    </div>
+                    <!-- Team-only: team name + teammate info -->
+                    <div class="form-group team-only" style="grid-column:1/-1;background:rgba(255,209,102,0.06);border:1px solid rgba(255,209,102,0.2);border-radius:8px;padding:0.85rem 1rem">
+                        <p style="margin:0;font-size:0.83rem;color:#94a3b8;line-height:1.6"><strong style="color:#ffd166;display:block;margin-bottom:0.3rem">One application per team.</strong>Only one team member needs to submit a Team application: you. Your teammate should apply separately using the <strong style="color:var(--text)">Driver Application</strong> tab and our admin team will link them to your team after acceptance.</p>
+                    </div>
+                    <div class="form-group team-only">
+                        <label for="field-team-name">Team Name <span class="req">*</span></label>
+                        <input type="text" id="field-team-name" name="team_name" placeholder="Your team name">
+                    </div>
+                    <div class="form-group team-only">
+                        <label for="field-teammate-name">Teammate's Display Name</label>
+                        <input type="text" id="field-teammate-name" name="teammate_name" placeholder="Their racing name">
+                        <div class="hint">So our admin team knows who to expect</div>
+                    </div>
+                    <div class="form-group team-only">
+                        <label for="field-teammate-psn">Teammate's PSN ID</label>
+                        <input type="text" id="field-teammate-psn" name="teammate_psn" placeholder="TheirPSNHandle">
+                    </div>
+                    <div class="form-group full">
+                        <label for="field-exp">Racing Experience</label>
+                        <textarea id="field-exp" name="experience" placeholder="Brief GT7 racing background: championships entered, leagues, notable results…"></textarea>
+                    </div>
+                    <div class="form-group full">
+                        <label for="field-msg">Message to Admins</label>
+                        <textarea id="field-msg" name="message" placeholder="Anything else you'd like us to know…"></textarea>
+                    </div>
+                    <div class="form-group full">
+                        <label style="display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer;font-weight:normal">
+                            <input type="checkbox" name="willing_host" value="true" style="margin-top:0.25rem;accent-color:#ffd166;width:16px;height:16px;flex-shrink:0">
+                            <span style="font-size:0.85rem;color:#94a3b8;line-height:1.55">I'm happy to host a lobby if selected as split host
+                                <span style="display:block;margin-top:0.3rem;font-size:0.78rem;color:#64748b">Lobby hosts must have a stable, wired internet connection to ensure a clean experience for all drivers in their split.</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section" style="margin-bottom:0">
+                <div class="form-grid">
+                    <div class="form-group full">
+                        <label style="display:flex;align-items:flex-start;gap:0.75rem;cursor:pointer;font-weight:normal">
+                            <input type="checkbox" id="field-agree" name="agree_regulations" required style="margin-top:0.25rem;accent-color:#ffd166;width:16px;height:16px;flex-shrink:0">
+                            <span style="font-size:0.85rem;color:#94a3b8;line-height:1.55">I have read and agree to the <a href="/endurance/rules/" target="_blank" style="color:var(--gold);text-decoration:none">GTEC Sporting Regulations</a>. I understand that repeated no-shows or unsporting behaviour may result in penalties or removal from the championship. <span style="color:#f87171">*</span></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-footer">
+                <button type="submit" class="btn-submit" id="btn-submit">Submit Application</button>
+                <p class="form-note">We'll review your application and be in touch via your email. No spam, ever.</p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script src="../assets/countries.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data.session) { if (portal) portal.style.display = ''; }
+    else              { if (signin) signin.style.display = ''; }
+});
+
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Country dropdown
+document.getElementById('field-nationality').innerHTML = window.gtecCountryOptions();
+
+// Always show a "what happens next" line, but tailor the copy to the
+// championship state. Three independent queries: each catches its own
+// errors, so a failure in one doesn't kill the others, and the page
+// shows correct copy even if migration 67 hasn't been applied yet.
+(async () => {
+    const body = document.getElementById('window-notice-body');
+    if (!body) return;
+
+    // Active season (if any).
+    let season = null;
+    try {
+        const r = await sb.from('seasons')
+            .select('id, name')
+            .eq('is_active', true)
+            .maybeSingle();
+        season = r?.data || null;
+    } catch (e) { /* leave null */ }
+
+    // Has the active season started racing? Try the RPC first; if
+    // it's not available (migration 67 not applied), fall back to a
+    // direct existence check that anyone can run.
+    let racingStarted = false;
+    if (season) {
+        try {
+            const r = await sb.rpc('is_team_window_open');
+            if (r?.data === false) racingStarted = true;
+        } catch (e) { /* RPC not yet deployed, fall back */ }
+        if (!racingStarted) {
+            try {
+                const r = await sb.from('results')
+                    .select('id, events!inner(season_id)', { head: true, count: 'exact' })
+                    .eq('events.season_id', season.id)
+                    .limit(1);
+                if ((r?.count ?? 0) > 0) racingStarted = true;
+            } catch (e) { /* leave false */ }
+        }
+    }
+
+    if (season && racingStarted) {
+        body.innerHTML = `The <strong>${esc(season.name || 'current season')}</strong> is already underway. You're welcome to apply now (as a driver or as a team). You'll race from the next available round and won't carry prior-round points for this season. Plenty of season still to come.`;
+    } else if (season) {
+        body.innerHTML = `The <strong>${esc(season.name || 'current season')}</strong> is on the way. You'll be on the grid from the first round.`;
+    } else {
+        body.innerHTML = `Applications are open. You'll be in from the start of the next season.`;
+    }
+})();
+
+// Load manufacturers for dropdown
+(async () => {
+    const { data: mfrs } = await sb.from('manufacturers').select('id, name, car_name').order('name');
+    const sel = document.getElementById('field-mfr');
+    (mfrs || []).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name + (m.car_name ? ' · ' + m.car_name : '');
+        sel.appendChild(opt);
+    });
+})();
+
+// Load taken career numbers for inline validation
+const _takenNumbers = new Map(); // number -> driver display_name
+(async () => {
+    const { data: drivers } = await sb.from('drivers')
+        .select('display_name, career_number')
+        .not('career_number', 'is', null);
+    (drivers || []).forEach(d => _takenNumbers.set(d.career_number, d.display_name));
+})();
+
+function checkCareerNumber(input) {
+    const hint = document.getElementById('career-num-hint');
+    if (!hint) return;
+    const val = parseInt(input.value, 10);
+    if (!val || val < 1 || val > 999) {
+        hint.textContent = 'Optional. We\'ll honour it if it\'s still available.';
+        hint.className = 'hint';
+        return;
+    }
+    const owner = _takenNumbers.get(val);
+    if (owner) {
+        hint.textContent = `#${val} is already taken by ${owner}. Please choose a different number.`;
+        hint.className = 'hint hint--taken';
+    } else {
+        hint.textContent = `#${val} looks available.`;
+        hint.className = 'hint hint--ok';
+    }
+}
+
+function setType(type) {
+    document.getElementById('field-type').value = type;
+    document.body.className = `type-${type}`;
+    document.getElementById('btn-driver').classList.toggle('active', type === 'driver');
+    document.getElementById('btn-team').classList.toggle('active', type === 'team');
+    const tn = document.getElementById('field-team-name');
+    if (tn) tn.required = type === 'team';
+}
+
+async function submitForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-submit');
+    const errBox = document.getElementById('error-box');
+    errBox.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    const f = new FormData(document.getElementById('apply-form'));
+    const payload = {
+        type:                      f.get('type') || 'driver',
+        name:                      f.get('name'),
+        email:                     f.get('email') || null,
+        psn_id:                    f.get('psn_id') || null,
+        discord_username:          f.get('discord_username') || null,
+        nationality:               f.get('nationality') || null,
+        preferred_career_number:   f.get('preferred_career_number') ? parseInt(f.get('preferred_career_number'), 10) : null,
+        timezone:                  f.get('timezone') || null,
+        gt7_dr_rating:             f.get('gt7_dr_rating') || null,
+        gt7_sr_rating:             f.get('gt7_sr_rating') || null,
+        preferred_manufacturer_id: f.get('preferred_manufacturer_id') || null,
+        team_name:                 f.get('team_name') || null,
+        experience:                f.get('experience') || null,
+        message:                   f.get('message') || null,
+        willing_host:              f.get('willing_host') === 'true',
+        teammate_name:             f.get('teammate_name') || null,
+        teammate_psn:              f.get('teammate_psn')  || null,
+    };
+
+    const { error } = await sb.from('applications').insert(payload);
+
+    if (error) {
+        errBox.textContent = error.message;
+        errBox.style.display = '';
+        btn.disabled = false;
+        btn.textContent = 'Submit Application';
+        return;
+    }
+
+    // Thank you screen
+    document.getElementById('form-area').innerHTML = `
+    <div class="thankyou">
+        <div class="thankyou-icon">🏁</div>
+        <h2>Application Received</h2>
+        <p>Thanks, <strong style="color:var(--text)">${esc(payload.name)}</strong>! Your application has been submitted. Our admin team will review it and reach out via email.</p>
+        <p style="font-size:0.82rem;color:var(--muted);font-style:italic">We'll only ever email you about your GTEC application or championship updates. No spam, no third-party sharing, no mailing lists.</p>
+        <p>In the meantime, explore the <a href="/endurance/">GTEC championship hub</a> or check the <a href="/endurance/rules/">sporting regulations</a>.</p>
+    </div>`;
+}
+</script>
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>

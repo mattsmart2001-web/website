@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GTEC | OBS Standings Ticker</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg-2: #11161f;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --gold: #ffd166;
+        --gold-deep: #c79a3a;
+        --silver: #d7dee6;
+        --bronze: #d99a5b;
+        --border: rgba(255, 255, 255, 0.1);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        font-family: 'Inter', sans-serif;
+        overflow: hidden;
+        width: 100%;
+        height: 100vh;
+    }
+
+    #bar {
+        display: none;
+        align-items: stretch;
+        height: 44px;
+        width: 100%;
+        background: rgba(8, 11, 16, 0.88);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.35), 0 4px 20px rgba(0,0,0,0.35);
+        overflow: hidden;
+        position: relative;
+    }
+    #bar.ready { display: flex; }
+
+    .label {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0 1.25rem;
+        background: rgba(19, 25, 34, 0.96);
+        border-bottom: 2px solid var(--gold);
+        color: var(--text);
+        position: relative;
+        z-index: 2;
+    }
+    .label .l-logo { height: 20px; width: auto; display: block; margin-bottom: 3px; }
+    .label .l2 { font-family: 'Orbitron', sans-serif; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.16em; color: var(--gold); }
+    .label::after {
+        content: '';
+        position: absolute; top: 0; right: -14px; bottom: 0; width: 14px;
+        background: inherit;
+        clip-path: polygon(0 0, 100% 50%, 0 100%);
+    }
+
+    .track-wrap { flex: 1; overflow: hidden; position: relative; }
+    .track {
+        display: flex;
+        width: max-content;
+        align-items: center;
+        height: 100%;
+        white-space: nowrap;
+        will-change: transform;
+        animation: scroll linear infinite;
+    }
+    @keyframes scroll {
+        from { transform: translateX(0); }
+        to   { transform: translateX(-50%); }
+    }
+
+    .entry { display: inline-flex; align-items: center; gap: 0.55rem; padding: 0 1.4rem; flex-shrink: 0; }
+    .entry .pos { font-family: 'Orbitron', sans-serif; font-size: 0.95rem; font-weight: 800; color: var(--muted); min-width: 1.6em; text-align: right; }
+    .entry.p1 .pos { color: var(--gold); }
+    .entry.p2 .pos { color: var(--silver); }
+    .entry.p3 .pos { color: var(--bronze); }
+    .entry .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mfr-color, var(--muted)); flex-shrink: 0; }
+    .entry .name { font-size: 0.92rem; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.02em; }
+    .entry .pts { font-family: 'Orbitron', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--gold); }
+    .entry .pts-label { font-size: 0.62rem; color: var(--muted); margin-left: 0.15em; }
+    .entry .sep { color: var(--border); font-size: 0.9rem; }
+
+    /* Sponsor bookend — a fixed "Powered by" block on the right end of the
+       ticker, mirroring the gold GTEC label on the left. Dark panel with a
+       gold eyebrow so the GTEC brand stays the hero. */
+    .sponsor-end {
+        display: none;
+        flex-shrink: 0;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0 1.1rem 0 1.35rem;
+        background: rgba(19, 25, 34, 0.96);
+        position: relative;
+        z-index: 2;
+    }
+    .sponsor-end.ready { display: flex; }
+    .sponsor-end::before {
+        content: '';
+        position: absolute; top: 0; left: -14px; bottom: 0; width: 14px;
+        background: inherit;
+        clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    }
+    .se-eyebrow {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 0.5rem;
+        font-weight: 800;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--gold);
+        white-space: nowrap;
+    }
+    .se-logo { display: flex; align-items: center; height: 22px; transition: opacity 0.25s ease; }
+    .se-logo img { height: 100%; width: auto; max-width: 120px; object-fit: contain; filter: brightness(1.08); }
+
+    #err { display: none; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.85rem; padding: 1rem; }
+</style>
+</head>
+<body>
+
+<div id="bar">
+    <div class="label"><img class="l-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"><span class="l2">STANDINGS</span></div>
+    <div class="track-wrap"><div class="track" id="track"></div></div>
+    <div class="sponsor-end" id="sponsor-end">
+        <span class="se-eyebrow" id="se-eyebrow">Powered by</span>
+        <div class="se-logo" id="se-logo"></div>
+    </div>
+</div>
+<div id="err">No standings to show yet.</div>
+
+<script src="/endurance/assets/gtec-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+
+const esc = s => { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+
+// Refresh periodically in case standings change mid-stream. Cheap query,
+// long interval — this isn't meant to be live-live, just not stale.
+const REFRESH_MS = 90000;
+// Seconds of scroll per entry — tune the overall speed here.
+const SECONDS_PER_ENTRY = 1.8;
+
+// Sponsor strip beneath the ticker. Edit this list to add/remove partners
+// (logos live at the site root). Add ?sponsors=off to the browser-source
+// URL to hide the strip for a ticker-only scene.
+const SPONSORS = [
+    { name: 'Sim-Lab', href: 'https://sim-lab.eu/?ref=SPARKSTHEORY', img: '/simlab.png' },
+];
+
+// Seconds each partner shows before rotating (only when there's >1).
+const SPONSOR_ROTATE_MS = 6000;
+
+function renderSponsors() {
+    const params = new URLSearchParams(location.search);
+    const end = document.getElementById('sponsor-end');
+    if (params.get('sponsors') === 'off' || !SPONSORS.length) { end.style.display = 'none'; return; }
+
+    const logo = document.getElementById('se-logo');
+    document.getElementById('se-eyebrow').textContent = SPONSORS.length > 1 ? 'Partners' : 'Powered by';
+    const show = i => {
+        const s = SPONSORS[i];
+        logo.innerHTML = `<img src="${esc(s.img)}" alt="${esc(s.name)}" title="${esc(s.name)}">`;
+    };
+    show(0);
+    end.classList.add('ready');
+
+    // Rotate through partners one at a time when there's more than one.
+    if (SPONSORS.length > 1) {
+        let i = 0;
+        setInterval(() => {
+            i = (i + 1) % SPONSORS.length;
+            logo.style.opacity = '0';
+            setTimeout(() => { show(i); logo.style.opacity = '1'; }, 250);
+        }, SPONSOR_ROTATE_MS);
+    }
+}
+renderSponsors();
+
+async function render() {
+    const { data: season } = await sb.from('seasons').select('id').eq('is_active', true).maybeSingle();
+    if (!season) { document.getElementById('err').style.display = 'block'; return; }
+
+    // Full roster from `drivers` (same source the public Drivers page uses —
+    // every registered driver, season-agnostic) merged with this season's
+    // standings. Anyone with no standings row yet (no races scored) shows
+    // at 0 PTS instead of being missing entirely.
+    const [{ data: drivers }, { data: standings }] = await Promise.all([
+        sb.from('drivers').select('id, display_name, manufacturers(brand_color)'),
+        sb.from('driver_standings').select('driver_id, points, wins, podiums').eq('season_id', season.id),
+    ]);
+    const standingByDriver = new Map((standings || []).map(s => [s.driver_id, s]));
+    const rows = (drivers || [])
+        .map(d => {
+            const st = standingByDriver.get(d.id);
+            return {
+                driver_name: d.display_name,
+                brand_color: d.manufacturers?.brand_color || null,
+                points:  st ? Number(st.points)  : 0,
+                wins:    st ? Number(st.wins)    : 0,
+                podiums: st ? Number(st.podiums) : 0,
+            };
+        })
+        .sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.podiums - a.podiums));
+
+    if (!rows.length) { document.getElementById('err').style.display = 'block'; return; }
+
+    const entryHTML = (r, i) => {
+        const pos = i + 1;
+        const posClass = pos === 1 ? ' p1' : pos === 2 ? ' p2' : pos === 3 ? ' p3' : '';
+        return `<span class="entry${posClass}" style="${r.brand_color ? `--mfr-color:${esc(r.brand_color)}` : ''}">
+            <span class="pos">P${pos}</span>
+            <span class="dot"></span>
+            <span class="name">${esc(r.driver_name)}</span>
+            <span class="pts">${Number(r.points)}</span><span class="pts-label">PTS</span>
+        </span><span class="sep">/</span>`;
+    };
+
+    const itemsHTML = rows.map(entryHTML).join('');
+    // Duplicate the list back-to-back so translateX(-50%) loops seamlessly.
+    const track = document.getElementById('track');
+    track.innerHTML = itemsHTML + itemsHTML;
+    track.style.animationDuration = `${rows.length * SECONDS_PER_ENTRY}s`;
+
+    document.getElementById('bar').classList.add('ready');
+    document.getElementById('err').style.display = 'none';
+}
+
+render();
+setInterval(render, REFRESH_MS);
+</script>
+</body>
+</html>

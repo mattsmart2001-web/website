@@ -1,0 +1,295 @@
+name: Build GT7 Live Connector
+
+# Builds the Windows GT7-Live-Connector.exe with PyInstaller, mirroring
+# build_connector.bat.
+#
+#  - Every push that touches the connector uploads the fresh .exe as a
+#    downloadable build artifact (so it is always test-built).
+#  - A manual run ("Run workflow" on the Actions tab, with a version like
+#    v2.1) also publishes it to a GitHub Release, so the site's
+#    /releases/latest/download/GT7-Live-Connector.exe link serves the new build.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to publish (e.g. v2.7). Leave blank to build without releasing."
+        required: false
+        default: "v2.7"
+  push:
+    branches:
+      - claude/add-signup-page-pBzI2
+      - claude/hello-l02wij
+    paths:
+      - "gt7_connector.py"
+      - "build_connector.bat"
+      - "requirements.txt"
+      - ".github/workflows/build-connector.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build one-folder (zip)
+        # --onedir zipped up is flagged by Defender far less than a onefile .exe.
+        # --noupx: UPX-packed binaries trip Defender's heuristics; skip it.
+        # --version-file: embeds real version metadata (further reduces false positives).
+        run: >
+          pyinstaller --onedir --noconsole --noupx --distpath dist_dir
+          --name "GT7-Live-Connector"
+          --icon NONE
+          --version-file connector_version.txt
+          --collect-all Crypto
+          --hidden-import=Crypto.Cipher.Salsa20
+          --hidden-import=Crypto.Cipher._Salsa20
+          gt7_connector.py
+
+      - name: Add README and zip the folder
+        shell: pwsh
+        run: |
+          $readme = @"
+          GT7 LIVE CONNECTOR - READ THIS FIRST
+
+          1) Right-click this zip in Windows and choose "Extract All".
+          2) Open the extracted GT7-Live-Connector folder.
+          3) Run GT7-Live-Connector.exe from INSIDE that folder.
+
+          Do NOT run the .exe straight from inside the zip - Windows does not
+          unpack the support files, and you will get "Failed to load Python DLL".
+          Keep GT7-Live-Connector.exe together with the _internal folder; if you
+          move the .exe on its own it will not start.
+
+          If Windows flags it as a virus, that is a false positive on the packaged
+          Python app. Allow it in Windows Security, then run it.
+
+          RUNNING IT ALONGSIDE A DASHBOARD
+          Only one program on a PC can listen on port 33740, which is where GT7
+          sends. To run both, one of them forwards a copy to the other:
+            - if your dashboard can forward, make a file called gt7-udp-port.txt
+              next to the .exe containing the port it forwards to, e.g. 33742
+            - if it cannot, make a file called gt7-forward.txt next to the .exe
+              containing where to send a copy, e.g. 127.0.0.1:33742
+          Either file can also be given as --port 33742 or --forward 127.0.0.1:33742,
+          or set from the settings page: right-click the tray icon and choose
+          "Settings", or open http://127.0.0.1:8767/settings in a browser.
+          "@
+          Set-Content -Path dist_dir/GT7-Live-Connector/README.txt -Value $readme -Encoding utf8
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path dist_dir/GT7-Live-Connector -DestinationPath dist/GT7-Live-Connector.zip -Force
+
+      - name: Build single-file (exe fallback)
+        # A onefile .exe that "just runs" (no extraction). Handy for anyone who
+        # hits the DLL error from not extracting the zip. May draw an AV prompt.
+        run: >
+          pyinstaller --onefile --noconsole --noupx --distpath dist
+          --name "GT7-Live-Connector"
+          --icon NONE
+          --version-file connector_version.txt
+          --collect-all Crypto
+          --hidden-import=Crypto.Cipher.Salsa20
+          --hidden-import=Crypto.Cipher._Salsa20
+          gt7_connector.py
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: GT7-Live-Connector-windows
+          path: |
+            dist/GT7-Live-Connector.zip
+            dist/GT7-Live-Connector.exe
+          if-no-files-found: error
+
+  # Apple Silicon only. GitHub is retiring the Intel (macos-13) hosted runners,
+  # so those jobs get starved in the queue and cancelled, blocking the release.
+  # Every Mac sold since late 2020 is Apple Silicon, so this covers current Macs.
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller pyobjc-framework-Cocoa
+
+      - name: Build macOS app
+        # --windowed builds a .app bundle (needed for the menu-bar tray icon).
+        # --version-file / --icon NONE are Windows-only, so omitted here.
+        run: >
+          pyinstaller --windowed --noupx
+          --name "GT7-Live-Connector"
+          --collect-all Crypto
+          --hidden-import=Crypto.Cipher.Salsa20
+          --hidden-import=Crypto.Cipher._Salsa20
+          gt7_connector.py
+
+      - name: Zip the .app
+        # ditto preserves the bundle structure and the executable bit.
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            "dist/GT7-Live-Connector.app" \
+            "dist/GT7-Live-Connector-macOS-AppleSilicon.zip"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GT7-Live-Connector-macos-AppleSilicon
+          path: dist/GT7-Live-Connector-macOS-AppleSilicon.zip
+          if-no-files-found: error
+
+  # Linux is console only on purpose. GNOME dropped legacy tray icons years ago,
+  # so a tray build would work on some desktops and quietly fail on others, and
+  # the connector already falls back to printing to the terminal when pystray is
+  # not importable. Leaving pystray and Pillow out also strips almost every
+  # native dependency, which is what keeps the binary portable across distros.
+  linux:
+    # Built on 22.04, not latest. A PyInstaller binary needs a glibc at least as
+    # old as the one it was built against, so building on 24.04 would lock out
+    # everyone still on Ubuntu 22.04 and Debian 11.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        # deliberately NOT -r requirements.txt: that would pull in pystray and
+        # Pillow and put a tray on a platform where it cannot be relied on
+        run: |
+          python -m pip install --upgrade pip
+          pip install websockets cryptography pycryptodome pyinstaller
+
+      - name: Build single-file binary
+        run: >
+          pyinstaller --onefile --noupx --distpath dist
+          --name "GT7-Live-Connector"
+          --collect-all Crypto
+          --hidden-import=Crypto.Cipher.Salsa20
+          --hidden-import=Crypto.Cipher._Salsa20
+          --exclude-module pystray
+          --exclude-module PIL
+          gt7_connector.py
+
+      - name: Smoke test it
+        # catches a build that produces a binary which cannot actually start
+        run: |
+          chmod +x dist/GT7-Live-Connector
+          ./dist/GT7-Live-Connector & sleep 10
+          python - <<'EOF'
+          import socket, sys
+          s = socket.socket(); s.settimeout(5)
+          try:
+              s.connect(("127.0.0.1", 8765))
+              print("connector is serving ws://localhost:8765")
+          except Exception as e:
+              print("FAILED to reach the websocket:", e); sys.exit(1)
+          EOF
+          kill %1 || true
+
+      - name: Add README and tar it up
+        # a tar.gz keeps the executable bit, which a bare binary download loses
+        run: |
+          mkdir -p pkg/GT7-Live-Connector
+          cp dist/GT7-Live-Connector pkg/GT7-Live-Connector/
+          cat > pkg/GT7-Live-Connector/README.txt <<'EOF'
+          GT7 LIVE CONNECTOR, LINUX
+
+          1) tar -xzf GT7-Live-Connector-Linux-x86_64.tar.gz
+          2) cd GT7-Live-Connector
+          3) chmod +x GT7-Live-Connector
+          4) ./GT7-Live-Connector
+
+          It runs in the terminal and prints "running on ws://localhost:8765".
+          Leave it open, then open the Lap Coach or Telemetry page in a browser
+          on the same machine. Ctrl+C stops it.
+
+          There is no tray icon on Linux. That is deliberate: too many desktops
+          no longer show one.
+
+          The machine running this only has to be on the same network as the
+          PS5, not connected to it. If your network blocks broadcast, put the
+          console's IP in a file called gt7-console-ip.txt next to the binary,
+          or pass it as an argument.
+
+          RUNNING IT ALONGSIDE A DASHBOARD
+          Only one program can listen on port 33740, which is where GT7 sends.
+          To run both, one forwards a copy to the other:
+            --port 33742                 listen to a copy your dashboard forwards
+            --forward 127.0.0.1:33742    send a copy on to your dashboard
+          Or put the same values in gt7-udp-port.txt / gt7-forward.txt next to
+          the binary.
+
+          SETTINGS PAGE
+          There is no tray icon on Linux, so the settings live in a page the
+          connector serves itself. With it running, open:
+
+              http://127.0.0.1:8767/settings
+
+          It shows whether telemetry is arriving and lets you change the ports
+          without restarting.
+          EOF
+          tar -czf dist/GT7-Live-Connector-Linux-x86_64.tar.gz -C pkg GT7-Live-Connector
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GT7-Live-Connector-linux
+          path: dist/GT7-Live-Connector-Linux-x86_64.tar.gz
+          if-no-files-found: error
+
+  # Single publisher: waits for all OS builds, gathers their artifacts, and
+  # uploads them to the release in one go. Publishing from one job (instead of
+  # each OS job in parallel) avoids the asset-upload race that 404s.
+  # Publish from ONE branch only. Both deploy branches get the same commit, so
+  # publishing from each would fire two simultaneous `gh release upload` runs
+  # against the same tag and race, which can drop assets. The other branch still
+  # builds (and tests) its artifacts above; it just skips the publish.
+  release:
+    needs: [windows, macos, linux]
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/claude/add-signup-page-pBzI2')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: GT7-Live-Connector-*
+          merge-multiple: true
+          path: assets
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_VERSION: "v2.7"
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          else
+            TAG="$DEFAULT_VERSION"
+          fi
+          NOTES="Automated build of the GT7 Live Connector for Windows, macOS and Linux. Windows: the .zip (extract the whole folder, then run GT7-Live-Connector.exe inside) or the single-file .exe. macOS (Apple Silicon): the .zip (unzip, then right-click the app and Open the first time). Linux (x86_64): the .tar.gz (extract, chmod +x, run it in a terminal; console only, no tray). Includes the telemetry decryption fix, freeze fix, and self-diagnosing status. New in this build: the connector reports its version to the Lap Coach page, so anyone running an older one is told, and nobody else sees a notice. Also from v2.6: a settings page, served by the connector itself at http://127.0.0.1:8767/settings and reachable from the tray icon, showing whether telemetry is arriving and letting you change ports without restarting. On Linux, where there is no tray, it is the first interface the connector has had. Also advanced UDP options, so the connector can share the telemetry stream with a dashboard. Only one program can hold port 33740, so either can go first: put a port in gt7-udp-port.txt (or pass --port) to listen to a copy another app forwards, or put an address in gt7-forward.txt (or pass --forward) to have the connector send a copy on. Carried over from v2.5: if the compiled Salsa20 module will not load (antivirus quarantine, or Smart App Control blocking an unsigned DLL) the connector falls back to a built-in pure-Python decoder instead of refusing to start."
+          echo "Publishing $TAG with:"; ls -1 assets
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "GT7 Live Connector $TAG" --notes "$NOTES" --latest
+          gh release upload "$TAG" assets/* --repo "$GITHUB_REPOSITORY" --clobber
