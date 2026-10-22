@@ -10501,11 +10501,47 @@ async function renderHealthCheck() {
                         <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${esc(d.psn_id || '—')}${lastSeenLine(d.driver_id)}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                        <span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)">${d.no_shows} missed / ${d.events_entered}</span>
+                        ${d.excused ? `<span class="badge badge-muted" title="Rounds they flagged in advance — these do not count toward 6.4">+${d.excused} declared</span>` : ''}
+                        <span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)" title="Undeclared no-shows — the figure 6.4 counts">${d.no_shows} missed / ${d.events_entered}</span>
                         <button class="btn-icon" onclick="openDirectMessageModal('${d.driver_id}','${esc(d.display_name)}')">Message</button>
                     </div>
                 </div>
             </div>`).join('');
+
+    // No-shows by round. The watch list above answers "who keeps missing
+    // races"; this answers "how many holes were in the grid, and is it
+    // getting worse" — the figures to put in front of the drivers.
+    const { data: roundNoShows } = await sb.rpc('event_no_show_summary',
+        activeSeason ? { p_season_id: activeSeason.id } : {});
+    const nsRounds      = roundNoShows || [];
+    const nsSeasonTotal = nsRounds.reduce((n, r) => n + r.unexcused, 0);
+    const nsDeclared    = nsRounds.reduce((n, r) => n + r.declared, 0);
+    const roundNoShowRows = !nsRounds.length
+        ? `<div class="empty-state" style="padding:2rem 1rem">No completed rounds yet.</div>`
+        : nsRounds.map(r => {
+            // Bar is scaled to the entry list, so a round reads as the share
+            // of the grid that went missing rather than a raw count.
+            const unexPct = r.entered ? (r.unexcused / r.entered) * 100 : 0;
+            const exPct   = r.entered ? (r.excused   / r.entered) * 100 : 0;
+            const pct     = Math.round(unexPct);
+            return `
+            <div class="hc-driver-card"${r.unexcused ? ' style="border-color:rgba(251,146,60,0.3)"' : ''}>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.45rem">
+                    <div style="min-width:0">
+                        <div style="font-weight:600">R${r.round} &mdash; ${esc(r.name)}</div>
+                        <div style="font-size:0.78rem;color:var(--muted)">${r.entered} entered &middot; ${r.started} started${r.declared ? ` &middot; ${r.declared} flagged in advance` : ''}</div>
+                    </div>
+                    <span class="badge" style="flex-shrink:0;${r.unexcused
+                        ? 'background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)'
+                        : 'background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3)'}">${r.unexcused} no-show${r.unexcused === 1 ? '' : 's'}</span>
+                </div>
+                <div style="height:6px;border-radius:3px;background:rgba(255,255,255,0.07);overflow:hidden;display:flex" title="${r.unexcused} undeclared, ${r.excused} declared, of ${r.entered} entered">
+                    <div style="width:${unexPct}%;background:#f87171"></div>
+                    <div style="width:${exPct}%;background:rgba(148,163,184,0.45)"></div>
+                </div>
+                <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem">${pct}% of the grid missing without notice${r.excused ? ` &middot; a further ${r.excused} had flagged it` : ''}</div>
+            </div>`;
+        }).join('');
 
     // Dead wood — only meaningful once at least one event has been completed
     const { data: completedEvents, count: completedCount } = await sb.from('events')
@@ -10667,7 +10703,11 @@ async function renderHealthCheck() {
         })),
         ...(noShows || []).map(d => ({
             category: 'No-Show Watch', name: d.display_name, team: d.team_name || 'No team', psn: d.psn_id || '',
-            detail: `${d.no_shows} missed / ${d.events_entered} entered`,
+            detail: `${d.no_shows} missed / ${d.events_entered} entered${d.excused ? `; ${d.excused} declared (not counted)` : ''}`,
+        })),
+        ...nsRounds.map(r => ({
+            category: 'No-Shows by Round', name: `R${r.round} ${r.name}`, team: '', psn: '',
+            detail: `${r.unexcused} undeclared, ${r.excused} declared, of ${r.entered} entered (${r.started} started)`,
         })),
         ...absentFlat.map(a => ({ category: 'Unable to Attend', name: a.name, team: a.team, psn: a.psn, detail: a.detail })),
         ...(noMfrDrivers || []).map(d => ({
@@ -10714,6 +10754,10 @@ async function renderHealthCheck() {
                     <span class="hc-stat-num">${noShowCount}</span>
                     <span class="hc-stat-label">No-Show Watch</span>
                 </div>
+                <div class="hc-stat ${nsSeasonTotal ? 'hc-stat--warn' : 'hc-stat--ok'}" title="${nsDeclared} further absences were flagged in advance">
+                    <span class="hc-stat-num">${nsSeasonTotal}</span>
+                    <span class="hc-stat-label">No-Shows (Season)</span>
+                </div>
                 <div class="hc-stat ${inactiveCount ? 'hc-stat--critical' : 'hc-stat--ok'}">
                     <span class="hc-stat-num">${inactiveCount}</span>
                     <span class="hc-stat-label">Never Raced</span>
@@ -10745,12 +10789,16 @@ async function renderHealthCheck() {
             </div>
 
             <div class="hc-grid-2">
-                ${hcSection('warn', 'No-Show Watch', 'Missed 2 or more of the last 5 completed races', noShowCount, noShowRows)}
-                ${hcSection('warn', 'Unable to Attend', 'Self-declared unavailability for upcoming events', absentTotalCount, absentPanelRows)}
+                ${hcSection('warn', 'No-Show Watch', 'Missed 2 or more of the last 5 races without flagging it (reg 6.4)', noShowCount, noShowRows)}
+                ${hcSection('warn', 'No-Shows by Round', 'Holes in the grid per completed round', nsSeasonTotal, roundNoShowRows)}
             </div>
 
             <div class="hc-grid-2">
+                ${hcSection('warn', 'Unable to Attend', 'Self-declared unavailability for upcoming events', absentTotalCount, absentPanelRows)}
                 ${hcSection('warn', 'No Manufacturer', 'Claimed drivers with no manufacturer assigned', noMfrCount, noMfrRows)}
+            </div>
+
+            <div class="hc-grid-2">
                 ${hcSection('critical', 'Never Raced', `On the roster but no race entries yet${neverExcused.length ? ` · ${neverExcused.length} excused (flagged an absence)` : ''}`, inactiveCount, inactiveRows)}
             </div>
 
