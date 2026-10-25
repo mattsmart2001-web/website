@@ -683,9 +683,9 @@ async function send(body, okText){
   }catch(e){ say('Could not save: ' + e, 'bad'); }
 }
 
-$('save').onclick  = () => send({ udpPort: $('udpPort').value, forward: $('forward').value, heartbeat: $('heartbeat').value }, 'Saved, and in use now.');
+$('save').onclick  = () => send({ udpPort: $('udpPort').value, forward: $('forward').value, heartbeat: $('heartbeat').value, gtecCode: $('gtecCode').value }, 'Saved, and in use now.');
 $('gtecSave').onclick  = () => send({ gtecCode: $('gtecCode').value }, 'Pairing code saved. The status below updates within a few seconds.');
-$('gtecClear').onclick = () => { $('gtecCode').value=''; send({ gtecCode: '' }, 'Unpaired. Nothing is sent to GTEC now.'); };
+$('gtecClear').onclick = () => { $('gtecCode').value=''; send({ gtecClear: true }, 'Unpaired. Nothing is sent to GTEC now.'); };
 $('reset').onclick = () => { $('udpPort').value=''; $('forward').value=''; $('heartbeat').value='auto';
                              send({ udpPort:'', forward:'', heartbeat:'auto' }, 'Back to normal: listening on the standard port.'); };
 $('saveIp').onclick = () => send({ consoleIp: $('consoleIp').value }, 'Address saved.');
@@ -1295,18 +1295,26 @@ def _apply_settings(d):
             _stats["ps5"] = ip
         notes.append("The console address is read when the connector starts, so restart it to use a new one.")
 
-    if "gtecCode" in d:
-        global GTEC_CODE
+    global GTEC_CODE
+    if d.get("gtecClear"):
+        # Unpairing is deliberate and nothing else can trigger it.
+        GTEC_CODE = ""
+        _write_setting(SETTINGS_FILES["gtecCode"], "")
+        _gtec["state"], _gtec["detail"] = "off", "No pairing code set."
+    elif "gtecCode" in d:
         code = str(d.get("gtecCode") or "").strip()
-        # Only sanity-check the shape. Whether it is a real code is the
-        # server's call, and it says so in the status line within seconds.
-        if code and len(code) < 20:
-            notes.append("That does not look like a GTEC pairing code, so it was left alone.")
-        else:
-            GTEC_CODE = code
-            _write_setting(SETTINGS_FILES["gtecCode"], code)
-            if not code:
-                _gtec["state"], _gtec["detail"] = "off", "No pairing code set."
+        # An empty box means "leave it alone", not "unpair me". Both Save
+        # buttons send this field, and the status call can fail just after
+        # startup, so an empty value must never destroy a working pairing.
+        if code:
+            # Only sanity-check the shape. Whether it is a real code is the
+            # server's call, and it says so in the status line in seconds.
+            if len(code) < 20:
+                notes.append("That does not look like a GTEC pairing code, so it was left alone.")
+            else:
+                GTEC_CODE = code
+                _write_setting(SETTINGS_FILES["gtecCode"], code)
+                _gtec["state"], _gtec["detail"] = "waiting", "Pairing code saved. Checking with GTEC."
 
     if "heartbeat" in d:
         v = d.get("heartbeat")
