@@ -38,11 +38,19 @@ website ships in `endurance/assets/gtec-config.js` — because the beacon is
 authorised by the driver's pairing code, not by the key.
 
 
+Open `gtec-reporter/` in Android Studio, which handles the SDK for you, or
+from a terminal with the Android SDK installed:
+
 ```bash
 cd gtec-reporter
-./gradlew test                      # verifies the decode, see below
-./gradlew assembleRelease
+./gradlew test              # verifies the decode, see below
+./gradlew assembleDebug     # installable immediately, for testing
+./gradlew assembleRelease   # unsigned; sign it as below before distributing
 ```
+
+The Gradle wrapper is included, so Gradle itself does not need installing.
+The Android SDK does: `platforms;android-34` and `build-tools;34.0.0`.
+Android Studio installs both on first open.
 
 Signing for a sideloaded APK, once:
 
@@ -63,9 +71,15 @@ values, so `./gradlew test` proves Salsa20 and every offset before anyone
 goes near a console. If the crypto or an offset is wrong it fails, rather
 than putting a car quietly at the wrong end of the circuit.
 
-The same source has been compiled and run on the JVM against that vector:
-all fifteen checks pass, including the two rejection cases and Salsa20
-round-tripping.
+That is not a claim on trust: `Gt7PacketTest` itself has been compiled and
+run on plain Kotlin/JVM, outside Android, and all four of its tests pass.
+The same source was also driven through fifteen field-by-field checks
+against the vector.
+
+Note a debug build is signed with Android's debug key. Useful for testing,
+but a device cannot update from a debug-signed APK to a release-signed one
+— Android refuses an update whose signature changed — so anything handed
+to drivers should be the release build, signed as below.
 
 Key, nonce construction and offsets are taken verbatim from the
 production connector (`gt7_connector.py`, `commentary-poc/gt7_packet.py`)
