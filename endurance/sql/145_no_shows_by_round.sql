@@ -93,6 +93,11 @@ GRANT EXECUTE ON FUNCTION public.event_no_show_summary(uuid) TO authenticated;
 
 
 -- ---- watch list now honours a declared absence, per 6.4 ----
+-- Dropped rather than replaced: this adds an `excused` column, and
+-- CREATE OR REPLACE cannot change a function's return type. Nothing
+-- depends on it but the console's own RPC call.
+DROP FUNCTION IF EXISTS driver_no_show_watch(int);
+
 CREATE OR REPLACE FUNCTION driver_no_show_watch(p_lookback int DEFAULT 5)
 RETURNS TABLE(
     driver_id      uuid,
