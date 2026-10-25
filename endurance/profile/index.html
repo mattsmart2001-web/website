@@ -481,6 +481,7 @@
         <a href="/endurance/media/">Media</a>
         <a href="/endurance/standings/">Standings</a>
         <a href="/endurance/results/">Results</a>
+        <a href="/endurance/live/">Live</a>
         <a href="/endurance/drivers/">Drivers</a>
         <a href="/endurance/teams/">Teams</a>
         <a href="/endurance/stats/">Stats</a>
@@ -928,10 +929,35 @@
     <!-- Live timing -->
     <div class="card" id="card-live-timing">
         <div class="card-title">Live Timing</div>
-        <p class="form-hint" style="margin-bottom:1.25rem">
+        <p class="form-hint" style="margin-bottom:1rem">
             Put your car on the live map during a race. Pair once and it works for every round after that, so this is a one-off.
-            You need the GTEC app on an Android phone, or the GT7 Live Connector on a PC or Mac.
+            You need one piece of software running on the same WiFi as your console, then the pairing code below.
         </p>
+
+        <!-- The downloads live here rather than being described, because a card
+             that tells someone they need software and then makes them go and
+             find it is doing half a job. All links point at the GitHub
+             "latest" alias, so they never go stale when a new build ships. -->
+        <div style="display:grid;gap:0.6rem;margin-bottom:1.5rem">
+            <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap">
+                <a class="btn-small" style="text-decoration:none;color:var(--gold);border-color:rgba(255,209,102,0.3)"
+                   href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.zip">PC &middot; Windows</a>
+                <a class="btn-small" style="text-decoration:none"
+                   href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector-macOS-AppleSilicon.zip">Mac</a>
+                <a class="btn-small" style="text-decoration:none"
+                   href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector-Linux-x86_64.tar.gz">Linux</a>
+                <span style="font-size:0.72rem;color:var(--muted)">GT7 Live Connector</span>
+            </div>
+            <div style="font-size:0.72rem;color:var(--muted);line-height:1.6">
+                Already running the connector for the Lap Coach or the telemetry dashboard? You have it already, nothing more to install.
+                Prefer a single file with nothing to extract? There is a
+                <a href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.exe" style="color:var(--gold)">single-file .exe</a>,
+                though some browsers and antivirus flag a bare .exe.
+            </div>
+            <div style="font-size:0.72rem;color:var(--muted);line-height:1.6;padding-top:0.3rem;border-top:1px solid var(--border);margin-top:0.3rem">
+                <strong style="color:var(--text)">On a phone?</strong> The Android app is coming. It does the same job from your pocket, so you will not need a computer at all. iPhone is not supported.
+            </div>
+        </div>
 
         <!-- Never paired -->
         <div id="lt-unpaired" style="display:none">

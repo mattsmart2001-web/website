@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Timing | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="Live timing for the GTEC Gran Turismo 7 endurance championship. Every split running at once, lap by lap, while the race is on.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/live/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Live Timing">
+    <meta property="og:description" content="Every GTEC split running at once, lap by lap, while the race is on.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/live/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Live Timing">
+    <meta name="twitter:description" content="Every GTEC split running at once, lap by lap.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --green: #22c55e;
+            --red: #ef4444;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav — shared with every other GTEC page */
+        .gtec-nav { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 2rem; background: rgba(5,6,8,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand-logo { height: 26px; width: auto; display: block; }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; }
+        .gtec-nav-toggle { display: none; background: none; border: none; color: var(--text); cursor: pointer; }
+        .gtec-nav-toggle svg { width: 24px; height: 24px; }
+        .nav-badge { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--red); margin-left: 0.3rem; vertical-align: top; }
+
+        .page-wrap { max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+        .eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.6rem; }
+        .title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: 0.04em; text-transform: uppercase; }
+        .subtitle { color: var(--muted); font-size: 0.88rem; margin-top: 0.5rem; }
+
+        /* The pulsing dot is the only moving thing on the page when nothing
+           is happening, which is what tells a viewer it is still connected. */
+        .live-pill { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.3rem 0.75rem; border-radius: 999px; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+        .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 1.6s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+        @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+        .splits { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.25rem; margin-top: 2rem; align-items: start; }
+
+        .split { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .split-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+        .split-name { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+        .split-meta { font-size: 0.7rem; color: var(--muted); }
+
+        /* Fixed layout so a long team name truncates instead of forcing the
+           table wider than its card, which silently clipped the Best column. */
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th:nth-child(1), td:nth-child(1) { width: 26px; }
+        th:nth-child(3), td:nth-child(3) { width: 38px; }
+        /* Sized in pixels, not ch: a Nordschleife lap reads 7:54.471, and ch
+           units under-measured it once cell padding was counted, which clipped
+           the Best column on the narrowest cards. */
+        th:nth-child(4), td:nth-child(4) { width: 66px; }
+        th:nth-child(5), td:nth-child(5) { width: 66px; }
+        th { font-family: 'Orbitron', sans-serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); }
+        td { padding: 0.5rem 0.6rem; font-size: 0.82rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        .num { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; font-size: 0.78rem; padding-left: 0.25rem; padding-right: 0.45rem; }
+        th:nth-child(n+3) { text-align: right; }
+        .pos { font-family: 'Anton', sans-serif; font-size: 0.95rem; color: var(--gold); width: 2.2ch; }
+        .car { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.75rem; }
+        .dr { display: flex; align-items: center; min-width: 0; }
+        .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .team { display: block; font-size: 0.7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Liveness. A dot that vanishes reads as a bug and one frozen in a
+           corner reads as a crash, so a car fades through these instead. */
+        .s-live     { }
+        .s-drifting { opacity: 0.75; }
+        .s-lost     { opacity: 0.45; }
+        .s-offline  { opacity: 0.3; }
+        .flag { flex: 0 0 auto; font-family: 'Orbitron', sans-serif; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.35rem; white-space: nowrap; }
+        .flag-lost    { background: rgba(251,146,60,0.15); color: #fdba74; }
+        .flag-offline { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .flag-menus   { background: rgba(148,163,184,0.12); color: var(--muted); }
+
+        .state { text-align: center; padding: 4.5rem 2rem; }
+        .state h3 { font-family: 'Anton', sans-serif; font-size: 1.3rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.6rem; }
+        .state p { color: var(--muted); font-size: 0.88rem; line-height: 1.7; max-width: 46ch; margin: 0 auto; }
+        .state .cta { display: inline-block; margin-top: 1.5rem; font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); text-decoration: none; border: 1px solid rgba(255,209,102,0.3); padding: 0.6rem 1.1rem; border-radius: 999px; }
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+
+        .foot-note { margin-top: 2.5rem; font-size: 0.74rem; color: var(--muted); line-height: 1.7; text-align: center; }
+        .foot-note a { color: var(--gold); text-decoration: none; }
+
+        @media (max-width: 860px) {
+            .gtec-nav { padding: 1rem; flex-wrap: wrap; }
+            .gtec-nav-toggle { display: block; }
+            .gtec-nav .nav-links { display: none; width: 100%; flex-direction: column; align-items: flex-start; gap: 0.85rem; padding-top: 1rem; }
+            .gtec-nav .nav-links.open { display: flex; }
+            .page-wrap { padding: 1.75rem 1rem 3rem; }
+            .splits { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/live/" class="active">Live</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div id="app"><div class="loading">Loading…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+const app = document.getElementById('app');
+
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data?.session) { if (portal) portal.style.display = ''; }
+    else if (signin) signin.style.display = '';
+});
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/** Lap times arrive as milliseconds. */
+function lapTime(ms) {
+    if (ms == null || ms <= 0) return '—';
+    const m = Math.floor(ms / 60000);
+    const s = ((ms % 60000) / 1000).toFixed(3).padStart(6, '0');
+    return m > 0 ? `${m}:${s}` : s;
+}
+
+/**
+ * How much to trust a car's position, from the age of its last beacon.
+ *
+ * Deliberately slow to alarm and quick to recover. A three-second cadence
+ * over home WiFi skips beacons constantly, so six seconds of silence is
+ * normal and thirty is worth showing. One good beacon returns a car
+ * straight to live, with no smoothing.
+ *
+ * Nothing here ever contradicts the race: a driver whose phone dies on lap
+ * 37 still reads lap 37, because losing the reporter is not losing the car.
+ */
+function liveness(ageMs, onTrack) {
+    if (!onTrack) return { cls: 's-drifting', flag: 'In menus', flagCls: 'flag-menus' };
+    if (ageMs < 6000)   return { cls: 's-live', flag: '', flagCls: '' };
+    if (ageMs < 30000)  return { cls: 's-drifting', flag: '', flagCls: '' };
+    if (ageMs < 300000) return { cls: 's-lost', flag: 'Signal lost', flagCls: 'flag-lost' };
+    return { cls: 's-offline', flag: 'Offline', flagCls: 'flag-offline' };
+}
+
+function rowHtml(r, idx) {
+    const st = liveness(r.age_ms ?? 0, r.on_track);
+    // Order within a split is by laps completed. Real gaps need most of a
+    // lobby reporting plus the track centreline, so they are not claimed
+    // here rather than shown as something they are not.
+    // Car number sits on the team line rather than in its own column. A
+    // Nordschleife lap is over seven minutes, so Last and Best are wide, and
+    // a sixth column pushed Best off the edge of the card.
+    const sub = [
+        r.car_number != null ? '#' + r.car_number : null,
+        r.team_name ? esc(r.team_name) : null,
+    ].filter(Boolean).join(' · ');
+
+    return `<tr class="${st.cls}">
+        <td class="pos">${idx + 1}</td>
+        <td>
+            <div class="dr"><span class="who">${esc(r.display_name)}</span>${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
+            ${sub ? `<span class="team">${sub}</span>` : ''}
+        </td>
+        <td class="num">${r.lap ?? 0}</td>
+        <td class="num">${lapTime(r.last_lap_ms)}</td>
+        <td class="num">${lapTime(r.best_lap_ms)}</td>
+    </tr>`;
+}
+
+function splitHtml(lobby, rows) {
+    rows.sort((a, b) => (b.lap ?? 0) - (a.lap ?? 0));
+    const reporting = rows.filter(r => (r.age_ms ?? 0) < 30000 && r.on_track).length;
+    return `<div class="split">
+        <div class="split-head">
+            <span class="split-name">${lobby ? 'Split ' + lobby : 'Unassigned'}</span>
+            <span class="split-meta">${rows.length} car${rows.length === 1 ? '' : 's'} reporting${reporting !== rows.length ? ` · ${reporting} live` : ''}</span>
+        </div>
+        <table>
+            <thead><tr><th></th><th>Driver</th><th>Lap</th><th>Last</th><th>Best</th></tr></thead>
+            <tbody>${rows.map(rowHtml).join('')}</tbody>
+        </table>
+    </div>`;
+}
+
+/** Shown when no race is running, so the page is never a blank map. */
+async function renderIdle() {
+    const { data: next } = await sb.from('events')
+        .select('name, round, starts_at, circuit_name')
+        .eq('status', 'scheduled')
+        .gte('starts_at', new Date().toISOString())
+        .order('starts_at')
+        .limit(1)
+        .maybeSingle();
+
+    const when = next?.starts_at
+        ? new Date(next.starts_at).toLocaleString('en-GB',
+            { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+        : null;
+
+    app.innerHTML = `
+    <div class="page-wrap">
+        <div class="eyebrow">Live Timing</div>
+        <div class="title">Live</div>
+        <div class="state">
+            <h3>No race running</h3>
+            <p>${next
+                ? `Timing goes live for <strong>Round ${next.round}</strong> at ${esc(next.circuit_name || next.name)}, ${esc(when)}. Every split appears here at once, lap by lap, for as long as the race is on.`
+                : 'Timing appears here while a round is running, with every split shown at once.'}</p>
+            <a class="cta" href="/endurance/calendar/">Full calendar</a>
+        </div>
+        <div class="foot-note">
+            Racing in GTEC? You can put your own car on here.
+            <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
+        </div>
+    </div>`;
+}
+
+function renderField(rows) {
+    const ev = rows[0];
+    const byLobby = new Map();
+    rows.forEach(r => {
+        const k = r.lobby_number ?? 0;
+        if (!byLobby.has(k)) byLobby.set(k, []);
+        byLobby.get(k).push(r);
+    });
+    const lobbies = [...byLobby.keys()].sort((a, b) => a - b);
+
+    app.innerHTML = `
+    <div class="page-wrap">
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+            <div class="eyebrow" style="margin:0">Live Timing</div>
+            <span class="live-pill"><span class="live-dot"></span>Live</span>
+        </div>
+        <div class="title" style="margin-top:0.4rem">Round ${ev.round}</div>
+        <div class="subtitle">${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${lobbies.length} split${lobbies.length === 1 ? '' : 's'}</div>
+        <div class="splits">${lobbies.map(l => splitHtml(l, byLobby.get(l))).join('')}</div>
+        <div class="foot-note">
+            Only drivers who have paired a reporter appear here, so this is part of the grid rather than all of it.
+            Order is by laps completed.<br>
+            Racing in GTEC? <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
+        </div>
+    </div>`;
+}
+
+let failures = 0;
+
+async function tick() {
+    const { data, error } = await sb.rpc('live_field');
+
+    if (error) {
+        // Two consecutive failures before saying anything: one dropped poll
+        // on a phone changing cell is not worth replacing the page over.
+        if (++failures >= 2 && !document.querySelector('.split')) {
+            app.innerHTML = `<div class="page-wrap"><div class="state">
+                <h3>Can't reach live timing</h3>
+                <p>${esc(error.message)}</p></div></div>`;
+        }
+        return;
+    }
+
+    failures = 0;
+    if (!data || data.length === 0) { await renderIdle(); return; }
+    renderField(data);
+}
+
+// Polling rather than Realtime: the table is a handful of rows, there is no
+// connection ceiling, and a dropped poll is invisible where a dropped socket
+// needs reconnection logic. Worth revisiting once the field is much larger.
+tick();
+setInterval(tick, 2000);
+</script>
+
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>
