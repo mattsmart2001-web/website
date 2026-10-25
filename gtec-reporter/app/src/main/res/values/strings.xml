@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GTEC Live Timing</string>
+    <string name="intro">Paste the pairing code from your GTEC driver portal, then press Start before the race. Keep your phone on the same WiFi as your PlayStation, and on charge.</string>
+    <string name="token_hint">Pairing code</string>
+    <string name="start">Start reporting</string>
+    <string name="stop">Stop</string>
+    <string name="need_token">That does not look like a pairing code. Copy it from your portal.</string>
+    <string name="status_idle">Stopped</string>
+</resources>
