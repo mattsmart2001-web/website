@@ -84,10 +84,25 @@
         #track { display: block; width: 100%; height: 420px; }
         @media (max-width: 560px) { #track { height: 300px; } }
 
+        /* A split header is a button: it collapses its table and filters the
+           map. Both from one control, because they are the same intent. */
+        .split-head { cursor: pointer; user-select: none; border: none; width: 100%; text-align: left; font: inherit; color: inherit; }
+        .split-head:hover { background: rgba(255,255,255,0.03); }
+        .split-head:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+        .split-chev { flex: 0 0 auto; color: var(--muted); font-size: 0.8rem; line-height: 1; transition: transform 0.15s; cursor: pointer; padding: 0.2rem 0.3rem; margin: -0.2rem -0.1rem -0.2rem -0.3rem; border-radius: 4px; }
+        .split-chev:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+        .split.collapsed .split-chev { transform: rotate(-90deg); }
+        .split.collapsed table { display: none; }
+        .split.collapsed .split-head { border-bottom-color: transparent; }
+        /* The focused split is the one the map is showing. */
+        .split.focused { border-color: rgba(255,209,102,0.45); }
+        .split.focused .split-name { color: var(--gold); }
+
         .splits { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 1.25rem; margin-top: 2rem; align-items: start; }
 
         .split { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-        .split-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+        .split-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+        .split-head .split-meta { margin-left: auto; }
         .split-name { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
         .split-meta { font-size: 0.7rem; color: var(--muted); }
 
@@ -289,11 +304,20 @@ function rowHtml(r, idx, showFuel) {
 function splitHtml(lobby, rows, showFuel) {
     rows.sort((a, b) => (b.lap ?? 0) - (a.lap ?? 0));
     const reporting = rows.filter(r => (r.age_ms ?? 0) < 30000 && r.on_track).length;
-    return `<div class="split">
-        <div class="split-head">
+    const key = String(lobby ?? 0);
+    const collapsed = collapsedSplits.has(key);
+    const focused = focusedSplit === key;
+    return `<div class="split${collapsed ? ' collapsed' : ''}${focused ? ' focused' : ''}" data-split="${key}">
+        <button class="split-head" type="button" aria-expanded="${collapsed ? 'false' : 'true'}"
+                onclick="onSplitClick('${key}')"
+                title="Show only this split on the map">
+            <span class="split-chev" role="button" tabindex="0"
+                  aria-label="${collapsed ? 'Expand' : 'Collapse'} this split"
+                  onclick="onSplitToggle(event, '${key}')"
+                  onkeydown="if(event.key==='Enter'||event.key===' '){onSplitToggle(event,'${key}');event.preventDefault();}">▾</span>
             <span class="split-name">${lobby ? 'Split ' + lobby : 'Unassigned'}</span>
-            <span class="split-meta">${rows.length} car${rows.length === 1 ? '' : 's'} reporting${reporting !== rows.length ? ` · ${reporting} live` : ''}</span>
-        </div>
+            <span class="split-meta">${rows.length} car${rows.length === 1 ? '' : 's'} reporting${reporting !== rows.length ? ` · ${reporting} live` : ''}${focused ? ' · on map' : ''}</span>
+        </button>
         <table>
             <thead><tr><th></th><th>Driver</th><th>Lap</th><th>Last</th><th>Best</th>${showFuel ? '<th>Fuel</th>' : ''}</tr></thead>
             <tbody>${rows.map((r, i) => rowHtml(r, i, showFuel)).join('')}</tbody>
@@ -387,6 +411,55 @@ function renderField(rows) {
 // builds the shape up over their first few minutes rather than being shown
 // a map that was drawn for them.
 // ---------------------------------------------------------------
+// Which splits are collapsed, and which one the map is showing. Remembered
+// per viewer, because someone following one split will want it that way
+// every time they open the page, not just this once.
+const collapsedSplits = new Set();
+let focusedSplit = null;        // null means every split
+try {
+    const raw = localStorage.getItem('gtecLiveSplits');
+    if (raw) {
+        const v = JSON.parse(raw);
+        (v.collapsed || []).forEach(k => collapsedSplits.add(String(k)));
+        focusedSplit = v.focused != null ? String(v.focused) : null;
+    }
+} catch (e) { /* private window, blocked storage: defaults are fine */ }
+
+function saveSplitPrefs() {
+    try {
+        localStorage.setItem('gtecLiveSplits', JSON.stringify({
+            collapsed: [...collapsedSplits], focused: focusedSplit,
+        }));
+    } catch (e) { /* nothing to do, and nothing depends on it */ }
+}
+
+/**
+ * Two separate controls, because they are two separate intentions and
+ * cramming both onto one click made the second press do two things at once.
+ *
+ *   the header   -> show this split on the map, or go back to all of them
+ *   the chevron  -> collapse or expand this split's table
+ */
+function onSplitClick(key) {
+    focusedSplit = (focusedSplit === key) ? null : key;
+    // Focusing a collapsed split should show it, or the click appears to
+    // have done nothing.
+    if (focusedSplit === key) collapsedSplits.delete(key);
+    redrawSplits();
+}
+
+function onSplitToggle(ev, key) {
+    ev.stopPropagation();     // the chevron is inside the header button
+    if (collapsedSplits.has(key)) collapsedSplits.delete(key);
+    else collapsedSplits.add(key);
+    redrawSplits();
+}
+
+function redrawSplits() {
+    saveSplitPrefs();
+    if (lastRows) { renderField(lastRows); drawTrack(lastRows); }
+}
+
 const SPLIT_COLOURS = ['#ffd166', '#38bdf8', '#4ade80', '#f472b6', '#fb923c', '#a78bfa', '#2dd4bf', '#f87171'];
 // driver_id -> every point that car has reported, in order. Per car rather
 // than one shared cloud, because consecutive points from the same car are
@@ -536,18 +609,21 @@ function drawTrack(rows) {
         }
     }
 
-    // Each car: a fading tail, then the car, then its number.
+    // Each car: a fading tail, then the car, then its number. A focused
+    // split dims the rest rather than removing them, so you can still see
+    // where the others are relative to the ones you are watching.
     rows.forEach(r => {
         if (r.x == null || r.z == null) return;
         const stale = (r.age_ms ?? 0) > 30000;
         if (stale) return;
+        const dim = focusedSplit !== null && String(r.lobby_number ?? 0) !== focusedSplit;
         const col = splitColour(r.lobby_number);
         const path = carPaths.get(r.driver_id) || [];
         const from = Math.max(0, path.length - 1 - TRAIL_LEN);
         for (let i = from; i < path.length - 1; i++) {
             const a = path[i], b = path[i + 1];
             if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
-            g.globalAlpha = 0.15 + 0.7 * ((i - from) / Math.max(1, path.length - 1 - from));
+            g.globalAlpha = (dim ? 0.08 : 0.15 + 0.7 * ((i - from) / Math.max(1, path.length - 1 - from)));
             g.strokeStyle = col;
             g.lineWidth = 3;
             g.beginPath();
@@ -556,7 +632,7 @@ function drawTrack(rows) {
             g.stroke();
         }
         g.globalAlpha = 1;
-        g.globalAlpha = r.on_track ? 1 : 0.35;
+        g.globalAlpha = dim ? 0.3 : (r.on_track ? 1 : 0.35);
         g.fillStyle = col;
         g.beginPath();
         g.arc(px(r.x), pz(r.z), 7, 0, Math.PI * 2);
@@ -573,12 +649,16 @@ function drawTrack(rows) {
 
     if (note) {
         const km = (Math.max(maxX - minX, maxZ - minZ) / 1000).toFixed(1);
-        note.textContent = `${total.toLocaleString()} positions${basePath.length ? ' (outline saved)' : ''} · about ${km} km across`
+        note.textContent = (focusedSplit !== null
+                ? `Showing ${focusedSplit === '0' ? 'unassigned' : 'Split ' + focusedSplit} · `
+                : '')
+            + `${total.toLocaleString()} positions${basePath.length ? ' (outline saved)' : ''} · about ${km} km across`
             + (relief ? ` · ${Math.round(maxY - minY)} m of climb, shaded by height` : '');
     }
 }
 
 let failures = 0;
+let lastRows = null;       // so a click redraws at once rather than at the next poll
 
 async function tick() {
     const { data, error } = await sb.rpc('live_field');
@@ -597,6 +677,7 @@ async function tick() {
     failures = 0;
     if (!data || data.length === 0) { await renderIdle(); return; }
     await loadBasePath(basePath.length === 0);
+    lastRows = data;
     recordPositions(data);
     renderField(data);
     drawTrack(data);
