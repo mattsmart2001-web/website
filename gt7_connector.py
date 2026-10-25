@@ -1039,6 +1039,13 @@ async def _gtec_beacon():
             "p_z":           round(float(pkt.pos_z), 2),
             "p_speed_kph":   int(pkt.speed_kmh),
             "p_on_track":    on_track,
+            # Percentage, not litres: capacity varies by car, so a
+            # percentage is the only figure comparable across a grid of
+            # different machinery. None rather than a guess when GT7 has
+            # not reported a capacity yet.
+            "p_fuel_pct":    (round(pkt.fuel / pkt.fuel_cap * 100, 1)
+                              if (pkt.fuel_cap or 0) > 0 else None),
+            "p_laps_in_race": int(pkt.laps_in_race) if (pkt.laps_in_race or 0) > 0 else None,
         }
 
         reply = await loop.run_in_executor(None, lambda: _gtec_post(payload))

@@ -74,7 +74,7 @@
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
         @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
 
-        .splits { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.25rem; margin-top: 2rem; align-items: start; }
+        .splits { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 1.25rem; margin-top: 2rem; align-items: start; }
 
         .split { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
         .split-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
@@ -85,7 +85,8 @@
            table wider than its card, which silently clipped the Best column. */
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th:nth-child(1), td:nth-child(1) { width: 26px; }
-        th:nth-child(3), td:nth-child(3) { width: 38px; }
+        th:nth-child(3), td:nth-child(3) { width: 46px; }
+        th:nth-child(6), td:nth-child(6) { width: 82px; }
         /* Sized in pixels, not ch: a Nordschleife lap reads 7:54.471, and ch
            units under-measured it once cell padding was counted, which clipped
            the Best column on the narrowest cards. */
@@ -98,8 +99,23 @@
         th:nth-child(n+3) { text-align: right; }
         .pos { font-family: 'Anton', sans-serif; font-size: 0.95rem; color: var(--gold); width: 2.2ch; }
         .car { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.75rem; }
+        /* Fuel as a bar rather than a bare number: across a split, "who is
+           about to stop" reads from the shape of a column of bars far faster
+           than from a column of percentages. */
+        .fuel-wrap { display: flex; align-items: center; gap: 0.35rem; justify-content: flex-end; }
+        .fuel-bar { width: 34px; height: 7px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; flex: 0 0 auto; }
+        .fuel-fill { display: block; height: 100%; background: var(--green); }
+        .fuel-low .fuel-fill  { background: #fb923c; }
+        .fuel-crit .fuel-fill { background: var(--red); }
+        .fuel-pct { font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+        .fuel-low .fuel-pct  { color: #fdba74; }
+        .fuel-crit .fuel-pct { color: #fca5a5; font-weight: 600; }
+        /* Second lines under Last and Best: current lap time and speed. They
+           use vertical space the rows already have rather than two more
+           columns, which these cards cannot spare. */
+        .sub2 { display: block; font-variant-numeric: tabular-nums; font-size: 0.66rem; color: var(--muted); }
         .dr { display: flex; align-items: center; min-width: 0; }
-        .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
         .team { display: block; font-size: 0.7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         /* Liveness. A dot that vanishes reads as a bug and one frozen in a
@@ -108,7 +124,10 @@
         .s-drifting { opacity: 0.75; }
         .s-lost     { opacity: 0.45; }
         .s-offline  { opacity: 0.3; }
-        .flag { flex: 0 0 auto; font-family: 'Orbitron', sans-serif; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.35rem; white-space: nowrap; }
+        /* Shrinkable: at phone width "Signal lost" is wider than the whole
+           driver cell, and a non-shrinking flag was simply being clipped by
+           the card, which loses it entirely rather than shortening it. */
+        .flag { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-family: 'Orbitron', sans-serif; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.35rem; white-space: nowrap; }
         .flag-lost    { background: rgba(251,146,60,0.15); color: #fdba74; }
         .flag-offline { background: rgba(255,255,255,0.06); color: var(--muted); }
         .flag-menus   { background: rgba(148,163,184,0.12); color: var(--muted); }
@@ -121,6 +140,14 @@
 
         .foot-note { margin-top: 2.5rem; font-size: 0.74rem; color: var(--muted); line-height: 1.7; text-align: center; }
         .foot-note a { color: var(--gold); text-decoration: none; }
+
+        /* Phone: drop Best so the driver name and status flag stay readable.
+           Last lap and fuel are what matter while a race is running. */
+        @media (max-width: 560px) {
+            th:nth-child(5), td:nth-child(5) { display: none; }
+            th:nth-child(6), td:nth-child(6) { width: 70px; }
+            .flag { font-size: 0.46rem; letter-spacing: 0.06em; }
+        }
 
         @media (max-width: 860px) {
             .gtec-nav { padding: 1rem; flex-wrap: wrap; }
@@ -206,8 +233,25 @@ function liveness(ageMs, onTrack) {
     return { cls: 's-offline', flag: 'Offline', flagCls: 'flag-offline' };
 }
 
+/**
+ * Fuel as a bar with the figure beside it. Thresholds are deliberately
+ * blunt: under 25% is worth noticing, under 10% means a stop within a lap
+ * or two. Turning that into "laps remaining" needs each driver's own
+ * consumption, which is a later job and not worth faking from one reading.
+ */
+function fuelHtml(pct) {
+    if (pct == null) return '<span class="fuel-pct">&mdash;</span>';
+    const v = Math.max(0, Math.min(100, pct));
+    const cls = v < 10 ? 'fuel-crit' : v < 25 ? 'fuel-low' : '';
+    return `<div class="fuel-wrap ${cls}" title="${v.toFixed(1)}% of tank">
+        <span class="fuel-pct">${Math.round(v)}%</span>
+        <span class="fuel-bar"><span class="fuel-fill" style="width:${v}%"></span></span>
+    </div>`;
+}
+
 function rowHtml(r, idx) {
     const st = liveness(r.age_ms ?? 0, r.on_track);
+    const live = st.cls === 's-live' && r.on_track;
     // Order within a split is by laps completed. Real gaps need most of a
     // lobby reporting plus the track centreline, so they are not claimed
     // here rather than shown as something they are not.
@@ -225,9 +269,10 @@ function rowHtml(r, idx) {
             <div class="dr"><span class="who">${esc(r.display_name)}</span>${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
             ${sub ? `<span class="team">${sub}</span>` : ''}
         </td>
-        <td class="num">${r.lap ?? 0}</td>
-        <td class="num">${lapTime(r.last_lap_ms)}</td>
-        <td class="num">${lapTime(r.best_lap_ms)}</td>
+        <td class="num">${r.lap ?? 0}${r.laps_in_race ? `<span class="sub2" style="display:inline">/${r.laps_in_race}</span>` : ''}</td>
+        <td class="num">${lapTime(r.last_lap_ms)}<span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
+        <td class="num">${lapTime(r.best_lap_ms)}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
+        <td>${fuelHtml(r.fuel_pct)}</td>
     </tr>`;
 }
 
@@ -240,7 +285,7 @@ function splitHtml(lobby, rows) {
             <span class="split-meta">${rows.length} car${rows.length === 1 ? '' : 's'} reporting${reporting !== rows.length ? ` · ${reporting} live` : ''}</span>
         </div>
         <table>
-            <thead><tr><th></th><th>Driver</th><th>Lap</th><th>Last</th><th>Best</th></tr></thead>
+            <thead><tr><th></th><th>Driver</th><th>Lap</th><th>Last</th><th>Best</th><th>Fuel</th></tr></thead>
             <tbody>${rows.map(rowHtml).join('')}</tbody>
         </table>
     </div>`;
