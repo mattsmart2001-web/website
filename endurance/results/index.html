@@ -482,7 +482,10 @@ async function loadIndex() {
     const gridLine = e => {
         const g = countsById.get(e.id);
         if (!g || !g.entered || !g.started) return '';   // nothing useful to say yet
-        return ` · <span class="results-item-grid">${g.entered} entered, ${g.started} started</span>`;
+        // Share of the entry list that never took the start. DNS is the
+        // league's own term for it and is defined in the regulations.
+        const pct = Math.round(((g.entered - g.started) / g.entered) * 100);
+        return ` · <span class="results-item-grid">${g.entered} entered, ${g.started} started (${pct}% DNS)</span>`;
     };
 
     const items = visible.map(e => `
