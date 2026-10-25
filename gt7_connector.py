@@ -526,7 +526,7 @@ footer{color:var(--mut);font-size:.76rem;text-align:center;margin-top:1.5rem;}
     <span class="h">One-off. It works for every round after that.</span>
     <input type="text" id="gtecCode" placeholder="not paired" spellcheck="false">
   </label>
-  <div class="note" id="gtecNote">Not paired.</div>
+  <div class="note" id="gtecNote">No pairing code set.</div>
   <div class="row" style="margin-top:.6rem">
     <button class="primary" id="gtecSave">Save pairing code</button>
     <button id="gtecClear">Unpair</button>
@@ -612,7 +612,7 @@ function paint(s){
     if(g.state === 'reporting'){ n.textContent = g.detail; n.classList.add('ok'); }
     else {
       n.classList.remove('ok');
-      n.textContent = g.detail || 'Not paired.';
+      n.textContent = g.detail || 'Starting up…';
       if(g.state === 'error') n.classList.add('bad');
     }
   }
@@ -956,7 +956,7 @@ GTEC_CODE  = ""          # the driver's pairing code; empty means do not report
 # What the settings page shows about live timing.
 _gtec = {
     "state":  "off",     # off | waiting | reporting | idle | error
-    "detail": "",
+    "detail": "No pairing code set.",
     "sent":   0,
     "last":   None,
 }
