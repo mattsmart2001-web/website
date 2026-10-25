@@ -332,7 +332,10 @@
         .results-item-info { flex: 1; min-width: 0; }
         .results-item-name { font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.04em; text-transform: uppercase; }
         .results-item-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
-        .results-item-grid { font-variant-numeric: tabular-nums; white-space: nowrap; }
+        /* Called out in red so the grid size reads at a glance. #f87171 rather
+           than --red: the lighter tone holds up at this size on the dark card,
+           matching .pts-deduct elsewhere on the page. */
+        .results-item-grid { font-variant-numeric: tabular-nums; white-space: nowrap; color: #f87171; font-weight: 600; }
         .results-item-arrow { color: var(--muted); }
 
         /* States */
