@@ -599,15 +599,13 @@
     <div class="portal-panel" id="panel-raceday" role="tabpanel" aria-labelledby="tab-raceday" tabindex="0" hidden>
         <p class="portal-empty" id="empty-raceday" hidden>Nothing live at the moment. Lobby IDs, stewarding and result screenshots appear here on a race weekend.</p>
 
-    <!-- Only shown to drivers who have not paired a reporter. Once they have,
-         it disappears for good rather than sitting here as a permanent advert. -->
+    <!-- Race day carries status and a way in, not the setup: on the night the
+         question is "is my car actually reporting", which Account cannot
+         answer at a glance. Pairing itself stays in Account with Hardware,
+         since it is a one-off nobody returns to. Filled by loadLiveTiming(). -->
     <div class="card" id="card-live-timing-prompt" style="display:none;border-color:rgba(255,209,102,0.3)">
-        <div class="card-title">Get on the live map</div>
-        <p class="form-hint" style="margin-bottom:0">
-            Your car can appear on GTEC's live timing map during a race, alongside every other split.
-            It takes one pairing code and about a minute to set up.
-            <a href="#account" onclick="showTab('account')" style="color:var(--gold);font-weight:600">Set it up in your Account tab</a>.
-        </p>
+        <div class="card-title" id="lt-rd-title">Live timing</div>
+        <p class="form-hint" style="margin-bottom:0" id="lt-rd-body"></p>
     </div>
 
     <!-- Upcoming events -->
@@ -1307,14 +1305,22 @@ async function loadLiveTiming() {
     if (error || !data?.ok) { _ltShow('lt-unpaired'); return; }
 
     const prompt = document.getElementById('card-live-timing-prompt');
+    const title  = document.getElementById('lt-rd-title');
+    const body   = document.getElementById('lt-rd-body');
+
     if (!data.paired) {
         _ltShow('lt-unpaired');
-        if (prompt) prompt.style.display = '';
+        if (prompt && title && body) {
+            prompt.style.display = '';
+            title.textContent = 'Get on the live map';
+            body.innerHTML = 'Your car can appear on GTEC\'s <a href="/endurance/live/" style="color:var(--gold);font-weight:600">live timing map</a> during a race, alongside every other split. '
+                + 'It takes one pairing code and about a minute to set up. '
+                + '<a href="#account" onclick="showTab(\'account\');return false;" style="color:var(--gold);font-weight:600">Set it up in your Account tab</a>.';
+        }
         return;
     }
 
     _ltShow('lt-paired');
-    if (prompt) prompt.style.display = 'none';
 
     // "Is my phone actually working" is the question this answers, and a
     // driver should not have to be mid-race to find out.
@@ -1323,6 +1329,24 @@ async function loadLiveTiming() {
         used.textContent = data.last_used_at
             ? `Last reported ${fmtRelative(data.last_used_at)}`
             : 'Not used yet';
+    }
+
+    if (prompt && title && body) {
+        prompt.style.display = '';
+        const ageMin = data.last_used_at
+            ? Math.floor((Date.now() - new Date(data.last_used_at).getTime()) / 60000)
+            : null;
+        // Under five minutes means a reporter is running right now. Anything
+        // older is stated as a fact rather than as a problem, because between
+        // races it is entirely normal.
+        const liveNow = ageMin !== null && ageMin < 5;
+        title.textContent = liveNow ? 'You are on the live map' : 'Live timing';
+        body.innerHTML = liveNow
+            ? `Your car is reporting and appears on <a href="/endurance/live/" style="color:var(--gold);font-weight:600">live timing</a> now.`
+            : `Live timing is paired. ${data.last_used_at
+                    ? `Your reporter last checked in ${fmtRelative(data.last_used_at)}.`
+                    : 'Your reporter has not checked in yet, so start the app or the connector before the race.'}`
+                + ` <a href="/endurance/live/" style="color:var(--gold);font-weight:600">Watch live timing</a>.`;
     }
 }
 
@@ -3110,6 +3134,15 @@ function setupRealtimeSubscriptions(driver) {
     const fromHash = (location.hash || '').replace('#', '');
     showTab(tabs.some(t => t.dataset.tab === fromHash) ? fromHash : 'raceday');
     refreshTabState();
+
+    // Cross-tab links inside the portal need these two. Without them a
+    // "#account" link changes the hash and nothing else happens until the
+    // page is reloaded, which reads as a dead link.
+    window.addEventListener('hashchange', () => {
+        const h = (location.hash || '').replace('#', '');
+        if (tabs.some(t => t.dataset.tab === h)) showTab(h);
+    });
+    window.showTab = showTab;
 })();
 
 init();
