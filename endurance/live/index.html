@@ -83,7 +83,15 @@
         .map-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; margin-top: 2rem; overflow: hidden; }
         .map-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
         .map-title { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
-        .map-note { font-size: 0.7rem; color: var(--muted); }
+        /* The note rotates through facts, so it fades rather than snapping.
+           Width is reserved by the flex row, not by the text, so a longer
+           fact cannot shuffle the title next to it. */
+        .map-note { font-size: 0.7rem; color: var(--muted); transition: opacity 0.45s ease; text-align: right; }
+        .map-note.fading { opacity: 0; }
+        @media (prefers-reduced-motion: reduce) {
+            .map-note { transition: none; }
+            .map-note.fading { opacity: 1; }
+        }
         #track { display: block; width: 100%; height: 420px; }
         @media (max-width: 560px) { #track { height: 300px; } }
 
@@ -597,7 +605,10 @@ function drawTrack(rows) {
     const total = allPaths.reduce((n, p) => n + p.length, 0);
 
     if (total < 2) {
-        if (note) note.textContent = 'Waiting for positions';
+        // Nothing to say yet, and the cycle must not paint over it.
+        if (factTimer) { clearInterval(factTimer); factTimer = null; }
+        factList = [];
+        if (note) { note.classList.remove('fading'); note.textContent = 'Waiting for positions'; note.title = ''; }
         g.fillStyle = '#94a3b8';
         g.font = "11px 'Inter', system-ui, sans-serif";
         g.textAlign = 'center';
@@ -701,11 +712,114 @@ function drawTrack(rows) {
 
     if (note) {
         const km = (Math.max(maxX - minX, maxZ - minZ) / 1000).toFixed(1);
-        note.textContent = (focusedSplit !== null
-                ? `Showing ${focusedSplit === '0' ? 'unassigned' : 'Split ' + focusedSplit} · `
-                : '')
-            + `${total.toLocaleString()} positions${basePath.length ? ' (outline saved)' : ''} · about ${km} km across`
-            + (relief ? ` · ${Math.round(maxY - minY)} m of climb, shaded by height` : '');
+        // The old readout was a diagnostic, useful while building this and
+        // not interesting to a spectator. Kept on hover, where it costs
+        // nobody anything and still answers "is the outline saved".
+        note.title = `${total.toLocaleString()} positions`
+            + `${basePath.length ? ' (outline saved)' : ''} · about ${km} km across`
+            + (relief ? ` · ${Math.round(maxY - minY)} m of climb` : '');
+        setFacts(buildFacts(rows, { km, relief, climb: Math.round(maxY - minY), total }));
+    }
+}
+
+// ---------------------------------------------------------------
+// The line beside Track Map, cycling through things worth knowing.
+//
+// Everything here is either measured from the outline the cars have just
+// drawn, or taken from GTEC's own history. Nothing is hand-written per
+// circuit, so a track nobody has raced before still has something to say
+// the first time a car goes round it.
+// ---------------------------------------------------------------
+let factList = [];
+let factIndex = 0;
+let factTimer = null;
+let circuitRecord = null;      // { best_lap_ms, driver_name, event_name }
+let circuitAsked = null;       // event id we already looked the record up for
+
+function buildFacts(rows, geo) {
+    const f = [];
+
+    if (focusedSplit !== null) {
+        f.push(`Showing ${focusedSplit === '0' ? 'unassigned' : 'Split ' + focusedSplit} only`);
+    }
+
+    // The point most people miss: this is not a stock graphic. The drivers
+    // drew it, tonight, by driving round it.
+    if (geo.total > 2) {
+        f.push(`Nobody drew this map. The cars traced it themselves, ${geo.total.toLocaleString()} positions so far`);
+    }
+    if (geo.relief && geo.climb >= 15) {
+        f.push(`${geo.climb} m between its highest and lowest points, shaded by height`);
+    }
+    if (Number(geo.km) > 0) f.push(`About ${geo.km} km from end to end`);
+
+    // GTEC's own record at this circuit, which GT7 has no way of knowing.
+    if (circuitRecord && circuitRecord.best_lap_ms) {
+        f.push(`GTEC lap record here: ${lapTime(circuitRecord.best_lap_ms)}`
+            + (circuitRecord.driver_name ? ` by ${esc(circuitRecord.driver_name)}` : ''));
+    }
+
+    // Best of whoever is actually out, and how it stands against the record.
+    const bests = rows.map(r => r.best_lap_ms).filter(v => v != null && v > 0);
+    if (bests.length) {
+        const best = Math.min(...bests);
+        const who = rows.find(r => r.best_lap_ms === best);
+        // One line, not two: a standalone "that is 3.3s off the record" can
+        // surface on its own in the cycle, with nothing to say what "that" was.
+        const delta = circuitRecord?.best_lap_ms ? best - circuitRecord.best_lap_ms : null;
+        f.push(`Best out there right now: ${lapTime(best)}`
+            + (who?.display_name ? ` by ${esc(who.display_name)}` : '')
+            + (delta === null ? ''
+               : delta > 0 ? `, ${(delta / 1000).toFixed(1)}s off the GTEC record`
+                           : `, under the GTEC record`));
+    }
+
+    return f;
+}
+
+function setFacts(list) {
+    // Rebuilt on every poll, so only restart the cycle when the content
+    // actually changed. Otherwise a 1.5s poll would reset the fade forever
+    // and nothing would ever be readable.
+    if (list.join('|') === factList.join('|')) return;
+    factList = list;
+    if (factIndex >= list.length) factIndex = 0;
+    paintFact();
+    if (factTimer) clearInterval(factTimer);
+    if (list.length > 1) factTimer = setInterval(nextFact, 7000);
+}
+
+function paintFact() {
+    const note = document.getElementById('map-note');
+    if (!note) return;
+    note.innerHTML = factList[factIndex] || '';
+}
+
+function nextFact() {
+    const note = document.getElementById('map-note');
+    if (!note || factList.length < 2) return;
+    factIndex = (factIndex + 1) % factList.length;
+    note.classList.add('fading');
+    // Swap while invisible, then fade back in.
+    setTimeout(() => { paintFact(); note.classList.remove('fading'); }, 450);
+}
+
+/** The circuit's GTEC record, looked up once per round. circuit_records is a
+ *  public view, so this needs no migration and no sign-in. */
+async function loadCircuitRecord(eventId) {
+    if (!eventId || circuitAsked === eventId) return;
+    circuitAsked = eventId;
+    try {
+        const { data: ev } = await sb.from('events')
+            .select('circuit_name').eq('id', eventId).maybeSingle();
+        if (!ev?.circuit_name) return;
+        const { data: rec } = await sb.from('circuit_records')
+            .select('best_lap_ms, driver_name, event_name')
+            .eq('circuit_name', ev.circuit_name)
+            .maybeSingle();
+        if (rec) circuitRecord = rec;
+    } catch (_) {
+        // A missing record is not worth a broken map.
     }
 }
 
@@ -729,6 +843,7 @@ async function tick() {
     failures = 0;
     if (!data || data.length === 0) { await renderIdle(); return; }
     await loadBasePath(basePath.length === 0);
+    loadCircuitRecord(data[0].event_id);   // once per round, not awaited
     lastRows = data;
     recordPositions(data);
     renderField(data);
