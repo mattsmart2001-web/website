@@ -259,7 +259,7 @@ function fuelHtml(pct) {
     </div>`;
 }
 
-function rowHtml(r, idx) {
+function rowHtml(r, idx, showFuel) {
     const st = liveness(r.age_ms ?? 0, r.on_track);
     const live = st.cls === 's-live' && r.on_track;
     // Order within a split is by laps completed. Real gaps need most of a
@@ -282,11 +282,11 @@ function rowHtml(r, idx) {
         <td class="num">${r.lap ?? 0}${r.laps_in_race ? `<span class="sub2" style="display:inline">/${r.laps_in_race}</span>` : ''}</td>
         <td class="num">${lapTime(r.last_lap_ms)}<span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
         <td class="num">${lapTime(r.best_lap_ms)}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
-        <td>${fuelHtml(r.fuel_pct)}</td>
+        ${showFuel ? `<td>${fuelHtml(r.fuel_pct)}</td>` : ''}
     </tr>`;
 }
 
-function splitHtml(lobby, rows) {
+function splitHtml(lobby, rows, showFuel) {
     rows.sort((a, b) => (b.lap ?? 0) - (a.lap ?? 0));
     const reporting = rows.filter(r => (r.age_ms ?? 0) < 30000 && r.on_track).length;
     return `<div class="split">
@@ -295,8 +295,8 @@ function splitHtml(lobby, rows) {
             <span class="split-meta">${rows.length} car${rows.length === 1 ? '' : 's'} reporting${reporting !== rows.length ? ` · ${reporting} live` : ''}</span>
         </div>
         <table>
-            <thead><tr><th></th><th>Driver</th><th>Lap</th><th>Last</th><th>Best</th><th>Fuel</th></tr></thead>
-            <tbody>${rows.map(rowHtml).join('')}</tbody>
+            <thead><tr><th></th><th>Driver</th><th>Lap</th><th>Last</th><th>Best</th>${showFuel ? '<th>Fuel</th>' : ''}</tr></thead>
+            <tbody>${rows.map((r, i) => rowHtml(r, i, showFuel)).join('')}</tbody>
         </table>
     </div>`;
 }
@@ -343,6 +343,10 @@ function renderField(rows) {
         byLobby.get(k).push(r);
     });
     const lobbies = [...byLobby.keys()].sort((a, b) => a - b);
+    // Only show Fuel when something is actually reporting it. A connector
+    // that predates fuel would otherwise give every car a dash, and the
+    // column reappears by itself once one does.
+    const showFuel = rows.some(r => r.fuel_pct != null);
 
     app.innerHTML = `
     <div class="page-wrap">
@@ -355,7 +359,7 @@ function renderField(rows) {
         <div class="title" style="margin-top:0.4rem">Round ${ev.round}</div>
         <div class="subtitle">${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${lobbies.length} split${lobbies.length === 1 ? '' : 's'}</div>
         ${ev.is_test ? '<div class="subtitle" style="color:#fdba74">This is a test of live timing, not a live race.</div>' : ''}
-        <div class="splits">${lobbies.map(l => splitHtml(l, byLobby.get(l))).join('')}</div>
+        <div class="splits">${lobbies.map(l => splitHtml(l, byLobby.get(l), showFuel)).join('')}</div>
         <div class="map-card">
             <div class="map-head">
                 <span class="map-title">Track Map</span>
