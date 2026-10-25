@@ -332,6 +332,7 @@
         .results-item-info { flex: 1; min-width: 0; }
         .results-item-name { font-family: 'Anton', sans-serif; font-size: 1rem; letter-spacing: 0.04em; text-transform: uppercase; }
         .results-item-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+        .results-item-grid { font-variant-numeric: tabular-nums; white-space: nowrap; }
         .results-item-arrow { color: var(--muted); }
 
         /* States */
@@ -470,12 +471,23 @@ async function loadIndex() {
 
     const statusLabel = { completed:'Completed', in_progress:'Live', scheduled:'Scheduled' };
 
+    // Grid size per round. Stated plainly as entered and started, the way any
+    // results page carries a starter count: it explains a thin field without
+    // naming anybody or passing judgement on why they were missing.
+    const { data: gridCounts } = await sb.rpc('event_grid_counts');
+    const countsById = new Map((gridCounts || []).map(g => [g.event_id, g]));
+    const gridLine = e => {
+        const g = countsById.get(e.id);
+        if (!g || !g.entered || !g.started) return '';   // nothing useful to say yet
+        return ` · <span class="results-item-grid">${g.entered} entered, ${g.started} started</span>`;
+    };
+
     const items = visible.map(e => `
         <a class="results-item" href="/endurance/results/?slug=${encodeURIComponent(e.slug)}">
             <div class="results-item-round">${e.round}</div>
             <div class="results-item-info">
                 <div class="results-item-name">${esc(e.name)} <span class="badge badge-${esc(e.status)}" style="margin-left:0.5rem;font-size:0.65rem">${esc(statusLabel[e.status] || e.status)}</span></div>
-                <div class="results-item-meta">${flag(e.circuit_country)} ${esc(e.circuit_name)} · ${fmtDate(e.starts_at)} · ${esc(e.seasons?.name)}</div>
+                <div class="results-item-meta">${flag(e.circuit_country)} ${esc(e.circuit_name)} · ${fmtDate(e.starts_at)} · ${esc(e.seasons?.name)}${gridLine(e)}</div>
             </div>
             <div class="results-item-arrow">→</div>
         </a>`).join('');
