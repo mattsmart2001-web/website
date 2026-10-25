@@ -375,7 +375,11 @@ async function renderIdle() {
                     ? `Timing goes live for <strong>Round ${next.round}</strong> at ${esc(next.circuit_name || next.name)}, ${esc(when)}. Every split appears here at once, lap by lap, for as long as the race is on.`
                     : 'Timing appears here while a round is running, with every split shown at once.'}</p>
             ${!practiceOpen && prac?.enabled
-                ? `<p style="margin-top:0.9rem">Want to try it before race day? Practice live timing is open every evening, ${esc(prac.from)} to ${esc(prac.to)} UK time. Next open ${esc(opensIn(prac.at))}.</p>`
+                ? prac.race_day
+                    // Stood down for the day, so promising a time tonight would
+                    // be a lie. Said as a rule rather than a one-off.
+                    ? `<p style="margin-top:0.9rem">Practice live timing is paused on race days. It is open ${esc(prac.from)} to ${esc(prac.to)} UK time every other evening, so you can try it out before you race.</p>`
+                    : `<p style="margin-top:0.9rem">Want to try it before race day? Practice live timing is open every evening, ${esc(prac.from)} to ${esc(prac.to)} UK time. Next open ${esc(opensIn(prac.at))}.</p>`
                 : ''}
             <a class="cta" href="${practiceOpen ? '/endurance/profile/#account' : '/endurance/calendar/'}">${practiceOpen ? 'Pair your reporter' : 'Full calendar'}</a>
         </div>

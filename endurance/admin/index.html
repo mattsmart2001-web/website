@@ -4129,7 +4129,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
                 <button class="btn btn-ghost" onclick="exportSplitsCsv()">Export CSV</button>
                 <button class="btn btn-ghost" title="Open live timing on this event for a while, without touching its start time or putting a fake round on the calendar. Drivers with a paired reporter will appear on /endurance/live/ marked as a test." onclick="openLiveTest('${eventId}','${esc(eventName)}','${seasonId}')">Live Timing Test</button>
-                <button class="btn btn-ghost" title="Open live timing on this event every evening between two times, so drivers can try it before race day. Reopens itself nightly, shows on /endurance/live/ as Practice, and needs no entry." onclick="setLivePractice('${eventId}','${esc(eventName)}')">Practice Window</button>
+                <button class="btn btn-ghost" title="Open live timing on this event every evening between two times, so drivers can try it before race day. Reopens itself nightly, shows on /endurance/live/ as Practice, needs no entry, and stands down on race days." onclick="setLivePractice('${eventId}','${esc(eventName)}')">Practice Window</button>
                 <button class="btn-icon danger" title="Remove this event's split-assignment and hosting messages from every driver's inbox — use once the event is over" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
                 <button class="btn-icon danger" title="Close any live timing test on this event and clear the cars it put on the live page" onclick="closeLiveTest('${eventId}','${esc(eventName)}')">End Live Test</button>
                 <button class="btn-icon danger" title="Stop the nightly practice window on this event and clear the cars it put on the live page" onclick="clearLivePractice('${eventId}','${esc(eventName)}')">End Practice</button>
@@ -4671,7 +4671,8 @@ async function setLivePractice(eventId, eventName) {
         `Open live timing on "${eventName}" every evening, between which times?\n\n`
         + 'UK times, 24 hour clock, as from-to. Up to 8 hours.\n\n'
         + 'Any driver with a paired reporter can join, entered or not, and the live page '
-        + 'shows it as Practice rather than a race. It reopens itself nightly until you end it.',
+        + 'shows it as Practice rather than a race. It reopens itself nightly until you end it, '
+        + 'and stands itself down on any day a round is racing.',
         '18:00-22:00');
     if (answer === null) return;
 

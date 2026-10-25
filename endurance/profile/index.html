@@ -1308,6 +1308,7 @@ function _ltPracticeNote(prac, paired) {
             ? ` <strong style="color:#86efac">Practice live timing is open now, until ${prac.to} UK time.</strong> Start your reporter and you will show up on the map within a few seconds.`
             : ` <strong style="color:#86efac">Practice live timing is open now, until ${prac.to} UK time</strong>, so you can set it up and see your own car on the map straight away.`;
     }
+    if (prac.race_day) return ' Practice live timing is paused today because there is a race on.';
     return ` Practice live timing is open every evening, ${prac.from} to ${prac.to} UK time, so you can try it out well before race day.`;
 }
 
