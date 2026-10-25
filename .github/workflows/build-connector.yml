@@ -13,9 +13,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release tag to publish (e.g. v2.7). Leave blank to build without releasing."
+        # Deliberately blank. A hardcoded default is a loaded gun: leaving it
+        # untouched republishes over whatever release it names.
+        description: "Release tag to publish (e.g. v3.2). Leave blank to build without releasing."
         required: false
-        default: "v2.7"
+        default: ""
   push:
     branches:
       - claude/add-signup-page-pBzI2
