@@ -485,6 +485,8 @@ input[type=text]:focus,select:focus{outline:none;border-color:var(--blu);}
 button{font-family:ui-monospace,'JetBrains Mono',Menlo,monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;
   padding:.6rem 1.2rem;border-radius:5px;border:1px solid var(--bor);background:transparent;color:var(--mut);cursor:pointer;}
 button:hover{border-color:var(--wht);color:var(--wht);}
+button:disabled{opacity:.35;cursor:not-allowed;}
+button:disabled:hover{border-color:inherit;color:inherit;}
 button.primary{border-color:var(--blu);background:rgba(26,180,255,.12);color:var(--blu);}
 button.primary:hover{background:rgba(26,180,255,.22);}
 a{color:var(--blu);}
@@ -529,7 +531,7 @@ footer{color:var(--mut);font-size:.76rem;text-align:center;margin-top:1.5rem;}
   <div class="note" id="gtecNote">No pairing code set.</div>
   <div class="row" style="margin-top:.6rem">
     <button class="primary" id="gtecSave">Save pairing code</button>
-    <button id="gtecClear">Unpair</button>
+    <button id="gtecClear" disabled title="Nothing to unpair yet">Unpair</button>
   </div>
 </div>
 
@@ -608,6 +610,10 @@ function paint(s){
   // things and a driver wants to know the second one.
   if(s.gtec){
     const g = s.gtec, n = $('gtecNote');
+    // Only offer Unpair when there is something to unpair. It sits beside
+    // Save, and on a fresh install it is the wrong button to be able to press.
+    const clr = $('gtecClear');
+    if(clr){ clr.disabled = !g.paired; clr.title = g.paired ? 'Stop reporting to GTEC' : 'Nothing to unpair yet'; }
     n.classList.remove('bad');
     if(g.state === 'reporting'){ n.textContent = g.detail; n.classList.add('ok'); }
     else {
