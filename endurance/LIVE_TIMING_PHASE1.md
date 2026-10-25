@@ -24,22 +24,40 @@ Also out of scope: iOS, replay and history, any non-host driver.
 
 ---
 
-## Why the client has to be native
+## The client: nothing new for anyone on a PC or Mac
 
-The existing `ANDROID_APP.md` plan is a Trusted Web Activity, a browser
-shell around the PWA. A browser cannot open a raw UDP socket, so the TWA
-cannot do this. Phase 1 needs a small native Android service.
+The GT7 Live Connector already exposes a WebSocket on
+`127.0.0.1:8765`, and `gt7-lap-coach.html` and `gt7-telemetry.html`
+both read it. A GTEC reporter page can open the same socket, take the
+same stream, and POST beacons. That is browser code, so for every driver
+already running the connector there is **nothing to install**.
 
-It is genuinely small. On the same WiFi as the console it must:
+The pattern is proven in production: the Lap Coach is served over HTTPS
+and talks to `ws://localhost:8765` today. Loopback is exempt from
+mixed-content blocking in Chrome and Firefox, which is what makes it
+work, and the reporter leans on the same exemption.
+
+To confirm: whether the connector accepts several WebSocket clients at
+once, so the Lap Coach and the reporter can run side by side. The v2.8
+"share the telemetry stream" work suggests yes. If it is single-client,
+the reporter folds into the Lap Coach page instead of sitting beside it.
+
+### Phone-only drivers still need native code
+
+A browser cannot open a raw UDP socket, and the existing
+`ANDROID_APP.md` plan is a Trusted Web Activity — a browser shell around
+the PWA — so it cannot carry this either. A driver with a console and a
+phone and no computer needs a small native Android service:
 
 1. Send the heartbeat so GT7 starts streaming.
-2. Decrypt the packet (Salsa20 — port the logic from the existing
-   connector rather than rewriting it).
+2. Decrypt the packet (Salsa20 — port the logic from the connector
+   rather than rewriting it).
 3. Pull six or seven fields.
-4. POST them every two seconds.
+4. POST them on the cadence the server asks for.
 
 No UI beyond "paired / reporting / lost signal" and a foreground-service
-notification. The phone stays in a pocket.
+notification. The phone stays in a pocket. This is worth building, but
+it no longer blocks anything: the PC and Mac route ships first.
 
 ### The reframe this rests on
 
@@ -222,6 +240,7 @@ live it shows the next round and when it starts, not an empty map.
 | Failure | Handling |
 |---|---|
 | Phone sleeps | Foreground service with a persistent notification; this is the main reason it cannot be a TWA |
+| Browser tab backgrounded | Timers are throttled in background tabs, so the reporter page must send from the WebSocket message handler rather than a `setInterval`, and should warn if the tab is hidden |
 | Phone dies mid-race (12h) | Document that the host should keep it on charge; the card degrades per the liveness table |
 | WiFi drops | Beacons simply stop; no queueing, since stale positions are worse than none |
 | Host rejoins the lobby | Lap counter may reset; take the **max** of reported and stored lap rather than overwriting |
