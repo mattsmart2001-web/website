@@ -92,8 +92,21 @@
             .map-note { transition: none; }
             .map-note.fading { opacity: 1; }
         }
-        #track { display: block; width: 100%; height: 420px; }
+        /* pan-y leaves one-finger vertical scrolling to the page, so the map
+           cannot trap a reader halfway down it. Two fingers come to us. */
+        #track { display: block; width: 100%; height: 420px; touch-action: pan-y; cursor: grab; }
+        #track.grabbing { cursor: grabbing; }
         @media (max-width: 560px) { #track { height: 300px; } }
+        /* Buttons as well as gestures: a phone has no scroll wheel, and not
+           everyone thinks to try pinching a picture of a racetrack. */
+        .map-zoom { display: flex; align-items: center; gap: 0.3rem; }
+        .map-zoom button { font-family: 'Orbitron', sans-serif; font-size: 0.72rem; font-weight: 700; line-height: 1;
+            width: 26px; height: 26px; padding: 0; display: grid; place-items: center;
+            color: var(--muted); background: var(--bg-1); border: 1px solid var(--border);
+            border-radius: 6px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+        .map-zoom button:hover:not(:disabled) { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .map-zoom button:disabled { opacity: 0.35; cursor: default; }
+        .map-zoom .reset { width: auto; padding: 0 0.5rem; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; }
 
         /* A split header is a button: it collapses its table and filters the
            map. Both from one control, because they are the same intent. */
@@ -426,28 +439,34 @@ function renderField(rows) {
     // column reappears by itself once one does.
     const showFuel = rows.some(r => r.fuel_pct != null);
 
-    app.innerHTML = `
-    <div class="page-wrap">
+    // The shell is built once and then only its volatile parts are updated.
+    // Rebuilding it every poll would destroy and recreate the canvas twice a
+    // second, which costs nothing visually but makes a drag impossible: the
+    // element being dragged stops existing mid-gesture.
+    if (!document.getElementById('live-shell')) {
+        // A fresh shell means the page was idle and has come back, so any zoom
+        // from the previous session points at a circuit that may not even be
+        // the same one.
+        view = { scale: 1, x: 0, y: 0 };
+        app.innerHTML = `
+    <div class="page-wrap" id="live-shell">
         <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
             <div class="eyebrow" style="margin:0">Live Timing</div>
-            ${ev.mode === 'practice'
-                ? '<span class="live-pill practice-pill"><span class="live-dot"></span>Practice</span>'
-                : ev.is_test
-                    ? '<span class="live-pill test-pill">Test</span>'
-                    : '<span class="live-pill"><span class="live-dot"></span>Live</span>'}
+            <span id="live-pill"></span>
         </div>
-        <div class="title" style="margin-top:0.4rem">Round ${ev.round}</div>
-        <div class="subtitle">${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${lobbies.length} split${lobbies.length === 1 ? '' : 's'}</div>
-        ${ev.mode === 'practice'
-            ? '<div class="subtitle" style="color:#86efac">Open practice, not a race. Everyone here is out on their own, so laps and gaps mean nothing yet.</div>'
-            : ev.is_test
-                ? '<div class="subtitle" style="color:#fdba74">This is a test of live timing, not a live race.</div>'
-                : ''}
-        <div class="splits">${lobbies.map(l => splitHtml(l, byLobby.get(l), showFuel)).join('')}</div>
+        <div class="title" style="margin-top:0.4rem" id="live-round"></div>
+        <div class="subtitle" id="live-sub"></div>
+        <div class="subtitle" id="live-mode-note"></div>
+        <div class="splits" id="live-splits"></div>
         <div class="map-card">
             <div class="map-head">
                 <span class="map-title">Track Map</span>
                 <span class="map-note" id="map-note"></span>
+                <span class="map-zoom">
+                    <button type="button" id="zoom-out" aria-label="Zoom out" title="Zoom out">&minus;</button>
+                    <button type="button" id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+                    <button type="button" class="reset" id="zoom-reset" aria-label="Reset the view" title="Fit the whole circuit">Fit</button>
+                </span>
             </div>
             <canvas id="track"></canvas>
         </div>
@@ -457,6 +476,35 @@ function renderField(rows) {
             Racing in GTEC? <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
         </div>
     </div>`;
+    }
+
+    // ---- the parts that change ----
+    const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+
+    set('live-pill', ev.mode === 'practice'
+        ? '<span class="live-pill practice-pill"><span class="live-dot"></span>Practice</span>'
+        : ev.is_test
+            ? '<span class="live-pill test-pill">Test</span>'
+            : '<span class="live-pill"><span class="live-dot"></span>Live</span>');
+
+    set('live-round', `Round ${ev.round}`);
+    set('live-sub', `${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${lobbies.length} split${lobbies.length === 1 ? '' : 's'}`);
+
+    const modeNote = document.getElementById('live-mode-note');
+    if (modeNote) {
+        if (ev.mode === 'practice') {
+            modeNote.style.cssText = 'color:#86efac';
+            modeNote.textContent = 'Open practice, not a race. Everyone here is out on their own, so laps and gaps mean nothing yet.';
+        } else if (ev.is_test) {
+            modeNote.style.cssText = 'color:#fdba74';
+            modeNote.textContent = 'This is a test of live timing, not a live race.';
+        } else {
+            modeNote.textContent = '';
+        }
+        modeNote.hidden = !modeNote.textContent;
+    }
+
+    set('live-splits', lobbies.map(l => splitHtml(l, byLobby.get(l), showFuel)).join(''));
 }
 
 // ---------------------------------------------------------------
@@ -505,6 +553,10 @@ function onSplitClick(key) {
     // Focusing a collapsed split should show it, or the click appears to
     // have done nothing.
     if (focusedSplit === key) collapsedSplits.delete(key);
+    // The map reframes around a different set of cars, so a zoom held from
+    // the previous framing would point at nothing in particular.
+    view = { scale: 1, x: 0, y: 0 };
+    syncZoomButtons();
     redrawSplits();
 }
 
@@ -584,9 +636,147 @@ function strokePath(g, path, px, pz, from, to) {
     if (started) g.stroke();
 }
 
+// ---------------------------------------------------------------
+// Zoom and pan.
+//
+// The view is an overlay on the auto-fit rather than a replacement for it:
+// scale 1 with no offset is "the whole circuit, framed". That way the map
+// keeps reframing itself as more of the track is traced, and a reader who
+// has zoomed into the Karussell stays there across the 1.5 second redraw.
+//
+// Deliberately 2D. Rotation and a real elevation ribbon want a denser path
+// than a beacon every 1.5 seconds can give, which is a separate job.
+// ---------------------------------------------------------------
+const ZOOM_MIN = 1, ZOOM_MAX = 14;
+let view = { scale: 1, x: 0, y: 0 };
+
+function resetView() {
+    view = { scale: 1, x: 0, y: 0 };
+    syncZoomButtons();
+    if (lastRows) drawTrack(lastRows);
+}
+
+/** Keeps the circuit from being dragged off the edge: panning is bounded by
+ *  how far the zoomed content actually overflows the canvas. */
+function clampView(w, h, contentW, contentH) {
+    view.scale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, view.scale));
+    const maxX = Math.max(0, (contentW * view.scale - w) / 2 + 26);
+    const maxY = Math.max(0, (contentH * view.scale - h) / 2 + 26);
+    view.x = Math.min(maxX, Math.max(-maxX, view.x));
+    view.y = Math.min(maxY, Math.max(-maxY, view.y));
+}
+
+/** Zoom about a fixed screen point, so what is under the cursor or the
+ *  midpoint of a pinch stays under it. */
+function zoomAt(sx, sy, factor) {
+    const cv = document.getElementById('track');
+    if (!cv) return;
+    const cx = cv.clientWidth / 2, cy = cv.clientHeight / 2;
+    const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, view.scale * factor));
+    const k = next / view.scale;
+    view.x = sx - cx - (sx - cx - view.x) * k;
+    view.y = sy - cy - (sy - cy - view.y) * k;
+    view.scale = next;
+    syncZoomButtons();
+    if (lastRows) drawTrack(lastRows);
+}
+
+function syncZoomButtons() {
+    const out = document.getElementById('zoom-out');
+    const inn = document.getElementById('zoom-in');
+    const rst = document.getElementById('zoom-reset');
+    if (out) out.disabled = view.scale <= ZOOM_MIN + 0.001;
+    if (inn) inn.disabled = view.scale >= ZOOM_MAX - 0.001;
+    if (rst) rst.disabled = view.scale <= ZOOM_MIN + 0.001 && !view.x && !view.y;
+}
+
+function bindMapControls() {
+    const cv = document.getElementById('track');
+    if (!cv || cv.dataset.bound) return;
+    cv.dataset.bound = '1';
+
+    const at = e => {
+        const r = cv.getBoundingClientRect();
+        return [e.clientX - r.left, e.clientY - r.top];
+    };
+
+    cv.addEventListener('wheel', e => {
+        e.preventDefault();
+        const [sx, sy] = at(e);
+        // deltaMode 1 is lines rather than pixels, which a few mice still use.
+        const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+        zoomAt(sx, sy, Math.exp(-d * 0.0022));
+    }, { passive: false });
+
+    // Mouse drag to pan. Pointer capture so a drag that leaves the canvas
+    // still finishes cleanly rather than sticking.
+    let dragging = false, lastPt = null;
+    cv.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'touch') return;      // touch is handled below
+        dragging = true; lastPt = at(e);
+        cv.classList.add('grabbing');
+        cv.setPointerCapture(e.pointerId);
+    });
+    cv.addEventListener('pointermove', e => {
+        if (!dragging) return;
+        const p = at(e);
+        view.x += p[0] - lastPt[0];
+        view.y += p[1] - lastPt[1];
+        lastPt = p;
+        syncZoomButtons();
+        if (lastRows) drawTrack(lastRows);
+    });
+    const endDrag = e => {
+        if (!dragging) return;
+        dragging = false;
+        cv.classList.remove('grabbing');
+        try { cv.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    cv.addEventListener('pointerup', endDrag);
+    cv.addEventListener('pointercancel', endDrag);
+
+    // Touch: two fingers pinch and pan together. One finger is left alone so
+    // the page still scrolls, which matters more than one-finger panning on
+    // a map sat halfway down a long page.
+    let pinch = null;
+    const spread = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const mid = t => {
+        const r = cv.getBoundingClientRect();
+        return [(t[0].clientX + t[1].clientX) / 2 - r.left,
+                (t[0].clientY + t[1].clientY) / 2 - r.top];
+    };
+    cv.addEventListener('touchstart', e => {
+        if (e.touches.length !== 2) { pinch = null; return; }
+        pinch = { d: spread(e.touches), m: mid(e.touches) };
+    }, { passive: true });
+    cv.addEventListener('touchmove', e => {
+        if (e.touches.length !== 2 || !pinch) return;
+        e.preventDefault();
+        const d = spread(e.touches), m = mid(e.touches);
+        view.x += m[0] - pinch.m[0];
+        view.y += m[1] - pinch.m[1];
+        if (pinch.d > 0) zoomAt(m[0], m[1], d / pinch.d);
+        else { syncZoomButtons(); if (lastRows) drawTrack(lastRows); }
+        pinch = { d, m };
+    }, { passive: false });
+    cv.addEventListener('touchend', () => { pinch = null; }, { passive: true });
+
+    // Double click or double tap to fit, the usual way out of a lost view.
+    cv.addEventListener('dblclick', e => { e.preventDefault(); resetView(); });
+
+    document.getElementById('zoom-in')?.addEventListener('click',
+        () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1.6));
+    document.getElementById('zoom-out')?.addEventListener('click',
+        () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.6));
+    document.getElementById('zoom-reset')?.addEventListener('click', resetView);
+
+    syncZoomButtons();
+}
+
 function drawTrack(rows) {
     const cv = document.getElementById('track');
     if (!cv) return;
+    bindMapControls();
     const note = document.getElementById('map-note');
 
     const dpr = window.devicePixelRatio || 1;
@@ -632,8 +822,20 @@ function drawTrack(rows) {
     const spanX = Math.max(1, maxX - minX), spanZ = Math.max(1, maxZ - minZ);
     const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanZ);
     const offX = (w - spanX * scale) / 2, offZ = (h - spanZ * scale) / 2;
-    const px = x => offX + (x - minX) * scale;
-    const pz = z => offZ + (z - minZ) * scale;
+
+    // The fitted projection above is the baseline; the reader's zoom and pan
+    // ride on top of it, about the middle of the canvas. Keeping the fit
+    // separate means the view survives the 1.5s redraw and the circuit still
+    // reframes itself as more of it is traced.
+    clampView(w, h, spanX * scale, spanZ * scale);
+    const vs = view.scale, cx = w / 2, cy = h / 2;
+    const px = x => cx + (offX + (x - minX) * scale - cx) * vs + view.x;
+    const pz = z => cy + (offZ + (z - minZ) * scale - cy) * vs + view.y;
+    // Line weights and markers are drawn in screen pixels, so they would
+    // bloat with the zoom. Held roughly constant instead, which is what a
+    // map should do, while still thickening a little so it does not look
+    // spindly when zoomed right in.
+    const zw = Math.max(0.6, Math.min(1.8, Math.pow(vs, 0.35)));
 
     // Only shade when there is a real climb to show. A circuit with ten
     // metres of elevation would otherwise be painted as dramatically as the
@@ -648,7 +850,7 @@ function drawTrack(rows) {
     // pass when there is not.
     for (const path of allPaths) {
         if (relief) {
-            g.lineWidth = 2.5;
+            g.lineWidth = 2.5 * zw;
             for (let i = 0; i < path.length - 1; i++) {
                 const a = path[i], b = path[i + 1];
                 if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
@@ -666,7 +868,7 @@ function drawTrack(rows) {
                 g.stroke();
             }
         } else {
-            g.lineWidth = 2.5;
+            g.lineWidth = 2.5 * zw;
             g.strokeStyle = 'rgba(148,163,184,0.5)';
             strokePath(g, path, px, pz, 0, path.length - 1);
         }
@@ -688,7 +890,7 @@ function drawTrack(rows) {
             if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
             g.globalAlpha = (dim ? 0.08 : 0.15 + 0.7 * ((i - from) / Math.max(1, path.length - 1 - from)));
             g.strokeStyle = col;
-            g.lineWidth = 3;
+            g.lineWidth = 3 * zw;
             g.beginPath();
             g.moveTo(px(a[0]), pz(a[1]));
             g.lineTo(px(b[0]), pz(b[1]));
