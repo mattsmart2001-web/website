@@ -10511,12 +10511,17 @@ async function renderHealthCheck() {
     // No-shows by round. The watch list above answers "who keeps missing
     // races"; this answers "how many holes were in the grid, and is it
     // getting worse" — the figures to put in front of the drivers.
-    const { data: roundNoShows } = await sb.rpc('event_no_show_summary',
+    const { data: roundNoShows, error: nsErr } = await sb.rpc('event_no_show_summary',
         activeSeason ? { p_season_id: activeSeason.id } : {});
     const nsRounds      = roundNoShows || [];
     const nsSeasonTotal = nsRounds.reduce((n, r) => n + r.unexcused, 0);
     const nsDeclared    = nsRounds.reduce((n, r) => n + r.declared, 0);
-    const roundNoShowRows = !nsRounds.length
+    // Say so when the query itself failed. Swallowing the error here reads
+    // as a clean zero, which is indistinguishable from a healthy grid and
+    // is exactly the wrong thing to show on a panel about missing drivers.
+    const roundNoShowRows = nsErr
+        ? `<div class="empty-state" style="padding:2rem 1rem;color:#f87171">Could not load no-show figures: ${esc(nsErr.message)}<br><span style="color:var(--muted);font-size:0.8rem">If this mentions a missing function, run endurance/sql/145_no_shows_by_round.sql.</span></div>`
+        : !nsRounds.length
         ? `<div class="empty-state" style="padding:2rem 1rem">No completed rounds yet.</div>`
         : nsRounds.map(r => {
             // Bar is scaled to the entry list, so a round reads as the share
@@ -10754,8 +10759,8 @@ async function renderHealthCheck() {
                     <span class="hc-stat-num">${noShowCount}</span>
                     <span class="hc-stat-label">No-Show Watch</span>
                 </div>
-                <div class="hc-stat ${nsSeasonTotal ? 'hc-stat--warn' : 'hc-stat--ok'}" title="${nsDeclared} further absences were flagged in advance">
-                    <span class="hc-stat-num">${nsSeasonTotal}</span>
+                <div class="hc-stat ${nsErr ? 'hc-stat--critical' : nsSeasonTotal ? 'hc-stat--warn' : 'hc-stat--ok'}" title="${nsErr ? 'Figures unavailable — see the No-Shows by Round panel' : `${nsDeclared} further absences were flagged in advance`}">
+                    <span class="hc-stat-num">${nsErr ? '!' : nsSeasonTotal}</span>
                     <span class="hc-stat-label">No-Shows (Season)</span>
                 </div>
                 <div class="hc-stat ${inactiveCount ? 'hc-stat--critical' : 'hc-stat--ok'}">
