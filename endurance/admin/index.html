@@ -980,7 +980,7 @@ let _splitsExport  = null;   // flat snapshot of the current split allocation, f
 let _penaltiesExport = null; // snapshot of the current event's penalties, for CSV export
 let _qualifyingExport = null; // snapshot of the current event's qualifying (all splits), for CSV export
 let _healthExport  = null;   // flat list of everything the health check flagged, for CSV export
-const INACTIVE_DAYS = 24;    // portal-inactivity threshold used by the Drivers list and entries view
+const INACTIVE_DAYS = 24;
 // Result statuses that mean the driver never actually took part, so they
 // don't count as a race result when deciding whether to skip the flag.
 const NO_SHOW_STATUSES = new Set(['dns', 'withdrawn']);
@@ -10501,7 +10501,7 @@ async function renderHealthCheck() {
                         <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${esc(d.psn_id || '—')}${lastSeenLine(d.driver_id)}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                        ${d.late ? `<span class="badge" style="background:rgba(251,146,60,0.15);color:#fdba74;border:1px solid rgba(251,146,60,0.3)" title="Flagged an absence, but inside 48 hours of the start — after the grid was published, so it still counts. Worth knowing before you act on this.">${d.late} flagged late</span>` : ''}
+                        ${d.late ? `<span class="badge" style="background:rgba(251,146,60,0.15);color:#fdba74;border:1px solid rgba(251,146,60,0.3)" title="Flagged an absence, but after that round's splits had been notified — too late for registration to drop them, so the hole in the grid was real and it still counts. Worth knowing before you act on this.">${d.late} flagged late</span>` : ''}
                         ${d.excused ? `<span class="badge badge-muted" title="Rounds they flagged in time — these do not count toward 6.4">+${d.excused} declared</span>` : ''}
                         <span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)" title="Undeclared no-shows — the figure 6.4 counts">${d.no_shows} missed / ${d.events_entered}</span>
                         <button class="btn-icon" onclick="openDirectMessageModal('${d.driver_id}','${esc(d.display_name)}')">Message</button>
@@ -10545,7 +10545,7 @@ async function renderHealthCheck() {
                     <div style="width:${unexPct}%;background:#f87171"></div>
                     <div style="width:${exPct}%;background:rgba(148,163,184,0.45)"></div>
                 </div>
-                <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem">${pct}% of the grid missing${r.late ? ` &middot; ${r.late} flagged inside 48h, still counted` : ''}${r.excused ? ` &middot; a further ${r.excused} flagged in time` : ''}</div>
+                <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem">${pct}% of the grid missing${r.late ? ` &middot; ${r.late} flagged after splits went out, still counted` : ''}${r.excused ? ` &middot; a further ${r.excused} flagged in time` : ''}</div>
             </div>`;
         }).join('');
 
