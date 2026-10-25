@@ -598,6 +598,17 @@
     <div class="portal-panel" id="panel-raceday" role="tabpanel" aria-labelledby="tab-raceday" tabindex="0" hidden>
         <p class="portal-empty" id="empty-raceday" hidden>Nothing live at the moment. Lobby IDs, stewarding and result screenshots appear here on a race weekend.</p>
 
+    <!-- Only shown to drivers who have not paired a reporter. Once they have,
+         it disappears for good rather than sitting here as a permanent advert. -->
+    <div class="card" id="card-live-timing-prompt" style="display:none;border-color:rgba(255,209,102,0.3)">
+        <div class="card-title">Get on the live map</div>
+        <p class="form-hint" style="margin-bottom:0">
+            Your car can appear on GTEC's live timing map during a race, alongside every other split.
+            It takes one pairing code and about a minute to set up.
+            <a href="#account" onclick="showTab('account')" style="color:var(--gold);font-weight:600">Set it up in your Account tab</a>.
+        </p>
+    </div>
+
     <!-- Upcoming events -->
     <div class="card" id="card-upcoming" style="display:none">
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap">
@@ -914,6 +925,55 @@
     </div>
 
 
+    <!-- Live timing -->
+    <div class="card" id="card-live-timing">
+        <div class="card-title">Live Timing</div>
+        <p class="form-hint" style="margin-bottom:1.25rem">
+            Put your car on the live map during a race. Pair once and it works for every round after that, so this is a one-off.
+            You need the GTEC app on an Android phone, or the GT7 Live Connector on a PC or Mac.
+        </p>
+
+        <!-- Never paired -->
+        <div id="lt-unpaired" style="display:none">
+            <button class="btn-save" id="btn-lt-pair" onclick="issueLiveTimingCode()">Get my pairing code</button>
+        </div>
+
+        <!-- Just issued. The code is shown once and never retrievable again,
+             the same as any API key, so the warning has to be plain. -->
+        <div id="lt-code-shown" style="display:none">
+            <label class="field-label">Your pairing code</label>
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.3rem">
+                <input type="text" id="lt-code" readonly
+                       style="flex:1;min-width:240px;font-family:monospace;font-size:0.8rem">
+                <button class="btn-small" onclick="copyLiveTimingCode()">Copy</button>
+            </div>
+            <div class="field-hint" style="font-size:0.75rem;color:var(--gold);margin-top:0.6rem;line-height:1.6">
+                Copy this into the app now. It is only shown once, and we cannot show it again.
+                If you lose it, come back and get a new one.
+            </div>
+            <div class="field-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;line-height:1.6">
+                Treat it like a password: anyone holding it can put a car on the map as you.
+            </div>
+        </div>
+
+        <!-- Paired on some earlier visit -->
+        <div id="lt-paired" style="display:none">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+                <span style="display:inline-flex;align-items:center;padding:0.2rem 0.6rem;border-radius:999px;font-family:'Orbitron',sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3)">Paired</span>
+                <span id="lt-last-used" style="font-size:0.78rem;color:var(--muted)"></span>
+            </div>
+            <div class="field-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.75rem;line-height:1.6">
+                Your code is set up and not shown again. Lost your phone, or need to set up a different one?
+                Get a new code and the old one stops working straight away.
+            </div>
+            <div style="display:flex;gap:0.5rem;margin-top:1.25rem;flex-wrap:wrap">
+                <button class="btn-small" onclick="issueLiveTimingCode()">New code</button>
+                <button class="btn-small danger" onclick="revokeLiveTimingCode()">Unpair</button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Change password -->
     <div class="card" id="card-change-password">
         <div class="card-title">Change Password</div>
@@ -1199,6 +1259,97 @@ function onHardwareInputChange() {
     const isWheel = document.getElementById('field-hw-input').value === 'wheel';
     document.getElementById('hw-wheel-group').style.display = isWheel ? '' : 'none';
 }
+
+// ---------------------------------------------------------------
+// Live timing pairing
+//
+// The code is per driver and never expires, so a driver pairs once and
+// every round after that just works. Which race a beacon belongs to is
+// worked out server side from the clock, so there is nothing to renew.
+// ---------------------------------------------------------------
+function _ltShow(which) {
+    ['lt-unpaired', 'lt-code-shown', 'lt-paired'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = id === which ? '' : 'none';
+    });
+}
+
+async function loadLiveTiming() {
+    const { data, error } = await sb.rpc('live_timing_status');
+    // A failure here is not worth a toast on a page the driver opened to do
+    // something else; default to the safe view and let them pair if they want.
+    if (error || !data?.ok) { _ltShow('lt-unpaired'); return; }
+
+    const prompt = document.getElementById('card-live-timing-prompt');
+    if (!data.paired) {
+        _ltShow('lt-unpaired');
+        if (prompt) prompt.style.display = '';
+        return;
+    }
+
+    _ltShow('lt-paired');
+    if (prompt) prompt.style.display = 'none';
+
+    // "Is my phone actually working" is the question this answers, and a
+    // driver should not have to be mid-race to find out.
+    const used = document.getElementById('lt-last-used');
+    if (used) {
+        used.textContent = data.last_used_at
+            ? `Last reported ${fmtRelative(data.last_used_at)}`
+            : 'Not used yet';
+    }
+}
+
+function fmtRelative(iso) {
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 1)    return 'just now';
+    if (mins < 60)   return `${mins} min ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)    return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+async function issueLiveTimingCode() {
+    const btn = document.getElementById('btn-lt-pair');
+    if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+
+    const { data, error } = await sb.rpc('live_timing_token_issue');
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Get my pairing code'; }
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not generate a code.', 'error'); return; }
+
+    document.getElementById('lt-code').value = data.token;
+    _ltShow('lt-code-shown');
+    const prompt = document.getElementById('card-live-timing-prompt');
+    if (prompt) prompt.style.display = 'none';
+    toast('Pairing code ready. Copy it now.', 'success');
+}
+
+async function copyLiveTimingCode() {
+    const field = document.getElementById('lt-code');
+    try {
+        await navigator.clipboard.writeText(field.value);
+        toast('Copied.', 'success');
+    } catch (e) {
+        // Clipboard access is blocked in plenty of mobile browsers, so fall
+        // back to selecting it for a manual copy rather than failing silently.
+        field.focus();
+        field.select();
+        toast('Press and hold to copy.', 'error');
+    }
+}
+
+async function revokeLiveTimingCode() {
+    if (!confirm('Unpair live timing?\n\nYour phone or connector will stop reporting, and your car will disappear from the live map if a race is running. You can pair again any time.')) return;
+    const { data, error } = await sb.rpc('live_timing_token_revoke');
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not unpair.', 'error'); return; }
+    toast('Unpaired.', 'success');
+    await loadLiveTiming();
+}
+
 
 async function saveHardware() {
     const btn = document.getElementById('btn-save-hardware');
@@ -2126,6 +2277,11 @@ async function init() {
     document.getElementById('field-hw-input').value   = driver.hardware_input   || '';
     document.getElementById('field-hw-wheel').value   = driver.hardware_wheel   || '';
     onHardwareInputChange();
+
+    // Pairing state decides both the Account card and whether the Race day
+    // prompt appears at all, so it is loaded with the rest of the profile
+    // rather than when the Account tab is first opened.
+    loadLiveTiming();
 
     // Birthday banner: compares month/day only, parsed as local time (a bare
     // "YYYY-MM-DD" string parses as UTC midnight, which can land on the
