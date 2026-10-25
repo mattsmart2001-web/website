@@ -74,6 +74,16 @@
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
         @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
 
+        /* Track map. No circuit artwork anywhere: the cars' own positions
+           trace the lap, so this works on any track from the first beacon
+           without calibration. */
+        .map-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; margin-top: 2rem; overflow: hidden; }
+        .map-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+        .map-title { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+        .map-note { font-size: 0.7rem; color: var(--muted); }
+        #track { display: block; width: 100%; height: 420px; }
+        @media (max-width: 560px) { #track { height: 300px; } }
+
         .splits { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 1.25rem; margin-top: 2rem; align-items: start; }
 
         .split { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
@@ -346,12 +356,140 @@ function renderField(rows) {
         <div class="subtitle">${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${lobbies.length} split${lobbies.length === 1 ? '' : 's'}</div>
         ${ev.is_test ? '<div class="subtitle" style="color:#fdba74">This is a test of live timing, not a live race.</div>' : ''}
         <div class="splits">${lobbies.map(l => splitHtml(l, byLobby.get(l))).join('')}</div>
+        <div class="map-card">
+            <div class="map-head">
+                <span class="map-title">Track Map</span>
+                <span class="map-note" id="map-note"></span>
+            </div>
+            <canvas id="track"></canvas>
+        </div>
         <div class="foot-note">
             Only drivers who have paired a reporter appear here, so this is part of the grid rather than all of it.
             Order is by laps completed.<br>
             Racing in GTEC? <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
         </div>
     </div>`;
+}
+
+// ---------------------------------------------------------------
+// Track map
+//
+// There is no circuit outline and nothing to calibrate per track. Every
+// position a car reports is kept, and the accumulated cloud of points IS
+// the lap: after a few minutes of running the shape of the circuit is
+// simply there, on any track, including one nobody has mapped.
+//
+// Points live for the life of the page, so a viewer arriving mid-race
+// builds the shape up over their first few minutes rather than being shown
+// a map that was drawn for them.
+// ---------------------------------------------------------------
+const SPLIT_COLOURS = ['#ffd166', '#38bdf8', '#4ade80', '#f472b6', '#fb923c', '#a78bfa', '#2dd4bf', '#f87171'];
+const trackCloud = [];            // every point seen this session
+const carTrails = new Map();      // driver_id -> recent points, for a tail
+const TRAIL_LEN = 14;
+const CLOUD_MAX = 20000;          // plenty for a shape, bounded for memory
+
+function splitColour(lobby) {
+    return SPLIT_COLOURS[((lobby || 1) - 1) % SPLIT_COLOURS.length];
+}
+
+function recordPositions(rows) {
+    rows.forEach(r => {
+        if (r.x == null || r.z == null) return;
+        // Only cars actually circulating. A car in the menus or long gone
+        // sits at one spot and would drag the whole map toward it.
+        if (!r.on_track || (r.age_ms ?? 0) > 30000) return;
+        const p = [r.x, r.z];
+        const t = carTrails.get(r.driver_id) || [];
+        const last = t[t.length - 1];
+        // Skip a repeat of the same position, which is a throttled or
+        // stationary car rather than movement.
+        if (last && last[0] === p[0] && last[1] === p[1]) return;
+        t.push(p);
+        while (t.length > TRAIL_LEN) t.shift();
+        carTrails.set(r.driver_id, t);
+        trackCloud.push(p);
+        if (trackCloud.length > CLOUD_MAX) trackCloud.shift();
+    });
+}
+
+function drawTrack(rows) {
+    const cv = document.getElementById('track');
+    if (!cv) return;
+    const note = document.getElementById('map-note');
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+        cv.width = Math.round(w * dpr);
+        cv.height = Math.round(h * dpr);
+    }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+
+    if (trackCloud.length < 2) {
+        if (note) note.textContent = 'Waiting for positions';
+        g.fillStyle = '#94a3b8';
+        g.font = "11px 'Inter', system-ui, sans-serif";
+        g.textAlign = 'center';
+        g.fillText('The circuit draws itself as cars report their position.', w / 2, h / 2);
+        return;
+    }
+
+    // Fit whatever has been seen, keeping the aspect ratio so the shape of
+    // the circuit is true rather than stretched to the box.
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const [x, z] of trackCloud) {
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    }
+    const pad = 26;
+    const spanX = Math.max(1, maxX - minX), spanZ = Math.max(1, maxZ - minZ);
+    const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanZ);
+    const offX = (w - spanX * scale) / 2, offZ = (h - spanZ * scale) / 2;
+    const px = x => offX + (x - minX) * scale;
+    const pz = z => offZ + (z - minZ) * scale;
+
+    // The accumulated cloud, faint: this is the track itself.
+    g.fillStyle = 'rgba(148,163,184,0.55)';
+    for (const [x, z] of trackCloud) g.fillRect(px(x) - 1, pz(z) - 1, 2, 2);
+
+    // Each car: a fading tail, then the car, then its number.
+    rows.forEach(r => {
+        if (r.x == null || r.z == null) return;
+        const stale = (r.age_ms ?? 0) > 30000;
+        if (stale) return;
+        const col = splitColour(r.lobby_number);
+        const trail = carTrails.get(r.driver_id) || [];
+        for (let i = 0; i < trail.length - 1; i++) {
+            g.globalAlpha = 0.1 + 0.5 * (i / Math.max(1, trail.length - 1));
+            g.strokeStyle = col;
+            g.lineWidth = 1.6;
+            g.beginPath();
+            g.moveTo(px(trail[i][0]), pz(trail[i][1]));
+            g.lineTo(px(trail[i + 1][0]), pz(trail[i + 1][1]));
+            g.stroke();
+        }
+        g.globalAlpha = r.on_track ? 1 : 0.35;
+        g.fillStyle = col;
+        g.beginPath();
+        g.arc(px(r.x), pz(r.z), 7, 0, Math.PI * 2);
+        g.fill();
+        if (r.car_number != null) {
+            g.fillStyle = '#050608';
+            g.font = "bold 10px 'Inter', system-ui, sans-serif";
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            g.fillText(String(r.car_number), px(r.x), pz(r.z) + 0.5);
+        }
+        g.globalAlpha = 1;
+    });
+
+    if (note) {
+        const km = (Math.max(maxX - minX, maxZ - minZ) / 1000).toFixed(1);
+        note.textContent = `${trackCloud.length.toLocaleString()} positions · about ${km} km across`;
+    }
 }
 
 let failures = 0;
@@ -372,7 +510,9 @@ async function tick() {
 
     failures = 0;
     if (!data || data.length === 0) { await renderIdle(); return; }
+    recordPositions(data);
     renderField(data);
+    drawTrack(data);
 }
 
 // Polling rather than Realtime: the table is a handful of rows, there is no
