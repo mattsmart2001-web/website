@@ -393,6 +393,10 @@ const SPLIT_COLOURS = ['#ffd166', '#38bdf8', '#4ade80', '#f472b6', '#fb923c', '#
 // consecutive in time and can therefore be joined into a line. A single
 // mixed cloud can only ever be drawn as dots.
 const carPaths = new Map();
+// The outline captured server side, so a refresh or a viewer arriving an
+// hour into a race gets the circuit straight away instead of an empty box.
+let basePath = [];
+let baseFetchedAt = 0;
 const PATH_MAX = 4000;            // per car; plenty of laps, bounded for memory
 const TRAIL_LEN = 14;             // how much of the tail is drawn bright
 // Two points further apart than this are not consecutive track: a car has
@@ -402,6 +406,17 @@ const MAX_SEGMENT_M = 600;
 
 function splitColour(lobby) {
     return SPLIT_COLOURS[((lobby || 1) - 1) % SPLIT_COLOURS.length];
+}
+
+async function loadBasePath(force) {
+    // Cheap and small, but no point asking every poll: it only grows while
+    // a car is circulating, and the page is accumulating its own points
+    // between fetches anyway.
+    if (!force && Date.now() - baseFetchedAt < 45000) return;
+    baseFetchedAt = Date.now();
+    const { data, error } = await sb.rpc('live_track');
+    if (error || !data) return;
+    basePath = data.map(p => [p.x, p.z, p.y]).filter(p => p[0] != null && p[1] != null);
 }
 
 function recordPositions(rows) {
@@ -451,7 +466,9 @@ function drawTrack(rows) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, w, h);
 
-    const allPaths = [...carPaths.values()];
+    // The stored outline is drawn as part of the track, same as the cars'
+    // own paths, so it joins up with what this page has seen since.
+    const allPaths = basePath.length ? [basePath, ...carPaths.values()] : [...carPaths.values()];
     const total = allPaths.reduce((n, p) => n + p.length, 0);
 
     if (total < 2) {
@@ -556,7 +573,7 @@ function drawTrack(rows) {
 
     if (note) {
         const km = (Math.max(maxX - minX, maxZ - minZ) / 1000).toFixed(1);
-        note.textContent = `${total.toLocaleString()} positions · about ${km} km across`
+        note.textContent = `${total.toLocaleString()} positions${basePath.length ? ' (outline saved)' : ''} · about ${km} km across`
             + (relief ? ` · ${Math.round(maxY - minY)} m of climb, shaded by height` : '');
     }
 }
@@ -579,6 +596,7 @@ async function tick() {
 
     failures = 0;
     if (!data || data.length === 0) { await renderIdle(); return; }
+    await loadBasePath(basePath.length === 0);
     recordPositions(data);
     renderField(data);
     drawTrack(data);
