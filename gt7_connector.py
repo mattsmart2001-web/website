@@ -59,9 +59,9 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "3.0"   # shown in the tray so you can confirm which build is running
-                        # 3.0 adds GTEC live timing, so this is how a driver
-                        # checks they have a build that can report.
+VERSION       = "3.1"   # shown in the tray so you can confirm which build is running
+                        # 3.0 added GTEC live timing; 3.1 adds fuel and
+                        # elevation to what it reports.
 GT7_PORT_STD  = 33740   # the port GT7 itself sends telemetry to
 GT7_PORT      = GT7_PORT_STD   # what we actually listen on; see _resolve_udp_config
 SEND_PORT     = 33739
@@ -1036,6 +1036,9 @@ async def _gtec_beacon():
             "p_last_lap_ms": int(pkt.last_lap) if (pkt.last_lap or 0) > 0 else None,
             "p_best_lap_ms": int(pkt.best_lap) if (pkt.best_lap or 0) > 0 else None,
             "p_x":           round(float(pkt.pos_x), 2),
+            # Elevation. GT7's y is the vertical axis, and a position without
+            # its height cannot be reconstructed afterwards.
+            "p_y":           round(float(pkt.pos_y), 2),
             "p_z":           round(float(pkt.pos_z), 2),
             "p_speed_kph":   int(pkt.speed_kmh),
             "p_on_track":    on_track,

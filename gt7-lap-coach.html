@@ -597,7 +597,7 @@ function connect(){
 // cannot share telemetry with a dashboard. Rather than put a notice at the top
 // of the page for everyone, including the majority who already have the
 // current build, ask the connector what it is and tell only the ones behind.
-const CONNECTOR_WANT = '3.0';
+const CONNECTOR_WANT = '3.1';
 const vnum = v => String(v || '').split('.').map(n => parseInt(n, 10) || 0);
 const behind = (have, want) => {
   const a = vnum(have), b = vnum(want);
@@ -616,7 +616,7 @@ function connectorVersion(m){
   connNoticeDone = true;
   try{ if(localStorage.getItem('lapCoachConnSeen') === CONNECTOR_WANT) return; }catch(_){}
   const bar = $('connBar'); if(!bar) return;
-  $('connTxt').innerHTML = `Your connector is ${have ? `version <b>${String(have).replace(/[<>&]/g,'')}</b>` : 'an older build'}, and <b>${CONNECTOR_WANT}</b> is out. The new one can put your car on GTEC's live timing map during a race, and it has a settings page that lets a dashboard or motion rig share the telemetry so both run at once. Your laps work either way.`;
+  $('connTxt').innerHTML = `Your connector is ${have ? `version <b>${String(have).replace(/[<>&]/g,'')}</b>` : 'an older build'}, and <b>${CONNECTOR_WANT}</b> is out. The new one puts your car on GTEC's live timing map during a race, with fuel and position, and it has a settings page that lets a dashboard or motion rig share the telemetry so both run at once. Your laps work either way.`;
   bar.classList.remove('hidden');
   $('connHide').onclick = () => {
     bar.classList.add('hidden');

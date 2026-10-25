@@ -399,7 +399,7 @@ function recordPositions(rows) {
         // Only cars actually circulating. A car in the menus or long gone
         // sits at one spot and would drag the whole map toward it.
         if (!r.on_track || (r.age_ms ?? 0) > 30000) return;
-        const p = [r.x, r.z];
+        const p = [r.x, r.z, r.y];
         const t = carTrails.get(r.driver_id) || [];
         const last = t[t.length - 1];
         // Skip a repeat of the same position, which is a throttled or
@@ -452,8 +452,31 @@ function drawTrack(rows) {
     const pz = z => offZ + (z - minZ) * scale;
 
     // The accumulated cloud, faint: this is the track itself.
-    g.fillStyle = 'rgba(148,163,184,0.55)';
-    for (const [x, z] of trackCloud) g.fillRect(px(x) - 1, pz(z) - 1, 2, 2);
+    let minY = Infinity, maxY = -Infinity;
+    for (const pt of trackCloud) {
+        const y = pt[2];
+        if (y == null) continue;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+    }
+    // Only shade when there is a real climb to show. A circuit with ten
+    // metres of elevation would otherwise be painted as dramatically as the
+    // Nordschleife, which says something untrue about it.
+    const relief = (maxY - minY) >= 15;
+    for (const pt of trackCloud) {
+        if (relief && pt[2] != null) {
+            const t = (pt[2] - minY) / (maxY - minY);
+            // Low ground cool and dark, high ground warm and bright, which
+            // reads as height without needing a legend.
+            const r0 = Math.round(80 + 175 * t);
+            const g0 = Math.round(110 + 90 * t);
+            const b0 = Math.round(170 - 80 * t);
+            g.fillStyle = `rgba(${r0},${g0},${b0},0.6)`;
+        } else {
+            g.fillStyle = 'rgba(148,163,184,0.55)';
+        }
+        g.fillRect(px(pt[0]) - 1, pz(pt[1]) - 1, 2, 2);
+    }
 
     // Each car: a fading tail, then the car, then its number.
     rows.forEach(r => {
@@ -488,7 +511,8 @@ function drawTrack(rows) {
 
     if (note) {
         const km = (Math.max(maxX - minX, maxZ - minZ) / 1000).toFixed(1);
-        note.textContent = `${trackCloud.length.toLocaleString()} positions · about ${km} km across`;
+        note.textContent = `${trackCloud.length.toLocaleString()} positions · about ${km} km across`
+            + (relief ? ` · ${Math.round(maxY - minY)} m of climb, shaded by height` : '');
     }
 }
 

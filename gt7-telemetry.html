@@ -703,7 +703,7 @@ let latestTelemetry = null;
 // Which connector build the site wants. Kept in step with VERSION in
 // gt7_connector.py and with the Lap Coach, so a driver is not told two
 // different things by two pages.
-const CONNECTOR_WANT = '3.0';
+const CONNECTOR_WANT = '3.1';
 let connNoticeDone = false;
 function behindVersion(a, b){
   const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
@@ -725,7 +725,7 @@ function connectorVersion(m){
   if(!bar) return;
   document.getElementById('connTxt').innerHTML =
     'Your connector is ' + (have ? 'version <b>' + String(have).replace(/[<>&]/g, '') + '</b>' : 'an older build')
-    + ', and <b>' + CONNECTOR_WANT + '</b> is out. The new one can put your car on GTEC\'s live timing map during a race. Your dashboard works either way.';
+    + ', and <b>' + CONNECTOR_WANT + '</b> is out. The new one puts your car on GTEC\'s live timing map during a race, with fuel and position. Your dashboard works either way.';
   bar.style.display = 'flex';
   document.getElementById('connHide').onclick = function(){
     bar.style.display = 'none';
