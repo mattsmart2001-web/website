@@ -59,7 +59,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "3.1"   # shown in the tray so you can confirm which build is running
+VERSION       = "3.2"   # shown in the tray so you can confirm which build is running
                         # 3.0 added GTEC live timing; 3.1 adds fuel and
                         # elevation to what it reports.
 GT7_PORT_STD  = 33740   # the port GT7 itself sends telemetry to
@@ -992,7 +992,31 @@ def _gtec_post(payload: dict):
         with urllib.request.urlopen(req, timeout=5) as resp:
             return json.loads(resp.read().decode("utf-8") or "{}")
     except urllib.error.HTTPError as e:
-        return {"ok": False, "error": f"Server said {e.code}"}
+        # The body is the whole diagnosis: PostgREST names the function and
+        # parameters it could not find, and Postgres names the constraint or
+        # the column. A bare status code sends everyone hunting in the wrong
+        # half of the system, which has cost two long debugging sessions, so
+        # whatever the server said is carried through to the status line.
+        detail = ""
+        try:
+            raw = e.read().decode("utf-8", "replace").strip()
+            if raw:
+                try:
+                    j = json.loads(raw)
+                    detail = (j.get("message") or j.get("error")
+                              or j.get("hint") or raw)
+                    if j.get("hint") and j.get("message"):
+                        detail = f"{j['message']} ({j['hint']})"
+                except Exception:
+                    detail = raw
+        except Exception:
+            pass
+        detail = " ".join(detail.split())          # one line for the status bar
+        if len(detail) > 220:
+            detail = detail[:217] + "..."
+        return {"ok": False,
+                "error": f"Server said {e.code}: {detail}" if detail
+                         else f"Server said {e.code}"}
     except Exception as e:
         # A dropped beacon is not queued. A stale position shown as live is
         # worse than a gap the website can age out honestly.
