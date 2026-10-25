@@ -4129,8 +4129,10 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
                 <button class="btn btn-ghost" onclick="exportSplitsCsv()">Export CSV</button>
                 <button class="btn btn-ghost" title="Open live timing on this event for a while, without touching its start time or putting a fake round on the calendar. Drivers with a paired reporter will appear on /endurance/live/ marked as a test." onclick="openLiveTest('${eventId}','${esc(eventName)}','${seasonId}')">Live Timing Test</button>
+                <button class="btn btn-ghost" title="Open live timing on this event every evening between two times, so drivers can try it before race day. Reopens itself nightly, shows on /endurance/live/ as Practice, and needs no entry." onclick="setLivePractice('${eventId}','${esc(eventName)}')">Practice Window</button>
                 <button class="btn-icon danger" title="Remove this event's split-assignment and hosting messages from every driver's inbox — use once the event is over" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
                 <button class="btn-icon danger" title="Close any live timing test on this event and clear the cars it put on the live page" onclick="closeLiveTest('${eventId}','${esc(eventName)}')">End Live Test</button>
+                <button class="btn-icon danger" title="Stop the nightly practice window on this event and clear the cars it put on the live page" onclick="clearLivePractice('${eventId}','${esc(eventName)}')">End Practice</button>
                 <button class="btn-icon danger" onclick="deleteLobbyRoomCodes('${eventId}','${esc(eventName)}')">Delete Room Codes</button>
                 <button class="btn-icon danger" onclick="deleteEventScreenshots('${eventId}','${esc(eventName)}','${seasonId}')">Delete Screenshots</button>
                 <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Split size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
@@ -4656,6 +4658,45 @@ async function openLiveTest(eventId, eventName, seasonId) {
 
     const until = new Date(data.until).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     toast(`Live timing open until ${until}. Start your connector and check /endurance/live/.`, 'success');
+}
+
+// ---------------------------------------------------------------
+// Nightly practice window. Unlike the test above this is a standing
+// schedule rather than a countdown: it reopens itself every evening, so the
+// drivers can try live timing on their own time instead of discovering a
+// problem an hour before a race.
+// ---------------------------------------------------------------
+async function setLivePractice(eventId, eventName) {
+    const answer = prompt(
+        `Open live timing on "${eventName}" every evening, between which times?\n\n`
+        + 'UK times, 24 hour clock, as from-to. Up to 8 hours.\n\n'
+        + 'Any driver with a paired reporter can join, entered or not, and the live page '
+        + 'shows it as Practice rather than a race. It reopens itself nightly until you end it.',
+        '18:00-22:00');
+    if (answer === null) return;
+
+    const m = answer.trim().match(/^(\d{1,2}):(\d{2})\s*(?:-|to|–)\s*(\d{1,2}):(\d{2})$/i);
+    if (!m) { toast('Give it as 18:00-22:00.', 'error'); return; }
+    const pad = (h, mi) => `${String(parseInt(h, 10)).padStart(2, '0')}:${mi}`;
+    const from = pad(m[1], m[2]), to = pad(m[3], m[4]);
+    if (parseInt(m[1], 10) > 23 || parseInt(m[3], 10) > 23 || parseInt(m[2], 10) > 59 || parseInt(m[4], 10) > 59) {
+        toast('That is not a time of day.', 'error'); return;
+    }
+
+    const { data, error } = await sb.rpc('live_practice_set',
+        { p_event_id: eventId, p_from: from, p_to: to });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not set the practice window.', 'error'); return; }
+
+    toast(`Practice live timing open ${data.from} to ${data.to} UK time, every evening. Drivers can pair and join from /endurance/live/.`, 'success');
+}
+
+async function clearLivePractice(eventId, eventName) {
+    if (!confirm(`Stop the nightly practice window on "${eventName}"?\n\nThis also clears any cars it put on the live page. The captured track outline is kept, so the map is still drawn on race day.`)) return;
+    const { data, error } = await sb.rpc('live_practice_clear', { p_event_id: eventId });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not stop it.', 'error'); return; }
+    toast(`Practice window stopped${data.cleared ? `, ${data.cleared} car${data.cleared === 1 ? '' : 's'} cleared` : ''}.`, 'success');
 }
 
 async function closeLiveTest(eventId, eventName) {

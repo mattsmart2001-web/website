@@ -1298,8 +1298,24 @@ function _ltShow(which) {
     });
 }
 
+/** The nightly practice window, worded for whoever is reading it. This is
+ *  the one place every driver passes through, so it is where an open
+ *  practice session has a chance of being noticed. */
+function _ltPracticeNote(prac, paired) {
+    if (!prac?.enabled) return '';
+    if (prac.open) {
+        return paired
+            ? ` <strong style="color:#86efac">Practice live timing is open now, until ${prac.to} UK time.</strong> Start your reporter and you will show up on the map within a few seconds.`
+            : ` <strong style="color:#86efac">Practice live timing is open now, until ${prac.to} UK time</strong>, so you can set it up and see your own car on the map straight away.`;
+    }
+    return ` Practice live timing is open every evening, ${prac.from} to ${prac.to} UK time, so you can try it out well before race day.`;
+}
+
 async function loadLiveTiming() {
-    const { data, error } = await sb.rpc('live_timing_status');
+    const [{ data, error }, { data: prac }] = await Promise.all([
+        sb.rpc('live_timing_status'),
+        sb.rpc('live_practice_window'),
+    ]);
     // A failure here is not worth a toast on a page the driver opened to do
     // something else; default to the safe view and let them pair if they want.
     if (error || !data?.ok) { _ltShow('lt-unpaired'); return; }
@@ -1314,8 +1330,9 @@ async function loadLiveTiming() {
             prompt.style.display = '';
             title.textContent = 'Get on the live map';
             body.innerHTML = 'Your car can appear on GTEC\'s <a href="/endurance/live/" style="color:var(--gold);font-weight:600">live timing map</a> during a race, alongside every other split. '
-                + 'It takes one pairing code and about a minute to set up. '
-                + '<a href="#account" onclick="showTab(\'account\');return false;" style="color:var(--gold);font-weight:600">Set it up in your Account tab</a>.';
+                + 'It takes one pairing code and about a minute to set up.'
+                + _ltPracticeNote(prac, false)
+                + ' <a href="#account" onclick="showTab(\'account\');return false;" style="color:var(--gold);font-weight:600">Set it up in your Account tab</a>.';
         }
         return;
     }
@@ -1346,6 +1363,7 @@ async function loadLiveTiming() {
             : `Live timing is paired. ${data.last_used_at
                     ? `Your reporter last checked in ${fmtRelative(data.last_used_at)}.`
                     : 'Your reporter has not checked in yet, so start the app or the connector before the race.'}`
+                + _ltPracticeNote(prac, true)
                 + ` <a href="/endurance/live/" style="color:var(--gold);font-weight:600">Watch live timing</a>.`;
     }
 }
