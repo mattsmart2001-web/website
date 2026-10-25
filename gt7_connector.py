@@ -1067,7 +1067,10 @@ async def _gtec_beacon():
         if not reply.get("reporting"):
             _gtec["state"] = "idle"
             _gtec["detail"] = reply.get("reason") or "No race in progress."
-            wait = 30.0
+            # Honour the server's pacing here too. Thirty seconds hardcoded
+            # meant an admin could open a test window and wait half a minute
+            # for anything to happen, with nothing on screen explaining why.
+            wait = max(5.0, float(reply.get("next_ms", 10000)) / 1000.0)
             continue
 
         _gtec["state"] = "reporting"
