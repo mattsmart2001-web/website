@@ -164,7 +164,39 @@
            columns, which these cards cannot spare. */
         .sub2 { display: block; font-variant-numeric: tabular-nums; font-size: 0.66rem; color: var(--muted); }
         .dr { display: flex; align-items: center; min-width: 0; }
-        .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; cursor: help; }
+        .who:hover, .who:focus-visible { color: var(--gold); outline: none; }
+
+        /* Driver card. Fixed, and appended outside the splits container, so
+           the 1.5s poll that rewrites the tables cannot pull it out from
+           under the pointer. */
+        .dcard { position: fixed; z-index: 60; width: 248px; padding: 0.85rem 0.95rem;
+            background: rgba(10,14,21,0.97); border: 1px solid var(--border); border-radius: 10px;
+            box-shadow: 0 14px 40px rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+            opacity: 0; transform: translateY(4px); pointer-events: none;
+            transition: opacity 0.16s ease, transform 0.16s ease; }
+        .dcard.on { opacity: 1; transform: translateY(0); }
+        .dcard .dc-top { display: flex; align-items: baseline; gap: 0.45rem; border-left: 3px solid var(--gold);
+            padding-left: 0.55rem; margin-bottom: 0.6rem; }
+        .dcard .dc-name { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700;
+            letter-spacing: 0.1em; text-transform: uppercase; color: var(--text);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dcard .dc-num { font-family: 'Anton', sans-serif; font-size: 0.92rem; color: var(--muted); margin-left: auto; }
+        .dcard .dc-team { font-size: 0.7rem; color: var(--muted); margin: -0.35rem 0 0.65rem 0.6rem; }
+        .dcard .dc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 0.75rem; }
+        .dcard .dc-k { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--muted); font-family: 'Orbitron', sans-serif; }
+        .dcard .dc-v { font-size: 0.95rem; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+        .dcard .dc-v small { font-size: 0.62rem; font-weight: 500; color: var(--muted); margin-left: 0.2rem; }
+        .dcard .dc-up { color: var(--green); } .dcard .dc-down { color: var(--red); }
+        .dcard .dc-foot { margin-top: 0.7rem; padding-top: 0.55rem; border-top: 1px solid var(--border);
+            font-size: 0.66rem; color: var(--muted); display: flex; justify-content: space-between; gap: 0.5rem; }
+        @media (prefers-reduced-motion: reduce) { .dcard { transition: none; } }
+        /* On a phone it docks to the bottom rather than chasing a finger. */
+        @media (max-width: 560px) {
+            .dcard { left: 12px !important; right: 12px; width: auto;
+                top: auto !important; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+        }
         .team { display: block; font-size: 0.7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         /* Liveness. A dot that vanishes reads as a bug and one frozen in a
@@ -319,7 +351,7 @@ function rowHtml(r, idx, showFuel) {
     return `<tr class="${st.cls}">
         <td class="pos">${idx + 1}</td>
         <td>
-            <div class="dr"><span class="who">${esc(r.display_name)}</span>${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
+            <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
             ${sub ? `<span class="team">${sub}</span>` : ''}
         </td>
         <td class="num">${r.lap ?? 0}${r.laps_in_race ? `<span class="sub2" style="display:inline">/${r.laps_in_race}</span>` : ''}</td>
@@ -395,15 +427,19 @@ async function renderIdle() {
         <div class="state">
             <h3>${practiceOpen ? 'Practice is open' : 'No race running'}</h3>
             <p>${practiceOpen
-                ? `Live timing is open for practice until ${esc(prac.to)} UK time and nothing is reporting yet. Grab the connector from your profile, follow the instructions there, and yours is the first car on the map.`
+                ? `Live timing is open for practice ${prac.always ? 'right up to race day' : `until ${esc(prac.to)} UK time`} and nothing is reporting yet. Grab the connector from your profile, follow the instructions there, and yours is the first car on the map.`
                 : next
                     ? `Timing goes live for <strong>Round ${next.round}</strong> at ${esc(next.circuit_name || next.name)}, ${esc(when)}. Every split appears here at once, lap by lap, for as long as the race is on.`
                     : 'Timing appears here while a round is running, with every split shown at once.'}</p>
             ${!practiceOpen && prac?.enabled
                 ? prac.race_day
-                    // Stood down for the day, so promising a time tonight would
-                    // be a lie. Said as a rule rather than a one-off.
-                    ? `<p style="margin-top:0.9rem">Practice live timing is paused on race days. It is open ${esc(prac.from)} to ${esc(prac.to)} UK time every other evening, so you can try it out before you race.</p>`
+                    // Stood down for the day, so promising a time would be a
+                    // lie. Said as a rule rather than a one-off.
+                    ? (prac.always
+                        // "Paused on race days, so you can try it before you
+                        // race" does not follow. Said plainly instead.
+                        ? '<p style="margin-top:0.9rem">Practice live timing is paused today because there is a race on.</p>'
+                        : `<p style="margin-top:0.9rem">Practice live timing is paused on race days. It is open ${esc(prac.from)} to ${esc(prac.to)} UK time every other evening, so you can try it out before you race.</p>`)
                     : `<p style="margin-top:0.9rem">Want to try it before race day? Practice live timing is open every evening, ${esc(prac.from)} to ${esc(prac.to)} UK time. Next open ${esc(opensIn(prac.at))}.</p>`
                 : ''}
             <a class="cta" href="${practiceOpen ? '/endurance/profile/#account' : '/endurance/calendar/'}">${practiceOpen ? 'Pair your reporter' : 'Full calendar'}</a>
@@ -505,6 +541,7 @@ function renderField(rows) {
     }
 
     set('live-splits', lobbies.map(l => splitHtml(l, byLobby.get(l), showFuel)).join(''));
+    bindDriverCards();
 }
 
 // ---------------------------------------------------------------
@@ -1006,23 +1043,200 @@ function nextFact() {
     setTimeout(() => { paintFact(); note.classList.remove('fading'); }, 450);
 }
 
-/** The circuit's GTEC record, looked up once per round. circuit_records is a
- *  public view, so this needs no migration and no sign-in. */
+/** The circuit's GTEC record and this season's form, looked up once per
+ *  round. Both are public views, so this needs no migration and no sign-in. */
 async function loadCircuitRecord(eventId) {
     if (!eventId || circuitAsked === eventId) return;
     circuitAsked = eventId;
     try {
         const { data: ev } = await sb.from('events')
-            .select('circuit_name').eq('id', eventId).maybeSingle();
-        if (!ev?.circuit_name) return;
-        const { data: rec } = await sb.from('circuit_records')
-            .select('best_lap_ms, driver_name, event_name')
-            .eq('circuit_name', ev.circuit_name)
-            .maybeSingle();
-        if (rec) circuitRecord = rec;
+            .select('circuit_name, season_id').eq('id', eventId).maybeSingle();
+        if (ev?.circuit_name) {
+            const { data: rec } = await sb.from('circuit_records')
+                .select('best_lap_ms, driver_name, event_name')
+                .eq('circuit_name', ev.circuit_name)
+                .maybeSingle();
+            if (rec) circuitRecord = rec;
+        }
+        if (ev?.season_id) await loadDriverCards(ev.season_id);
     } catch (_) {
         // A missing record is not worth a broken map.
     }
+}
+
+// ---------------------------------------------------------------
+// Driver card on hover.
+//
+// What the timing table cannot show without becoming a spreadsheet: where
+// this driver stands in the championship, what their rating is, and how
+// their season has gone. All of it from public views, fetched once per round
+// rather than per hover, so pointing at a name costs nothing.
+// ---------------------------------------------------------------
+const driverCards = new Map();   // driver_id -> facts
+
+async function loadDriverCards(seasonId) {
+    // The whole season's standings, because a championship position is a
+    // rank among everyone, not a property of one driver.
+    const [stand, rate] = await Promise.all([
+        sb.from('driver_standings')
+          .select('driver_id, points, races, wins, podiums, poles, fastest_laps, team_name, manufacturer_name, brand_color, career_number')
+          .eq('season_id', seasonId),
+        sb.from('driver_current_ratings')
+          .select('driver_id, rating, peak_rating, last_delta, nationality, team_name, manufacturer_name, brand_color, career_number'),
+    ]);
+
+    const rows = (stand.data || []).slice()
+        .sort((a, b) => Number(b.points ?? 0) - Number(a.points ?? 0));
+    const leader = rows.length ? Number(rows[0].points ?? 0) : null;
+
+    driverCards.clear();
+    rows.forEach((r, i) => driverCards.set(r.driver_id, {
+        pos: i + 1,
+        of: rows.length,
+        points: Number(r.points ?? 0),
+        behind: leader == null ? null : leader - Number(r.points ?? 0),
+        races: r.races, wins: r.wins, podiums: r.podiums,
+        poles: r.poles, fastest_laps: r.fastest_laps,
+        team_name: r.team_name, manufacturer_name: r.manufacturer_name,
+        brand_color: r.brand_color, career_number: r.career_number,
+    }));
+
+    (rate.data || []).forEach(r => {
+        const e = driverCards.get(r.driver_id) || {};
+        // A driver with a rating but no points yet still deserves a card.
+        driverCards.set(r.driver_id, Object.assign(e, {
+            rating: r.rating == null ? null : Math.round(r.rating),
+            peak: r.peak_rating == null ? null : Math.round(r.peak_rating),
+            delta: r.last_delta == null ? null : Math.round(r.last_delta),
+            nationality: r.nationality,
+            team_name: e.team_name || r.team_name,
+            manufacturer_name: e.manufacturer_name || r.manufacturer_name,
+            brand_color: e.brand_color || r.brand_color,
+            career_number: e.career_number ?? r.career_number,
+        }));
+    });
+}
+
+function cardHtml(row) {
+    const c = driverCards.get(row.driver_id);
+    const num = row.car_number ?? c?.career_number;
+    const line = [c?.team_name, c?.manufacturer_name].filter(Boolean).join(' · ');
+
+    // Nothing loaded yet, or a driver with no season history at all. Say so
+    // rather than showing a card full of dashes.
+    if (!c || (c.points == null && c.rating == null)) {
+        return `<div class="dc-top"><span class="dc-name">${esc(row.display_name)}</span>
+            ${num != null ? `<span class="dc-num">#${num}</span>` : ''}</div>
+            ${line ? `<div class="dc-team">${esc(line)}</div>` : ''}
+            <div class="dc-foot"><span>No championship record yet</span></div>`;
+    }
+
+    const d = c.delta;
+    const deltaHtml = d == null || d === 0 ? ''
+        : `<small class="${d > 0 ? 'dc-up' : 'dc-down'}">${d > 0 ? '+' : ''}${d}</small>`;
+
+    const cells = [];
+    if (c.points != null) {
+        cells.push(['Championship', `P${c.pos}<small>of ${c.of}</small>`]);
+        // "86 -18" reads as a subtraction. Spelled out instead, and left off
+        // entirely for whoever is leading.
+        cells.push(['Points', `${c.points}${c.behind ? `<small>${c.behind} behind</small>` : ''}`]);
+    }
+    if (c.rating != null) {
+        cells.push(['Elo', `${c.rating}${deltaHtml}`]);
+        if (c.peak != null && c.peak > c.rating) cells.push(['Peak', `${c.peak}`]);
+    }
+
+    const season = [
+        c.races ? `${c.races} race${c.races === 1 ? '' : 's'}` : null,
+        c.wins ? `${c.wins} win${c.wins === 1 ? '' : 's'}` : null,
+        c.podiums ? `${c.podiums} podium${c.podiums === 1 ? '' : 's'}` : null,
+    ].filter(Boolean).join(' · ');
+
+    return `<div class="dc-top">
+            <span class="dc-name">${esc(row.display_name)}</span>
+            ${num != null ? `<span class="dc-num">#${num}</span>` : ''}
+        </div>
+        ${line ? `<div class="dc-team">${esc(line)}</div>` : ''}
+        <div class="dc-grid">${cells.map(([k, v]) =>
+            `<div><div class="dc-k">${k}</div><div class="dc-v">${v}</div></div>`).join('')}</div>
+        <div class="dc-foot">
+            <span>${season || 'No races yet'}</span>
+            ${c.nationality ? `<span>${esc(c.nationality)}</span>` : ''}
+        </div>`;
+}
+
+let cardEl = null;
+function showCard(target, driverId) {
+    if (!cardEl) return;
+    const row = (lastRows || []).find(r => r.driver_id === driverId);
+    if (!row) return;
+    cardEl.innerHTML = cardHtml(row);
+
+    const c = driverCards.get(driverId);
+    // Borrow the manufacturer's colour for the accent, so a card for a Porsche
+    // driver does not look identical to one for a Ferrari driver.
+    cardEl.querySelector('.dc-top').style.borderLeftColor = c?.brand_color || 'var(--gold)';
+
+    // Measure after filling: the card's height depends on how many cells it has.
+    cardEl.classList.add('on');
+    const r = target.getBoundingClientRect();
+    const box = cardEl.getBoundingClientRect();
+    const gap = 10;
+    let left = r.left;
+    let top = r.bottom + gap;
+    if (left + box.width > window.innerWidth - 12) left = window.innerWidth - box.width - 12;
+    if (left < 12) left = 12;
+    // Flip above when there is no room below.
+    if (top + box.height > window.innerHeight - 12) top = Math.max(12, r.top - box.height - gap);
+    cardEl.style.left = left + 'px';
+    cardEl.style.top = top + 'px';
+}
+
+function hideCard() { if (cardEl) cardEl.classList.remove('on'); }
+
+function bindDriverCards() {
+    const shell = document.getElementById('live-shell');
+    const splits = document.getElementById('live-splits');
+    if (!shell || !splits || splits.dataset.carded) return;
+    splits.dataset.carded = '1';
+
+    if (!cardEl) {
+        cardEl = document.createElement('div');
+        cardEl.className = 'dcard';
+        cardEl.setAttribute('role', 'tooltip');
+        shell.appendChild(cardEl);
+    }
+
+    // Delegated, so it survives the tables being rewritten every poll.
+    const nameAt = e => e.target.closest?.('.who[data-driver]');
+    splits.addEventListener('mouseover', e => {
+        const el = nameAt(e);
+        if (el) showCard(el, el.dataset.driver);
+    });
+    splits.addEventListener('mouseout', e => {
+        const el = nameAt(e);
+        if (el && !el.contains(e.relatedTarget)) hideCard();
+    });
+    splits.addEventListener('focusin', e => {
+        const el = nameAt(e);
+        if (el) showCard(el, el.dataset.driver);
+    });
+    splits.addEventListener('focusout', hideCard);
+
+    // Touch: a tap opens the card without following anything, and the next
+    // tap anywhere closes it.
+    splits.addEventListener('click', e => {
+        const el = nameAt(e);
+        if (!el) return;
+        e.stopPropagation();
+        if (cardEl.classList.contains('on') && cardEl.dataset.for === el.dataset.driver) { hideCard(); return; }
+        cardEl.dataset.for = el.dataset.driver;
+        showCard(el, el.dataset.driver);
+    });
+    document.addEventListener('click', hideCard);
+    window.addEventListener('scroll', hideCard, { passive: true });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') hideCard(); });
 }
 
 let failures = 0;
