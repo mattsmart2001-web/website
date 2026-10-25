@@ -352,6 +352,15 @@ body.editing .accent-swatches{display:flex;}
   </div>
 </header>
 
+<!-- Connector update notice. Hidden until the connector reports a version
+     older than the one we want, so it never shows to someone already up to
+     date, and only once until a newer version ships. -->
+<div id="connBar" style="display:none;margin:0 1rem 1rem;padding:.7rem 1.1rem;border:1px solid rgba(255,195,26,.35);border-radius:10px;background:rgba(255,195,26,.06);align-items:center;gap:1rem;flex-wrap:wrap">
+  <span id="connTxt" style="flex:1;min-width:260px;font-size:.9rem;color:#c9cee0;line-height:1.5"></span>
+  <a id="connGet" href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.zip" style="font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:#1ab4ff;text-decoration:none;border:1px solid rgba(26,180,255,.4);padding:.4rem .8rem;border-radius:6px">Download</a>
+  <button id="connHide" style="font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;background:none;border:1px solid rgba(255,255,255,.2);color:#8a90a6;padding:.4rem .8rem;border-radius:6px;cursor:pointer">Not now</button>
+</div>
+
 <!-- SETUP SCREEN (shown when disconnected) -->
 <div id="setupScreen">
   <div class="setup-card">
@@ -691,6 +700,39 @@ let lastMsgTs = Date.now();   // watchdog: any message (telemetry or 2s status) 
 // CEF) coalesces a burst down to the newest frame instead of falling behind.
 let latestTelemetry = null;
 
+// Which connector build the site wants. Kept in step with VERSION in
+// gt7_connector.py and with the Lap Coach, so a driver is not told two
+// different things by two pages.
+const CONNECTOR_WANT = '3.0';
+let connNoticeDone = false;
+function behindVersion(a, b){
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for(let i = 0; i < Math.max(pa.length, pb.length); i++){
+    if((pa[i] || 0) < (pb[i] || 0)) return true;
+    if((pa[i] || 0) > (pb[i] || 0)) return false;
+  }
+  return false;
+}
+function connectorVersion(m){
+  if(connNoticeDone) return;
+  // A status message with no version at all is an older build saying so by
+  // omission, which is the case worth catching.
+  const have = m.version || null;
+  if(have && !behindVersion(have, CONNECTOR_WANT)) return;
+  connNoticeDone = true;
+  try{ if(localStorage.getItem('telemetryConnSeen') === CONNECTOR_WANT) return; }catch(_){}
+  const bar = document.getElementById('connBar');
+  if(!bar) return;
+  document.getElementById('connTxt').innerHTML =
+    'Your connector is ' + (have ? 'version <b>' + String(have).replace(/[<>&]/g, '') + '</b>' : 'an older build')
+    + ', and <b>' + CONNECTOR_WANT + '</b> is out. The new one can put your car on GTEC\'s live timing map during a race. Your dashboard works either way.';
+  bar.style.display = 'flex';
+  document.getElementById('connHide').onclick = function(){
+    bar.style.display = 'none';
+    try{ localStorage.setItem('telemetryConnSeen', CONNECTOR_WANT); }catch(_){}
+  };
+}
+
 function updateWaiting(txt){
   const el = document.getElementById('waitingTxt');
   if(el) el.textContent = txt;
@@ -741,6 +783,7 @@ function scheduleReconnect(){
 function handleMsg(msg){
   if(msg.type === 'connected'){ setStatus('bridge','BRIDGE READY'); updateWaiting('Connector found. Waiting for GT7. Start a session in Gran Turismo 7.'); return; }
   if(msg.type === 'status'){
+    connectorVersion(msg);
     // The connector reporting whether the console is actually sending packets.
     if(!hasLiveData){
       if((msg.packets || 0) > 0){
