@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Season Wrapped | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="A driver's GTEC season, rewound: results, Elo climb, closest battles and team, in one shareable recap.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/wrapped/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Season Wrapped">
+    <meta property="og:description" content="A GTEC driver's season, rewound.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/wrapped/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Season Wrapped">
+    <meta name="twitter:description" content="A GTEC driver's season, rewound.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Orbitron:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #0a0612; --ink-2: #120a1f; --stage: #030103;
+            --violet: #7c3aed; --magenta: #ec4899; --amber: #ffb347;
+            --gold: #ffd166; --cyan: #22d3ee; --paper: #f5f1ff; --muted: #b7aed4;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; background: var(--stage); color: var(--paper);
+            font-family: 'Inter', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center;
+            padding-block: 1.5rem 2.5rem;
+        }
+
+        .chrome-bar {
+            width: 100%; max-width: 460px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 1rem; margin-bottom: 1.1rem;
+        }
+        .chrome-back {
+            font-size: 0.82rem; color: var(--muted); text-decoration: none;
+            display: inline-flex; align-items: center; gap: 0.35rem;
+        }
+        .chrome-back:hover { color: var(--paper); }
+        .chrome-brand {
+            font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700;
+            letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold);
+        }
+
+        .loading, .notfound {
+            text-align: center; padding: 4rem 2rem; color: var(--muted);
+            font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase;
+        }
+        .notfound a { display: block; margin-top: 1.2rem; color: var(--gold); font-size: 0.72rem; letter-spacing: 0.1em; }
+
+        .phone {
+            position: relative;
+            width: min(400px, calc(100vw - 32px));
+            height: min(760px, calc(100vh - 140px));
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 30px 90px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.06);
+            background: var(--ink);
+        }
+
+        .story-bars { position: absolute; top: 0.65rem; left: 0.65rem; right: 0.65rem; z-index: 20; display: flex; gap: 0.3rem; }
+        .story-bar { flex: 1; height: 3px; border-radius: 3px; background: rgba(255,255,255,0.22); overflow: hidden; }
+        .story-bar > i { display: block; height: 100%; width: 0%; background: #fff; border-radius: 3px; }
+        .story-bar.done > i { width: 100%; }
+        .story-bar.active > i { animation: fillBar var(--dur, 4.6s) linear forwards; }
+        @keyframes fillBar { from { width: 0%; } to { width: 100%; } }
+
+        .tapzones { position: absolute; inset: 0; z-index: 15; display: flex; }
+        .tapzones .zone { flex: 1; cursor: pointer; }
+
+        .slides { position: absolute; inset: 0; display: grid; }
+        .slide {
+            grid-area: 1 / 1; position: relative; min-width: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+            padding: 3.2rem 1.9rem 2.6rem;
+            opacity: 0; visibility: hidden; transition: opacity 0.35s ease;
+        }
+        .slide.active { opacity: 1; visibility: visible; }
+
+        .slide.s-intro    { background: radial-gradient(120% 90% at 50% 0%, #2a1150 0%, var(--ink) 62%), var(--ink); }
+        .slide.s-races    { background: radial-gradient(120% 90% at 20% 0%, #3b0f52 0%, var(--ink) 60%), linear-gradient(200deg, var(--ink-2), var(--ink)); }
+        .slide.s-best     { background: radial-gradient(120% 90% at 80% 0%, #4a0e3a 0%, var(--ink) 60%), var(--ink); }
+        .slide.s-points   { background: radial-gradient(120% 90% at 50% 100%, #123a4a 0%, var(--ink) 62%), var(--ink); }
+        .slide.s-elo      { background: radial-gradient(120% 90% at 20% 100%, #3a2a05 0%, var(--ink) 62%), var(--ink); }
+        .slide.s-battle   { background: radial-gradient(120% 90% at 80% 0%, #2a0f4d 0%, var(--ink) 60%), var(--ink); }
+        .slide.s-team     { background: radial-gradient(120% 90% at 50% 0%, #0d3a34 0%, var(--ink) 62%), var(--ink); }
+        .slide.s-archetype{ background: radial-gradient(130% 100% at 50% 50%, #4a1250 0%, #1a0b2e 55%, var(--ink) 100%); }
+        .slide.s-finale   { background: linear-gradient(160deg, #2a0f4d 0%, #4a0e3a 45%, #3a2a05 100%); }
+
+        .eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.35em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.9rem; }
+        .slide.active .eyebrow { animation: riseIn 0.6s cubic-bezier(.2,.8,.2,1) both 0.05s; }
+        .big { font-family: 'Anton', sans-serif; text-transform: uppercase; line-height: 0.98; letter-spacing: 0.01em; max-width: 100%; overflow-wrap: break-word; }
+        .huge { font-size: clamp(2.8rem, 14vw, 4.2rem); }
+        .med { font-size: clamp(1.9rem, 9vw, 2.5rem); }
+        .slide.active .big { animation: riseIn 0.6s cubic-bezier(.2,.8,.2,1) both 0.15s; }
+        .sub { font-size: 0.95rem; color: var(--muted); line-height: 1.55; max-width: 27ch; margin-top: 0.9rem; }
+        .slide.active .sub { animation: riseIn 0.6s cubic-bezier(.2,.8,.2,1) both 0.28s; }
+        @keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+        @media (prefers-reduced-motion: reduce) {
+            .slide.active .eyebrow, .slide.active .big, .slide.active .sub { animation: none; }
+            .story-bar.active > i { animation-duration: 0.01s; }
+        }
+        .glownum { text-shadow: 0 0 40px currentColor; }
+
+        .stat-row { display: flex; gap: 1.5rem; margin-top: 1.5rem; flex-wrap: wrap; justify-content: center; }
+        .stat-mini { text-align: center; }
+        .stat-mini .n { font-family: 'Anton', sans-serif; font-size: 1.6rem; color: var(--cyan); }
+        .stat-mini .k { font-family: 'Orbitron', sans-serif; font-size: 0.5rem; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-top: 0.2rem; }
+
+        .chart-wrap { width: 100%; max-width: 270px; margin-top: 1.3rem; }
+        .chart-wrap svg { width: 100%; height: 120px; overflow: visible; }
+        .chart-line { fill: none; stroke: var(--cyan); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 8px rgba(34,211,238,0.6)); }
+        .chart-dot { fill: var(--cyan); }
+
+        .tier-arrow { display: flex; align-items: center; gap: 0.9rem; margin-top: 1.5rem; flex-wrap: wrap; justify-content: center; }
+        .tier-pill { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.5rem 1rem; border-radius: 999px; }
+        .tier-arrow svg { width: 20px; height: 20px; color: var(--gold); flex-shrink: 0; }
+
+        .crest-slot canvas { display: block; width: 96px; height: 96px; margin: 1.2rem auto 0; filter: drop-shadow(0 8px 20px rgba(0,0,0,0.5)); }
+        .team-name { font-family: 'Anton', sans-serif; font-size: 1.4rem; text-transform: uppercase; margin-top: 0.9rem; }
+        .team-mates { font-size: 0.82rem; color: var(--muted); margin-top: 0.35rem; max-width: 26ch; }
+
+        .archetype-icon { width: 60px; height: 60px; margin-bottom: 1rem; color: var(--gold); }
+        .archetype-name { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 10vw, 2.8rem); background: linear-gradient(135deg, #fff, var(--gold) 60%, var(--amber)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .final-badge {
+            display: inline-block; margin-bottom: 0.6rem; padding: 0.25rem 0.7rem;
+            border: 1px solid rgba(255,209,102,0.5); border-radius: 999px;
+            font-family: 'Orbitron', sans-serif; font-size: 0.52rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold);
+        }
+
+        .finale-card {
+            margin-top: 1.4rem; width: 100%; max-width: 250px;
+            background: rgba(10,6,18,0.55);
+            border: 1.5px solid transparent;
+            background-image: linear-gradient(rgba(10,6,18,0.72), rgba(10,6,18,0.72)), linear-gradient(135deg, var(--gold), var(--magenta), var(--cyan));
+            background-origin: border-box; background-clip: padding-box, border-box;
+            border-radius: 16px; padding: 1.05rem; backdrop-filter: blur(6px);
+        }
+        .finale-row { display: flex; justify-content: space-between; font-size: 0.74rem; padding: 0.28rem 0; border-bottom: 1px dashed rgba(255,255,255,0.12); }
+        .finale-row:last-child { border-bottom: none; }
+        .finale-row .k { color: var(--muted); }
+        .finale-row .v { font-family: 'Orbitron', sans-serif; font-weight: 700; color: var(--gold); }
+        .finale-actions { display: flex; gap: 0.6rem; margin-top: 1.2rem; }
+        .fbtn {
+            position: relative; z-index: 16;
+            font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+            padding: 0.68rem 0.95rem; border-radius: 999px; border: none; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.4rem;
+        }
+        .fbtn.primary { background: linear-gradient(135deg, var(--gold), var(--amber)); color: #1a1200; }
+        .fbtn.ghost { background: rgba(255,255,255,0.08); color: var(--paper); border: 1px solid rgba(255,255,255,0.18); }
+        .fbtn svg { width: 13px; height: 13px; }
+        .fbtn:disabled { opacity: 0.65; cursor: progress; }
+
+        .start-btn {
+            position: relative; z-index: 16; margin-top: 1.7rem;
+            font-family: 'Orbitron', sans-serif; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+            padding: 0.8rem 1.6rem; border-radius: 999px; border: none; cursor: pointer;
+            background: linear-gradient(135deg, var(--gold), var(--amber)); color: #1a1200;
+            box-shadow: 0 8px 26px rgba(255,179,71,0.35);
+        }
+        .restart-hint { position: absolute; bottom: 0.9rem; left: 0; right: 0; text-align: center; font-size: 0.66rem; color: var(--muted); z-index: 18; pointer-events: none; }
+
+        @media (max-width: 460px) {
+            body { padding-block: 0.85rem 0; }
+            .phone { width: 100vw; height: calc(100vh - 3.2rem); height: calc(100dvh - 3.2rem); border-radius: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="chrome-bar">
+    <a class="chrome-back" id="back-link" href="/endurance/drivers/">← Back</a>
+    <span class="chrome-brand">GTEC · Wrapped</span>
+</div>
+
+<div id="app"><div class="loading">Loading…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/endurance/assets/gtec-config.js"></script>
+<script src="/endurance/assets/elo-tiers.js?v=3"></script>
+<script src="/endurance/assets/gtec-crest.js"></script>
+<script src="/endurance/assets/gtec-trading-card.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+const app = document.getElementById('app');
+const slug = new URLSearchParams(location.search).get('slug');
+
+function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function notFound(msg) {
+    app.innerHTML = `<div class="notfound">${esc(msg)}<a href="/endurance/drivers/">← All Drivers</a></div>`;
+}
+
+// ============================================================
+// Archetype classifier - a small set of named "seasons", checked in
+// priority order (most specific / most impressive first), each backed
+// by a stat that's actually tracked. Falls through to a generic
+// default so every driver gets something.
+// ============================================================
+const ARCHETYPES = [
+    { key: 'perfectionist', name: 'The Perfectionist', icon: 'star',
+      test: s => s.races >= 3 && s.wins === s.races,
+      copy: s => `You won every single round this season. Nobody else even had a say.` },
+    { key: 'pole', name: 'Pole Position', icon: 'flag',
+      test: s => s.poles >= 2 && s.poles >= Math.ceil(s.races * 0.5),
+      copy: s => `${s.poles} poles from ${s.races} rounds. Your race was won before the lights went out.` },
+    { key: 'ironman', name: 'Iron Man', icon: 'shield',
+      test: s => s.races >= 5 && s.dnfs === 0,
+      copy: s => `${s.races} rounds started, ${s.races} rounds finished. Not one DNF all season.` },
+    { key: 'climber', name: 'The Climber', icon: 'trend',
+      test: s => s.splitClimbed,
+      copy: s => `You started in Split ${s.firstSplit} and fought your way up to Split ${s.lastSplit}.` },
+    { key: 'podium', name: 'Podium Regular', icon: 'trophy',
+      test: s => s.podiums >= 3 && s.podiums >= Math.ceil(s.races * 0.5),
+      copy: s => `${s.podiums} podiums from ${s.races} rounds. You made the top 3 a habit.` },
+    { key: 'flkings', name: 'Fastest Lap King', icon: 'bolt',
+      test: s => s.fastestLaps >= 2 && s.fastestLaps >= Math.ceil(s.races * 0.4),
+      copy: s => `${s.fastestLaps} fastest laps. When it mattered most, you were the quickest on track.` },
+    { key: 'grinder', name: 'The Grinder', icon: 'wrench',
+      test: s => s.races >= 5,
+      copy: s => `${s.races} rounds, every single one finished. The championship is won by drivers who show up.` },
+    { key: 'racer', name: 'The Racer', icon: 'checkflag',
+      test: () => true,
+      copy: s => `${s.races} round${s.races === 1 ? '' : 's'} on track this season. Here's to the next one.` },
+];
+
+function classifyArchetype(stats) {
+    return ARCHETYPES.find(a => a.test(stats)) || ARCHETYPES[ARCHETYPES.length - 1];
+}
+
+const ARCHETYPE_ICONS = {
+    star:      '<path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4L12 2z"/>',
+    flag:      '<path d="M4 3v18"/><path d="M4 4h13l-3 4 3 4H4"/>',
+    shield:    '<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/>',
+    trend:     '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    trophy:    '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 5H4a3 3 0 0 0 3 5"/><path d="M17 5h3a3 3 0 0 1-3 5"/>',
+    bolt:      '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>',
+    wrench:    '<path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 1 5.4-5.4z"/>',
+    checkflag: '<path d="M4 3v18"/><path d="M4 4h4v3h4V4h4v3h-4v3h4v3h-4v-3H8v3H4z"/>',
+};
+
+// ============================================================
+// Data
+// ============================================================
+async function init() {
+    if (!slug) { notFound('No driver specified.'); return; }
+
+    const { data: driver, error } = await sb.from('drivers')
+        .select('*, teams!current_team_id(name,slug), manufacturers(name,brand_color)')
+        .eq('slug', slug).maybeSingle();
+    if (error || !driver) { notFound('Driver not found.'); return; }
+
+    document.getElementById('back-link').href = `/endurance/drivers/?slug=${esc(slug)}`;
+    document.title = `${driver.display_name}'s Season Wrapped | GTEC`;
+
+    const [{ data: activeSeason }, { data: standingsRows }] = await Promise.all([
+        sb.from('seasons').select('id, year').eq('is_active', true).maybeSingle(),
+        sb.from('driver_standings').select('*').eq('driver_id', driver.id).order('season_year', { ascending: false }),
+    ]);
+
+    let targetStanding = null;
+    if (activeSeason) targetStanding = (standingsRows || []).find(s => s.season_id === activeSeason.id) || null;
+    if (!targetStanding) targetStanding = (standingsRows || [])[0] || null;
+
+    if (!targetStanding) { notFound('No season data yet - check back after your first race.'); return; }
+
+    const targetSeasonId = targetStanding.season_id;
+    const targetSeasonYear = targetStanding.season_year;
+    const prevStanding = (standingsRows || []).find(s => s.season_year === targetSeasonYear - 1) || null;
+
+    const [lockedCardRes, resultRowsRes, ratingRowsRes, fieldRes, teammatesRes] = await Promise.all([
+        sb.from('driver_season_cards').select('*').eq('driver_id', driver.id).eq('season_id', targetSeasonId).maybeSingle(),
+        sb.from('result_drivers')
+            .select('finish_position, status, laps_driven, pole_point, fastest_lap_point, results!inner(entries(lobby_number), events!inner(season_id, round, name, circuit_name))')
+            .eq('driver_id', driver.id).eq('results.events.season_id', targetSeasonId),
+        sb.from('driver_ratings')
+            .select('rating_before, rating_after, created_at, events!inner(season_id)')
+            .eq('driver_id', driver.id).eq('events.season_id', targetSeasonId).order('created_at'),
+        sb.from('driver_standings').select('driver_id, points').eq('season_id', targetSeasonId).order('points', { ascending: false }),
+        targetStanding.team_id
+            ? sb.from('driver_standings').select('driver_name').eq('season_id', targetSeasonId).eq('team_id', targetStanding.team_id).neq('driver_id', driver.id)
+            : Promise.resolve({ data: [] }),
+    ]);
+
+    const isFinal = !!lockedCardRes.data;
+    const headline = isFinal ? {
+        points: lockedCardRes.data.points, wins: lockedCardRes.data.wins, podiums: lockedCardRes.data.podiums,
+        races: lockedCardRes.data.races, poles: lockedCardRes.data.poles, elo: lockedCardRes.data.elo,
+        tier: lockedCardRes.data.tier, careerNumber: lockedCardRes.data.career_number, nationality: lockedCardRes.data.nationality,
+        teamName: lockedCardRes.data.team_name, mfrName: lockedCardRes.data.manufacturer_name, mfrColor: lockedCardRes.data.manufacturer_color,
+    } : {
+        points: Number(targetStanding.points || 0), wins: targetStanding.wins, podiums: targetStanding.podiums,
+        races: targetStanding.races, poles: targetStanding.poles, elo: null, tier: null,
+        careerNumber: driver.career_number, nationality: driver.nationality,
+        teamName: targetStanding.team_name, mfrName: targetStanding.manufacturer_name, mfrColor: targetStanding.brand_color,
+    };
+
+    // Elo movement this season (races don't get replayed after the fact, so
+    // this stays accurate whether the season is locked or still live).
+    const ratingRows = ratingRowsRes.data || [];
+    const eloFirst = ratingRows[0]?.rating_before ?? null;
+    const eloLast  = ratingRows[ratingRows.length - 1]?.rating_after ?? (headline.elo != null ? headline.elo : null);
+    const tierFirst = eloFirst != null && window.eloTier ? window.eloTier(eloFirst)?.name : null;
+    const tierLast  = eloLast  != null && window.eloTier ? window.eloTier(eloLast)?.name  : (headline.tier || null);
+    if (!isFinal) headline.elo = eloLast;
+    if (!isFinal) headline.tier = tierLast;
+
+    // Result-row-derived stats: laps, DNFs, best finish, split journey.
+    const rows = resultRowsRes.data || [];
+    const laps = rows.reduce((sum, r) => sum + Number(r.laps_driven || 0), 0);
+    const dnfs = rows.filter(r => r.status === 'dnf').length;
+    const classified = rows.filter(r => (r.status || 'classified') === 'classified' && r.finish_position != null);
+    let best = null;
+    classified.forEach(r => { if (!best || r.finish_position < best.finish_position) best = r; });
+    const fastestLaps = rows.filter(r => r.fastest_lap_point).length;
+    const orderedByRound = rows.slice().sort((a, b) => (a.results?.events?.round ?? 0) - (b.results?.events?.round ?? 0));
+    const splits = orderedByRound.map(r => r.results?.entries?.lobby_number).filter(n => n != null);
+    const firstSplit = splits[0] ?? null;
+    const lastSplit = splits[splits.length - 1] ?? null;
+    const distinctSplits = new Set(splits).size;
+
+    // Closest championship battle - smallest points gap to a neighbour
+    // in the final standings, from either side.
+    const field = fieldRes.data || [];
+    const myIdx = field.findIndex(f => f.driver_id === driver.id);
+    let closest = null;
+    if (myIdx > 0) closest = { gap: Number(field[myIdx - 1].points) - Number(field[myIdx].points), pos: myIdx, dir: 'up' };
+    if (myIdx >= 0 && myIdx < field.length - 1) {
+        const gapDown = Number(field[myIdx].points) - Number(field[myIdx + 1].points);
+        if (!closest || gapDown < closest.gap) closest = { gap: gapDown, pos: myIdx + 2, dir: 'down' };
+    }
+
+    const teammates = (teammatesRes.data || []).map(t => t.driver_name);
+
+    const stats = {
+        races: headline.races, wins: headline.wins, podiums: headline.podiums, poles: headline.poles,
+        dnfs, fastestLaps, splitClimbed: firstSplit != null && lastSplit != null && lastSplit < firstSplit,
+        firstSplit, lastSplit,
+    };
+    const archetype = classifyArchetype(stats);
+
+    renderWrapped({
+        driver, isFinal, targetSeasonYear, headline,
+        laps, dnfs, distinctSplits, best,
+        eloFirst, eloLast, tierFirst, tierLast,
+        prevPoints: prevStanding ? Number(prevStanding.points || 0) : null,
+        closest, fieldSize: field.length,
+        teammates,
+        archetype, stats,
+    });
+}
+
+// ============================================================
+// Render
+// ============================================================
+function renderWrapped(d) {
+    const h = d.headline;
+    const seasonLabel = d.isFinal ? `${d.targetSeasonYear} Final Season` : `${d.targetSeasonYear} Season · So Far`;
+
+    const slidesHTML = [
+        // Intro
+        `<div class="slide s-intro active" data-slide>
+            ${d.isFinal ? '<div class="final-badge">Final</div>' : ''}
+            <div class="eyebrow">GTEC · ${d.targetSeasonYear} Season</div>
+            <div class="big huge fit-line" data-fit-min="18">${esc(d.driver.display_name.toUpperCase())}</div>
+            <div class="sub">${d.isFinal ? 'Your season, wrapped up.' : 'Your season, so far.'} Tap to begin.</div>
+            <button class="start-btn" id="startBtn">▶ Start</button>
+        </div>`,
+
+        // On track
+        `<div class="slide s-races" data-slide>
+            <div class="eyebrow">On Track</div>
+            <div class="big med glownum" style="color:var(--cyan)">${h.races} ROUND${h.races === 1 ? '' : 'S'}</div>
+            <div class="sub">${d.dnfs === 0 ? 'You finished every round you started.' : `${d.dnfs} DNF${d.dnfs === 1 ? '' : 's'} along the way.`}</div>
+            <div class="stat-row">
+                <div class="stat-mini"><div class="n">${d.distinctSplits || 1}</div><div class="k">Split${d.distinctSplits === 1 ? '' : 's'}</div></div>
+                <div class="stat-mini"><div class="n">${d.laps}</div><div class="k">Laps</div></div>
+                <div class="stat-mini"><div class="n">${d.dnfs}</div><div class="k">DNFs</div></div>
+            </div>
+        </div>`,
+
+        // Best result
+        d.best ? `<div class="slide s-best" data-slide>
+            <div class="eyebrow">Best Result</div>
+            <div class="big huge glownum" style="color:var(--magenta)">P${d.best.finish_position}</div>
+            <div class="sub">${esc(d.best.results?.events?.circuit_name || d.best.results?.events?.name || 'Round ' + d.best.results?.events?.round)}, your best finish of the season.</div>
+        </div>` : '',
+
+        // Points climb
+        `<div class="slide s-points" data-slide>
+            <div class="eyebrow">Points</div>
+            <div class="big med">${h.points} PTS</div>
+            <div class="sub">${d.prevPoints != null ? (h.points > d.prevPoints ? `Up from ${d.prevPoints} last season.` : `${d.prevPoints} last season. The number that matters is what you do next.`) : 'Your first season on the board.'}</div>
+        </div>`,
+
+        // Elo climb
+        (d.eloFirst != null && d.eloLast != null) ? `<div class="slide s-elo" data-slide>
+            <div class="eyebrow">Elo</div>
+            <div class="big med">${d.tierFirst === d.tierLast ? `STEADY IN ${esc((d.tierLast || '').toUpperCase())}` : `${esc((d.tierFirst||'').toUpperCase())} → ${esc((d.tierLast||'').toUpperCase())}`}</div>
+            <div class="sub">${Math.round(d.eloFirst)} to ${Math.round(d.eloLast)} Elo this season.</div>
+            <div class="tier-arrow">
+                <span class="tier-pill" style="background:rgba(255,255,255,0.1)">${esc(d.tierFirst || '?')}</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                <span class="tier-pill" style="background:rgba(255,209,102,0.18);color:var(--gold)">${esc(d.tierLast || '?')}</span>
+            </div>
+        </div>` : '',
+
+        // Closest battle
+        d.closest ? `<div class="slide s-battle" data-slide>
+            <div class="eyebrow">Closest Battle</div>
+            <div class="big huge glownum" style="color:var(--gold)">${Math.abs(d.closest.gap).toFixed(Math.abs(d.closest.gap) % 1 === 0 ? 0 : 1)} PTS</div>
+            <div class="sub">That's how close you were to P${d.closest.pos} in a field of ${d.fieldSize}.</div>
+        </div>` : '',
+
+        // Team
+        h.teamName ? `<div class="slide s-team" data-slide>
+            <div class="eyebrow">Team</div>
+            <span class="crest-slot" data-crest-name="${esc(h.teamName)}" data-crest-size="96" aria-hidden="true"></span>
+            <div class="team-name">${esc(h.teamName)}</div>
+            <div class="team-mates">${d.teammates.length ? `Raced alongside ${d.teammates.map(esc).join(' &amp; ')}` : (h.mfrName ? esc(h.mfrName) : 'Flying solo')}</div>
+        </div>` : '',
+
+        // Archetype
+        `<div class="slide s-archetype" data-slide>
+            <div class="eyebrow">Your Season, In One Word</div>
+            <svg class="archetype-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${ARCHETYPE_ICONS[d.archetype.icon]}</svg>
+            <div class="archetype-name">${esc(d.archetype.name.toUpperCase())}</div>
+            <div class="sub">${esc(d.archetype.copy(d.stats))}</div>
+        </div>`,
+
+        // Finale
+        `<div class="slide s-finale" data-slide>
+            <div class="eyebrow">${esc(seasonLabel)}</div>
+            <div class="big med fit-line" data-fit-min="16">${esc(d.driver.display_name.toUpperCase())}</div>
+            <div class="finale-card">
+                <div class="finale-row"><span class="k">Points</span><span class="v">${h.points}</span></div>
+                <div class="finale-row"><span class="k">Wins</span><span class="v">${h.wins}</span></div>
+                <div class="finale-row"><span class="k">Podiums</span><span class="v">${h.podiums}</span></div>
+                ${h.tier ? `<div class="finale-row"><span class="k">Elo Tier</span><span class="v">${esc(h.tier)}</span></div>` : ''}
+                ${h.teamName ? `<div class="finale-row"><span class="k">Team</span><span class="v">${esc(h.teamName)}</span></div>` : ''}
+                <div class="finale-row"><span class="k">Archetype</span><span class="v">${esc(d.archetype.name)}</span></div>
+            </div>
+            <div class="finale-actions">
+                <button class="fbtn primary" id="saveCardBtn" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Save Card</span>
+                </button>
+            </div>
+        </div>`,
+    ].filter(Boolean).join('');
+
+    app.innerHTML = `<div class="phone" id="phone">
+        <div class="story-bars" id="bars"></div>
+        <div class="tapzones"><div class="zone" data-dir="-1"></div><div class="zone" data-dir="1"></div></div>
+        <div class="slides" id="slides">${slidesHTML}</div>
+        <div class="restart-hint" id="restartHint" hidden>Tap to replay ↻</div>
+    </div>`;
+
+    hydrateWrappedCrests();
+    fitAllOneLiners();
+    wireStory();
+    wireSaveCard(d);
+
+    // Fonts (Anton in particular) can shift measured text width once they
+    // actually swap in, so re-fit after they're ready too.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAllOneLiners);
+}
+
+function hydrateWrappedCrests() {
+    if (!window.gtecRenderCrest) return;
+    document.querySelectorAll('.crest-slot').forEach(el => {
+        const name = el.dataset.crestName;
+        if (!name || el.childElementCount) return;
+        el.appendChild(window.gtecRenderCrest(name, Number(el.dataset.crestSize) || 64));
+    });
+}
+
+// Keeps a name on one line by shrinking its font-size to fit the slide's
+// content width, rather than letting it wrap to a second line - measured
+// against the real rendered width, so it works for any name length.
+function fitAllOneLiners() {
+    document.querySelectorAll('.fit-line').forEach(fitTextToOneLine);
+}
+function fitTextToOneLine(el) {
+    if (!el) return;
+    const slide = el.closest('.slide');
+    if (!slide) return;
+    const cs = getComputedStyle(slide);
+    const available = slide.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+    el.style.whiteSpace = 'nowrap';
+    // Belt-and-braces: even after shrinking as far as the legibility floor
+    // allows, an extreme name could still be wider than the slide - clip
+    // it with an ellipsis rather than letting it spill past the frame.
+    el.style.overflow = 'hidden';
+    el.style.textOverflow = 'ellipsis';
+    el.style.maxWidth = available + 'px';
+    el.style.fontSize = '';
+    let fontSize = parseFloat(getComputedStyle(el).fontSize);
+    const minSize = Number(el.dataset.fitMin) || 16;
+    let guard = 0;
+    while (el.scrollWidth > available && fontSize > minSize && guard < 60) {
+        fontSize -= 1;
+        el.style.fontSize = fontSize + 'px';
+        guard++;
+    }
+}
+
+function wireSaveCard(d) {
+    const btn = document.getElementById('saveCardBtn');
+    if (!btn || !window.gtecTradingCard) return;
+    const h = d.headline;
+    btn.addEventListener('click', () => window.gtecTradingCard({
+        driver: {
+            display_name: d.driver.display_name, slug: d.driver.slug,
+            career_number: h.careerNumber, nationality: h.nationality, photo_url: d.driver.photo_url,
+            team_name: h.teamName || null, manufacturer_name: h.mfrName || null, manufacturer_color: h.mfrColor || null,
+        },
+        stats: { elo: h.elo, tier: h.tier, points: h.points, wins: h.wins, podiums: h.podiums, races: h.races },
+        buttonEl: btn,
+        eyebrow: `${d.targetSeasonYear} SEASON`,
+        title: `${d.targetSeasonYear} Season Card`,
+        fnamePart: String(d.targetSeasonYear),
+    }));
+}
+
+// ============================================================
+// Story engine - progress bars, tap/swipe/keyboard navigation.
+// ============================================================
+function wireStory() {
+    const slides = Array.prototype.slice.call(document.querySelectorAll('[data-slide]'));
+    const bars = document.getElementById('bars');
+    const phone = document.getElementById('phone');
+    const restartHint = document.getElementById('restartHint');
+    let started = false, i = 0, timer = null;
+    const DUR = 4600;
+
+    slides.forEach(() => {
+        const b = document.createElement('div');
+        b.className = 'story-bar';
+        b.appendChild(document.createElement('i'));
+        bars.appendChild(b);
+    });
+    const barEls = Array.prototype.slice.call(bars.children);
+
+    function render() {
+        slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+        barEls.forEach((b, idx) => {
+            b.classList.toggle('done', idx < i);
+            b.classList.toggle('active', idx === i && started);
+            const fill = b.querySelector('i');
+            if (idx === i && started) { fill.style.animation = 'none'; void fill.offsetWidth; fill.style.animation = ''; }
+        });
+        restartHint.hidden = i !== slides.length - 1;
+    }
+    function clearTimer() { if (timer) { clearTimeout(timer); timer = null; } }
+    function schedule() {
+        clearTimer();
+        if (!started || i >= slides.length - 1) return;
+        timer = setTimeout(next, DUR);
+    }
+    function next() { if (i < slides.length - 1) { i++; render(); schedule(); } }
+    function prev() { if (i > 0) { i--; } render(); schedule(); }
+
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn) startBtn.addEventListener('click', e => { e.stopPropagation(); started = true; next(); });
+
+    document.querySelectorAll('.zone').forEach(z => {
+        z.addEventListener('click', () => {
+            if (!started) return;
+            if (i === slides.length - 1) { i = 0; started = false; render(); clearTimer(); return; }
+            z.dataset.dir === '1' ? next() : prev();
+        });
+    });
+
+    document.addEventListener('keydown', e => {
+        if (!started) { if (e.key === 'Enter' || e.key === ' ') { started = true; next(); } return; }
+        if (e.key === 'ArrowRight') next();
+        if (e.key === 'ArrowLeft') prev();
+    });
+
+    let touchX = null;
+    phone.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
+    phone.addEventListener('touchend', e => {
+        if (touchX == null || !started) return;
+        const dx = e.changedTouches[0].clientX - touchX;
+        if (Math.abs(dx) > 40) dx < 0 ? next() : prev();
+        touchX = null;
+    }, { passive: true });
+
+    render();
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Timing | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="Live timing for the GTEC Gran Turismo 7 endurance championship. Every split running at once, lap by lap, while the race is on.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/live/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Live Timing">
+    <meta property="og:description" content="Every GTEC split running at once, lap by lap, while the race is on.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/live/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Live Timing">
+    <meta name="twitter:description" content="Every GTEC split running at once, lap by lap.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --green: #22c55e;
+            --red: #ef4444;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+        /* Nav — shared with every other GTEC page */
+        .gtec-nav { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 2rem; background: rgba(5,6,8,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand-logo { height: 26px; width: auto; display: block; }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav .back { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 0.45rem 0.85rem; border: 1px solid var(--border); border-radius: 999px; }
+        .gtec-nav-toggle { display: none; background: none; border: none; color: var(--text); cursor: pointer; }
+        .gtec-nav-toggle svg { width: 24px; height: 24px; }
+        .nav-badge { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--red); margin-left: 0.3rem; vertical-align: top; }
+
+        .page-wrap { max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+        .eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.6rem; }
+        .title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: 0.04em; text-transform: uppercase; }
+        .subtitle { color: var(--muted); font-size: 0.88rem; margin-top: 0.5rem; }
+
+        /* The pulsing dot is the only moving thing on the page when nothing
+           is happening, which is what tells a viewer it is still connected. */
+        .live-pill { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.3rem 0.75rem; border-radius: 999px; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+        /* A test must never be mistakeable for a race, so it loses the
+           pulsing dot and the red entirely. */
+        .test-pill { background: rgba(251,146,60,0.12); color: #fdba74; border-color: rgba(251,146,60,0.35); }
+        /* An open practice evening is a real session, not a warning, so it
+           reads as green rather than borrowing the amber of a test. */
+        .practice-pill { background: rgba(34,197,94,0.12); color: #86efac; border-color: rgba(34,197,94,0.35); }
+        .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 1.6s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+        @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+        /* Track map. No circuit artwork anywhere: the cars' own positions
+           trace the lap, so this works on any track from the first beacon
+           without calibration. */
+        .map-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; margin-top: 2rem; overflow: hidden; }
+        .map-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+        .map-title { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+        .map-note { font-size: 0.7rem; color: var(--muted); }
+        #track { display: block; width: 100%; height: 420px; }
+        @media (max-width: 560px) { #track { height: 300px; } }
+
+        /* A split header is a button: it collapses its table and filters the
+           map. Both from one control, because they are the same intent. */
+        .split-head { cursor: pointer; user-select: none; border: none; width: 100%; text-align: left; font: inherit; color: inherit; }
+        .split-head:hover { background: rgba(255,255,255,0.03); }
+        .split-head:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+        .split-chev { flex: 0 0 auto; color: var(--muted); font-size: 0.8rem; line-height: 1; transition: transform 0.15s; cursor: pointer; padding: 0.2rem 0.3rem; margin: -0.2rem -0.1rem -0.2rem -0.3rem; border-radius: 4px; }
+        .split-chev:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+        .split.collapsed .split-chev { transform: rotate(-90deg); }
+        .split.collapsed table { display: none; }
+        .split.collapsed .split-head { border-bottom-color: transparent; }
+        /* The focused split is the one the map is showing. */
+        .split.focused { border-color: rgba(255,209,102,0.45); }
+        .split.focused .split-name { color: var(--gold); }
+
+        .splits { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 1.25rem; margin-top: 2rem; align-items: start; }
+
+        .split { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .split-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+        .split-head .split-meta { margin-left: auto; }
+        .split-name { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+        .split-meta { font-size: 0.7rem; color: var(--muted); }
+
+        /* Fixed layout so a long team name truncates instead of forcing the
+           table wider than its card, which silently clipped the Best column. */
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th:nth-child(1), td:nth-child(1) { width: 26px; }
+        th:nth-child(3), td:nth-child(3) { width: 46px; }
+        th:nth-child(6), td:nth-child(6) { width: 82px; }
+        /* Sized in pixels, not ch: a Nordschleife lap reads 7:54.471, and ch
+           units under-measured it once cell padding was counted, which clipped
+           the Best column on the narrowest cards. */
+        th:nth-child(4), td:nth-child(4) { width: 66px; }
+        th:nth-child(5), td:nth-child(5) { width: 66px; }
+        th { font-family: 'Orbitron', sans-serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); }
+        td { padding: 0.5rem 0.6rem; font-size: 0.82rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        .num { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; font-size: 0.78rem; padding-left: 0.25rem; padding-right: 0.45rem; }
+        th:nth-child(n+3) { text-align: right; }
+        .pos { font-family: 'Anton', sans-serif; font-size: 0.95rem; color: var(--gold); width: 2.2ch; }
+        .car { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.75rem; }
+        /* Fuel as a bar rather than a bare number: across a split, "who is
+           about to stop" reads from the shape of a column of bars far faster
+           than from a column of percentages. */
+        .fuel-wrap { display: flex; align-items: center; gap: 0.35rem; justify-content: flex-end; }
+        .fuel-bar { width: 34px; height: 7px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; flex: 0 0 auto; }
+        .fuel-fill { display: block; height: 100%; background: var(--green); }
+        .fuel-low .fuel-fill  { background: #fb923c; }
+        .fuel-crit .fuel-fill { background: var(--red); }
+        .fuel-pct { font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+        .fuel-low .fuel-pct  { color: #fdba74; }
+        .fuel-crit .fuel-pct { color: #fca5a5; font-weight: 600; }
+        /* Second lines under Last and Best: current lap time and speed. They
+           use vertical space the rows already have rather than two more
+           columns, which these cards cannot spare. */
+        .sub2 { display: block; font-variant-numeric: tabular-nums; font-size: 0.66rem; color: var(--muted); }
+        .dr { display: flex; align-items: center; min-width: 0; }
+        .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .team { display: block; font-size: 0.7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Liveness. A dot that vanishes reads as a bug and one frozen in a
+           corner reads as a crash, so a car fades through these instead. */
+        .s-live     { }
+        .s-drifting { opacity: 0.75; }
+        .s-lost     { opacity: 0.45; }
+        .s-offline  { opacity: 0.3; }
+        /* Shrinkable: at phone width "Signal lost" is wider than the whole
+           driver cell, and a non-shrinking flag was simply being clipped by
+           the card, which loses it entirely rather than shortening it. */
+        .flag { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-family: 'Orbitron', sans-serif; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.35rem; white-space: nowrap; }
+        .flag-lost    { background: rgba(251,146,60,0.15); color: #fdba74; }
+        .flag-offline { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .flag-menus   { background: rgba(148,163,184,0.12); color: var(--muted); }
+
+        .state { text-align: center; padding: 4.5rem 2rem; }
+        .state h3 { font-family: 'Anton', sans-serif; font-size: 1.3rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.6rem; }
+        .state p { color: var(--muted); font-size: 0.88rem; line-height: 1.7; max-width: 46ch; margin: 0 auto; }
+        .state .cta { display: inline-block; margin-top: 1.5rem; font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); text-decoration: none; border: 1px solid rgba(255,209,102,0.3); padding: 0.6rem 1.1rem; border-radius: 999px; }
+        .loading { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 0.35em; text-transform: uppercase; }
+
+        .foot-note { margin-top: 2.5rem; font-size: 0.74rem; color: var(--muted); line-height: 1.7; text-align: center; }
+        .foot-note a { color: var(--gold); text-decoration: none; }
+
+        /* Phone: drop Best so the driver name and status flag stay readable.
+           Last lap and fuel are what matter while a race is running. */
+        @media (max-width: 560px) {
+            th:nth-child(5), td:nth-child(5) { display: none; }
+            th:nth-child(6), td:nth-child(6) { width: 70px; }
+            .flag { font-size: 0.46rem; letter-spacing: 0.06em; }
+        }
+
+        @media (max-width: 860px) {
+            .gtec-nav { padding: 1rem; flex-wrap: wrap; }
+            .gtec-nav-toggle { display: block; }
+            .gtec-nav .nav-links { display: none; width: 100%; flex-direction: column; align-items: flex-start; gap: 0.85rem; padding-top: 1rem; }
+            .gtec-nav .nav-links.open { display: flex; }
+            .page-wrap { padding: 1.75rem 1rem 3rem; }
+            .splits { grid-template-columns: 1fr; }
+        }
+    </style>
+    <!-- Loaded after the inline styles, as on every other page: it is what
+         centres the links and pins the logo, overriding the space-between
+         layout above. Without it this page's nav sits right of every other. -->
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/live/" class="active">Live</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div id="app"><div class="loading">Loading…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+const app = document.getElementById('app');
+
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data?.session) { if (portal) portal.style.display = ''; }
+    else if (signin) signin.style.display = '';
+});
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/** Lap times arrive as milliseconds. */
+function lapTime(ms) {
+    if (ms == null || ms <= 0) return '—';
+    const m = Math.floor(ms / 60000);
+    const s = ((ms % 60000) / 1000).toFixed(3).padStart(6, '0');
+    return m > 0 ? `${m}:${s}` : s;
+}
+
+/**
+ * How much to trust a car's position, from the age of its last beacon.
+ *
+ * Deliberately slow to alarm and quick to recover. A three-second cadence
+ * over home WiFi skips beacons constantly, so six seconds of silence is
+ * normal and thirty is worth showing. One good beacon returns a car
+ * straight to live, with no smoothing.
+ *
+ * Nothing here ever contradicts the race: a driver whose phone dies on lap
+ * 37 still reads lap 37, because losing the reporter is not losing the car.
+ */
+function liveness(ageMs, onTrack) {
+    if (!onTrack) return { cls: 's-drifting', flag: 'In menus', flagCls: 'flag-menus' };
+    if (ageMs < 6000)   return { cls: 's-live', flag: '', flagCls: '' };
+    if (ageMs < 30000)  return { cls: 's-drifting', flag: '', flagCls: '' };
+    if (ageMs < 300000) return { cls: 's-lost', flag: 'Signal lost', flagCls: 'flag-lost' };
+    return { cls: 's-offline', flag: 'Offline', flagCls: 'flag-offline' };
+}
+
+/**
+ * Fuel as a bar with the figure beside it. Thresholds are deliberately
+ * blunt: under 25% is worth noticing, under 10% means a stop within a lap
+ * or two. Turning that into "laps remaining" needs each driver's own
+ * consumption, which is a later job and not worth faking from one reading.
+ */
+function fuelHtml(pct) {
+    if (pct == null) return '<span class="fuel-pct">&mdash;</span>';
+    const v = Math.max(0, Math.min(100, pct));
+    const cls = v < 10 ? 'fuel-crit' : v < 25 ? 'fuel-low' : '';
+    return `<div class="fuel-wrap ${cls}" title="${v.toFixed(1)}% of tank">
+        <span class="fuel-pct">${Math.round(v)}%</span>
+        <span class="fuel-bar"><span class="fuel-fill" style="width:${v}%"></span></span>
+    </div>`;
+}
+
+function rowHtml(r, idx, showFuel) {
+    const st = liveness(r.age_ms ?? 0, r.on_track);
+    const live = st.cls === 's-live' && r.on_track;
+    // Order within a split is by laps completed. Real gaps need most of a
+    // lobby reporting plus the track centreline, so they are not claimed
+    // here rather than shown as something they are not.
+    // Car number sits on the team line rather than in its own column. A
+    // Nordschleife lap is over seven minutes, so Last and Best are wide, and
+    // a sixth column pushed Best off the edge of the card.
+    const sub = [
+        r.car_number != null ? '#' + r.car_number : null,
+        r.team_name ? esc(r.team_name) : null,
+    ].filter(Boolean).join(' · ');
+
+    return `<tr class="${st.cls}">
+        <td class="pos">${idx + 1}</td>
+        <td>
+            <div class="dr"><span class="who">${esc(r.display_name)}</span>${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
+            ${sub ? `<span class="team">${sub}</span>` : ''}
+        </td>
+        <td class="num">${r.lap ?? 0}${r.laps_in_race ? `<span class="sub2" style="display:inline">/${r.laps_in_race}</span>` : ''}</td>
+        <td class="num">${lapTime(r.last_lap_ms)}<span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
+        <td class="num">${lapTime(r.best_lap_ms)}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
+        ${showFuel ? `<td>${fuelHtml(r.fuel_pct)}</td>` : ''}
+    </tr>`;
+}
+
+function splitHtml(lobby, rows, showFuel) {
+    rows.sort((a, b) => (b.lap ?? 0) - (a.lap ?? 0));
+    const reporting = rows.filter(r => (r.age_ms ?? 0) < 30000 && r.on_track).length;
+    const key = String(lobby ?? 0);
+    const collapsed = collapsedSplits.has(key);
+    const focused = focusedSplit === key;
+    return `<div class="split${collapsed ? ' collapsed' : ''}${focused ? ' focused' : ''}" data-split="${key}">
+        <button class="split-head" type="button" aria-expanded="${collapsed ? 'false' : 'true'}"
+                onclick="onSplitClick('${key}')"
+                title="Show only this split on the map">
+            <span class="split-chev" role="button" tabindex="0"
+                  aria-label="${collapsed ? 'Expand' : 'Collapse'} this split"
+                  onclick="onSplitToggle(event, '${key}')"
+                  onkeydown="if(event.key==='Enter'||event.key===' '){onSplitToggle(event,'${key}');event.preventDefault();}">▾</span>
+            <span class="split-name">${lobby ? 'Split ' + lobby : 'Unassigned'}</span>
+            <span class="split-meta">${rows.length} car${rows.length === 1 ? '' : 's'} reporting${reporting !== rows.length ? ` · ${reporting} live` : ''}${focused ? ' · on map' : ''}</span>
+        </button>
+        <table>
+            <thead><tr><th></th><th>Driver</th><th>Lap</th><th>Last</th><th>Best</th>${showFuel ? '<th>Fuel</th>' : ''}</tr></thead>
+            <tbody>${rows.map((r, i) => rowHtml(r, i, showFuel)).join('')}</tbody>
+        </table>
+    </div>`;
+}
+
+// The idle page polls on the same 1.5 second cadence as a live race, and
+// neither the next round nor a nightly schedule changes on that timescale.
+// Cached for a minute so an empty page is not asking twice a second.
+let idleCache = null;
+async function idleFacts() {
+    // Dropped early when the moment it was waiting for has arrived, so six
+    // o'clock is not up to a minute late in saying practice is open.
+    const due = idleCache?.prac?.enabled && new Date(idleCache.prac.at).getTime() <= Date.now();
+    if (idleCache && !due && Date.now() - idleCache.at < 60000) return idleCache;
+    const [nextRes, pracRes] = await Promise.all([
+        sb.from('events')
+            .select('name, round, starts_at, circuit_name')
+            .eq('status', 'scheduled')
+            .gte('starts_at', new Date().toISOString())
+            .order('starts_at')
+            .limit(1)
+            .maybeSingle(),
+        sb.rpc('live_practice_window'),
+    ]);
+    idleCache = { at: Date.now(), next: nextRes.data, prac: pracRes.data };
+    return idleCache;
+}
+
+/** Shown when no race is running, so the page is never a blank map. */
+async function renderIdle() {
+    // A practice window that is open but has nobody out yet lands here too,
+    // which is the one moment the page can actually recruit the first car.
+    const { next, prac } = await idleFacts();
+    const practiceOpen = !!(prac?.enabled && prac.open);
+
+    const when = next?.starts_at
+        ? new Date(next.starts_at).toLocaleString('en-GB',
+            { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+        : null;
+
+    app.innerHTML = `
+    <div class="page-wrap">
+        <div class="eyebrow">Live Timing</div>
+        <div class="title">Live</div>
+        <div class="state">
+            <h3>${practiceOpen ? 'Practice is open' : 'No race running'}</h3>
+            <p>${practiceOpen
+                ? `Live timing is open for practice until ${esc(prac.to)} UK time and nothing is reporting yet. Grab the connector from your profile, follow the instructions there, and yours is the first car on the map.`
+                : next
+                    ? `Timing goes live for <strong>Round ${next.round}</strong> at ${esc(next.circuit_name || next.name)}, ${esc(when)}. Every split appears here at once, lap by lap, for as long as the race is on.`
+                    : 'Timing appears here while a round is running, with every split shown at once.'}</p>
+            ${!practiceOpen && prac?.enabled
+                ? prac.race_day
+                    // Stood down for the day, so promising a time tonight would
+                    // be a lie. Said as a rule rather than a one-off.
+                    ? `<p style="margin-top:0.9rem">Practice live timing is paused on race days. It is open ${esc(prac.from)} to ${esc(prac.to)} UK time every other evening, so you can try it out before you race.</p>`
+                    : `<p style="margin-top:0.9rem">Want to try it before race day? Practice live timing is open every evening, ${esc(prac.from)} to ${esc(prac.to)} UK time. Next open ${esc(opensIn(prac.at))}.</p>`
+                : ''}
+            <a class="cta" href="${practiceOpen ? '/endurance/profile/#account' : '/endurance/calendar/'}">${practiceOpen ? 'Pair your reporter' : 'Full calendar'}</a>
+        </div>
+        <div class="foot-note">
+            Racing in GTEC? You can put your own car on here.
+            <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
+        </div>
+    </div>`;
+}
+
+/** "in about 2 hours", from the server's next-opening timestamp. Phrased
+ *  loosely on purpose: the exact minute is on the line above it. */
+function opensIn(iso) {
+    const mins = Math.round((new Date(iso).getTime() - Date.now()) / 60000);
+    if (!Number.isFinite(mins) || mins <= 0) return 'shortly';
+    if (mins < 60) return `in about ${mins} min`;
+    const hrs = Math.round(mins / 60);
+    return `in about ${hrs} hour${hrs === 1 ? '' : 's'}`;
+}
+
+function renderField(rows) {
+    const ev = rows[0];
+    const byLobby = new Map();
+    rows.forEach(r => {
+        const k = r.lobby_number ?? 0;
+        if (!byLobby.has(k)) byLobby.set(k, []);
+        byLobby.get(k).push(r);
+    });
+    const lobbies = [...byLobby.keys()].sort((a, b) => a - b);
+    // Only show Fuel when something is actually reporting it. A connector
+    // that predates fuel would otherwise give every car a dash, and the
+    // column reappears by itself once one does.
+    const showFuel = rows.some(r => r.fuel_pct != null);
+
+    app.innerHTML = `
+    <div class="page-wrap">
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+            <div class="eyebrow" style="margin:0">Live Timing</div>
+            ${ev.mode === 'practice'
+                ? '<span class="live-pill practice-pill"><span class="live-dot"></span>Practice</span>'
+                : ev.is_test
+                    ? '<span class="live-pill test-pill">Test</span>'
+                    : '<span class="live-pill"><span class="live-dot"></span>Live</span>'}
+        </div>
+        <div class="title" style="margin-top:0.4rem">Round ${ev.round}</div>
+        <div class="subtitle">${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${lobbies.length} split${lobbies.length === 1 ? '' : 's'}</div>
+        ${ev.mode === 'practice'
+            ? '<div class="subtitle" style="color:#86efac">Open practice, not a race. Everyone here is out on their own, so laps and gaps mean nothing yet.</div>'
+            : ev.is_test
+                ? '<div class="subtitle" style="color:#fdba74">This is a test of live timing, not a live race.</div>'
+                : ''}
+        <div class="splits">${lobbies.map(l => splitHtml(l, byLobby.get(l), showFuel)).join('')}</div>
+        <div class="map-card">
+            <div class="map-head">
+                <span class="map-title">Track Map</span>
+                <span class="map-note" id="map-note"></span>
+            </div>
+            <canvas id="track"></canvas>
+        </div>
+        <div class="foot-note">
+            Only drivers who have paired a reporter appear here, so this is part of the grid rather than all of it.
+            Order is by laps completed.<br>
+            Racing in GTEC? <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
+        </div>
+    </div>`;
+}
+
+// ---------------------------------------------------------------
+// Track map
+//
+// There is no circuit outline and nothing to calibrate per track. Every
+// position a car reports is kept, and the accumulated cloud of points IS
+// the lap: after a few minutes of running the shape of the circuit is
+// simply there, on any track, including one nobody has mapped.
+//
+// Points live for the life of the page, so a viewer arriving mid-race
+// builds the shape up over their first few minutes rather than being shown
+// a map that was drawn for them.
+// ---------------------------------------------------------------
+// Which splits are collapsed, and which one the map is showing. Remembered
+// per viewer, because someone following one split will want it that way
+// every time they open the page, not just this once.
+const collapsedSplits = new Set();
+let focusedSplit = null;        // null means every split
+try {
+    const raw = localStorage.getItem('gtecLiveSplits');
+    if (raw) {
+        const v = JSON.parse(raw);
+        (v.collapsed || []).forEach(k => collapsedSplits.add(String(k)));
+        focusedSplit = v.focused != null ? String(v.focused) : null;
+    }
+} catch (e) { /* private window, blocked storage: defaults are fine */ }
+
+function saveSplitPrefs() {
+    try {
+        localStorage.setItem('gtecLiveSplits', JSON.stringify({
+            collapsed: [...collapsedSplits], focused: focusedSplit,
+        }));
+    } catch (e) { /* nothing to do, and nothing depends on it */ }
+}
+
+/**
+ * Two separate controls, because they are two separate intentions and
+ * cramming both onto one click made the second press do two things at once.
+ *
+ *   the header   -> show this split on the map, or go back to all of them
+ *   the chevron  -> collapse or expand this split's table
+ */
+function onSplitClick(key) {
+    focusedSplit = (focusedSplit === key) ? null : key;
+    // Focusing a collapsed split should show it, or the click appears to
+    // have done nothing.
+    if (focusedSplit === key) collapsedSplits.delete(key);
+    redrawSplits();
+}
+
+function onSplitToggle(ev, key) {
+    ev.stopPropagation();     // the chevron is inside the header button
+    if (collapsedSplits.has(key)) collapsedSplits.delete(key);
+    else collapsedSplits.add(key);
+    redrawSplits();
+}
+
+function redrawSplits() {
+    saveSplitPrefs();
+    if (lastRows) { renderField(lastRows); drawTrack(lastRows); }
+}
+
+const SPLIT_COLOURS = ['#ffd166', '#38bdf8', '#4ade80', '#f472b6', '#fb923c', '#a78bfa', '#2dd4bf', '#f87171'];
+// driver_id -> every point that car has reported, in order. Per car rather
+// than one shared cloud, because consecutive points from the same car are
+// consecutive in time and can therefore be joined into a line. A single
+// mixed cloud can only ever be drawn as dots.
+const carPaths = new Map();
+// The outline captured server side, so a refresh or a viewer arriving an
+// hour into a race gets the circuit straight away instead of an empty box.
+let basePath = [];
+let baseFetchedAt = 0;
+const PATH_MAX = 4000;            // per car; plenty of laps, bounded for memory
+const TRAIL_LEN = 14;             // how much of the tail is drawn bright
+// Two points further apart than this are not consecutive track: a car has
+// been reset to the pits, or its reporter dropped out for a while. Joining
+// them would draw a line straight across the infield.
+const MAX_SEGMENT_M = 600;
+
+function splitColour(lobby) {
+    return SPLIT_COLOURS[((lobby || 1) - 1) % SPLIT_COLOURS.length];
+}
+
+async function loadBasePath(force) {
+    // Cheap and small, but no point asking every poll: it only grows while
+    // a car is circulating, and the page is accumulating its own points
+    // between fetches anyway.
+    if (!force && Date.now() - baseFetchedAt < 45000) return;
+    baseFetchedAt = Date.now();
+    const { data, error } = await sb.rpc('live_track');
+    if (error || !data) return;
+    basePath = data.map(p => [p.x, p.z, p.y]).filter(p => p[0] != null && p[1] != null);
+}
+
+function recordPositions(rows) {
+    rows.forEach(r => {
+        if (r.x == null || r.z == null) return;
+        // Only cars actually circulating. A car in the menus or long gone
+        // sits at one spot and would drag the whole map toward it.
+        if (!r.on_track || (r.age_ms ?? 0) > 30000) return;
+        const path = carPaths.get(r.driver_id) || [];
+        const last = path[path.length - 1];
+        // Skip a repeat of the same position, which is a throttled or
+        // stationary car rather than movement.
+        if (last && last[0] === r.x && last[1] === r.z) return;
+        path.push([r.x, r.z, r.y]);
+        while (path.length > PATH_MAX) path.shift();
+        carPaths.set(r.driver_id, path);
+    });
+}
+
+/** Draws one car's path as a line, breaking it wherever two points are too
+ *  far apart to be consecutive track. */
+function strokePath(g, path, px, pz, from, to) {
+    let started = false;
+    for (let i = from; i < to; i++) {
+        const a = path[i], b = path[i + 1];
+        if (!b) break;
+        const gap = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (gap > MAX_SEGMENT_M) { started = false; continue; }
+        if (!started) { g.beginPath(); g.moveTo(px(a[0]), pz(a[1])); started = true; }
+        g.lineTo(px(b[0]), pz(b[1]));
+    }
+    if (started) g.stroke();
+}
+
+function drawTrack(rows) {
+    const cv = document.getElementById('track');
+    if (!cv) return;
+    const note = document.getElementById('map-note');
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+        cv.width = Math.round(w * dpr);
+        cv.height = Math.round(h * dpr);
+    }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+
+    // The stored outline is drawn as part of the track, same as the cars'
+    // own paths, so it joins up with what this page has seen since.
+    const allPaths = basePath.length ? [basePath, ...carPaths.values()] : [...carPaths.values()];
+    const total = allPaths.reduce((n, p) => n + p.length, 0);
+
+    if (total < 2) {
+        if (note) note.textContent = 'Waiting for positions';
+        g.fillStyle = '#94a3b8';
+        g.font = "11px 'Inter', system-ui, sans-serif";
+        g.textAlign = 'center';
+        g.fillText('The circuit draws itself as cars report their position.', w / 2, h / 2);
+        return;
+    }
+
+    // Fit whatever has been seen, keeping the aspect ratio so the shape of
+    // the circuit is true rather than stretched to the box.
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    for (const path of allPaths) for (const pt of path) {
+        if (pt[0] < minX) minX = pt[0]; if (pt[0] > maxX) maxX = pt[0];
+        if (pt[1] < minZ) minZ = pt[1]; if (pt[1] > maxZ) maxZ = pt[1];
+        if (pt[2] != null) {
+            if (pt[2] < minY) minY = pt[2];
+            if (pt[2] > maxY) maxY = pt[2];
+        }
+    }
+    const pad = 26;
+    const spanX = Math.max(1, maxX - minX), spanZ = Math.max(1, maxZ - minZ);
+    const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanZ);
+    const offX = (w - spanX * scale) / 2, offZ = (h - spanZ * scale) / 2;
+    const px = x => offX + (x - minX) * scale;
+    const pz = z => offZ + (z - minZ) * scale;
+
+    // Only shade when there is a real climb to show. A circuit with ten
+    // metres of elevation would otherwise be painted as dramatically as the
+    // Nordschleife, which says something untrue about it.
+    const relief = (maxY - minY) >= 15;
+
+    g.lineJoin = 'round';
+    g.lineCap = 'round';
+
+    // The track itself: every car's whole path, joined into lines. Drawn
+    // segment by segment when there is elevation to colour by, and in one
+    // pass when there is not.
+    for (const path of allPaths) {
+        if (relief) {
+            g.lineWidth = 2.5;
+            for (let i = 0; i < path.length - 1; i++) {
+                const a = path[i], b = path[i + 1];
+                if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
+                const h2 = (a[2] != null && b[2] != null) ? (a[2] + b[2]) / 2 : null;
+                if (h2 == null) { g.strokeStyle = 'rgba(148,163,184,0.5)'; }
+                else {
+                    const t = (h2 - minY) / Math.max(1, maxY - minY);
+                    // Low ground cool and dark, high ground warm and bright,
+                    // which reads as height without needing a legend.
+                    g.strokeStyle = `rgba(${Math.round(80 + 175 * t)},${Math.round(110 + 90 * t)},${Math.round(170 - 80 * t)},0.75)`;
+                }
+                g.beginPath();
+                g.moveTo(px(a[0]), pz(a[1]));
+                g.lineTo(px(b[0]), pz(b[1]));
+                g.stroke();
+            }
+        } else {
+            g.lineWidth = 2.5;
+            g.strokeStyle = 'rgba(148,163,184,0.5)';
+            strokePath(g, path, px, pz, 0, path.length - 1);
+        }
+    }
+
+    // Each car: a fading tail, then the car, then its number. A focused
+    // split dims the rest rather than removing them, so you can still see
+    // where the others are relative to the ones you are watching.
+    rows.forEach(r => {
+        if (r.x == null || r.z == null) return;
+        const stale = (r.age_ms ?? 0) > 30000;
+        if (stale) return;
+        const dim = focusedSplit !== null && String(r.lobby_number ?? 0) !== focusedSplit;
+        const col = splitColour(r.lobby_number);
+        const path = carPaths.get(r.driver_id) || [];
+        const from = Math.max(0, path.length - 1 - TRAIL_LEN);
+        for (let i = from; i < path.length - 1; i++) {
+            const a = path[i], b = path[i + 1];
+            if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
+            g.globalAlpha = (dim ? 0.08 : 0.15 + 0.7 * ((i - from) / Math.max(1, path.length - 1 - from)));
+            g.strokeStyle = col;
+            g.lineWidth = 3;
+            g.beginPath();
+            g.moveTo(px(a[0]), pz(a[1]));
+            g.lineTo(px(b[0]), pz(b[1]));
+            g.stroke();
+        }
+        g.globalAlpha = 1;
+        g.globalAlpha = dim ? 0.3 : (r.on_track ? 1 : 0.35);
+        g.fillStyle = col;
+        g.beginPath();
+        g.arc(px(r.x), pz(r.z), 7, 0, Math.PI * 2);
+        g.fill();
+        if (r.car_number != null) {
+            g.fillStyle = '#050608';
+            g.font = "bold 10px 'Inter', system-ui, sans-serif";
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            g.fillText(String(r.car_number), px(r.x), pz(r.z) + 0.5);
+        }
+        g.globalAlpha = 1;
+    });
+
+    if (note) {
+        const km = (Math.max(maxX - minX, maxZ - minZ) / 1000).toFixed(1);
+        note.textContent = (focusedSplit !== null
+                ? `Showing ${focusedSplit === '0' ? 'unassigned' : 'Split ' + focusedSplit} · `
+                : '')
+            + `${total.toLocaleString()} positions${basePath.length ? ' (outline saved)' : ''} · about ${km} km across`
+            + (relief ? ` · ${Math.round(maxY - minY)} m of climb, shaded by height` : '');
+    }
+}
+
+let failures = 0;
+let lastRows = null;       // so a click redraws at once rather than at the next poll
+
+async function tick() {
+    const { data, error } = await sb.rpc('live_field');
+
+    if (error) {
+        // Two consecutive failures before saying anything: one dropped poll
+        // on a phone changing cell is not worth replacing the page over.
+        if (++failures >= 2 && !document.querySelector('.split')) {
+            app.innerHTML = `<div class="page-wrap"><div class="state">
+                <h3>Can't reach live timing</h3>
+                <p>${esc(error.message)}</p></div></div>`;
+        }
+        return;
+    }
+
+    failures = 0;
+    if (!data || data.length === 0) { await renderIdle(); return; }
+    await loadBasePath(basePath.length === 0);
+    lastRows = data;
+    recordPositions(data);
+    renderField(data);
+    drawTrack(data);
+}
+
+// Polling rather than Realtime: the table is a handful of rows, there is no
+// connection ceiling, and a dropped poll is invisible where a dropped socket
+// needs reconnection logic. Worth revisiting once the field is much larger.
+tick();
+setInterval(tick, 1500);
+</script>
+
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>

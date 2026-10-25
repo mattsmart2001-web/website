@@ -1,0 +1,109 @@
+RUNNING THE LAP COACH ALONGSIDE A DASHBOARD
+===========================================
+Connector v2.8 and later.
+
+THE PROBLEM
+-----------
+GT7 always sends telemetry to UDP port 33740, and only one program on a PC can
+hold that port. So a dashboard (SimHub, RS Dash, SIM Dashboard, anything) and
+the GT7 Live Connector cannot both listen to the console directly. Whichever
+one starts second gets nothing.
+
+THE FIX
+-------
+One of them goes first and passes a copy to the other. It does not matter
+which. Pick whichever of these two your other app supports.
+
+
+THE EASY WAY: THE SETTINGS PAGE
+-------------------------------
+Right-click the connector's tray icon and choose "Settings". On Linux, where
+there is no tray icon, open this in a browser while it is running:
+
+    http://127.0.0.1:8767/settings
+
+Everything below can be done there, with a live readout telling you whether
+telemetry is actually arriving. Changes take effect straight away, with no
+restart. The rest of this file is the manual way, for anyone who prefers it.
+
+
+OPTION A: YOUR DASHBOARD GOES FIRST
+-----------------------------------
+Use this if your dashboard can forward or mirror its UDP data.
+
+1. Set your dashboard to forward to 127.0.0.1 on a spare port, e.g. 33742.
+2. Next to GT7-Live-Connector.exe, make a text file called:
+
+       gt7-udp-port.txt
+
+   containing one line:
+
+       33742
+
+3. Start the dashboard first, then the connector.
+
+The connector will listen on 33742 instead of 33740, and will stop pinging
+your console, because your dashboard is already doing that.
+
+
+OPTION B: THE CONNECTOR GOES FIRST
+----------------------------------
+Use this if your dashboard cannot forward, but can be told to listen on a
+port other than 33740.
+
+1. Next to GT7-Live-Connector.exe, make a text file called:
+
+       gt7-forward.txt
+
+   containing where to send the copy:
+
+       127.0.0.1:33742
+
+2. Point your dashboard at port 33742.
+3. Start the connector first, then the dashboard.
+
+The connector keeps talking to the console as normal and sends an untouched
+copy of every packet on to your dashboard. You can list more than one
+destination, separated by commas, and they can be on other machines:
+
+       127.0.0.1:33742, 192.168.1.50:33742
+
+
+OTHER WAYS TO SET THE SAME THING
+--------------------------------
+These do exactly the same job as the settings page and the text files:
+
+    GT7-Live-Connector.exe --port 33742
+    GT7-Live-Connector.exe --forward 127.0.0.1:33742
+    GT7-Live-Connector.exe 192.168.1.9 --port 33742      (console IP still works)
+
+Or environment variables: GT7_UDP_PORT and GT7_FORWARD.
+
+
+IF NOTHING ARRIVES
+------------------
+When the connector is on a forwarded port, it has no way to reach the console
+itself, so "no data" almost always means the forwarding is not happening. The
+settings page says "Waiting on the other app" rather than "Waiting for the
+console", which tells you which half of the chain to look at. The tray tooltip
+says the same thing in fewer words.
+
+Check, in order:
+
+1. The dashboard is running and is itself receiving telemetry.
+2. The dashboard's forward destination matches the port in gt7-udp-port.txt.
+3. The forward address is 127.0.0.1 and not the PS5's address.
+4. Your firewall is not blocking local UDP.
+
+If you want the connector to ping the console anyway, add:
+
+    --heartbeat on
+
+It is off by default on a forwarded port only to stay out of the way.
+
+
+A NOTE ON ENCRYPTION
+--------------------
+GT7's telemetry is encrypted, and most tools forward it exactly as it arrives.
+The connector handles that. If your dashboard forwards decoded data instead,
+that also works, because the connector checks for both.
