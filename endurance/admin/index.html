@@ -10501,7 +10501,8 @@ async function renderHealthCheck() {
                         <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${esc(d.psn_id || '—')}${lastSeenLine(d.driver_id)}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                        ${d.excused ? `<span class="badge badge-muted" title="Rounds they flagged in advance — these do not count toward 6.4">+${d.excused} declared</span>` : ''}
+                        ${d.late ? `<span class="badge" style="background:rgba(251,146,60,0.15);color:#fdba74;border:1px solid rgba(251,146,60,0.3)" title="Flagged an absence, but inside 48 hours of the start — after the grid was published, so it still counts. Worth knowing before you act on this.">${d.late} flagged late</span>` : ''}
+                        ${d.excused ? `<span class="badge badge-muted" title="Rounds they flagged in time — these do not count toward 6.4">+${d.excused} declared</span>` : ''}
                         <span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)" title="Undeclared no-shows — the figure 6.4 counts">${d.no_shows} missed / ${d.events_entered}</span>
                         <button class="btn-icon" onclick="openDirectMessageModal('${d.driver_id}','${esc(d.display_name)}')">Message</button>
                     </div>
@@ -10544,7 +10545,7 @@ async function renderHealthCheck() {
                     <div style="width:${unexPct}%;background:#f87171"></div>
                     <div style="width:${exPct}%;background:rgba(148,163,184,0.45)"></div>
                 </div>
-                <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem">${pct}% of the grid missing without notice${r.excused ? ` &middot; a further ${r.excused} had flagged it` : ''}</div>
+                <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem">${pct}% of the grid missing${r.late ? ` &middot; ${r.late} flagged inside 48h, still counted` : ''}${r.excused ? ` &middot; a further ${r.excused} flagged in time` : ''}</div>
             </div>`;
         }).join('');
 
@@ -10708,11 +10709,11 @@ async function renderHealthCheck() {
         })),
         ...(noShows || []).map(d => ({
             category: 'No-Show Watch', name: d.display_name, team: d.team_name || 'No team', psn: d.psn_id || '',
-            detail: `${d.no_shows} missed / ${d.events_entered} entered${d.excused ? `; ${d.excused} declared (not counted)` : ''}`,
+            detail: `${d.no_shows} missed / ${d.events_entered} entered${d.late ? `; ${d.late} flagged late` : ''}${d.excused ? `; ${d.excused} declared in time (not counted)` : ''}`,
         })),
         ...nsRounds.map(r => ({
             category: 'No-Shows by Round', name: `R${r.round} ${r.name}`, team: '', psn: '',
-            detail: `${r.unexcused} undeclared, ${r.excused} declared, of ${r.entered} entered (${r.started} started)`,
+            detail: `${r.unexcused} no-shows (${r.late} flagged late), ${r.excused} declared in time, of ${r.entered} entered (${r.started} started)`,
         })),
         ...absentFlat.map(a => ({ category: 'Unable to Attend', name: a.name, team: a.team, psn: a.psn, detail: a.detail })),
         ...(noMfrDrivers || []).map(d => ({
