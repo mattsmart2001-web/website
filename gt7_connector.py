@@ -663,7 +663,7 @@ function paint(s){
     $('forward').value  = s.forward || '';
     $('heartbeat').value = s.heartbeatExplicit ? (s.heartbeat ? 'on' : 'off') : 'auto';
     $('consoleIp').value = (s.udpPort === s.standardPort ? (s.consoleIp || '') : '');
-    $('gtecCode').value  = (s.gtec && s.gtec.code) || '';
+    if (s.gtec) $('gtecCode').value = s.gtec.code || '';
   }
 }
 
@@ -1370,6 +1370,19 @@ def _settings_snapshot():
         "bindError": _stats["bindError"],
         "settingsDir": _settings_dir(),
         "wsPort": WS_PORT,
+        # Live timing. This has to be here as well as in _status_msg: the
+        # settings page reads /api/status, which is this snapshot, while
+        # _status_msg only goes out over the WebSocket. Putting it in just
+        # one of them left the page unable to see live timing at all, so its
+        # status line never changed from the placeholder and the pairing box
+        # cleared itself on every poll.
+        "gtec": {
+            "state":  _gtec["state"],
+            "detail": _gtec["detail"],
+            "sent":   _gtec["sent"],
+            "paired": bool(GTEC_CODE),
+            "code":   GTEC_CODE,
+        },
         # How long we have been listening with nothing to show for it. Silence on
         # the standard port usually means another program already has it, which
         # is the one problem a user will never guess at on their own.
