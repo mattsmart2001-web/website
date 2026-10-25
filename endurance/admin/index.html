@@ -4129,7 +4129,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
                 <button class="btn btn-ghost" onclick="exportSplitsCsv()">Export CSV</button>
                 <button class="btn btn-ghost" title="Open live timing on this event for a while, without touching its start time or putting a fake round on the calendar. Drivers with a paired reporter will appear on /endurance/live/ marked as a test." onclick="openLiveTest('${eventId}','${esc(eventName)}','${seasonId}')">Live Timing Test</button>
-                <button class="btn btn-ghost" title="Open live timing on this event every evening between two times, so drivers can try it before race day. Reopens itself nightly, shows on /endurance/live/ as Practice, needs no entry, and stands down on race days." onclick="setLivePractice('${eventId}','${esc(eventName)}')">Practice Window</button>
+                <button class="btn btn-ghost" title="Open live timing for practice on this event, normally straight through until race day (or set evening hours if you prefer). Shows on /endurance/live/ as Practice, needs no entry, and stands down on race days." onclick="setLivePractice('${eventId}','${esc(eventName)}')">Practice Window</button>
                 <button class="btn-icon danger" title="Remove this event's split-assignment and hosting messages from every driver's inbox — use once the event is over" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
                 <button class="btn-icon danger" title="Close any live timing test on this event and clear the cars it put on the live page" onclick="closeLiveTest('${eventId}','${esc(eventName)}')">End Live Test</button>
                 <button class="btn-icon danger" title="Stop the nightly practice window on this event and clear the cars it put on the live page" onclick="clearLivePractice('${eventId}','${esc(eventName)}')">End Practice</button>
@@ -4668,16 +4668,28 @@ async function openLiveTest(eventId, eventName, seasonId) {
 // ---------------------------------------------------------------
 async function setLivePractice(eventId, eventName) {
     const answer = prompt(
-        `Open live timing on "${eventName}" every evening, between which times?\n\n`
-        + 'UK times, 24 hour clock, as from-to. Up to 8 hours.\n\n'
-        + 'Any driver with a paired reporter can join, entered or not, and the live page '
-        + 'shows it as Practice rather than a race. It reopens itself nightly until you end it, '
-        + 'and stands itself down on any day a round is racing.',
-        '18:00-22:00');
+        `Open live timing for practice on "${eventName}".\n\n`
+        + 'Leave this BLANK to stay open until race day, which is what you usually want.\n\n'
+        + 'Or give UK times as from-to, e.g. 18:00-22:00, to open those hours each evening instead. '
+        + 'Up to 8 hours.\n\n'
+        + 'Either way, any driver with a paired reporter can join, entered or not, the live page '
+        + 'shows it as Practice rather than a race, and it stands itself down on any day a round '
+        + 'is racing.',
+        '');
     if (answer === null) return;
 
+    // Blank is the common case: open continuously until the round races.
+    if (!answer.trim()) {
+        const { data, error } = await sb.rpc('live_practice_set',
+            { p_event_id: eventId, p_from: null, p_to: null });
+        if (error)     { toast(error.message, 'error'); return; }
+        if (!data?.ok) { toast(data?.error || 'Could not open practice.', 'error'); return; }
+        toast('Practice live timing is open until race day. Drivers can pair and join from /endurance/live/.', 'success');
+        return;
+    }
+
     const m = answer.trim().match(/^(\d{1,2}):(\d{2})\s*(?:-|to|–)\s*(\d{1,2}):(\d{2})$/i);
-    if (!m) { toast('Give it as 18:00-22:00.', 'error'); return; }
+    if (!m) { toast('Give it as 18:00-22:00, or leave it blank to stay open until race day.', 'error'); return; }
     const pad = (h, mi) => `${String(parseInt(h, 10)).padStart(2, '0')}:${mi}`;
     const from = pad(m[1], m[2]), to = pad(m[3], m[4]);
     if (parseInt(m[1], 10) > 23 || parseInt(m[3], 10) > 23 || parseInt(m[2], 10) > 59 || parseInt(m[4], 10) > 59) {

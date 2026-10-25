@@ -1303,10 +1303,11 @@ function _ltShow(which) {
  *  practice session has a chance of being noticed. */
 function _ltPracticeNote(prac, paired) {
     if (!prac?.enabled) return '';
+    const when = prac.always ? 'right up to race day' : `until ${prac.to} UK time`;
     if (prac.open) {
         return paired
-            ? ` <strong style="color:#86efac">Practice live timing is open now, until ${prac.to} UK time.</strong> Start your reporter and you will show up on the map within a few seconds.`
-            : ` <strong style="color:#86efac">Practice live timing is open now, until ${prac.to} UK time</strong>, so you can set it up and see your own car on the map straight away.`;
+            ? ` <strong style="color:#86efac">Practice live timing is open now, ${when}.</strong> Start your reporter and you will show up on the map within a few seconds.`
+            : ` <strong style="color:#86efac">Practice live timing is open now, ${when}</strong>, so you can set it up and see your own car on the map straight away.`;
     }
     if (prac.race_day) return ' Practice live timing is paused today because there is a race on.';
     return ` Practice live timing is open every evening, ${prac.from} to ${prac.to} UK time, so you can try it out well before race day.`;
