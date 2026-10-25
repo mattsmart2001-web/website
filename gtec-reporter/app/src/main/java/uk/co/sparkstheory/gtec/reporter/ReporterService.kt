@@ -218,5 +218,5 @@ class ReporterService : Service() {
  */
 object BuildConfigish {
     const val SUPABASE_URL = "https://wtryzoabpkqtucfpmbnn.supabase.co"
-    const val ANON_KEY = "REPLACE_WITH_ANON_KEY_FROM_gtec-config.js"
+    const val ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0cnl6b2FicGtxdHVjZnBtYm5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTg0MjMsImV4cCI6MjA5NTk5NDQyM30.Jpx_23mxUsiS5Ke2MCZKOKBu09bH1XuViY6heAB-jds"
 }

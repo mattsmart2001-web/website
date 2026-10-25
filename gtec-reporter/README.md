@@ -30,14 +30,13 @@ No third-party code ships in the APK. `org.json` is part of Android and
 Salsa20 is hand-written, which keeps a sideloaded binary something a
 driver can reasonably be asked to trust.
 
-## Before building
-
-Put the real anon key into `BuildConfigish` at the bottom of
-`ReporterService.kt`. It is the same public key the website already ships
-in `endurance/assets/gtec-config.js`; the beacon is authorised by the
-driver's pairing token, not by the key.
-
 ## Build
+
+The site URL and anon key are already in `BuildConfigish` at the bottom of
+`ReporterService.kt`. The anon key is public by design — the same one the
+website ships in `endurance/assets/gtec-config.js` — because the beacon is
+authorised by the driver's pairing code, not by the key.
+
 
 ```bash
 cd gtec-reporter

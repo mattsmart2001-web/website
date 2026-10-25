@@ -361,6 +361,13 @@ def _status_msg():
         "forwardTo": [f"{h}:{p}" for h, p in FORWARD_TO],
         "bindError": _stats["bindError"],
         "crypto": SALSA_BACKEND,   # "native", or "pure" if the compiled module would not load
+        "gtec": {                  # live timing, so the page can say whether it is working
+            "state":  _gtec["state"],
+            "detail": _gtec["detail"],
+            "sent":   _gtec["sent"],
+            "paired": bool(GTEC_CODE),
+            "code":   GTEC_CODE,
+        },
     })
 
 async def _client_sender(ws, tel_q, evt_q):
@@ -506,6 +513,24 @@ footer{color:var(--mut);font-size:.76rem;text-align:center;margin-top:1.5rem;}
   <div class="note bad hidden" id="bindErr"></div>
 </div>
 
+<div class="card">
+  <h2>GTEC live timing</h2>
+  <p class="sub" style="margin-top:-.4rem">
+    Put your car on the GTEC live map during a race. Paste the pairing code from your
+    driver portal, under Account. Leave this empty and nothing is sent.
+  </p>
+  <label>
+    <span class="t">GTEC pairing code</span>
+    <span class="h">One-off. It works for every round after that.</span>
+    <input type="text" id="gtecCode" placeholder="not paired" spellcheck="false">
+  </label>
+  <div class="note" id="gtecNote">Not paired.</div>
+  <div class="row" style="margin-top:.6rem">
+    <button class="primary" id="gtecSave">Save pairing code</button>
+    <button id="gtecClear">Unpair</button>
+  </div>
+</div>
+
 <div class="card" id="share">
   <h2>Sharing telemetry with another app</h2>
   <p class="sub" style="margin-top:-.4rem">
@@ -561,7 +586,7 @@ footer{color:var(--mut);font-size:.76rem;text-align:center;margin-top:1.5rem;}
 </div><script>
 const $ = id => document.getElementById(id);
 let touched = false;
-['udpPort','forward','heartbeat','consoleIp'].forEach(id => {
+['udpPort','forward','heartbeat','consoleIp','gtecCode'].forEach(id => {
   $(id).addEventListener('input', () => touched = true);
   $(id).addEventListener('change', () => touched = true);
 });
@@ -575,6 +600,20 @@ function paint(s){
   $('sPkt').textContent = s.packets.toLocaleString();
   $('sIp').textContent = s.consoleIp || (s.udpPort === s.standardPort ? 'searching' : 'via another app');
   $('sCli').textContent = s.clients;
+
+  // Live timing status. Says what is actually happening rather than just
+  // whether a code is present, because "paired" and "working" are different
+  // things and a driver wants to know the second one.
+  if(s.gtec){
+    const g = s.gtec, n = $('gtecNote');
+    n.classList.remove('bad');
+    if(g.state === 'reporting'){ n.textContent = g.detail; n.classList.add('ok'); }
+    else {
+      n.classList.remove('ok');
+      n.textContent = g.detail || 'Not paired.';
+      if(g.state === 'error') n.classList.add('bad');
+    }
+  }
 
   const dot = $('dot');
   dot.className = 'dot';
@@ -616,6 +655,7 @@ function paint(s){
     $('forward').value  = s.forward || '';
     $('heartbeat').value = s.heartbeatExplicit ? (s.heartbeat ? 'on' : 'off') : 'auto';
     $('consoleIp').value = (s.udpPort === s.standardPort ? (s.consoleIp || '') : '');
+    $('gtecCode').value  = (s.gtec && s.gtec.code) || '';
   }
 }
 
@@ -642,6 +682,8 @@ async function send(body, okText){
 }
 
 $('save').onclick  = () => send({ udpPort: $('udpPort').value, forward: $('forward').value, heartbeat: $('heartbeat').value }, 'Saved, and in use now.');
+$('gtecSave').onclick  = () => send({ gtecCode: $('gtecCode').value }, 'Pairing code saved. The status below updates within a few seconds.');
+$('gtecClear').onclick = () => { $('gtecCode').value=''; send({ gtecCode: '' }, 'Unpaired. Nothing is sent to GTEC now.'); };
 $('reset').onclick = () => { $('udpPort').value=''; $('forward').value=''; $('heartbeat').value='auto';
                              send({ udpPort:'', forward:'', heartbeat:'auto' }, 'Back to normal: listening on the standard port.'); };
 $('saveIp').onclick = () => send({ consoleIp: $('consoleIp').value }, 'Address saved.');
@@ -882,8 +924,141 @@ async def _receiver(ps5_ip, ip_ref):
         # stops. Re-ping every HEARTBEAT_EVERY packets so the feed never stalls.
         if HEARTBEAT_ON and pkt.packet_id % HEARTBEAT_EVERY == 0:
             _hb(ip_ref[0] or detected or '255.255.255.255')
+        global _gtec_last_pkt
+        _gtec_last_pkt = pkt              # the beacon reads this, it never decodes
         if _clients:
             _broadcast(json.dumps(pkt.to_dict()))
+
+
+# ═══════════════════════════════════════════════════════════════
+#  GTEC LIVE TIMING
+#
+#  Posts this car's own position to GTEC so the website can assemble the
+#  whole field from every driver reporting. One machine cannot see sixteen
+#  cars across eight splits, but it never has to.
+#
+#  Off unless a pairing code is set, so a driver who does not want to be on
+#  the live map simply never enters one and nothing leaves this machine.
+#  Nothing is sent outside a race window either: the server decides whether
+#  a round is on and tells us how often to come back.
+#
+#  urllib rather than requests, to keep the frozen build dependency-free.
+# ═══════════════════════════════════════════════════════════════
+GTEC_URL   = "https://wtryzoabpkqtucfpmbnn.supabase.co"
+GTEC_ANON  = ("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0cnl6b2FicGtxdHVjZnBtYm5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTg0MjMsImV4cCI6MjA5NTk5NDQyM30.Jpx_23mxUsiS5Ke2MCZKOKBu09bH1XuViY6heAB-jds")
+# The public anon key, the same one the website ships in gtec-config.js.
+# Public by design: the beacon is authorised by the driver's pairing code,
+# not by this.
+GTEC_CODE  = ""          # the driver's pairing code; empty means do not report
+
+# What the settings page shows about live timing.
+_gtec = {
+    "state":  "off",     # off | waiting | reporting | idle | error
+    "detail": "",
+    "sent":   0,
+    "last":   None,
+}
+
+_gtec_last_pkt = None    # most recent decoded packet, set by the receiver
+# (lap number, when it changed, whether we have seen a real change). The flag
+# matters: on the first packet we know the lap number but not when it started,
+# so elapsed time is unknown rather than zero.
+_gtec_lap_seen = [None, 0.0, False]
+
+
+def _gtec_post(payload: dict):
+    """One beacon. Returns the decoded reply, or None if it did not land."""
+    import urllib.request, urllib.error
+    body = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        GTEC_URL.rstrip("/") + "/rest/v1/rpc/live_beacon",
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "apikey": GTEC_ANON,
+            "Authorization": "Bearer " + GTEC_ANON,
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as e:
+        return {"ok": False, "error": f"Server said {e.code}"}
+    except Exception as e:
+        # A dropped beacon is not queued. A stale position shown as live is
+        # worse than a gap the website can age out honestly.
+        return None
+
+
+async def _gtec_beacon():
+    loop = asyncio.get_event_loop()
+    wait = 3.0
+    while True:
+        await asyncio.sleep(wait)
+
+        if not GTEC_CODE or not GTEC_ANON:
+            _gtec["state"] = "off"
+            _gtec["detail"] = "No pairing code set." if not GTEC_CODE else "This build has no site key."
+            wait = 5.0
+            continue
+
+        pkt = _gtec_last_pkt
+        if pkt is None:
+            _gtec["state"] = "waiting"
+            _gtec["detail"] = "Waiting for telemetry from GT7."
+            wait = 3.0
+            continue
+
+        # GT7 does not send elapsed time on the current lap, so derive it from
+        # when the lap counter last changed rather than guessing from startup.
+        if _gtec_lap_seen[0] != pkt.lap_count:
+            if _gtec_lap_seen[0] is not None:
+                _gtec_lap_seen[2] = True      # a real crossing, not just the first sight
+            _gtec_lap_seen[0] = pkt.lap_count
+            _gtec_lap_seen[1] = time.time()
+        lap_ms = int((time.time() - _gtec_lap_seen[1]) * 1000) if _gtec_lap_seen[2] else None
+
+        on_track = bool(pkt.in_race and not pkt.paused)
+        payload = {
+            "p_token":       GTEC_CODE,
+            "p_lap":         int(pkt.lap_count or 0),
+            "p_lap_ms":      lap_ms,
+            # GT7 reports -1 for a lap time that does not exist yet.
+            "p_last_lap_ms": int(pkt.last_lap) if (pkt.last_lap or 0) > 0 else None,
+            "p_best_lap_ms": int(pkt.best_lap) if (pkt.best_lap or 0) > 0 else None,
+            "p_x":           round(float(pkt.pos_x), 2),
+            "p_z":           round(float(pkt.pos_z), 2),
+            "p_speed_kph":   int(pkt.speed_kmh),
+            "p_on_track":    on_track,
+        }
+
+        reply = await loop.run_in_executor(None, lambda: _gtec_post(payload))
+
+        if reply is None:
+            _gtec["state"] = "error"
+            _gtec["detail"] = "Could not reach GTEC. Retrying."
+            wait = 10.0
+            continue
+        if not reply.get("ok"):
+            _gtec["state"] = "error"
+            _gtec["detail"] = reply.get("error") or "GTEC refused the beacon."
+            # A bad code will not fix itself, so stop hammering the server.
+            wait = 60.0
+            continue
+        if not reply.get("reporting"):
+            _gtec["state"] = "idle"
+            _gtec["detail"] = reply.get("reason") or "No race in progress."
+            wait = 30.0
+            continue
+
+        _gtec["state"] = "reporting"
+        _gtec["detail"] = f"On the live map, lap {payload['p_lap']}" + ("" if on_track else " (in menus)")
+        _gtec["sent"] += 1
+        _gtec["last"] = time.time()
+        # The server sets the pace, dropping us to 15s while the car sits in
+        # menus, which is where most of the idle traffic would come from.
+        wait = max(1.5, float(reply.get("next_ms", 3000)) / 1000.0)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -905,6 +1080,7 @@ async def _async_main(ps5_ip):
         _receiver(ps5_ip, ip_ref),
         _heartbeat(ip_ref),
         _status_loop(),
+        _gtec_beacon(),
     )
 
 def _run_bridge(ps5_ip):
@@ -1023,6 +1199,12 @@ def _resolve_udp_config():
         HEARTBEAT_ON = hb.lower() in ("1", "on", "yes", "true")
         HEARTBEAT_EXPLICIT = True
 
+    # GTEC live timing. Same precedence as the rest: command line, then the
+    # environment, then the file the settings page writes.
+    global GTEC_CODE
+    GTEC_CODE = (_flag("--gtec-code") or os.environ.get("GTEC_CODE", "").strip()
+                 or _read_setting("gtec-code.txt") or "").strip()
+
 # ═══════════════════════════════════════════════════════════════
 #  SETTINGS: READING, WRITING, APPLYING
 # ═══════════════════════════════════════════════════════════════
@@ -1031,6 +1213,7 @@ SETTINGS_FILES = {
     "udpPort":   "gt7-udp-port.txt",
     "forward":   "gt7-forward.txt",
     "heartbeat": "gt7-heartbeat.txt",
+    "gtecCode":  "gtec-code.txt",
 }
 
 def _settings_dir():
@@ -1106,6 +1289,19 @@ def _apply_settings(d):
             _ip_ref_global[0] = ip
             _stats["ps5"] = ip
         notes.append("The console address is read when the connector starts, so restart it to use a new one.")
+
+    if "gtecCode" in d:
+        global GTEC_CODE
+        code = str(d.get("gtecCode") or "").strip()
+        # Only sanity-check the shape. Whether it is a real code is the
+        # server's call, and it says so in the status line within seconds.
+        if code and len(code) < 20:
+            notes.append("That does not look like a GTEC pairing code, so it was left alone.")
+        else:
+            GTEC_CODE = code
+            _write_setting(SETTINGS_FILES["gtecCode"], code)
+            if not code:
+                _gtec["state"], _gtec["detail"] = "off", "No pairing code set."
 
     if "heartbeat" in d:
         v = d.get("heartbeat")
