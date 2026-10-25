@@ -4128,7 +4128,9 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn btn-ghost" onclick="clearAllLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Clear All</button>
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
                 <button class="btn btn-ghost" onclick="exportSplitsCsv()">Export CSV</button>
+                <button class="btn btn-ghost" title="Open live timing on this event for a while, without touching its start time or putting a fake round on the calendar. Drivers with a paired reporter will appear on /endurance/live/ marked as a test." onclick="openLiveTest('${eventId}','${esc(eventName)}','${seasonId}')">Live Timing Test</button>
                 <button class="btn-icon danger" title="Remove this event's split-assignment and hosting messages from every driver's inbox — use once the event is over" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
+                <button class="btn-icon danger" title="Close any live timing test on this event and clear the cars it put on the live page" onclick="closeLiveTest('${eventId}','${esc(eventName)}')">End Live Test</button>
                 <button class="btn-icon danger" onclick="deleteLobbyRoomCodes('${eventId}','${esc(eventName)}')">Delete Room Codes</button>
                 <button class="btn-icon danger" onclick="deleteEventScreenshots('${eventId}','${esc(eventName)}','${seasonId}')">Delete Screenshots</button>
                 <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Split size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
@@ -4635,6 +4637,33 @@ async function deleteEventScreenshots(eventId, eventName, seasonId) {
 
     toast(`Deleted ${paths.length} screenshot file${paths.length === 1 ? '' : 's'} across ${count ?? 0} split${count === 1 ? '' : 's'}.`, 'success');
     await viewEventLobbies(eventId, eventName, seasonId);
+}
+
+// ---------------------------------------------------------------
+// Live timing test window. Lets an admin see live timing work without
+// waiting for a race or shifting a real event's start time, which would
+// drag notifications, split generation and the public calendar with it.
+// ---------------------------------------------------------------
+async function openLiveTest(eventId, eventName, seasonId) {
+    const mins = prompt(`Open live timing on "${eventName}" for how many minutes?\n\nDrivers with a paired reporter will appear on the public live page, marked as a test. It closes itself when it expires.`, '60');
+    if (mins === null) return;
+    const n = parseInt(mins, 10);
+    if (!Number.isFinite(n) || n < 1 || n > 240) { toast('Pick between 1 and 240 minutes.', 'error'); return; }
+
+    const { data, error } = await sb.rpc('live_test_open', { p_event_id: eventId, p_minutes: n });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not open a test window.', 'error'); return; }
+
+    const until = new Date(data.until).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    toast(`Live timing open until ${until}. Start your connector and check /endurance/live/.`, 'success');
+}
+
+async function closeLiveTest(eventId, eventName) {
+    if (!confirm(`Close the live timing test on "${eventName}"?\n\nThis also clears any cars it put on the live page.`)) return;
+    const { data, error } = await sb.rpc('live_test_close', { p_event_id: eventId });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not close it.', 'error'); return; }
+    toast(`Test closed${data.cleared ? `, ${data.cleared} car${data.cleared === 1 ? '' : 's'} cleared` : ''}.`, 'success');
 }
 
 async function moveEntryLobby(entryId, delta, eventId, eventName, seasonId) {

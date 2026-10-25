@@ -1053,7 +1053,10 @@ async def _gtec_beacon():
             continue
 
         _gtec["state"] = "reporting"
-        _gtec["detail"] = f"On the live map, lap {payload['p_lap']}" + ("" if on_track else " (in menus)")
+        # Say when this is an admin test window rather than a real race, so
+        # nobody concludes from the settings page that a round is running.
+        where = "On the live timing test" if reply.get("test") else "On the live map"
+        _gtec["detail"] = f"{where}, lap {payload['p_lap']}" + ("" if on_track else " (in menus)")
         _gtec["sent"] += 1
         _gtec["last"] = time.time()
         # The server sets the pace, dropping us to 15s while the car sits in

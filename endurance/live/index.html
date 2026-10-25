@@ -67,6 +67,9 @@
         /* The pulsing dot is the only moving thing on the page when nothing
            is happening, which is what tells a viewer it is still connected. */
         .live-pill { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.3rem 0.75rem; border-radius: 999px; font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+        /* A test must never be mistakeable for a race, so it loses the
+           pulsing dot and the red entirely. */
+        .test-pill { background: rgba(251,146,60,0.12); color: #fdba74; border-color: rgba(251,146,60,0.35); }
         .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 1.6s ease-in-out infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
         @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
@@ -290,10 +293,13 @@ function renderField(rows) {
     <div class="page-wrap">
         <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
             <div class="eyebrow" style="margin:0">Live Timing</div>
-            <span class="live-pill"><span class="live-dot"></span>Live</span>
+            ${ev.is_test
+                ? '<span class="live-pill test-pill">Test</span>'
+                : '<span class="live-pill"><span class="live-dot"></span>Live</span>'}
         </div>
         <div class="title" style="margin-top:0.4rem">Round ${ev.round}</div>
         <div class="subtitle">${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${lobbies.length} split${lobbies.length === 1 ? '' : 's'}</div>
+        ${ev.is_test ? '<div class="subtitle" style="color:#fdba74">This is a test of live timing, not a live race.</div>' : ''}
         <div class="splits">${lobbies.map(l => splitHtml(l, byLobby.get(l))).join('')}</div>
         <div class="foot-note">
             Only drivers who have paired a reporter appear here, so this is part of the grid rather than all of it.
