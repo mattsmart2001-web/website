@@ -384,10 +384,17 @@ function renderField(rows) {
 // a map that was drawn for them.
 // ---------------------------------------------------------------
 const SPLIT_COLOURS = ['#ffd166', '#38bdf8', '#4ade80', '#f472b6', '#fb923c', '#a78bfa', '#2dd4bf', '#f87171'];
-const trackCloud = [];            // every point seen this session
-const carTrails = new Map();      // driver_id -> recent points, for a tail
-const TRAIL_LEN = 14;
-const CLOUD_MAX = 20000;          // plenty for a shape, bounded for memory
+// driver_id -> every point that car has reported, in order. Per car rather
+// than one shared cloud, because consecutive points from the same car are
+// consecutive in time and can therefore be joined into a line. A single
+// mixed cloud can only ever be drawn as dots.
+const carPaths = new Map();
+const PATH_MAX = 4000;            // per car; plenty of laps, bounded for memory
+const TRAIL_LEN = 14;             // how much of the tail is drawn bright
+// Two points further apart than this are not consecutive track: a car has
+// been reset to the pits, or its reporter dropped out for a while. Joining
+// them would draw a line straight across the infield.
+const MAX_SEGMENT_M = 600;
 
 function splitColour(lobby) {
     return SPLIT_COLOURS[((lobby || 1) - 1) % SPLIT_COLOURS.length];
@@ -399,18 +406,30 @@ function recordPositions(rows) {
         // Only cars actually circulating. A car in the menus or long gone
         // sits at one spot and would drag the whole map toward it.
         if (!r.on_track || (r.age_ms ?? 0) > 30000) return;
-        const p = [r.x, r.z, r.y];
-        const t = carTrails.get(r.driver_id) || [];
-        const last = t[t.length - 1];
+        const path = carPaths.get(r.driver_id) || [];
+        const last = path[path.length - 1];
         // Skip a repeat of the same position, which is a throttled or
         // stationary car rather than movement.
-        if (last && last[0] === p[0] && last[1] === p[1]) return;
-        t.push(p);
-        while (t.length > TRAIL_LEN) t.shift();
-        carTrails.set(r.driver_id, t);
-        trackCloud.push(p);
-        if (trackCloud.length > CLOUD_MAX) trackCloud.shift();
+        if (last && last[0] === r.x && last[1] === r.z) return;
+        path.push([r.x, r.z, r.y]);
+        while (path.length > PATH_MAX) path.shift();
+        carPaths.set(r.driver_id, path);
     });
+}
+
+/** Draws one car's path as a line, breaking it wherever two points are too
+ *  far apart to be consecutive track. */
+function strokePath(g, path, px, pz, from, to) {
+    let started = false;
+    for (let i = from; i < to; i++) {
+        const a = path[i], b = path[i + 1];
+        if (!b) break;
+        const gap = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (gap > MAX_SEGMENT_M) { started = false; continue; }
+        if (!started) { g.beginPath(); g.moveTo(px(a[0]), pz(a[1])); started = true; }
+        g.lineTo(px(b[0]), pz(b[1]));
+    }
+    if (started) g.stroke();
 }
 
 function drawTrack(rows) {
@@ -428,7 +447,10 @@ function drawTrack(rows) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, w, h);
 
-    if (trackCloud.length < 2) {
+    const allPaths = [...carPaths.values()];
+    const total = allPaths.reduce((n, p) => n + p.length, 0);
+
+    if (total < 2) {
         if (note) note.textContent = 'Waiting for positions';
         g.fillStyle = '#94a3b8';
         g.font = "11px 'Inter', system-ui, sans-serif";
@@ -440,9 +462,14 @@ function drawTrack(rows) {
     // Fit whatever has been seen, keeping the aspect ratio so the shape of
     // the circuit is true rather than stretched to the box.
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-    for (const [x, z] of trackCloud) {
-        if (x < minX) minX = x; if (x > maxX) maxX = x;
-        if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    let minY = Infinity, maxY = -Infinity;
+    for (const path of allPaths) for (const pt of path) {
+        if (pt[0] < minX) minX = pt[0]; if (pt[0] > maxX) maxX = pt[0];
+        if (pt[1] < minZ) minZ = pt[1]; if (pt[1] > maxZ) maxZ = pt[1];
+        if (pt[2] != null) {
+            if (pt[2] < minY) minY = pt[2];
+            if (pt[2] > maxY) maxY = pt[2];
+        }
     }
     const pad = 26;
     const spanX = Math.max(1, maxX - minX), spanZ = Math.max(1, maxZ - minZ);
@@ -451,31 +478,41 @@ function drawTrack(rows) {
     const px = x => offX + (x - minX) * scale;
     const pz = z => offZ + (z - minZ) * scale;
 
-    // The accumulated cloud, faint: this is the track itself.
-    let minY = Infinity, maxY = -Infinity;
-    for (const pt of trackCloud) {
-        const y = pt[2];
-        if (y == null) continue;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-    }
     // Only shade when there is a real climb to show. A circuit with ten
     // metres of elevation would otherwise be painted as dramatically as the
     // Nordschleife, which says something untrue about it.
     const relief = (maxY - minY) >= 15;
-    for (const pt of trackCloud) {
-        if (relief && pt[2] != null) {
-            const t = (pt[2] - minY) / (maxY - minY);
-            // Low ground cool and dark, high ground warm and bright, which
-            // reads as height without needing a legend.
-            const r0 = Math.round(80 + 175 * t);
-            const g0 = Math.round(110 + 90 * t);
-            const b0 = Math.round(170 - 80 * t);
-            g.fillStyle = `rgba(${r0},${g0},${b0},0.6)`;
+
+    g.lineJoin = 'round';
+    g.lineCap = 'round';
+
+    // The track itself: every car's whole path, joined into lines. Drawn
+    // segment by segment when there is elevation to colour by, and in one
+    // pass when there is not.
+    for (const path of allPaths) {
+        if (relief) {
+            g.lineWidth = 2.5;
+            for (let i = 0; i < path.length - 1; i++) {
+                const a = path[i], b = path[i + 1];
+                if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
+                const h2 = (a[2] != null && b[2] != null) ? (a[2] + b[2]) / 2 : null;
+                if (h2 == null) { g.strokeStyle = 'rgba(148,163,184,0.5)'; }
+                else {
+                    const t = (h2 - minY) / Math.max(1, maxY - minY);
+                    // Low ground cool and dark, high ground warm and bright,
+                    // which reads as height without needing a legend.
+                    g.strokeStyle = `rgba(${Math.round(80 + 175 * t)},${Math.round(110 + 90 * t)},${Math.round(170 - 80 * t)},0.75)`;
+                }
+                g.beginPath();
+                g.moveTo(px(a[0]), pz(a[1]));
+                g.lineTo(px(b[0]), pz(b[1]));
+                g.stroke();
+            }
         } else {
-            g.fillStyle = 'rgba(148,163,184,0.55)';
+            g.lineWidth = 2.5;
+            g.strokeStyle = 'rgba(148,163,184,0.5)';
+            strokePath(g, path, px, pz, 0, path.length - 1);
         }
-        g.fillRect(px(pt[0]) - 1, pz(pt[1]) - 1, 2, 2);
     }
 
     // Each car: a fading tail, then the car, then its number.
@@ -484,16 +521,20 @@ function drawTrack(rows) {
         const stale = (r.age_ms ?? 0) > 30000;
         if (stale) return;
         const col = splitColour(r.lobby_number);
-        const trail = carTrails.get(r.driver_id) || [];
-        for (let i = 0; i < trail.length - 1; i++) {
-            g.globalAlpha = 0.1 + 0.5 * (i / Math.max(1, trail.length - 1));
+        const path = carPaths.get(r.driver_id) || [];
+        const from = Math.max(0, path.length - 1 - TRAIL_LEN);
+        for (let i = from; i < path.length - 1; i++) {
+            const a = path[i], b = path[i + 1];
+            if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
+            g.globalAlpha = 0.15 + 0.7 * ((i - from) / Math.max(1, path.length - 1 - from));
             g.strokeStyle = col;
-            g.lineWidth = 1.6;
+            g.lineWidth = 3;
             g.beginPath();
-            g.moveTo(px(trail[i][0]), pz(trail[i][1]));
-            g.lineTo(px(trail[i + 1][0]), pz(trail[i + 1][1]));
+            g.moveTo(px(a[0]), pz(a[1]));
+            g.lineTo(px(b[0]), pz(b[1]));
             g.stroke();
         }
+        g.globalAlpha = 1;
         g.globalAlpha = r.on_track ? 1 : 0.35;
         g.fillStyle = col;
         g.beginPath();
@@ -511,7 +552,7 @@ function drawTrack(rows) {
 
     if (note) {
         const km = (Math.max(maxX - minX, maxZ - minZ) / 1000).toFixed(1);
-        note.textContent = `${trackCloud.length.toLocaleString()} positions · about ${km} km across`
+        note.textContent = `${total.toLocaleString()} positions · about ${km} km across`
             + (relief ? ` · ${Math.round(maxY - minY)} m of climb, shaded by height` : '');
     }
 }
@@ -543,7 +584,7 @@ async function tick() {
 // connection ceiling, and a dropped poll is invisible where a dropped socket
 // needs reconnection logic. Worth revisiting once the field is much larger.
 tick();
-setInterval(tick, 2000);
+setInterval(tick, 1500);
 </script>
 
 <script src="/endurance/assets/gtec-stars.js" defer></script>
