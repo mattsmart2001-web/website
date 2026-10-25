@@ -310,7 +310,10 @@ function lapTime(ms) {
  * Nothing here ever contradicts the race: a driver whose phone dies on lap
  * 37 still reads lap 37, because losing the reporter is not losing the car.
  */
-function liveness(ageMs, onTrack) {
+function liveness(ageMs, onTrack, elsewhere) {
+    // Said before anything else, because it explains why a car that is plainly
+    // reporting is nowhere on the map.
+    if (elsewhere) return { cls: 's-drifting', flag: 'Another track', flagCls: 'flag-menus' };
     if (!onTrack) return { cls: 's-drifting', flag: 'In menus', flagCls: 'flag-menus' };
     if (ageMs < 6000)   return { cls: 's-live', flag: '', flagCls: '' };
     if (ageMs < 30000)  return { cls: 's-drifting', flag: '', flagCls: '' };
@@ -335,7 +338,7 @@ function fuelHtml(pct) {
 }
 
 function rowHtml(r, idx, showFuel) {
-    const st = liveness(r.age_ms ?? 0, r.on_track);
+    const st = liveness(r.age_ms ?? 0, r.on_track, strays.has(r.driver_id));
     const live = st.cls === 's-live' && r.on_track;
     // Order within a split is by laps completed. Real gaps need most of a
     // lobby reporting plus the track centreline, so they are not claimed
@@ -641,9 +644,50 @@ async function loadBasePath(force) {
     basePath = data.map(p => [p.x, p.z, p.y]).filter(p => p[0] != null && p[1] != null);
 }
 
+// ---------------------------------------------------------------
+// Cars that are not at this circuit.
+//
+// A driver who leaves the connector running and goes off to hotlap somewhere
+// else on a Tuesday is still sending valid beacons, and practice is open. The
+// server already refuses their positions for the saved outline; the page has
+// to keep them out of the picture too, because the map frames whatever it is
+// given and one car at another venue stretches the view across both until the
+// real circuit is a squiggle in the corner.
+//
+// Judged against the saved outline rather than against each other: the
+// outline is the one thing on the page that is known to be this circuit.
+// ---------------------------------------------------------------
+let strays = new Set();
+
+function findStrays(rows) {
+    const out = new Set();
+    // Nothing to judge against until the outline is a real shape. Before
+    // that, every car is taken at its word.
+    if (basePath.length < 60) return out;
+
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const p of basePath) {
+        if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+        if (p[1] < minZ) minZ = p[1]; if (p[1] > maxZ) maxZ = p[1];
+    }
+    // Same tolerance the server uses: a quarter of the circuit's own
+    // diagonal, floor of 500m. Wide enough for a long pit lane or a section
+    // not yet traced, nowhere near wide enough to reach another venue.
+    const pad = Math.max(Math.hypot(maxX - minX, maxZ - minZ) * 0.25, 500);
+    rows.forEach(r => {
+        if (r.x == null || r.z == null) return;
+        if (r.x < minX - pad || r.x > maxX + pad ||
+            r.z < minZ - pad || r.z > maxZ + pad) out.add(r.driver_id);
+    });
+    return out;
+}
+
 function recordPositions(rows) {
     rows.forEach(r => {
         if (r.x == null || r.z == null) return;
+        // Their trail belongs to a different circuit, so it is not drawn and
+        // not kept.
+        if (strays.has(r.driver_id)) { carPaths.delete(r.driver_id); return; }
         // Only cars actually circulating. A car in the menus or long gone
         // sits at one spot and would drag the whole map toward it.
         if (!r.on_track || (r.age_ms ?? 0) > 30000) return;
@@ -916,6 +960,10 @@ function drawTrack(rows) {
     // where the others are relative to the ones you are watching.
     rows.forEach(r => {
         if (r.x == null || r.z == null) return;
+        // At a different circuit entirely: listed in the table, but drawing
+        // it here would put a marker in the middle of nowhere and drag the
+        // frame out to reach it.
+        if (strays.has(r.driver_id)) return;
         const stale = (r.age_ms ?? 0) > 30000;
         if (stale) return;
         const dim = focusedSplit !== null && String(r.lobby_number ?? 0) !== focusedSplit;
@@ -1261,6 +1309,9 @@ async function tick() {
     await loadBasePath(basePath.length === 0);
     loadCircuitRecord(data[0].event_id);   // once per round, not awaited
     lastRows = data;
+    // Worked out before anything uses it: the table labels these cars, the
+    // map leaves them out, and their trails are not kept.
+    strays = findStrays(data);
     recordPositions(data);
     renderField(data);
     drawTrack(data);

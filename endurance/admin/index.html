@@ -4133,6 +4133,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn-icon danger" title="Remove this event's split-assignment and hosting messages from every driver's inbox — use once the event is over" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
                 <button class="btn-icon danger" title="Close any live timing test on this event and clear the cars it put on the live page" onclick="closeLiveTest('${eventId}','${esc(eventName)}')">End Live Test</button>
                 <button class="btn-icon danger" title="Stop the nightly practice window on this event and clear the cars it put on the live page" onclick="clearLivePractice('${eventId}','${esc(eventName)}')">End Practice</button>
+                <button class="btn-icon danger" title="Delete the track outline the cars have traced for this event, so it draws itself again from scratch. Use if the wrong circuit got captured. Does not touch the cars, the splits or the practice window." onclick="clearTrackOutline('${eventId}','${esc(eventName)}')">Clear Map Outline</button>
                 <button class="btn-icon danger" onclick="deleteLobbyRoomCodes('${eventId}','${esc(eventName)}')">Delete Room Codes</button>
                 <button class="btn-icon danger" onclick="deleteEventScreenshots('${eventId}','${esc(eventName)}','${seasonId}')">Delete Screenshots</button>
                 <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Split size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
@@ -4710,6 +4711,19 @@ async function clearLivePractice(eventId, eventName) {
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not stop it.', 'error'); return; }
     toast(`Practice window stopped${data.cleared ? `, ${data.cleared} car${data.cleared === 1 ? '' : 's'} cleared` : ''}.`, 'success');
+}
+
+// The escape hatch for the outline guard. Once a round has a shape, the
+// beacon rejects positions that are nowhere near it, which is what stops one
+// driver hotlapping elsewhere from corrupting the map. The flip side is that
+// a wrong outline can never be replaced by driving, so there has to be a way
+// to throw it away.
+async function clearTrackOutline(eventId, eventName) {
+    if (!confirm(`Delete the track outline captured for "${eventName}"?\n\nThe map will draw itself again from scratch as cars report. The cars, splits and practice window are untouched.`)) return;
+    const { data, error } = await sb.rpc('live_track_clear', { p_event_id: eventId });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not clear the outline.', 'error'); return; }
+    toast(`Outline cleared${data.cleared ? `, ${data.cleared} point${data.cleared === 1 ? '' : 's'} removed` : ''}. It redraws as cars report.`, 'success');
 }
 
 async function closeLiveTest(eventId, eventName) {
