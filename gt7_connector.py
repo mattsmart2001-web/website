@@ -59,7 +59,9 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "2.9"   # shown in the tray so you can confirm which build is running
+VERSION       = "3.0"   # shown in the tray so you can confirm which build is running
+                        # 3.0 adds GTEC live timing, so this is how a driver
+                        # checks they have a build that can report.
 GT7_PORT_STD  = 33740   # the port GT7 itself sends telemetry to
 GT7_PORT      = GT7_PORT_STD   # what we actually listen on; see _resolve_udp_config
 SEND_PORT     = 33739
