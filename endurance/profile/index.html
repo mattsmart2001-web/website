@@ -987,7 +987,7 @@
                 <span id="lt-last-used" style="font-size:0.78rem;color:var(--muted)"></span>
             </div>
             <div class="field-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.75rem;line-height:1.6">
-                Your code is set up and not shown again. Lost your phone, or need to set up a different one?
+                Your code is set up and not shown again. Lost it, or need to set up a different computer?
                 Get a new code and the old one stops working straight away.
             </div>
             <div style="display:flex;gap:0.5rem;margin-top:1.25rem;flex-wrap:wrap">
@@ -1363,7 +1363,7 @@ async function loadLiveTiming() {
             ? `Your car is reporting and appears on <a href="/endurance/live/" style="color:var(--gold);font-weight:600">live timing</a> now.`
             : `Live timing is paired. ${data.last_used_at
                     ? `Your reporter last checked in ${fmtRelative(data.last_used_at)}.`
-                    : 'Your reporter has not checked in yet, so start the app or the connector before the race.'}`
+                    : 'Your reporter has not checked in yet, so start the connector before the race.'}`
                 + _ltPracticeNote(prac, true)
                 + ` <a href="/endurance/live/" style="color:var(--gold);font-weight:600">Watch live timing</a>.`;
     }

@@ -370,7 +370,7 @@ async function renderIdle() {
         <div class="state">
             <h3>${practiceOpen ? 'Practice is open' : 'No race running'}</h3>
             <p>${practiceOpen
-                ? `Live timing is open for practice until ${esc(prac.to)} UK time and nothing is reporting yet. Start the connector or the phone app and yours is the first car on the map.`
+                ? `Live timing is open for practice until ${esc(prac.to)} UK time and nothing is reporting yet. Grab the connector from your profile, follow the instructions there, and yours is the first car on the map.`
                 : next
                     ? `Timing goes live for <strong>Round ${next.round}</strong> at ${esc(next.circuit_name || next.name)}, ${esc(when)}. Every split appears here at once, lap by lap, for as long as the race is on.`
                     : 'Timing appears here while a round is running, with every split shown at once.'}</p>
