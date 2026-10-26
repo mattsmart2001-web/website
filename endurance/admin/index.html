@@ -4133,7 +4133,8 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn-icon danger" title="Remove this event's split-assignment and hosting messages from every driver's inbox — use once the event is over" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
                 <button class="btn-icon danger" title="Close any live timing test on this event and clear the cars it put on the live page" onclick="closeLiveTest('${eventId}','${esc(eventName)}')">End Live Test</button>
                 <button class="btn-icon danger" title="Stop the nightly practice window on this event and clear the cars it put on the live page" onclick="clearLivePractice('${eventId}','${esc(eventName)}')">End Practice</button>
-                <button class="btn-icon danger" title="Delete the track outline the cars have traced for this event, so it draws itself again from scratch. Use if the wrong circuit got captured. Does not touch the cars, the splits or the practice window." onclick="clearTrackOutline('${eventId}','${esc(eventName)}')">Clear Map Outline</button>
+                <button class="btn-icon danger" title="Delete the track outline the cars have traced for this event, so it draws itself again from scratch. Use if the wrong circuit got captured, or if it finished short. Does not touch the cars, the splits or the practice window." onclick="clearTrackOutline('${eventId}','${esc(eventName)}')">Clear Map Outline</button>
+                <span id="outline-state" class="badge badge-muted" title="The track outline stored for this round. Complete means it will not change again: clearing it is the only way to retrace it.">Outline: checking</span>
                 <button class="btn-icon danger" onclick="deleteLobbyRoomCodes('${eventId}','${esc(eventName)}')">Delete Room Codes</button>
                 <button class="btn-icon danger" onclick="deleteEventScreenshots('${eventId}','${esc(eventName)}','${seasonId}')">Delete Screenshots</button>
                 <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Split size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
@@ -4149,6 +4150,36 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
             </div>
         </div>
         ${lobbyCardsHTML}`;
+
+    showOutlineState(eventId);
+}
+
+// Whether this round has a stored map, and whether it is finished. Without
+// this the only way to tell was to open the live page and hover the map,
+// which says nothing about whether the trace had completed a lap.
+async function showOutlineState(eventId) {
+    const el = document.getElementById('outline-state');
+    if (!el) return;
+    const { data, error } = await sb.rpc('live_track_state', { p_event_id: eventId });
+    if (error) { el.textContent = 'Outline: could not read'; return; }
+    const pts = data?.points ?? 0;
+    if (!pts) {
+        el.className = 'badge badge-muted';
+        el.textContent = 'Outline: none yet';
+    } else if (data?.closed) {
+        el.className = 'badge badge-gold';
+        el.textContent = `Outline: ${pts} points · complete`;
+    } else if (data?.armed) {
+        el.className = 'badge badge-muted';
+        el.textContent = `Outline: ${pts} points · tracing the lap`;
+    } else {
+        // Before the first crossing these points are scaffolding: the car
+        // picked the job up in its pit box, and the trace restarts properly
+        // when it reaches the line. Worth saying, or the count appearing to
+        // reset looks like a fault.
+        el.className = 'badge badge-muted';
+        el.textContent = `Outline: ${pts} points · restarts at the line`;
+    }
 }
 
 async function autoAllocateLobbies(eventId, eventName, seasonId) {
@@ -4723,7 +4754,8 @@ async function clearTrackOutline(eventId, eventName) {
     const { data, error } = await sb.rpc('live_track_clear', { p_event_id: eventId });
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not clear the outline.', 'error'); return; }
-    toast(`Outline cleared${data.cleared ? `, ${data.cleared} point${data.cleared === 1 ? '' : 's'} removed` : ''}. It redraws as cars report.`, 'success');
+    toast(`Outline cleared${data.cleared ? `, ${data.cleared} point${data.cleared === 1 ? '' : 's'} removed` : ''}. The next car to report starts tracing it again, and it finishes when that car crosses the line.`, 'success');
+    showOutlineState(eventId);
 }
 
 async function closeLiveTest(eventId, eventName) {
