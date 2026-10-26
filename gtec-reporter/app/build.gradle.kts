@@ -31,7 +31,10 @@ android {
             create("gtec") {
                 storeFile = file(keystorePath!!)
                 storePassword = System.getenv("GTEC_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("GTEC_KEY_ALIAS") ?: "gtec"
+                // Detected in CI when it was never set, because a keystore
+                // exported by Windows is aliased by something the owner did
+                // not choose.
+                keyAlias = System.getenv("GTEC_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "gtec"
                 keyPassword = System.getenv("GTEC_KEY_PASSWORD")
                     ?: System.getenv("GTEC_KEYSTORE_PASSWORD")
             }

@@ -304,15 +304,40 @@ jobs:
         # and still produces a debug-signed APK for testing; it just must not
         # be published, which the release step below enforces.
         if: ${{ env.GTEC_KEYSTORE_BASE64 != '' }}
+        env:
+          GTEC_KEYSTORE_PASSWORD: ${{ secrets.GTEC_KEYSTORE_PASSWORD }}
+          GTEC_KEY_ALIAS: ${{ secrets.GTEC_KEY_ALIAS }}
         run: |
-          echo "$GTEC_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/gtec.jks"
-          echo "GTEC_KEYSTORE_PATH=$RUNNER_TEMP/gtec.jks" >> "$GITHUB_ENV"
+          set -euo pipefail
+          KS="$RUNNER_TEMP/gtec.jks"
+          echo "$GTEC_KEYSTORE_BASE64" | base64 -d > "$KS"
+          echo "GTEC_KEYSTORE_PATH=$KS" >> "$GITHUB_ENV"
+
+          # Work the alias out rather than requiring it to be told. A keystore
+          # made by keytool is aliased whatever was asked for; one exported by
+          # Windows PowerShell is aliased by its friendly name or a generated
+          # id. Since there is exactly one key in it either way, the first
+          # private key entry is the right answer, and this saves the owner
+          # having to know a detail they never chose.
+          if [ -z "${GTEC_KEY_ALIAS:-}" ]; then
+            FOUND=$(keytool -list -keystore "$KS" -storepass "$GTEC_KEYSTORE_PASSWORD" 2>/dev/null \
+                    | awk -F, '/PrivateKeyEntry/ { print $1; exit }')
+            if [ -n "$FOUND" ]; then
+              echo "Detected signing alias: $FOUND"
+              echo "GTEC_KEY_ALIAS=$FOUND" >> "$GITHUB_ENV"
+            else
+              echo "::error::Could not read a private key out of the keystore. Is GTEC_KEYSTORE_PASSWORD right?"
+              exit 1
+            fi
+          fi
 
       - name: Build the APK
         working-directory: gtec-reporter
         env:
           GTEC_KEYSTORE_PASSWORD: ${{ secrets.GTEC_KEYSTORE_PASSWORD }}
-          GTEC_KEY_ALIAS: ${{ secrets.GTEC_KEY_ALIAS }}
+          # GTEC_KEY_ALIAS deliberately not set here: it is already in the
+          # environment, either from the secret or from detection above, and
+          # naming it with an empty secret would blank it again.
           GTEC_KEY_PASSWORD: ${{ secrets.GTEC_KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleRelease
 
