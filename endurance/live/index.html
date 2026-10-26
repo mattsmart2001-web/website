@@ -1081,11 +1081,17 @@ function strokePath(g, path, S, from, to) {
 // which carried no useful height. Now the stored outline is a finished lap
 // with an elevation on every point, so the data is there.
 //
-// Orthographic, not perspective: the circuit is tilted and rotated but
-// nothing gets bigger for being nearer. That is deliberate. Perspective is
-// what makes a tilted map hard to read, because a car's dot changes size
-// with where it is on the circuit, and this is a timing page before it is a
-// picture.
+// Perspective, with the cars exempt from it. The first cut was
+// orthographic, on the reasoning that perspective makes a car's dot change
+// size with where it is on the circuit and this is a timing page before it
+// is a picture. The reasoning was half right and the conclusion was wrong:
+// without convergence a tilted map reads as a squashed flat map rather than
+// a circuit sitting in space.
+//
+// The dots do not have to obey the projection. The track converges, which is
+// what gives the depth; the cars are placed by the projection but drawn at a
+// constant size, which is what keeps them readable. Nothing had to be traded
+// after all.
 //
 // The height is exaggerated because it has to be. The 24h layout climbs
 // about 300 m across 20 km, which is one and a half percent: at true scale a
@@ -1100,13 +1106,26 @@ const HEIGHT_EXAGGERATION = 6;
 // the right way round, because two bits of track that cross are far apart in
 // depth and land in different buckets.
 const DEPTH_BUCKETS = 16;
+// How far the eye sits from the circuit, as a multiple of its longest side.
+// Lower is more dramatic and more distorted; this is about the strength of a
+// long camera lens.
+// 2.6 was a long lens and the result read as a squashed flat map. Closer
+// than this and the near side of the circuit bows unpleasantly.
+const EYE_DISTANCE = 1.5;
+// Far track is drawn fainter, which is the other half of reading depth. Free,
+// because the segments are already grouped by how far away they are.
+const DEPTH_FADE = 0.55;
+// Near track thicker than far, which turns out to be the strongest depth cue
+// of the three and the cheapest: the segments are already stroked a depth
+// bucket at a time, so a width per bucket costs nothing at all.
+const DEPTH_WIDTH = [0.55, 1.45];
 let view = { scale: 1, x: 0, y: 0 };
 let view3d = false;
-let yaw = 0.6, tilt = 0.62;
+let yaw = 0.6, tilt = 0.8;
 
 function resetView() {
     view = { scale: 1, x: 0, y: 0 };
-    yaw = 0.6; tilt = 0.62;
+    yaw = 0.6; tilt = 0.8;
     syncZoomButtons();
     if (lastRows) drawTrack(lastRows);
 }
@@ -1155,7 +1174,7 @@ function syncZoomButtons() {
     if (out) out.disabled = view.scale <= ZOOM_MIN + 0.001;
     if (inn) inn.disabled = view.scale >= ZOOM_MAX - 0.001;
     if (rst) rst.disabled = view.scale <= ZOOM_MIN + 0.001 && !view.x && !view.y
-                            && (!view3d || (Math.abs(yaw - 0.6) < 0.001 && Math.abs(tilt - 0.62) < 0.001));
+                            && (!view3d || (Math.abs(yaw - 0.6) < 0.001 && Math.abs(tilt - 0.8) < 0.001));
     const btn = document.getElementById('view-3d');
     if (btn) {
         btn.textContent = view3d ? '2D' : '3D';
@@ -1318,18 +1337,28 @@ function drawTrack(rows) {
     // GT7's coordinates are centred on nothing in particular and spinning
     // about a point off the edge of the map is not a rotation anyone wants.
     const midX = (minX + maxX) / 2, midZ = (minZ + maxZ) / 2;
+    const spanXw = Math.max(1, maxX - minX), spanZw = Math.max(1, maxZ - minZ);
     const yRef = Number.isFinite(minY) ? minY : 0;
     const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
     const cosT = Math.cos(tilt), sinT = Math.sin(tilt);
     // Returns [across, down, depth]. Depth is how near the viewer a point is,
     // and is what decides which bit of track is drawn over which.
+    const eye = EYE_DISTANCE * Math.max(spanXw, spanZw);
     const world = view3d
         ? (x, z, y) => {
             const dx = x - midX, dz = z - midZ;
             const xr = dx * cosY - dz * sinY;
             const zr = dx * sinY + dz * cosY;
             const hy = ((y == null ? yRef : y) - yRef) * HEIGHT_EXAGGERATION;
-            return [xr, zr * cosT - hy * sinT, zr];
+            // Tipped away from the viewer: up the screen, and toward them.
+            const up   = zr * cosT - hy * sinT;
+            const near = zr * sinT + hy * cosT;
+            // The divide. Nearer is bigger, which is the whole point, and
+            // the eye is far enough back that the far side of a circuit is
+            // about three quarters the size of the near side rather than a
+            // vanishing speck.
+            const k = eye / Math.max(eye * 0.25, eye - near);
+            return [xr * k, up * k, near];
         }
         : (x, z) => [x, z, 0];
 
@@ -1420,7 +1449,15 @@ function drawTrack(rows) {
             // Low ground cool and dark, high ground warm and bright, which
             // reads as height without needing a legend.
             const t = ((key % RELIEF_BANDS) + 0.5) / RELIEF_BANDS;
-            g.strokeStyle = `rgba(${Math.round(80 + 175 * t)},${Math.round(110 + 90 * t)},${Math.round(170 - 80 * t)},0.75)`;
+            // And far track fainter than near, which is the other half of
+            // reading depth. The grouping needed for draw order already
+            // knows how far away each segment is, so this costs nothing.
+            const depth = buckets > 1 ? Math.floor(key / RELIEF_BANDS) / (buckets - 1) : 1;
+            const a = view3d ? 0.75 * (DEPTH_FADE + (1 - DEPTH_FADE) * depth) : 0.75;
+            if (view3d) {
+                g.lineWidth = 2.5 * zw * (DEPTH_WIDTH[0] + (DEPTH_WIDTH[1] - DEPTH_WIDTH[0]) * depth);
+            }
+            g.strokeStyle = `rgba(${Math.round(80 + 175 * t)},${Math.round(110 + 90 * t)},${Math.round(170 - 80 * t)},${a.toFixed(3)})`;
             g.beginPath();
             for (let i = 0; i < segs.length; i += 2) {
                 const p1 = S(segs[i][0], segs[i][1], segs[i][2]);
