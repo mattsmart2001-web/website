@@ -32,10 +32,20 @@ object Gt7Packet {
         val numCars: Int,
         val inRace: Boolean,
         val paused: Boolean,
+        /** Litres in the tank, and the tank's size. Capacity varies by car,
+         *  so only the percentage of the two is comparable across a grid. */
+        val fuel: Float,
+        val fuelCapacity: Float,
     ) {
         /** True when the car is actually on track, as opposed to sitting in
          *  menus, paused, or in the pre-race lobby. Drives the beacon backoff. */
         val onTrack: Boolean get() = inRace && !paused
+
+        /** Percentage of the tank, or null before GT7 has reported a capacity.
+         *  Null rather than a guess: a wrong fuel figure during a six hour
+         *  race is worse than no figure at all. */
+        val fuelPercent: Float? get() =
+            if (fuelCapacity > 0f) fuel / fuelCapacity * 100f else null
     }
 
     /**
@@ -91,6 +101,9 @@ object Gt7Packet {
             numCars = i16(p, 0x86),
             inRace = (flags and 0x0001) != 0,
             paused = (flags and 0x0002) != 0,
+            // Same offsets the connector reads, which are in production.
+            fuel = f32(p, 0x44),
+            fuelCapacity = f32(p, 0x48),
         )
     }
 }

@@ -59,7 +59,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "3.3"   # shown in the tray so you can confirm which build is running
+VERSION       = "3.4"   # shown in the tray so you can confirm which build is running
                         # 3.0 added GTEC live timing; 3.1 adds fuel and
                         # elevation to what it reports.
 GT7_PORT_STD  = 33740   # the port GT7 itself sends telemetry to
@@ -1126,6 +1126,12 @@ async def _gtec_beacon():
             "p_fuel_pct":    (round(pkt.fuel / pkt.fuel_cap * 100, 1)
                               if (pkt.fuel_cap or 0) > 0 else None),
             "p_laps_in_race": int(pkt.laps_in_race) if (pkt.laps_in_race or 0) > 0 else None,
+            # Which app is reporting, so the live page can show a badge. The
+            # program knows exactly what it is running on; a user agent would
+            # be a guess.
+            "p_client": ("windows" if sys.platform.startswith("win")
+                         else "mac" if sys.platform == "darwin"
+                         else "linux"),
         }
 
         reply = await loop.run_in_executor(None, lambda: _gtec_post(payload))

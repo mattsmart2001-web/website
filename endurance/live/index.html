@@ -165,6 +165,10 @@
         .sub2 { display: block; font-variant-numeric: tabular-nums; font-size: 0.66rem; color: var(--muted); }
         .dr { display: flex; align-items: center; min-width: 0; }
         .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; cursor: help; }
+        /* Quiet: it is a detail, not a status. Never shrinks, so a long name
+           truncates around it rather than squashing it. */
+        .client { flex: 0 0 auto; display: inline-flex; color: var(--muted); opacity: 0.65; }
+        .client svg { width: 12px; height: 12px; display: block; }
         .who:hover, .who:focus-visible { color: var(--gold); outline: none; }
 
         /* Driver card. Fixed, and appended outside the splits container, so
@@ -337,6 +341,29 @@ function fuelHtml(pct) {
     </div>`;
 }
 
+/**
+ * What is tracking this car. Looked up from a fixed table rather than
+ * printed, because the value arrives from a client and must never reach the
+ * page verbatim; anything unrecognised simply gets no badge.
+ *
+ * Worth showing because it is the most surprising thing on the page: some of
+ * these cars are being tracked by a phone on the sofa next to the driver.
+ */
+const CLIENT_BADGE = {
+    android: ['Phone', 'M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3 18h4'],
+    windows: ['PC', 'M3 5l8-1v7H3V5zm0 8h8v7l-8-1v-6zm10-9.2L21 3v8h-8V3.8zM13 13h8v8l-8-1.2V13z'],
+    mac:     ['Mac', 'M3 5a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5zM2 19h20'],
+    linux:   ['Linux', 'M12 2a5 5 0 0 1 5 5v4l2 5a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l2-5V7a5 5 0 0 1 5-5z'],
+};
+
+function clientBadge(client) {
+    const b = CLIENT_BADGE[client];
+    if (!b) return '';
+    return `<span class="client" title="Reporting from ${b[0]}" aria-label="Reporting from ${b[0]}">`
+        + `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"`
+        + ` stroke-linecap="round" stroke-linejoin="round"><path d="${b[1]}"/></svg></span>`;
+}
+
 function rowHtml(r, idx, showFuel) {
     const st = liveness(r.age_ms ?? 0, r.on_track, strays.has(r.driver_id));
     const live = st.cls === 's-live' && r.on_track;
@@ -354,7 +381,7 @@ function rowHtml(r, idx, showFuel) {
     return `<tr class="${st.cls}">
         <td class="pos">${idx + 1}</td>
         <td>
-            <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
+            <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${clientBadge(r.client)}${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
             ${sub ? `<span class="team">${sub}</span>` : ''}
         </td>
         <td class="num">${r.lap ?? 0}${r.laps_in_race ? `<span class="sub2" style="display:inline">/${r.laps_in_race}</span>` : ''}</td>

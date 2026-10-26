@@ -35,9 +35,17 @@ class Beacon(private val supabaseUrl: String, private val anonKey: String) {
             if (s.lastLapMs != null) put("p_last_lap_ms", s.lastLapMs)
             if (s.bestLapMs != null) put("p_best_lap_ms", s.bestLapMs)
             put("p_x", s.x)
+            // Elevation. The map shades the track by height and a position
+            // without it cannot be reconstructed later, so a phone acting as
+            // the shape source was quietly costing the outline its relief.
+            put("p_y", s.y)
             put("p_z", s.z)
             put("p_speed_kph", s.speedKph)
             put("p_on_track", s.onTrack)
+            s.fuelPercent?.let { put("p_fuel_pct", it) }
+            if (s.lapsInRace > 0) put("p_laps_in_race", s.lapsInRace)
+            // Which app is reporting, so the live page can say so.
+            put("p_client", "android")
         }.toString()
 
         return try {
