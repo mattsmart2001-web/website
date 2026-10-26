@@ -371,9 +371,10 @@ function clientBadge(client) {
 function rowHtml(r, idx, showFuel) {
     const st = liveness(r.age_ms ?? 0, r.on_track, strays.has(r.driver_id));
     const live = st.cls === 's-live' && r.on_track;
-    // Order within a split is by laps completed. Real gaps need most of a
-    // lobby reporting plus the track centreline, so they are not claimed
-    // here rather than shown as something they are not.
+    // Order within a split is laps completed in a race and best lap in
+    // practice. Real gaps need most of a lobby reporting plus the track
+    // centreline, so they are not claimed here rather than shown as
+    // something they are not.
     // Car number sits on the team line rather than in its own column. A
     // Nordschleife lap is over seven minutes, so Last and Best are wide, and
     // a sixth column pushed Best off the edge of the card.
@@ -398,7 +399,17 @@ function rowHtml(r, idx, showFuel) {
 }
 
 function splitHtml(lobby, rows, showFuel) {
-    rows.sort((a, b) => (b.lap ?? 0) - (a.lap ?? 0));
+    // The same order the server sends, applied again here because the page
+    // regroups the rows. A race is laps completed then how far into the
+    // current lap; practice is the best lap, fastest first, because laps
+    // completed in a practice session ranks nothing and rearranges itself
+    // every time anybody crosses the line.
+    if (rows[0]?.mode === 'race') {
+        rows.sort((a, b) => (b.lap ?? 0) - (a.lap ?? 0)
+                         || (b.lap_ms ?? 0) - (a.lap_ms ?? 0));
+    } else {
+        rows.sort((a, b) => (a.best_lap_ms ?? Infinity) - (b.best_lap_ms ?? Infinity));
+    }
     const reporting = rows.filter(r => (r.age_ms ?? 0) < 30000 && r.on_track).length;
     const key = String(lobby ?? 0);
     const collapsed = collapsedSplits.has(key);
@@ -544,7 +555,7 @@ function renderField(rows) {
         </div>
         <div class="foot-note">
             Only drivers who have paired a reporter appear here, so this is part of the grid rather than all of it.
-            Order is by laps completed.<br>
+            ${ev?.mode === 'race' ? 'Order is by laps completed.' : 'Order is by best lap.'}<br>
             Racing in GTEC? <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
         </div>
     </div>`;
