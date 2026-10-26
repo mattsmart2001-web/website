@@ -358,6 +358,10 @@ def _status_msg():
         "debug": _stats["debug"],
         "listening": True,
         "udpPort": GT7_PORT,
+        # macOS withholds local network access until the user grants it, per
+        # app, and drops the traffic silently when it has not been granted.
+        # The page needs to know which platform it is on to say so.
+        "mac": sys.platform == "darwin",
         "forwarded": GT7_PORT != GT7_PORT_STD,   # we are second in the chain
         "heartbeat": HEARTBEAT_ON,
         "forwardTo": [f"{h}:{p}" for h, p in FORWARD_TO],
@@ -651,11 +655,13 @@ function paint(s){
       $('state').textContent = 'Nothing is arriving';
       $('detail').innerHTML = 'If you have a dashboard, motion rig or lap timer open, it has probably already taken port ' + s.standardPort +
         ', and only one program can have it. <a href="#share">Set them to share it</a> and both will work.' +
-        '<br>If you are not running anything like that, start Gran Turismo 7 and drive. If it still never connects, your network may be blocking broadcast, so try setting the console address below.';
+        '<br>If you are not running anything like that, start Gran Turismo 7 and drive. If it still never connects, your network may be blocking broadcast, so try setting the console address below.' +
+        (s.mac ? '<br><b>On a Mac this is usually the Local Network permission.</b> macOS blocks an app from seeing the console until you allow it, and says nothing when it has not been allowed. Open System Settings, Privacy and Security, Local Network, and switch on GT7-Live-Connector. A new version counts as a new app, so allowing an older one does not carry over.' : '');
     } else {
       dot.classList.add('warn');
       $('state').textContent = 'Waiting for the console';
-      $('detail').textContent = 'Start Gran Turismo 7 and drive. If it never connects, your network may be blocking broadcast, so try setting the console address below.';
+      $('detail').innerHTML = 'Start Gran Turismo 7 and drive. If it never connects, your network may be blocking broadcast, so try setting the console address below.' +
+        (s.mac ? '<br><b>On a Mac this is usually the Local Network permission.</b> macOS blocks an app from seeing the console until you allow it, and says nothing when it has not been allowed. Open System Settings, Privacy and Security, Local Network, and switch on GT7-Live-Connector. A new version counts as a new app, so allowing an older one does not carry over.' : '');
     }
   }
   if(!touched){
