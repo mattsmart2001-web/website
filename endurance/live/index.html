@@ -133,6 +133,11 @@
         /* Fixed layout so a long team name truncates instead of forcing the
            table wider than its card, which silently clipped the Best column. */
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        /* Hovering a row picks that car out on the map, so the row says so
+           too. Faint on purpose: the answer is over on the map, and a row
+           that lights up competes with it. */
+        tbody tr:hover { background: rgba(255,255,255,0.035); }
+        @media (hover: none) { tbody tr:hover { background: none; } }
         th:nth-child(1), td:nth-child(1) { width: 26px; }
         th:nth-child(3), td:nth-child(3) { width: 46px; }
         th:nth-child(6), td:nth-child(6) { width: 82px; }
@@ -454,7 +459,7 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
         r.team_name ? esc(r.team_name) : null,
     ].filter(Boolean).join(' · ');
 
-    return `<tr class="${st.cls}">
+    return `<tr class="${st.cls}" data-driver="${r.driver_id}">
         <td class="pos">${idx + 1}</td>
         <td>
             <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${clientBadge(r.client)}${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
@@ -693,6 +698,10 @@ function renderField(rows) {
 // every time they open the page, not just this once.
 const collapsedSplits = new Set();
 let focusedSplit = null;        // null means every split
+// The driver the pointer is over in the list, so the map can say which dot
+// that is. Pointer only: there is no hover on a phone, and the card that
+// opens on a tap already answers "who is this".
+let hoveredDriver = null;
 try {
     const raw = localStorage.getItem('gtecLiveSplits');
     if (raw) {
@@ -1329,7 +1338,12 @@ function drawTrack(rows) {
         if (strays.has(r.driver_id)) return;
         const stale = (r.age_ms ?? 0) > 30000;
         if (stale) return;
-        const dim = focusedSplit !== null && String(r.lobby_number ?? 0) !== focusedSplit;
+        // Hovering a row in the list picks that car out of the field. The
+        // others dim rather than disappear, so you can still see where the
+        // one you are looking at sits among them.
+        const hot = hoveredDriver === r.driver_id;
+        const dim = (focusedSplit !== null && String(r.lobby_number ?? 0) !== focusedSplit)
+                 || (hoveredDriver !== null && !hot);
         const col = carColour(r);
         // The tail fades, which needs a different alpha along its length, but
         // not a different alpha per segment: a stroke each cost 14 canvas
@@ -1369,9 +1383,21 @@ function drawTrack(rows) {
         }
         g.globalAlpha = 1;
         g.globalAlpha = dim ? 0.3 : (r.on_track ? 1 : 0.35);
+        // A ring round the hovered car, drawn under its dot. Wide and pale
+        // in the car's own colour, so it reads against the gold line and
+        // against the dark infield without needing a second colour.
+        if (hot) {
+            g.globalAlpha = 0.35;
+            g.strokeStyle = col;
+            g.lineWidth = 5;
+            g.beginPath();
+            g.arc(px(r.x), pz(r.z), 15, 0, Math.PI * 2);
+            g.stroke();
+            g.globalAlpha = r.on_track ? 1 : 0.35;
+        }
         g.fillStyle = col;
         g.beginPath();
-        g.arc(px(r.x), pz(r.z), 7, 0, Math.PI * 2);
+        g.arc(px(r.x), pz(r.z), hot ? 9 : 7, 0, Math.PI * 2);
         g.fill();
         const num = carNumber(r, rows[0]?.mode);
         if (num != null) {
@@ -1645,6 +1671,25 @@ function bindDriverCards() {
 
     // Delegated, so it survives the tables being rewritten every poll.
     const nameAt = e => e.target.closest?.('.who[data-driver]');
+    const rowAt  = e => e.target.closest?.('tr[data-driver]');
+
+    // Redrawn at once rather than at the next poll, or the highlight would
+    // arrive up to a second and a half after the pointer did.
+    const hover = (id) => {
+        if (hoveredDriver === id) return;
+        hoveredDriver = id;
+        if (lastRows) drawTrack(lastRows);
+    };
+    splits.addEventListener('mouseover', e => {
+        const row = rowAt(e);
+        if (row) hover(row.dataset.driver);
+    });
+    splits.addEventListener('mouseleave', () => hover(null));
+    splits.addEventListener('focusin',  e => {
+        const row = rowAt(e);
+        if (row) hover(row.dataset.driver);
+    });
+    splits.addEventListener('focusout', () => hover(null));
     splits.addEventListener('mouseover', e => {
         const el = nameAt(e);
         if (el) showCard(el, el.dataset.driver);
