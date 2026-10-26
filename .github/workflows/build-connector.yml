@@ -56,6 +56,7 @@ jobs:
           --icon NONE
           --version-file connector_version.txt
           --collect-all Crypto
+          --collect-data certifi
           --hidden-import=Crypto.Cipher.Salsa20
           --hidden-import=Crypto.Cipher._Salsa20
           gt7_connector.py
@@ -102,6 +103,7 @@ jobs:
           --icon NONE
           --version-file connector_version.txt
           --collect-all Crypto
+          --collect-data certifi
           --hidden-import=Crypto.Cipher.Salsa20
           --hidden-import=Crypto.Cipher._Salsa20
           gt7_connector.py
@@ -139,6 +141,7 @@ jobs:
           pyinstaller --windowed --noupx
           --name "GT7-Live-Connector"
           --collect-all Crypto
+          --collect-data certifi
           --hidden-import=Crypto.Cipher.Salsa20
           --hidden-import=Crypto.Cipher._Salsa20
           gt7_connector.py
@@ -186,6 +189,7 @@ jobs:
           pyinstaller --onefile --noupx --distpath dist
           --name "GT7-Live-Connector"
           --collect-all Crypto
+          --collect-data certifi
           --hidden-import=Crypto.Cipher.Salsa20
           --hidden-import=Crypto.Cipher._Salsa20
           --exclude-module pystray

@@ -974,6 +974,39 @@ _gtec_last_pkt = None    # most recent decoded packet, set by the receiver
 _gtec_lap_seen = [None, 0.0, False]
 
 
+_gtec_ssl_ctx = None
+
+def _gtec_ssl():
+    """A TLS context that can actually verify Supabase's certificate.
+
+    CPython on Windows reads the system certificate store, so a frozen build
+    there verifies fine. On macOS it does not: python.org builds carry their
+    own OpenSSL with no access to the Keychain, and rely on certifi, which a
+    PyInstaller bundle only contains if something imports it. Nothing did, so
+    the macOS app had no root certificates at all and every HTTPS request
+    failed verification -- which is reported as "could not reach GTEC", on
+    the one and only request this program makes.
+
+    Falls back to the default context rather than to an unverified one. A
+    connector that silently stopped checking certificates would be a worse
+    bug than the one it was working around.
+    """
+    global _gtec_ssl_ctx
+    if _gtec_ssl_ctx is None:
+        import ssl
+        try:
+            import certifi, os
+            where = certifi.where()
+            # The bundle can be importable while its data file was left out,
+            # and passing a path that does not exist raises.
+            _gtec_ssl_ctx = (ssl.create_default_context(cafile=where)
+                             if where and os.path.exists(where)
+                             else ssl.create_default_context())
+        except Exception:
+            _gtec_ssl_ctx = ssl.create_default_context()
+    return _gtec_ssl_ctx
+
+
 def _gtec_post(payload: dict):
     """One beacon. Returns the decoded reply, or None if it did not land."""
     import urllib.request, urllib.error
@@ -989,7 +1022,7 @@ def _gtec_post(payload: dict):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=5, context=_gtec_ssl()) as resp:
             return json.loads(resp.read().decode("utf-8") or "{}")
     except urllib.error.HTTPError as e:
         # The body is the whole diagnosis: PostgREST names the function and

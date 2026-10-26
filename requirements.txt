@@ -3,3 +3,6 @@ cryptography>=41.0
 pycryptodome>=3.19
 pystray>=0.19
 Pillow>=10.0
+# Root certificates. macOS Python has no access to the Keychain, so a frozen
+# build without this has no CA store and every HTTPS request fails to verify.
+certifi>=2024.2.2
