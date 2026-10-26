@@ -720,6 +720,9 @@ const carPaths = new Map();
 // The outline captured server side, so a refresh or a viewer arriving an
 // hour into a race gets the circuit straight away instead of an empty box.
 let basePath = [];
+// The same points with the first repeated at the end, once the lap is
+// finished, so the circuit draws as the loop it is.
+let baseLoop = [];
 let baseFetchedAt = 0;
 // How many points the server reported at the last fetch, so a poll can tell
 // whether the stored outline has grown, shrunk or finished without asking
@@ -841,12 +844,22 @@ async function loadBasePath(state) {
     baseFetchedAt = Date.now();
     const { data, error } = await sb.rpc('live_track');
     if (error || !data) return;
+    const baseClosedNext = !!state?.closed;
+    baseClosed = baseClosedNext;
     basePath = data.map(p => [p.x, p.z, p.y]).filter(p => p[0] != null && p[1] != null);
+    // A finished outline is a loop, and was being drawn as a line, so it had
+    // a gap at the start/finish straight the width of whatever the car
+    // covered between its last beacon and its first. Joining the ends closes
+    // it. Only once the server says the lap is finished: before that the two
+    // ends are nowhere near each other and a line between them would be a
+    // chord straight across the circuit.
+    baseLoop = (baseClosedNext && basePath.length > 2)
+        ? [...basePath, basePath[0]]
+        : basePath;
     // What the SERVER said, not what survived filtering here, or a single
     // point with no coordinates would leave the two permanently unequal and
     // refetch on every poll forever.
     baseServerPoints = known ? pts : data.length;
-    baseClosed = !!state?.closed;
     baseArmed  = !!state?.armed;
 }
 
@@ -919,9 +932,9 @@ function findStrays(rows) {
     rows.forEach(r => {
         if (r.x == null || r.z == null) return;
         let best = Infinity;
-        for (let i = 0; i < basePath.length - 1; i++) {
-            const ax = basePath[i][0], az = basePath[i][1];
-            const bx = basePath[i + 1][0], bz = basePath[i + 1][1];
+        for (let i = 0; i < baseLoop.length - 1; i++) {
+            const ax = baseLoop[i][0], az = baseLoop[i][1];
+            const bx = baseLoop[i + 1][0], bz = baseLoop[i + 1][1];
             const dx = bx - ax, dz = bz - az;
             const l2 = dx * dx + dz * dz;
             // A gap too big to be track: where the shape job changed hands.
@@ -1165,7 +1178,7 @@ function drawTrack(rows) {
     // strokes per redraw at sixty, which no canvas survives. Before an outline
     // has been captured the cars are still the only map there is, so they draw
     // it then.
-    const allPaths = basePath.length ? [basePath] : [...carPaths.values()];
+    const allPaths = baseLoop.length ? [baseLoop] : [...carPaths.values()];
     const total = basePath.length
         ? basePath.length + [...carPaths.values()].reduce((n, p) => n + Math.min(p.length, TRAIL_LEN + 1), 0)
         : allPaths.reduce((n, p) => n + p.length, 0);
