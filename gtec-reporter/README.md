@@ -59,10 +59,54 @@ keytool -genkey -v -keystore gtec-release.jks -keyalg RSA \
         -keysize 2048 -validity 10000 -alias gtec
 ```
 
-Then add a `signingConfigs` block to `app/build.gradle.kts` pointing at
-it, or sign the unsigned output with `apksigner`. **Keep the keystore
-safe:** Android will refuse to update an APK signed with a different key,
-so losing it means every driver uninstalling and reinstalling.
+`app/build.gradle.kts` already picks a keystore up from the environment,
+so nothing needs editing: set `GTEC_KEYSTORE_PATH`,
+`GTEC_KEYSTORE_PASSWORD`, `GTEC_KEY_ALIAS` and `GTEC_KEY_PASSWORD` and
+`assembleRelease` signs with it. With none of them set it falls back to
+debug signing, which installs fine for testing but must not be given out.
+
+**Keep the keystore safe:** Android refuses to update an APK signed with a
+different key, so losing it means every driver uninstalling and
+reinstalling.
+
+## Building it without Android Studio
+
+The `Build GT7 Live Connector` workflow builds the APK too, on GitHub's
+runners, so no local SDK is needed and nobody has to install Android
+Studio. Every push test-builds it and runs the decode test; a manual run
+with a version tag also attaches `GTEC-Reporter.apk` to that release,
+beside the desktop connector.
+
+It will only publish an APK that is **properly signed**, because a
+debug-signed one cannot later be updated in place: Android treats a
+different signature as a different app. So the keystore has to be given
+to the workflow once, as repository secrets.
+
+Generate it locally (the key never leaves your machine; only an encrypted
+copy goes to GitHub):
+
+```bash
+keytool -genkey -v -keystore gtec-release.jks -keyalg RSA \
+        -keysize 2048 -validity 10000 -alias gtec
+base64 -w0 gtec-release.jks > gtec-release.jks.b64   # macOS: base64 -i gtec-release.jks -o gtec-release.jks.b64
+```
+
+Then under Settings → Secrets and variables → Actions, add:
+
+| Secret | Value |
+| --- | --- |
+| `GTEC_KEYSTORE_BASE64` | the contents of `gtec-release.jks.b64` |
+| `GTEC_KEYSTORE_PASSWORD` | the store password you chose |
+| `GTEC_KEY_ALIAS` | `gtec` |
+| `GTEC_KEY_PASSWORD` | the key password (usually the same) |
+
+Back up `gtec-release.jks` somewhere safe and keep it out of the
+repository. It is the only thing that lets a future version replace this
+one on a driver's phone.
+
+Until those secrets exist the workflow still builds and still runs the
+tests; it just warns and leaves the APK off the release rather than
+shipping one that paints everybody into a corner.
 
 ## The decode is tested
 

@@ -17,12 +17,39 @@ android {
         versionName = "1.0"
     }
 
+    // Android refuses to update an app whose signature has changed, so a
+    // sideloaded APK must be signed with the same key every single time or
+    // every driver has to uninstall before taking a new version. A CI
+    // runner's debug keystore is generated fresh per run, which would do
+    // exactly that, so a release build signs with a keystore supplied
+    // through the environment and nothing else.
+    val keystorePath = System.getenv("GTEC_KEYSTORE_PATH")
+    val haveKeystore = !keystorePath.isNullOrBlank() && file(keystorePath).exists()
+
+    signingConfigs {
+        if (haveKeystore) {
+            create("gtec") {
+                storeFile = file(keystorePath!!)
+                storePassword = System.getenv("GTEC_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("GTEC_KEY_ALIAS") ?: "gtec"
+                keyPassword = System.getenv("GTEC_KEY_PASSWORD")
+                    ?: System.getenv("GTEC_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             // No shrinking: the app is tiny and R8 stripping a reflective
             // path in the JSON or notification code is not worth the risk
             // for an APK people sideload and cannot easily update.
             isMinifyEnabled = false
+            // Debug-signed when no keystore is configured, so a local build
+            // still produces something installable for testing. Such a build
+            // is deliberately NOT publishable: see the android job, which
+            // refuses to release one.
+            signingConfig = if (haveKeystore) signingConfigs.getByName("gtec")
+                            else signingConfigs.getByName("debug")
         }
     }
 
