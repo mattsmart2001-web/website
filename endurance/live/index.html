@@ -168,6 +168,10 @@
         /* Quiet: it is a detail, not a status. Never shrinks, so a long name
            truncates around it rather than squashing it. */
         .client { flex: 0 0 auto; display: inline-flex; color: var(--muted); opacity: 0.65; }
+        /* Ties the row to its dot on the map. Small and dim: it is a key, not
+           a status light. */
+        .team-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+            margin-right: 0.35rem; vertical-align: 0.5px; opacity: 0.85; }
         .client svg { width: 12px; height: 12px; display: block; }
         .who:hover, .who:focus-visible { color: var(--gold); outline: none; }
 
@@ -374,6 +378,7 @@ function rowHtml(r, idx, showFuel) {
     // Nordschleife lap is over seven minutes, so Last and Best are wide, and
     // a sixth column pushed Best off the edge of the card.
     const num = carNumber(r, r.mode);
+    const swatch = `<span class="team-dot" style="background:${carColour(r)}"></span>`;
     const sub = [
         num != null ? '#' + num : null,
         r.team_name ? esc(r.team_name) : null,
@@ -383,7 +388,7 @@ function rowHtml(r, idx, showFuel) {
         <td class="pos">${idx + 1}</td>
         <td>
             <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${clientBadge(r.client)}${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
-            ${sub ? `<span class="team">${sub}</span>` : ''}
+            ${sub ? `<span class="team">${swatch}${sub}</span>` : ''}
         </td>
         <td class="num">${r.lap ?? 0}${r.laps_in_race ? `<span class="sub2" style="display:inline">/${r.laps_in_race}</span>` : ''}</td>
         <td class="num">${lapTime(r.last_lap_ms)}<span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
@@ -662,19 +667,53 @@ function splitColour(lobby) {
 }
 
 /**
- * What colour to draw a car. Its team's manufacturer colour where there is
- * one, so teammates match and a Porsche does not look like a Ferrari, and
- * the split colour otherwise.
+ * A colour per team, so teammates match and no two teams on track look the
+ * same.
  *
- * Only accepts a plain hex value. brand_color comes from the database and is
- * written into a canvas fillStyle, where a crafted string could otherwise set
- * a gradient or simply break the drawing.
+ * Not the manufacturer's colour: several teams run the same manufacturer and
+ * would be indistinguishable, which defeats the point of colouring the map at
+ * all. The manufacturer's own colour still appears on the hover card, where
+ * brand identity belongs and telling cars apart does not.
+ *
+ * Seeded from the team's id so a team keeps its colour across a session and a
+ * refresh, then any clash is resolved against the teams actually on track.
+ * Twelve colours and fifteen teams makes a clash a certainty, and two teams
+ * drawn identically is the one outcome worth ruling out.
  */
-const HEX_RE = /^#[0-9a-f]{3}([0-9a-f]{3})?$/i;
+const TEAM_COLOURS = [
+    '#f87171', '#60a5fa', '#4ade80', '#f472b6', '#fb923c', '#22d3ee',
+    '#a78bfa', '#facc15', '#2dd4bf', '#e879f9', '#a3e635', '#fca5a5',
+];
+
+function hashId(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) >>> 0;
+    return h;
+}
+
+let teamColours = new Map();     // team or driver id -> hex
+
+function assignTeamColours(rows) {
+    // One key per car on track: its team, or itself when it has no team, so a
+    // solo driver is as distinguishable as any team.
+    const keys = [...new Set(rows.map(r => r.team_id || r.driver_id).filter(Boolean))].sort();
+    const taken = new Set();
+    const next = new Map();
+    for (const key of keys) {
+        let i = hashId(key) % TEAM_COLOURS.length;
+        // Walk to the next free slot. Deterministic because the keys are
+        // sorted, so the same field always produces the same assignment.
+        for (let n = 0; n < TEAM_COLOURS.length && taken.has(i); n++) {
+            i = (i + 1) % TEAM_COLOURS.length;
+        }
+        taken.add(i);
+        next.set(key, TEAM_COLOURS[i]);
+    }
+    teamColours = next;
+}
 
 function carColour(r) {
-    const c = (r.brand_color || '').trim();
-    return HEX_RE.test(c) ? c : splitColour(r.lobby_number);
+    return teamColours.get(r.team_id || r.driver_id) || splitColour(r.lobby_number);
 }
 
 /**
@@ -1416,6 +1455,7 @@ async function tick() {
     // Worked out before anything uses it: the table labels these cars, the
     // map leaves them out, and their trails are not kept.
     strays = findStrays(data);
+    assignTeamColours(data);
     recordPositions(data);
     renderField(data);
     drawTrack(data);
