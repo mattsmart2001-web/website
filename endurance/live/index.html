@@ -374,6 +374,19 @@ function clientBadge(client) {
         + ` stroke-linecap="round" stroke-linejoin="round"><path d="${b[1]}"/></svg></span>`;
 }
 
+// A best lap cannot be slower than a lap that was actually driven. GT7 has
+// been seen reporting a best of 8:07.307 alongside a completed lap of
+// 8:03.379, and the screen showed both, which cannot be true of anything.
+// The same rule the beacon applies, applied here to whatever this page has
+// been given, so a row that is already wrong in the database stops reading
+// as impossible.
+function bestLap(r) {
+    const best = r.best_lap_ms, last = r.last_lap_ms;
+    if (best == null) return last;
+    if (last == null || last < 20000) return best;
+    return Math.min(best, last);
+}
+
 // How far a car is round the lap in total, laps included, in metres. Null
 // until the round has a measured outline, which is what makes a gap possible
 // at all.
@@ -396,7 +409,7 @@ function gapHtml(r, ahead) {
     if (m < 0) return '<span class="sub2" style="display:inline">&mdash;</span>';
     const laps = Math.floor(m / r.lap_length_m);
     if (laps >= 1) return `+${laps} lap${laps === 1 ? '' : 's'}`;
-    const pace = ahead.best_lap_ms || r.best_lap_ms;      // ms for a whole lap
+    const pace = bestLap(ahead) || bestLap(r);             // ms for a whole lap
     if (!pace) return `+${Math.round(m)} m`;
     const s = (m / r.lap_length_m) * (pace / 1000);
     // Minutes and seconds past a minute, the way a timing screen reads. "+270s"
@@ -432,7 +445,7 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
         </td>
         <td class="num">${r.lap ?? 0}${r.laps_in_race ? `<span class="sub2" style="display:inline">/${r.laps_in_race}</span>` : ''}</td>
         <td class="num">${lapTime(r.last_lap_ms)}<span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
-        <td class="num">${isRace ? gapHtml(r, ahead) : lapTime(r.best_lap_ms)}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
+        <td class="num">${isRace ? gapHtml(r, ahead) : lapTime(bestLap(r))}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
         ${showFuel ? `<td>${fuelHtml(r.fuel_pct)}</td>` : ''}
     </tr>`;
 }
@@ -449,7 +462,7 @@ function splitHtml(lobby, rows, showFuel) {
                          || (runDistance(b) ?? -1) - (runDistance(a) ?? -1)
                          || (b.lap_ms ?? 0) - (a.lap_ms ?? 0));
     } else {
-        rows.sort((a, b) => (a.best_lap_ms ?? Infinity) - (b.best_lap_ms ?? Infinity));
+        rows.sort((a, b) => (bestLap(a) ?? Infinity) - (bestLap(b) ?? Infinity));
     }
     const reporting = rows.filter(r => (r.age_ms ?? 0) < 30000 && r.on_track).length;
     // Whether this number is a position or merely a place in a list. Only
@@ -1404,10 +1417,10 @@ function buildFacts(rows, geo) {
     }
 
     // Best of whoever is actually out, and how it stands against the record.
-    const bests = rows.map(r => r.best_lap_ms).filter(v => v != null && v > 0);
+    const bests = rows.map(bestLap).filter(v => v != null && v > 0);
     if (bests.length) {
         const best = Math.min(...bests);
-        const who = rows.find(r => r.best_lap_ms === best);
+        const who = rows.find(r => bestLap(r) === best);
         // One line, not two: a standalone "that is 3.3s off the record" can
         // surface on its own in the cycle, with nothing to say what "that" was.
         const delta = circuitRecord?.best_lap_ms ? best - circuitRecord.best_lap_ms : null;
