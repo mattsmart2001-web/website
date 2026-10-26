@@ -669,6 +669,9 @@ const TRAIL_STEPS = 4;            // alpha steps along it; see the trail drawing
 // been reset to the pits, or its reporter dropped out for a while. Joining
 // them would draw a line straight across the infield.
 const MAX_SEGMENT_M = 600;
+// Faster than any car in GT7 goes, so a move that implies more than this is
+// a car being put back somewhere rather than driven there.
+const TELEPORT_KPH = 400;
 
 function splitColour(lobby) {
     return SPLIT_COLOURS[((lobby || 1) - 1) % SPLIT_COLOURS.length];
@@ -856,8 +859,26 @@ function recordPositions(rows) {
         // next to each other in the trail and get joined: a line straight
         // across the infield to the pits, which is the one part of the map
         // that is not true. The fourth value says not to join this one.
-        const brk = trailBreak.delete(r.driver_id);
-        path.push([r.x, r.z, r.y, brk]);
+        let brk = trailBreak.delete(r.driver_id);
+        // When the car was HERE, not when this page got round to asking. The
+        // page can poll a little early or late, and timing the gap by the
+        // poll would make a normal lap look like a teleport now and then.
+        const now = Date.now() - (r.age_ms ?? 0);
+        // The flag above only catches a car the page SAW leave the track, and
+        // GT7 does not always drop its in-race flag the moment a car is put
+        // back in its box: a driver quitting can report one or two perfectly
+        // ordinary-looking positions from the pit lane. Those are a teleport,
+        // not driving, and the distance guard cannot see it because a pit box
+        // is a few hundred metres away, not kilometres. So judge it by the
+        // speed the move implies over the time it actually took. Nothing in
+        // GT7 covers ground at 400 km/h, so anything that claims to did not
+        // drive there.
+        if (!brk && last && last[4]) {
+            const dt = (now - last[4]) / 1000;
+            const m  = Math.hypot(r.x - last[0], r.z - last[1]);
+            if (dt > 0 && (m / dt) * 3.6 > TELEPORT_KPH) brk = true;
+        }
+        path.push([r.x, r.z, r.y, brk, now]);
         const keep = basePath.length ? PATH_KEEP_WITH_OUTLINE : PATH_MAX;
         while (path.length > keep) path.shift();
         carPaths.set(r.driver_id, path);
@@ -1167,7 +1188,13 @@ function drawTrack(rows) {
         // calls per car, 840 across a full grid, and the map is redrawn on
         // every pointer move while dragging. Four steps are indistinguishable
         // on a 3px line and cost four.
-        const path = carPaths.get(r.driver_id) || [];
+        // A car in the menus keeps beaconing, so it is still a live row and
+        // its dot moves to the pit box, but nothing is recorded for its trail
+        // while it is away. The trail therefore sat on the circuit, bright,
+        // at the last place the car actually was, while the car itself was
+        // somewhere else: a tail with no car on the end of it. It comes back
+        // when the driver does.
+        const path = r.on_track ? (carPaths.get(r.driver_id) || []) : [];
         const from = Math.max(0, path.length - 1 - TRAIL_LEN);
         const n = path.length - 1 - from;
         if (n > 0) {
