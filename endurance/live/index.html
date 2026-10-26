@@ -319,14 +319,20 @@ function lapTime(ms) {
  * 37 still reads lap 37, because losing the reporter is not losing the car.
  */
 function liveness(ageMs, onTrack, elsewhere) {
-    // Said before anything else, because it explains why a car that is plainly
+    // Whether anything is arriving at all comes first. "In menus" and
+    // "Another track" describe what a car that is REPORTING is doing, and
+    // they used to be tested before the age, so a driver who closed their
+    // reporter while sitting in the menus was described as being in the
+    // menus for as long as the row survived. They are not in the menus. They
+    // are not there at all, and that is the more useful thing to say.
+    if (ageMs >= 300000) return { cls: 's-offline', flag: 'Offline', flagCls: 'flag-offline' };
+    if (ageMs >= 30000)  return { cls: 's-lost', flag: 'Signal lost', flagCls: 'flag-lost' };
+    // Said before the rest, because it explains why a car that is plainly
     // reporting is nowhere on the map.
     if (elsewhere) return { cls: 's-drifting', flag: 'Another track', flagCls: 'flag-menus' };
     if (!onTrack) return { cls: 's-drifting', flag: 'In menus', flagCls: 'flag-menus' };
     if (ageMs < 6000)   return { cls: 's-live', flag: '', flagCls: '' };
-    if (ageMs < 30000)  return { cls: 's-drifting', flag: '', flagCls: '' };
-    if (ageMs < 300000) return { cls: 's-lost', flag: 'Signal lost', flagCls: 'flag-lost' };
-    return { cls: 's-offline', flag: 'Offline', flagCls: 'flag-offline' };
+    return { cls: 's-drifting', flag: '', flagCls: '' };
 }
 
 /**
