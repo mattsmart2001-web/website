@@ -962,8 +962,8 @@
             <button class="btn-save" id="btn-lt-pair" onclick="issueLiveTimingCode()">Get my pairing code</button>
         </div>
 
-        <!-- Just issued. The code is shown once and never retrievable again,
-             the same as any API key, so the warning has to be plain. -->
+        <!-- Just issued. Retrievable afterwards from the paired card below, so
+             this is a convenience rather than the only chance to see it. -->
         <div id="lt-code-shown" style="display:none">
             <label class="field-label">Your pairing code</label>
             <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.3rem">
@@ -972,8 +972,8 @@
                 <button class="btn-small" onclick="copyLiveTimingCode()">Copy</button>
             </div>
             <div class="field-hint" style="font-size:0.75rem;color:var(--gold);margin-top:0.6rem;line-height:1.6">
-                Copy this into the app now. It is only shown once, and we cannot show it again.
-                If you lose it, come back and get a new one.
+                Copy this into the connector or the phone app. The same code works on both,
+                and you can come back and see it here again whenever you need it.
             </div>
             <div class="field-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;line-height:1.6">
                 Treat it like a password: anyone holding it can put a car on the map as you.
@@ -986,9 +986,22 @@
                 <span style="display:inline-flex;align-items:center;padding:0.2rem 0.6rem;border-radius:999px;font-family:'Orbitron',sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3)">Paired</span>
                 <span id="lt-last-used" style="font-size:0.78rem;color:var(--muted)"></span>
             </div>
+            <label class="field-label" style="display:block;margin-top:1rem">Your pairing code</label>
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.3rem">
+                <!-- Masked by default. Copy works without revealing it, which
+                     is the normal case: a driver pasting it into an app does
+                     not need to read it, and plenty of them stream. -->
+                <input type="password" id="lt-code-saved" readonly value="••••••••••••••••••••••••"
+                       autocomplete="off" style="flex:1;min-width:240px;font-family:monospace;font-size:0.8rem">
+                <button class="btn-small" id="btn-lt-show" onclick="toggleLiveTimingCode()">Show</button>
+                <button class="btn-small" onclick="copySavedLiveTimingCode()">Copy</button>
+            </div>
             <div class="field-hint" style="font-size:0.72rem;color:var(--muted);margin-top:0.75rem;line-height:1.6">
-                Your code is set up and not shown again. Lost it, or need to set up a different computer?
-                Get a new code and the old one stops working straight away.
+                The same code works on as many devices as you like, so the connector on a computer
+                and the app on a phone can both use it without one cancelling the other.
+                <span style="color:var(--gold)">Keep it off stream:</span> anyone who sees it can put a car on the map as you.
+                Get a new code only if you think someone has, and remember it stops every device
+                currently using the old one.
             </div>
             <div style="display:flex;gap:0.5rem;margin-top:1.25rem;flex-wrap:wrap">
                 <button class="btn-small" onclick="issueLiveTimingCode()">New code</button>
@@ -1391,10 +1404,72 @@ async function issueLiveTimingCode() {
     if (!data?.ok) { toast(data?.error || 'Could not generate a code.', 'error'); return; }
 
     document.getElementById('lt-code').value = data.token;
+    // The old code has just been revoked, so anything cached is now wrong.
+    _ltCode = data.token;
     _ltShow('lt-code-shown');
     const prompt = document.getElementById('card-live-timing-prompt');
     if (prompt) prompt.style.display = 'none';
     toast('Pairing code ready. Copy it now.', 'success');
+}
+
+// The code is fetched only when it is actually wanted, rather than riding
+// along with every status poll, and cached so showing then copying does not
+// ask twice.
+let _ltCode = null;
+
+async function _ltFetchCode() {
+    if (_ltCode) return _ltCode;
+    const { data, error } = await sb.rpc('live_timing_code');
+    if (error)        { toast(error.message, 'error'); return null; }
+    if (!data?.ok)    { toast(data?.error || 'Could not fetch your code.', 'error'); return null; }
+    if (!data.paired) { toast('No pairing code yet.', 'error'); return null; }
+    _ltCode = data.code;
+    return _ltCode;
+}
+
+async function toggleLiveTimingCode() {
+    const field = document.getElementById('lt-code-saved');
+    const btn   = document.getElementById('btn-lt-show');
+    if (!field) return;
+
+    if (field.type === 'text') {                    // hide it again
+        field.type = 'password';
+        field.value = '••••••••••••••••••••••••';
+        if (btn) btn.textContent = 'Show';
+        return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+    const code = await _ltFetchCode();
+    if (btn) btn.disabled = false;
+    if (!code) { if (btn) btn.textContent = 'Show'; return; }
+
+    field.type = 'text';
+    field.value = code;
+    if (btn) btn.textContent = 'Hide';
+}
+
+/** Copy without revealing, which is what most people actually want. */
+async function copySavedLiveTimingCode() {
+    const code = await _ltFetchCode();
+    if (!code) return;
+    try {
+        await navigator.clipboard.writeText(code);
+        toast('Copied. Paste it into the connector or the phone app.', 'success');
+    } catch (e) {
+        // Clipboard access is blocked in plenty of mobile browsers. Falling
+        // back means revealing it, so say so rather than doing it silently.
+        const field = document.getElementById('lt-code-saved');
+        if (field) {
+            field.type = 'text';
+            field.value = code;
+            field.focus();
+            field.select();
+            const btn = document.getElementById('btn-lt-show');
+            if (btn) btn.textContent = 'Hide';
+        }
+        toast('Your browser blocked the clipboard, so the code is now shown. Press and hold to copy.', 'error');
+    }
 }
 
 async function copyLiveTimingCode() {
@@ -1416,6 +1491,7 @@ async function revokeLiveTimingCode() {
     const { data, error } = await sb.rpc('live_timing_token_revoke');
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not unpair.', 'error'); return; }
+    _ltCode = null;                    // nothing to reveal any more
     toast('Unpaired.', 'success');
     await loadLiveTiming();
 }
