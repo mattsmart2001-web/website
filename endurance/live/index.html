@@ -368,16 +368,49 @@ function clientBadge(client) {
         + ` stroke-linecap="round" stroke-linejoin="round"><path d="${b[1]}"/></svg></span>`;
 }
 
-function rowHtml(r, idx, showFuel) {
+// How far a car is round the lap in total, laps included, in metres. Null
+// until the round has a measured outline, which is what makes a gap possible
+// at all.
+function runDistance(r) {
+    if (r.progress_m == null || !r.lap_length_m) return null;
+    return (r.lap ?? 0) * r.lap_length_m + r.progress_m;
+}
+
+// The gap to the car in front, shown as time rather than distance because
+// that is what a driver thinks in. The conversion is the leader's own best
+// lap pace, which is an assumption and is said to be one in the column's
+// tooltip: a gap of 400 m means a different number of seconds down the
+// Döttinger Höhe than through the Karussell.
+function gapHtml(r, ahead) {
+    const mine = runDistance(r), theirs = ahead ? runDistance(ahead) : null;
+    if (mine == null) return '<span class="sub2" style="display:inline">&mdash;</span>';
+    if (!ahead) return '<span class="sub2" style="display:inline">leader</span>';
+    if (theirs == null) return '<span class="sub2" style="display:inline">&mdash;</span>';
+    const m = theirs - mine;
+    if (m < 0) return '<span class="sub2" style="display:inline">&mdash;</span>';
+    const laps = Math.floor(m / r.lap_length_m);
+    if (laps >= 1) return `+${laps} lap${laps === 1 ? '' : 's'}`;
+    const pace = ahead.best_lap_ms || r.best_lap_ms;      // ms for a whole lap
+    if (!pace) return `+${Math.round(m)} m`;
+    const s = (m / r.lap_length_m) * (pace / 1000);
+    // Minutes and seconds past a minute, the way a timing screen reads. "+270s"
+    // is arithmetic; "+4:30" is a gap.
+    const shown = s < 10 ? `${s.toFixed(1)}s`
+                : s < 60 ? `${Math.round(s)}s`
+                : `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+    return `<span title="${Math.round(m)} m round the lap">+${shown}</span>`;
+}
+
+function rowHtml(r, idx, showFuel, isRace, ahead) {
     const st = liveness(r.age_ms ?? 0, r.on_track, strays.has(r.driver_id));
     const live = st.cls === 's-live' && r.on_track;
-    // Order within a split is laps completed in a race and best lap in
-    // practice. Real gaps need most of a lobby reporting plus the track
-    // centreline, so they are not claimed here rather than shown as
-    // something they are not.
+    // Order within a split is laps completed and then distance round the lap
+    // in a race, and best lap in practice.
     // Car number sits on the team line rather than in its own column. A
     // Nordschleife lap is over seven minutes, so Last and Best are wide, and
-    // a sixth column pushed Best off the edge of the card.
+    // a sixth column pushed Best off the edge of the card. The fifth column
+    // is therefore Best in practice, where it is the ranking, and Gap in a
+    // race, where it is the question everybody is asking.
     const num = carNumber(r, r.mode);
     const swatch = `<span class="team-dot" style="background:${carColour(r)}"></span>`;
     const sub = [
@@ -393,7 +426,7 @@ function rowHtml(r, idx, showFuel) {
         </td>
         <td class="num">${r.lap ?? 0}${r.laps_in_race ? `<span class="sub2" style="display:inline">/${r.laps_in_race}</span>` : ''}</td>
         <td class="num">${lapTime(r.last_lap_ms)}<span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
-        <td class="num">${lapTime(r.best_lap_ms)}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
+        <td class="num">${isRace ? gapHtml(r, ahead) : lapTime(r.best_lap_ms)}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
         ${showFuel ? `<td>${fuelHtml(r.fuel_pct)}</td>` : ''}
     </tr>`;
 }
@@ -404,13 +437,27 @@ function splitHtml(lobby, rows, showFuel) {
     // current lap; practice is the best lap, fastest first, because laps
     // completed in a practice session ranks nothing and rearranges itself
     // every time anybody crosses the line.
-    if (rows[0]?.mode === 'race') {
+    const isRace = rows[0]?.mode === 'race';
+    if (isRace) {
         rows.sort((a, b) => (b.lap ?? 0) - (a.lap ?? 0)
+                         || (runDistance(b) ?? -1) - (runDistance(a) ?? -1)
                          || (b.lap_ms ?? 0) - (a.lap_ms ?? 0));
     } else {
         rows.sort((a, b) => (a.best_lap_ms ?? Infinity) - (b.best_lap_ms ?? Infinity));
     }
     const reporting = rows.filter(r => (r.age_ms ?? 0) < 30000 && r.on_track).length;
+    // Whether this number is a position or merely a place in a list. Only
+    // drivers who have paired a reporter are here at all, so with four of a
+    // split's sixteen cars reporting, the car at the top is first of four and
+    // might be eighth on the road. Calling that P1 on race day would have
+    // somebody's family cheering the wrong car.
+    const cov = coverage.get(lobby ?? 0);
+    const covered = isRace && cov && cov.entered > 0 && cov.reporting >= cov.entered;
+    const posHead = covered
+        ? `<th title="Position in this split. Every car entered for it is reporting, so this is the order on the road.">Pos</th>`
+        : `<th title="${isRace
+            ? `Place in this list, not position in the race. ${cov ? `${cov.reporting} of the ${cov.entered} cars` : 'Not every car'} in this split ${cov && cov.reporting === 1 ? 'is' : 'are'} reporting, so cars that are not here are not counted.`
+            : 'Place in this list, by best lap.'}">#</th>`;
     const key = String(lobby ?? 0);
     const collapsed = collapsedSplits.has(key);
     const focused = focusedSplit === key;
@@ -426,8 +473,10 @@ function splitHtml(lobby, rows, showFuel) {
             <span class="split-meta">${rows.length} car${rows.length === 1 ? '' : 's'} reporting${reporting !== rows.length ? ` · ${reporting} live` : ''}${focused ? ' · on map' : ''}</span>
         </button>
         <table>
-            <thead><tr><th></th><th>Driver</th><th>Lap</th><th>Last</th><th>Best</th>${showFuel ? '<th>Fuel</th>' : ''}</tr></thead>
-            <tbody>${rows.map((r, i) => rowHtml(r, i, showFuel)).join('')}</tbody>
+            <thead><tr>${posHead}<th>Driver</th><th>Lap</th><th>Last</th>${isRace
+                ? '<th title="Gap to the car above, worked out from how far round the lap each of them is and shown at the leading car\'s best-lap pace. A gap in metres is exact; the seconds it becomes depend on where on the circuit it is being covered.">Gap</th>'
+                : '<th>Best</th>'}${showFuel ? '<th>Fuel</th>' : ''}</tr></thead>
+            <tbody>${rows.map((r, i) => rowHtml(r, i, showFuel, isRace, rows[i - 1])).join('')}</tbody>
         </table>
     </div>`;
 }
@@ -809,6 +858,21 @@ async function loadBasePath(state) {
 // outline is the one thing on the page that is known to be this circuit.
 // ---------------------------------------------------------------
 let strays = new Set();
+
+// How many of each split's entered cars are reporting, which is the whole
+// difference between a position and a place in a list. Entries do not change
+// during a session and reporters come and go slowly, so this is asked for
+// every ten seconds rather than every poll.
+let coverage = new Map();
+let coverageAt = 0;
+async function loadCoverage(eventId) {
+    if (Date.now() - coverageAt < 10000) return;
+    coverageAt = Date.now();
+    const { data, error } = await sb.rpc('live_split_coverage', { p_event_id: eventId });
+    if (error || !data) return;
+    coverage = new Map(data.map(c => [c.lobby_number ?? 0,
+                                      { entered: c.entered, reporting: c.reporting }]));
+}
 
 // How far off the traced line a car can be and still be on this circuit.
 // A track is maybe 15m wide and racing lines vary, so 80m is generous.
@@ -1587,6 +1651,7 @@ async function tick() {
     failures = 0;
     if (!data || data.length === 0) { await renderIdle(); return; }
     await loadBasePath(trackState?.error ? null : trackState?.data);
+    loadCoverage(data[0].event_id);        // cached, not awaited
     loadCircuitRecord(data[0].event_id);   // once per round, not awaited
     lastRows = data;
     // Worked out before anything uses it: the table labels these cars, the
