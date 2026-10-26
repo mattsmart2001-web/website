@@ -655,8 +655,16 @@ const carPaths = new Map();
 // hour into a race gets the circuit straight away instead of an empty box.
 let basePath = [];
 let baseFetchedAt = 0;
-const PATH_MAX = 4000;            // per car; plenty of laps, bounded for memory
+// Per car. Only needed in full while the cars ARE the map, which is before
+// the server's outline has been captured. Once there is an outline the trail
+// is all that gets drawn, so the history is trimmed to just over it: sixty
+// cars holding 4,000 points each is 240,000 points of browser memory earning
+// nothing.
+const PATH_MAX = 4000;
+const PATH_KEEP_WITH_OUTLINE = 48;
+const RELIEF_BANDS = 12;          // height bands; see the banded shading below
 const TRAIL_LEN = 14;             // how much of the tail is drawn bright
+const TRAIL_STEPS = 4;            // alpha steps along it; see the trail drawing
 // Two points further apart than this are not consecutive track: a car has
 // been reset to the pits, or its reporter dropped out for a while. Joining
 // them would draw a line straight across the infield.
@@ -839,7 +847,8 @@ function recordPositions(rows) {
         // stationary car rather than movement.
         if (last && last[0] === r.x && last[1] === r.z) return;
         path.push([r.x, r.z, r.y]);
-        while (path.length > PATH_MAX) path.shift();
+        const keep = basePath.length ? PATH_KEEP_WITH_OUTLINE : PATH_MAX;
+        while (path.length > keep) path.shift();
         carPaths.set(r.driver_id, path);
     });
 }
@@ -1012,10 +1021,16 @@ function drawTrack(rows) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, w, h);
 
-    // The stored outline is drawn as part of the track, same as the cars'
-    // own paths, so it joins up with what this page has seen since.
-    const allPaths = basePath.length ? [basePath, ...carPaths.values()] : [...carPaths.values()];
-    const total = allPaths.reduce((n, p) => n + p.length, 0);
+    // Once the outline exists it IS the circuit, and the cars' own histories
+    // add nothing to it but work. Drawing every car's full trail as track cost
+    // one stroke per segment per car: fine at three cars, roughly 240,000
+    // strokes per redraw at sixty, which no canvas survives. Before an outline
+    // has been captured the cars are still the only map there is, so they draw
+    // it then.
+    const allPaths = basePath.length ? [basePath] : [...carPaths.values()];
+    const total = basePath.length
+        ? basePath.length + [...carPaths.values()].reduce((n, p) => n + Math.min(p.length, TRAIL_LEN + 1), 0)
+        : allPaths.reduce((n, p) => n + p.length, 0);
 
     if (total < 2) {
         // Nothing to say yet, and the cycle must not paint over it.
@@ -1033,7 +1048,8 @@ function drawTrack(rows) {
     // the circuit is true rather than stretched to the box.
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     let minY = Infinity, maxY = -Infinity;
-    for (const path of allPaths) for (const pt of path) {
+    for (const path of [...allPaths, ...(basePath.length ? carPaths.values() : [])])
+    for (const pt of path) {
         if (pt[0] < minX) minX = pt[0]; if (pt[0] > maxX) maxX = pt[0];
         if (pt[1] < minZ) minZ = pt[1]; if (pt[1] > maxZ) maxZ = pt[1];
         if (pt[2] != null) {
@@ -1071,35 +1087,59 @@ function drawTrack(rows) {
     // The track itself: every car's whole path, joined into lines. Drawn
     // segment by segment when there is elevation to colour by, and in one
     // pass when there is not.
-    for (const path of allPaths) {
-        if (relief) {
-            g.lineWidth = 2.5 * zw;
+    g.lineWidth = 2.5 * zw;
+    if (relief) {
+        // Sorted into height bands and drawn one band at a time. A stroke per
+        // segment gave a smooth gradient and cost a canvas call for every
+        // point on the map; a dozen bands are indistinguishable by eye on a
+        // 2.5px line and cost twelve calls however long the path is.
+        const bands = Array.from({ length: RELIEF_BANDS }, () => []);
+        const flat = [];
+        const span = Math.max(1, maxY - minY);
+        for (const path of allPaths) {
             for (let i = 0; i < path.length - 1; i++) {
                 const a = path[i], b = path[i + 1];
                 if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
                 const h2 = (a[2] != null && b[2] != null) ? (a[2] + b[2]) / 2 : null;
-                if (h2 == null) { g.strokeStyle = 'rgba(148,163,184,0.5)'; }
-                else {
-                    const t = (h2 - minY) / Math.max(1, maxY - minY);
-                    // Low ground cool and dark, high ground warm and bright,
-                    // which reads as height without needing a legend.
-                    g.strokeStyle = `rgba(${Math.round(80 + 175 * t)},${Math.round(110 + 90 * t)},${Math.round(170 - 80 * t)},0.75)`;
-                }
-                g.beginPath();
-                g.moveTo(px(a[0]), pz(a[1]));
-                g.lineTo(px(b[0]), pz(b[1]));
-                g.stroke();
+                if (h2 == null) { flat.push(a, b); continue; }
+                const bi = Math.min(RELIEF_BANDS - 1,
+                                    Math.max(0, Math.floor(((h2 - minY) / span) * RELIEF_BANDS)));
+                bands[bi].push(a, b);
             }
-        } else {
-            g.lineWidth = 2.5 * zw;
-            g.strokeStyle = 'rgba(148,163,184,0.5)';
-            strokePath(g, path, px, pz, 0, path.length - 1);
         }
+        bands.forEach((segs, bi) => {
+            if (!segs.length) return;
+            // Low ground cool and dark, high ground warm and bright, which
+            // reads as height without needing a legend.
+            const t = (bi + 0.5) / RELIEF_BANDS;
+            g.strokeStyle = `rgba(${Math.round(80 + 175 * t)},${Math.round(110 + 90 * t)},${Math.round(170 - 80 * t)},0.75)`;
+            g.beginPath();
+            for (let i = 0; i < segs.length; i += 2) {
+                g.moveTo(px(segs[i][0]), pz(segs[i][1]));
+                g.lineTo(px(segs[i + 1][0]), pz(segs[i + 1][1]));
+            }
+            g.stroke();
+        });
+        if (flat.length) {
+            g.strokeStyle = 'rgba(148,163,184,0.5)';
+            g.beginPath();
+            for (let i = 0; i < flat.length; i += 2) {
+                g.moveTo(px(flat[i][0]), pz(flat[i][1]));
+                g.lineTo(px(flat[i + 1][0]), pz(flat[i + 1][1]));
+            }
+            g.stroke();
+        }
+    } else {
+        g.strokeStyle = 'rgba(148,163,184,0.5)';
+        for (const path of allPaths) strokePath(g, path, px, pz, 0, path.length - 1);
     }
 
     // Each car: a fading tail, then the car, then its number. A focused
     // split dims the rest rather than removing them, so you can still see
     // where the others are relative to the ones you are watching.
+    g.font = "bold 10px 'Inter', system-ui, sans-serif";
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
     rows.forEach(r => {
         if (r.x == null || r.z == null) return;
         // At a different circuit entirely: listed in the table, but drawing
@@ -1110,18 +1150,35 @@ function drawTrack(rows) {
         if (stale) return;
         const dim = focusedSplit !== null && String(r.lobby_number ?? 0) !== focusedSplit;
         const col = carColour(r);
+        // The tail fades, which needs a different alpha along its length, but
+        // not a different alpha per segment: a stroke each cost 14 canvas
+        // calls per car, 840 across a full grid, and the map is redrawn on
+        // every pointer move while dragging. Four steps are indistinguishable
+        // on a 3px line and cost four.
         const path = carPaths.get(r.driver_id) || [];
         const from = Math.max(0, path.length - 1 - TRAIL_LEN);
-        for (let i = from; i < path.length - 1; i++) {
-            const a = path[i], b = path[i + 1];
-            if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
-            g.globalAlpha = (dim ? 0.08 : 0.15 + 0.7 * ((i - from) / Math.max(1, path.length - 1 - from)));
+        const n = path.length - 1 - from;
+        if (n > 0) {
             g.strokeStyle = col;
             g.lineWidth = 3 * zw;
-            g.beginPath();
-            g.moveTo(px(a[0]), pz(a[1]));
-            g.lineTo(px(b[0]), pz(b[1]));
-            g.stroke();
+            const per = Math.ceil(n / TRAIL_STEPS);
+            for (let step = 0; step < TRAIL_STEPS; step++) {
+                const lo = from + step * per;
+                const hi = Math.min(path.length - 1, lo + per);
+                if (lo >= hi) break;
+                g.globalAlpha = dim ? 0.08
+                    : 0.15 + 0.7 * ((step + 0.5) / TRAIL_STEPS);
+                g.beginPath();
+                let drew = false;
+                for (let i = lo; i < hi; i++) {
+                    const a = path[i], b = path[i + 1];
+                    if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
+                    g.moveTo(px(a[0]), pz(a[1]));
+                    g.lineTo(px(b[0]), pz(b[1]));
+                    drew = true;
+                }
+                if (drew) g.stroke();
+            }
         }
         g.globalAlpha = 1;
         g.globalAlpha = dim ? 0.3 : (r.on_track ? 1 : 0.35);
@@ -1131,10 +1188,10 @@ function drawTrack(rows) {
         g.fill();
         const num = carNumber(r, rows[0]?.mode);
         if (num != null) {
+            // Font and alignment are set once before the loop: assigning them
+            // per car forces a style recalculation each time, sixty times a
+            // redraw, and they never change.
             g.fillStyle = '#050608';
-            g.font = "bold 10px 'Inter', system-ui, sans-serif";
-            g.textAlign = 'center';
-            g.textBaseline = 'middle';
             g.fillText(String(num), px(r.x), pz(r.z) + 0.5);
         }
         g.globalAlpha = 1;
