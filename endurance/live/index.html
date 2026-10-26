@@ -690,11 +690,26 @@ let strays = new Set();
 // A track is maybe 15m wide and racing lines vary, so 80m is generous.
 const MATCH_M = 80;
 
+// Mirrors live_track_closed() and live_track_closure_m() on the server. A
+// circuit is a loop, so an outline that has come back round to where it
+// started is finished; anything less is a fragment of one lap.
+const MIN_SHAPE_POINTS = 60;
+const CLOSURE_M = 200;
+
+function outlineClosed() {
+    if (basePath.length < MIN_SHAPE_POINTS) return false;
+    const a = basePath[0], b = basePath[basePath.length - 1];
+    return Math.hypot(b[0] - a[0], b[1] - a[1]) <= CLOSURE_M;
+}
+
 function findStrays(rows) {
     const out = new Set();
-    // Nothing to judge against until the outline is a real shape. Before
-    // that, every car is taken at its word.
-    if (basePath.length < 60) return out;
+    // Only a FINISHED outline can say where this circuit is. Judging against
+    // a partial one brands the very car that is tracing it: it drives on into
+    // track nothing has covered yet, measures far from every point captured so
+    // far, and gets called a stray, which then stops it being drawn. Exactly
+    // what happened the first time anyone drove a freshly cleared round.
+    if (!outlineClosed()) return out;
 
     // Distance to the nearest traced point, NOT to a bounding box. GT7's
     // coordinates are per-circuit and roughly centred on each track's own
