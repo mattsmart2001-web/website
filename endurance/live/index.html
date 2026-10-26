@@ -373,8 +373,9 @@ function rowHtml(r, idx, showFuel) {
     // Car number sits on the team line rather than in its own column. A
     // Nordschleife lap is over seven minutes, so Last and Best are wide, and
     // a sixth column pushed Best off the edge of the card.
+    const num = carNumber(r, r.mode);
     const sub = [
-        r.car_number != null ? '#' + r.car_number : null,
+        num != null ? '#' + num : null,
         r.team_name ? esc(r.team_name) : null,
     ].filter(Boolean).join(' · ');
 
@@ -658,6 +659,37 @@ const MAX_SEGMENT_M = 600;
 
 function splitColour(lobby) {
     return SPLIT_COLOURS[((lobby || 1) - 1) % SPLIT_COLOURS.length];
+}
+
+/**
+ * What colour to draw a car. Its team's manufacturer colour where there is
+ * one, so teammates match and a Porsche does not look like a Ferrari, and
+ * the split colour otherwise.
+ *
+ * Only accepts a plain hex value. brand_color comes from the database and is
+ * written into a canvas fillStyle, where a crafted string could otherwise set
+ * a gradient or simply break the drawing.
+ */
+const HEX_RE = /^#[0-9a-f]{3}([0-9a-f]{3})?$/i;
+
+function carColour(r) {
+    const c = (r.brand_color || '').trim();
+    return HEX_RE.test(c) ? c : splitColour(r.lobby_number);
+}
+
+/**
+ * The number to put on a car.
+ *
+ * During a race the entry's number, because a team fields one car carrying
+ * one number and that is what every other timing screen shows. Otherwise the
+ * driver's own career number, because in practice both teammates can be out
+ * at once and they would both be labelled with the number their car will
+ * carry on race day, which is normally the team leader's.
+ */
+function carNumber(r, mode) {
+    return mode === 'race'
+        ? (r.car_number ?? r.career_number)
+        : (r.career_number ?? r.car_number);
 }
 
 async function loadBasePath(force) {
@@ -1038,7 +1070,7 @@ function drawTrack(rows) {
         const stale = (r.age_ms ?? 0) > 30000;
         if (stale) return;
         const dim = focusedSplit !== null && String(r.lobby_number ?? 0) !== focusedSplit;
-        const col = splitColour(r.lobby_number);
+        const col = carColour(r);
         const path = carPaths.get(r.driver_id) || [];
         const from = Math.max(0, path.length - 1 - TRAIL_LEN);
         for (let i = from; i < path.length - 1; i++) {
@@ -1058,12 +1090,13 @@ function drawTrack(rows) {
         g.beginPath();
         g.arc(px(r.x), pz(r.z), 7, 0, Math.PI * 2);
         g.fill();
-        if (r.car_number != null) {
+        const num = carNumber(r, rows[0]?.mode);
+        if (num != null) {
             g.fillStyle = '#050608';
             g.font = "bold 10px 'Inter', system-ui, sans-serif";
             g.textAlign = 'center';
             g.textBaseline = 'middle';
-            g.fillText(String(r.car_number), px(r.x), pz(r.z) + 0.5);
+            g.fillText(String(num), px(r.x), pz(r.z) + 0.5);
         }
         g.globalAlpha = 1;
     });
