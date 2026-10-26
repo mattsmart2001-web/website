@@ -948,9 +948,15 @@
             </div>
             <div style="font-size:0.72rem;color:var(--muted);line-height:1.6">
                 Already running the connector for the Lap Coach or the telemetry dashboard? You have it already, nothing more to install.
-                Prefer one file with nothing to unzip? There is a
+                <br><strong style="color:var(--text)">Extract the zip to a folder and keep it there.</strong> Somewhere like Documents, not your
+                Downloads folder, and do not run it by double-clicking inside the zip. Windows will happily run it from
+                inside, but it unpacks to a temporary folder that gets wiped, so you end up downloading it again every
+                time and the firewall asks again every time, because firewall permission is tied to the exact file
+                location. Extract it once, run it from there, allow the firewall once, and make a desktop shortcut.
+                <br>Prefer one file with nothing to unzip? There is a
                 <a href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.exe" style="color:var(--gold)">single-file version</a>,
-                though Windows or your antivirus may warn you about it before it will open. The zip above avoids that.
+                though Windows or your antivirus may warn you about it before it will open, and it unpacks itself afresh
+                on every launch, so the firewall may keep asking. The zip avoids both.
             </div>
             <div style="padding-top:0.6rem;border-top:1px solid var(--border);margin-top:0.3rem">
                 <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap">
