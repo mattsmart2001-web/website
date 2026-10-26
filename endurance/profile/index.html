@@ -952,8 +952,22 @@
                 <a href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.exe" style="color:var(--gold)">single-file version</a>,
                 though Windows or your antivirus may warn you about it before it will open. The zip above avoids that.
             </div>
-            <div style="font-size:0.72rem;color:var(--muted);line-height:1.6;padding-top:0.3rem;border-top:1px solid var(--border);margin-top:0.3rem">
-                <strong style="color:var(--text)">On a phone?</strong> The Android app is coming. It does the same job from your pocket, so you will not need a computer at all. iPhone is not supported.
+            <div style="padding-top:0.6rem;border-top:1px solid var(--border);margin-top:0.3rem">
+                <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap">
+                    <a class="btn-small" style="text-decoration:none;color:var(--gold);border-color:rgba(255,209,102,0.3)"
+                       href="https://github.com/mattsmart2001-web/website/releases/latest/download/GTEC-Reporter.apk">Android phone</a>
+                    <span style="font-size:0.72rem;color:var(--muted)">GTEC Reporter &middot; no computer needed</span>
+                </div>
+                <div style="font-size:0.72rem;color:var(--muted);line-height:1.6;margin-top:0.5rem">
+                    Does the same job from your pocket, so you need no computer at all.
+                    Download it on the phone, tap it, and allow installing from that source when Android asks.
+                    It is not from the Play Store, so you will also see a warning about an unknown developer:
+                    that is expected, and installing anyway is fine.
+                    <strong style="color:var(--text)">Allow notifications when it asks</strong> &mdash; the notification is what keeps it
+                    running through a long race, and it is where the status is shown.
+                    The phone has to be on the same WiFi as your console.
+                    <br>iPhone is not supported, and cannot be: Apple does not allow an app to read this kind of network traffic.
+                </div>
             </div>
         </div>
 
@@ -1377,7 +1391,7 @@ async function loadLiveTiming() {
             ? `Your car is reporting and appears on <a href="/endurance/live/" style="color:var(--gold);font-weight:600">live timing</a> now.`
             : `Live timing is paired. ${data.last_used_at
                     ? `Your reporter last checked in ${fmtRelative(data.last_used_at)}.`
-                    : 'Your reporter has not checked in yet, so start the connector before the race.'}`
+                    : 'Your reporter has not checked in yet, so start the connector or the phone app before the race.'}`
                 + _ltPracticeNote(prac, true)
                 + ` <a href="/endurance/live/" style="color:var(--gold);font-weight:600">Watch live timing</a>.`;
     }
