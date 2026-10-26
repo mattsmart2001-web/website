@@ -10598,8 +10598,8 @@ async function renderHealthCheck() {
                         <div style="font-size:0.8rem;color:var(--muted)">${d.team_name ? esc(d.team_name) : 'No team'} &middot; ${esc(d.psn_id || '—')}${lastSeenLine(d.driver_id)}</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                        ${d.late ? `<span class="badge" style="background:rgba(251,146,60,0.15);color:#fdba74;border:1px solid rgba(251,146,60,0.3)" title="Flagged an absence, but after that round's splits had been notified — too late for registration to drop them, so the hole in the grid was real and it still counts. Worth knowing before you act on this.">${d.late} flagged late</span>` : ''}
-                        ${d.excused ? `<span class="badge badge-muted" title="Rounds they flagged in time — these do not count toward 6.4">+${d.excused} declared</span>` : ''}
+                        ${d.late ? `<span class="badge" style="background:rgba(251,146,60,0.15);color:#fdba74;border:1px solid rgba(251,146,60,0.3)" title="Flagged an absence, but after that round's splits had been notified, too late for registration to drop them, so the hole in the grid was real and it still counts. Worth knowing before you act on this.">${d.late} flagged late</span>` : ''}
+                        ${d.excused ? `<span class="badge badge-muted" title="Rounds they flagged in time, which do not count toward 6.4">+${d.excused} declared</span>` : ''}
                         <span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)" title="Undeclared no-shows — the figure 6.4 counts">${d.no_shows} missed / ${d.events_entered}</span>
                         <button class="btn-icon" onclick="openDirectMessageModal('${d.driver_id}','${esc(d.display_name)}')">Message</button>
                     </div>
@@ -10631,7 +10631,7 @@ async function renderHealthCheck() {
             <div class="hc-driver-card"${r.unexcused ? ' style="border-color:rgba(251,146,60,0.3)"' : ''}>
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.45rem">
                     <div style="min-width:0">
-                        <div style="font-weight:600">R${r.round} &mdash; ${esc(r.name)}</div>
+                        <div style="font-weight:600">R${r.round} <div style="font-weight:600">R${r.round} &mdash; ${esc(r.name)}</div>middot; ${esc(r.name)}</div>
                         <div style="font-size:0.78rem;color:var(--muted)">${r.entered} entered &middot; ${r.started} started${r.declared ? ` &middot; ${r.declared} flagged in advance` : ''}</div>
                     </div>
                     <span class="badge" style="flex-shrink:0;${r.unexcused
@@ -10857,7 +10857,7 @@ async function renderHealthCheck() {
                     <span class="hc-stat-num">${noShowCount}</span>
                     <span class="hc-stat-label">No-Show Watch</span>
                 </div>
-                <div class="hc-stat ${nsErr ? 'hc-stat--critical' : nsSeasonTotal ? 'hc-stat--warn' : 'hc-stat--ok'}" title="${nsErr ? 'Figures unavailable — see the No-Shows by Round panel' : `${nsDeclared} further absences were flagged in advance`}">
+                <div class="hc-stat ${nsErr ? 'hc-stat--critical' : nsSeasonTotal ? 'hc-stat--warn' : 'hc-stat--ok'}" title="${nsErr ? 'Figures unavailable. See the No-Shows by Round panel' : `${nsDeclared} further absences were flagged in advance`}">
                     <span class="hc-stat-num">${nsErr ? '!' : nsSeasonTotal}</span>
                     <span class="hc-stat-label">No-Shows (Season)</span>
                 </div>
