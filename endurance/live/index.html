@@ -666,9 +666,16 @@ async function loadBasePath(force) {
     // between fetches anyway.
     if (!force && Date.now() - baseFetchedAt < 45000) return;
     baseFetchedAt = Date.now();
-    const { data, error } = await sb.rpc('live_track');
-    if (error || !data) return;
-    basePath = data.map(p => [p.x, p.z, p.y]).filter(p => p[0] != null && p[1] != null);
+    // Fetched together: the points are only safe to judge other cars against
+    // once the server says the lap is finished, and asking separately would
+    // leave a window where the page has one without the other.
+    const [track, state] = await Promise.all([
+        sb.rpc('live_track'),
+        sb.rpc('live_track_state'),
+    ]);
+    if (track.error || !track.data) return;
+    basePath = track.data.map(p => [p.x, p.z, p.y]).filter(p => p[0] != null && p[1] != null);
+    baseClosed = !!state.data?.closed;
 }
 
 // ---------------------------------------------------------------
@@ -690,36 +697,16 @@ let strays = new Set();
 // A track is maybe 15m wide and racing lines vary, so 80m is generous.
 const MATCH_M = 80;
 
-// Mirrors live_track_closed() and live_track_closure_m() on the server. A
-// circuit is a loop, so an outline that has come back round to where it
-// started is finished; anything less is a fragment of one lap.
-const MIN_SHAPE_POINTS = 60;
-const CLOSURE_M = 200;
-const MIN_SPAN_M = 500;
+// Whether the outline is a finished lap, as the server records it.
+//
+// Not computed here any more. A geometric test on the client has exactly the
+// flaw it had on the server: the Nordschleife crosses under itself, so no
+// radius separates "back where I was" from "passing beneath where I was",
+// and the outline froze mid-lap. The lap counter is the authority and only
+// the server sees it.
+let baseClosed = false;
 
-function outlineClosed() {
-    if (basePath.length < MIN_SHAPE_POINTS) return false;
-    // A loop has to enclose something. Sixty points from a car sat in its
-    // pit box are all at one coordinate, which ends exactly where it began
-    // and so passed as a completed lap; the page then treated a single dot
-    // as the circuit and called every moving car a stray.
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-    for (const p of basePath) {
-        if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
-        if (p[1] < minZ) minZ = p[1]; if (p[1] > maxZ) maxZ = p[1];
-    }
-    if (Math.hypot(maxX - minX, maxZ - minZ) < MIN_SPAN_M) return false;
-
-    // Against any earlier point, not the first one. The first point is
-    // wherever the car was when it started reporting, normally its pit box,
-    // and a car never returns there mid-lap, so first-against-last meant a
-    // finished lap never registered as finished.
-    const last = basePath[basePath.length - 1];
-    for (let i = 0; i < basePath.length - MIN_SHAPE_POINTS; i++) {
-        if (Math.hypot(last[0] - basePath[i][0], last[1] - basePath[i][1]) <= CLOSURE_M) return true;
-    }
-    return false;
-}
+function outlineClosed() { return baseClosed; }
 
 function findStrays(rows) {
     const out = new Set();
