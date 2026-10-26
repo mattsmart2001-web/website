@@ -655,6 +655,11 @@ const carPaths = new Map();
 // hour into a race gets the circuit straight away instead of an empty box.
 let basePath = [];
 let baseFetchedAt = 0;
+// How many points the server reported at the last fetch, so a poll can tell
+// whether the stored outline has grown, shrunk or finished without asking
+// for the whole thing.
+let baseServerPoints = 0;
+let baseArmed = false;
 // Per car. Only needed in full while the cars ARE the map, which is before
 // the server's outline has been captured. Once there is an outline the trail
 // is all that gets drawn, so the history is trimmed to just over it: sixty
@@ -742,22 +747,41 @@ function carNumber(r, mode) {
         : (r.career_number ?? r.car_number);
 }
 
-async function loadBasePath(force) {
-    // Cheap and small, but no point asking every poll: it only grows while
-    // a car is circulating, and the page is accumulating its own points
-    // between fetches anyway.
-    if (!force && Date.now() - baseFetchedAt < 45000) return;
+async function loadBasePath(state) {
+    // The state is three numbers and comes with every poll. The outline
+    // itself can be two thousand points, so it is only refetched when those
+    // numbers say something happened to it.
+    //
+    // An outline that merely GREW can wait: the page is accumulating its own
+    // points meanwhile, so the picture is right either way, and refetching
+    // two thousand rows every poll for one new point would be absurd.
+    //
+    // An outline that SHRANK cannot wait. That is an admin clearing it, or
+    // the trace restarting at the line, and until the page notices it is
+    // drawing a circuit the server no longer has. Waiting 45 seconds to find
+    // that out is what made clearing look as though it had not worked.
+    const pts = state?.points;
+    const known = pts != null;
+    const shrank   = known && pts < baseServerPoints;
+    const finished = known && (!!state.closed !== baseClosed || !!state.armed !== baseArmed);
+    const grew     = known && pts > baseServerPoints;
+    // The server has an outline and this page does not, which is the first
+    // poll or a fetch that failed. Keep asking.
+    const missing  = known && pts > 0 && basePath.length === 0;
+    if (!shrank && !finished && !missing
+        && !(grew && Date.now() - baseFetchedAt > 45000)
+        && baseFetchedAt) return;
+
     baseFetchedAt = Date.now();
-    // Fetched together: the points are only safe to judge other cars against
-    // once the server says the lap is finished, and asking separately would
-    // leave a window where the page has one without the other.
-    const [track, state] = await Promise.all([
-        sb.rpc('live_track'),
-        sb.rpc('live_track_state'),
-    ]);
-    if (track.error || !track.data) return;
-    basePath = track.data.map(p => [p.x, p.z, p.y]).filter(p => p[0] != null && p[1] != null);
-    baseClosed = !!state.data?.closed;
+    const { data, error } = await sb.rpc('live_track');
+    if (error || !data) return;
+    basePath = data.map(p => [p.x, p.z, p.y]).filter(p => p[0] != null && p[1] != null);
+    // What the SERVER said, not what survived filtering here, or a single
+    // point with no coordinates would leave the two permanently unequal and
+    // refetch on every poll forever.
+    baseServerPoints = known ? pts : data.length;
+    baseClosed = !!state?.closed;
+    baseArmed  = !!state?.armed;
 }
 
 // ---------------------------------------------------------------
@@ -1530,7 +1554,13 @@ let failures = 0;
 let lastRows = null;       // so a click redraws at once rather than at the next poll
 
 async function tick() {
-    const { data, error } = await sb.rpc('live_field');
+    // Asked together, in one round trip's worth of waiting. The outline state
+    // is three numbers; fetching it every poll is what lets the map notice an
+    // outline being cleared or restarted straight away.
+    const [{ data, error }, trackState] = await Promise.all([
+        sb.rpc('live_field'),
+        sb.rpc('live_track_state'),
+    ]);
 
     if (error) {
         // Two consecutive failures before saying anything: one dropped poll
@@ -1545,7 +1575,7 @@ async function tick() {
 
     failures = 0;
     if (!data || data.length === 0) { await renderIdle(); return; }
-    await loadBasePath(basePath.length === 0);
+    await loadBasePath(trackState?.error ? null : trackState?.data);
     loadCircuitRecord(data[0].event_id);   // once per round, not awaited
     lastRows = data;
     // Worked out before anything uses it: the table labels these cars, the
