@@ -4133,6 +4133,7 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn-icon danger" title="Remove this event's split-assignment and hosting messages from every driver's inbox — use once the event is over" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
                 <button class="btn-icon danger" title="Close any live timing test on this event and clear the cars it put on the live page" onclick="closeLiveTest('${eventId}','${esc(eventName)}')">End Live Test</button>
                 <button class="btn-icon danger" title="Stop the nightly practice window on this event and clear the cars it put on the live page" onclick="clearLivePractice('${eventId}','${esc(eventName)}')">End Practice</button>
+                <button class="btn-icon" title="Clear the track outline and hand the job of tracing it to one named driver, so it is not whoever happens to report first. They keep it while they are reporting. They drive two laps: the first gets them to the start/finish line and is discarded, the second is the one that gets stored." onclick="startTrackMap('${eventId}','${esc(eventName)}')">Start Track Map</button>
                 <button class="btn-icon danger" title="Delete the track outline the cars have traced for this event, so it draws itself again from scratch. Use if the wrong circuit got captured, or if it finished short. Does not touch the cars, the splits or the practice window." onclick="clearTrackOutline('${eventId}','${esc(eventName)}')">Clear Map Outline</button>
                 <span id="outline-state" class="badge badge-muted" title="The track outline stored for this round. Complete means it will not change again: clearing it is the only way to retrace it.">Outline: checking</span>
                 <button class="btn-icon danger" onclick="deleteLobbyRoomCodes('${eventId}','${esc(eventName)}')">Delete Room Codes</button>
@@ -4163,22 +4164,27 @@ async function showOutlineState(eventId) {
     const { data, error } = await sb.rpc('live_track_state', { p_event_id: eventId });
     if (error) { el.textContent = 'Outline: could not read'; return; }
     const pts = data?.points ?? 0;
+    // Who is drawing it, and whether they were named or simply got there
+    // first, which is the difference between a process and a coin toss.
+    const who = data?.drawn_by
+        ? ` · ${data.pinned ? 'named: ' : ''}${data.drawn_by}`
+        : '';
     if (!pts) {
         el.className = 'badge badge-muted';
-        el.textContent = 'Outline: none yet';
+        el.textContent = `Outline: none yet${who}`;
     } else if (data?.closed) {
         el.className = 'badge badge-gold';
         el.textContent = `Outline: ${pts} points · complete`;
     } else if (data?.armed) {
         el.className = 'badge badge-muted';
-        el.textContent = `Outline: ${pts} points · tracing the lap`;
+        el.textContent = `Outline: ${pts} points · tracing the lap${who}`;
     } else {
         // Before the first crossing these points are scaffolding: the car
         // picked the job up in its pit box, and the trace restarts properly
         // when it reaches the line. Worth saying, or the count appearing to
         // reset looks like a fault.
         el.className = 'badge badge-muted';
-        el.textContent = `Outline: ${pts} points · restarts at the line`;
+        el.textContent = `Outline: ${pts} points · restarts at the line${who}`;
     }
 }
 
@@ -4742,6 +4748,42 @@ async function clearLivePractice(eventId, eventName) {
     if (error)     { toast(error.message, 'error'); return; }
     if (!data?.ok) { toast(data?.error || 'Could not stop it.', 'error'); return; }
     toast(`Practice window stopped${data.cleared ? `, ${data.cleared} car${data.cleared === 1 ? '' : 's'} cleared` : ''}.`, 'success');
+}
+
+// Naming the driver who traces the map. Without this the job went to
+// whichever car's beacon arrived first once it was free, so clearing the
+// outline with four drivers out was a coin toss between four people and the
+// admin who wanted to drive it themselves had no way to say so.
+//
+// The list is the drivers actually reporting for this round, because only a
+// car that is out there can trace anything.
+async function startTrackMap(eventId, eventName) {
+    const { data, error } = await sb.rpc('live_field', { p_event_id: eventId });
+    if (error) { toast(error.message, 'error'); return; }
+
+    const seen = [...new Map((data || [])
+        .filter(r => r.driver_id && r.display_name)
+        .map(r => [r.driver_id, r.display_name])).entries()];
+    if (!seen.length) {
+        toast('Nobody is reporting for this round yet. The driver who is going to trace it needs to be out on track with their reporter running.', 'error');
+        return;
+    }
+
+    const list = seen.map(([, name], i) => `${i + 1}. ${name}`).join('\n');
+    const pick = prompt(`Who is tracing the map for "${eventName}"?\n\n${list}\n\nType the number.`);
+    if (pick === null) return;
+    const idx = parseInt(pick, 10);
+    if (!(idx >= 1 && idx <= seen.length)) { toast('No driver with that number.', 'error'); return; }
+    const [driverId, driverName] = seen[idx - 1];
+
+    if (!confirm(`Hand the map for "${eventName}" to ${driverName}?\n\nThis deletes whatever outline is stored for the round and starts again. Nobody else can take the job while ${driverName} keeps reporting, and it passes on if they go quiet for five minutes.\n\nThey need two laps: the first gets them to the start/finish line and is thrown away, the second is the one that gets stored.`)) return;
+
+    const { data: res, error: err2 } = await sb.rpc('live_track_start',
+        { p_event_id: eventId, p_driver_id: driverId });
+    if (err2)        { toast(err2.message, 'error'); return; }
+    if (!res?.ok)    { toast(res?.error || 'Could not start the map.', 'error'); return; }
+    toast(`${res.driver} is tracing the map${res.cleared ? `, ${res.cleared} old point${res.cleared === 1 ? '' : 's'} removed` : ''}. Two laps: the first is thrown away at the line, the second is stored.`, 'success');
+    showOutlineState(eventId);
 }
 
 // The escape hatch for the outline guard. Once a round has a shape, the
