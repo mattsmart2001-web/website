@@ -365,9 +365,13 @@ jobs:
 
   release:
     needs: [windows, macos, linux, android]
+    # Publishing is a deliberate act and nothing else. A push used to
+    # republish over DEFAULT_VERSION, so every commit to the deploy branch
+    # silently replaced the files on an old release with current builds:
+    # v2.7 ended up holding v3.4 binaries. Blanking the dispatch default
+    # fixed half of that and left this half doing the same thing.
     if: >
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/claude/add-signup-page-pBzI2')
+      github.event_name == 'workflow_dispatch' && github.event.inputs.version != ''
     runs-on: ubuntu-latest
     steps:
       - name: Download all build artifacts
@@ -398,13 +402,13 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_VERSION: "v2.7"
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.version }}"
-          else
-            TAG="$DEFAULT_VERSION"
-          fi
+          set -euo pipefail
+          TAG="${{ github.event.inputs.version }}"
+          # Belt and braces: the job condition already guarantees this, and a
+          # release published to an empty or stale tag is not worth risking
+          # twice.
+          test -n "$TAG" || { echo "::error::No version given, refusing to publish."; exit 1; }
           NOTES="Automated build of the GT7 Live Connector for Windows, macOS and Linux. Windows: the .zip (extract the whole folder, then run GT7-Live-Connector.exe inside) or the single-file .exe. macOS (Apple Silicon): the .zip (unzip, then right-click the app and Open the first time). Linux (x86_64): the .tar.gz (extract, chmod +x, run it in a terminal; console only, no tray). Includes the telemetry decryption fix, freeze fix, and self-diagnosing status. New in this build: the connector reports its version to the Lap Coach page, so anyone running an older one is told, and nobody else sees a notice. Also from v2.6: a settings page, served by the connector itself at http://127.0.0.1:8767/settings and reachable from the tray icon, showing whether telemetry is arriving and letting you change ports without restarting. On Linux, where there is no tray, it is the first interface the connector has had. Also advanced UDP options, so the connector can share the telemetry stream with a dashboard. Only one program can hold port 33740, so either can go first: put a port in gt7-udp-port.txt (or pass --port) to listen to a copy another app forwards, or put an address in gt7-forward.txt (or pass --forward) to have the connector send a copy on. Carried over from v2.5: if the compiled Salsa20 module will not load (antivirus quarantine, or Smart App Control blocking an unsigned DLL) the connector falls back to a built-in pure-Python decoder instead of refusing to start."
           echo "Publishing $TAG with:"; ls -1 assets
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
