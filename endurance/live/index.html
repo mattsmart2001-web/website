@@ -639,6 +639,7 @@ function renderField(rows) {
                     <button type="button" id="zoom-out" aria-label="Zoom out" title="Zoom out">&minus;</button>
                     <button type="button" id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
                     <button type="button" class="reset" id="zoom-reset" aria-label="Reset the view" title="Fit the whole circuit">Fit</button>
+                    <button type="button" class="reset" id="view-3d" aria-pressed="false" aria-label="Tilt the map">3D</button>
                 </span>
             </div>
             <canvas id="track"></canvas>
@@ -708,6 +709,7 @@ try {
         const v = JSON.parse(raw);
         (v.collapsed || []).forEach(k => collapsedSplits.add(String(k)));
         focusedSplit = v.focused != null ? String(v.focused) : null;
+        view3d = !!v.view3d;
     }
 } catch (e) { /* private window, blocked storage: defaults are fine */ }
 
@@ -715,6 +717,10 @@ function saveSplitPrefs() {
     try {
         localStorage.setItem('gtecLiveSplits', JSON.stringify({
             collapsed: [...collapsedSplits], focused: focusedSplit,
+            // Which way up the map was. Not the angle: coming back to a
+            // circuit turned to a strange angle you do not remember choosing
+            // is worse than coming back to the default one.
+            view3d,
         }));
     } catch (e) { /* nothing to do, and nothing depends on it */ }
 }
@@ -1045,15 +1051,19 @@ function recordPositions(rows) {
 /** Draws one car's path as a line, breaking it wherever two points are too
  *  far apart to be consecutive track, or wherever the car left the track
  *  between them. */
-function strokePath(g, path, px, pz, from, to) {
+function strokePath(g, path, S, from, to) {
     let started = false;
     for (let i = from; i < to; i++) {
         const a = path[i], b = path[i + 1];
         if (!b) break;
         const gap = Math.hypot(b[0] - a[0], b[1] - a[1]);
         if (b[3] || gap > MAX_SEGMENT_M) { started = false; continue; }
-        if (!started) { g.beginPath(); g.moveTo(px(a[0]), pz(a[1])); started = true; }
-        g.lineTo(px(b[0]), pz(b[1]));
+        if (!started) {
+            const p = S(a[0], a[1], a[2]);
+            g.beginPath(); g.moveTo(p[0], p[1]); started = true;
+        }
+        const q = S(b[0], b[1], b[2]);
+        g.lineTo(q[0], q[1]);
     }
     if (started) g.stroke();
 }
@@ -1066,15 +1076,50 @@ function strokePath(g, path, px, pz, from, to) {
 // keeps reframing itself as more of the track is traced, and a reader who
 // has zoomed into the Karussell stays there across the 1.5 second redraw.
 //
-// Deliberately 2D. Rotation and a real elevation ribbon want a denser path
-// than a beacon every 1.5 seconds can give, which is a separate job.
+// Flat by default, tilted on request. The tilt was left out originally
+// because the map was whatever the cars had traced since the page opened,
+// which carried no useful height. Now the stored outline is a finished lap
+// with an elevation on every point, so the data is there.
+//
+// Orthographic, not perspective: the circuit is tilted and rotated but
+// nothing gets bigger for being nearer. That is deliberate. Perspective is
+// what makes a tilted map hard to read, because a car's dot changes size
+// with where it is on the circuit, and this is a timing page before it is a
+// picture.
+//
+// The height is exaggerated because it has to be. The 24h layout climbs
+// about 300 m across 20 km, which is one and a half percent: at true scale a
+// tilt shows nothing at all. The factor is stated on the map rather than
+// applied quietly.
 // ---------------------------------------------------------------
 const ZOOM_MIN = 1, ZOOM_MAX = 14;
+const TILT_MIN = 0.12, TILT_MAX = 1.25;
+const HEIGHT_EXAGGERATION = 6;
+// Sorting every segment by depth would cost a stroke each; bucketing keeps
+// the colour batching from 1168 and still draws the Nordschleife's underpass
+// the right way round, because two bits of track that cross are far apart in
+// depth and land in different buckets.
+const DEPTH_BUCKETS = 16;
 let view = { scale: 1, x: 0, y: 0 };
+let view3d = false;
+let yaw = 0.6, tilt = 0.62;
 
 function resetView() {
     view = { scale: 1, x: 0, y: 0 };
+    yaw = 0.6; tilt = 0.62;
     syncZoomButtons();
+    if (lastRows) drawTrack(lastRows);
+}
+
+function setView3d(on) {
+    if (view3d === on) return;
+    view3d = on;
+    // The fit is computed from the projected shape, which changes completely
+    // between flat and tilted, so a pan carried across would point at
+    // somewhere else entirely.
+    view = { scale: 1, x: 0, y: 0 };
+    syncZoomButtons();
+    saveSplitPrefs();
     if (lastRows) drawTrack(lastRows);
 }
 
@@ -1109,7 +1154,16 @@ function syncZoomButtons() {
     const rst = document.getElementById('zoom-reset');
     if (out) out.disabled = view.scale <= ZOOM_MIN + 0.001;
     if (inn) inn.disabled = view.scale >= ZOOM_MAX - 0.001;
-    if (rst) rst.disabled = view.scale <= ZOOM_MIN + 0.001 && !view.x && !view.y;
+    if (rst) rst.disabled = view.scale <= ZOOM_MIN + 0.001 && !view.x && !view.y
+                            && (!view3d || (Math.abs(yaw - 0.6) < 0.001 && Math.abs(tilt - 0.62) < 0.001));
+    const btn = document.getElementById('view-3d');
+    if (btn) {
+        btn.textContent = view3d ? '2D' : '3D';
+        btn.title = view3d
+            ? 'Back to the flat map, which is the easier one to read'
+            : `Tilt the circuit and show its elevation, exaggerated ${HEIGHT_EXAGGERATION} times. Drag to turn it.`;
+        btn.setAttribute('aria-pressed', String(view3d));
+    }
 }
 
 function bindMapControls() {
@@ -1142,8 +1196,17 @@ function bindMapControls() {
     cv.addEventListener('pointermove', e => {
         if (!dragging) return;
         const p = at(e);
-        view.x += p[0] - lastPt[0];
-        view.y += p[1] - lastPt[1];
+        if (view3d) {
+            // Turning and tipping, which is what a drag means once the map is
+            // tilted. Panning is given up for it rather than hidden behind a
+            // modifier nobody would find: zoom still frames what you want,
+            // and Fit is one press away.
+            yaw += (p[0] - lastPt[0]) * 0.008;
+            tilt = Math.min(TILT_MAX, Math.max(TILT_MIN, tilt - (p[1] - lastPt[1]) * 0.005));
+        } else {
+            view.x += p[0] - lastPt[0];
+            view.y += p[1] - lastPt[1];
+        }
         lastPt = p;
         syncZoomButtons();
         if (lastRows) drawTrack(lastRows);
@@ -1191,6 +1254,7 @@ function bindMapControls() {
     document.getElementById('zoom-out')?.addEventListener('click',
         () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.6));
     document.getElementById('zoom-reset')?.addEventListener('click', resetView);
+    document.getElementById('view-3d')?.addEventListener('click', () => setView3d(!view3d));
 
     syncZoomButtons();
 }
@@ -1247,8 +1311,46 @@ function drawTrack(rows) {
             if (pt[2] > maxY) maxY = pt[2];
         }
     }
+    // Turning the circuit and tipping it away from the viewer. Flat is the
+    // identity, so everything below this is the same code for both views.
+    //
+    // Rotation about the middle of the circuit rather than the origin, since
+    // GT7's coordinates are centred on nothing in particular and spinning
+    // about a point off the edge of the map is not a rotation anyone wants.
+    const midX = (minX + maxX) / 2, midZ = (minZ + maxZ) / 2;
+    const yRef = Number.isFinite(minY) ? minY : 0;
+    const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
+    const cosT = Math.cos(tilt), sinT = Math.sin(tilt);
+    // Returns [across, down, depth]. Depth is how near the viewer a point is,
+    // and is what decides which bit of track is drawn over which.
+    const world = view3d
+        ? (x, z, y) => {
+            const dx = x - midX, dz = z - midZ;
+            const xr = dx * cosY - dz * sinY;
+            const zr = dx * sinY + dz * cosY;
+            const hy = ((y == null ? yRef : y) - yRef) * HEIGHT_EXAGGERATION;
+            return [xr, zr * cosT - hy * sinT, zr];
+        }
+        : (x, z) => [x, z, 0];
+
+    // The fit has to be measured on the projected shape, or turning the
+    // circuit would push it out of frame. Flat does not pay for that: there
+    // the projection is the identity, so the extents are the ones the pass
+    // above already found, and walking every point twice to rediscover them
+    // cost a flat redraw seventy per cent for a feature it is not using.
+    let minU = minX, maxU = maxX, minV = minZ, maxV = maxZ;
+    if (view3d) {
+        minU = minV = Infinity; maxU = maxV = -Infinity;
+        for (const path of [...allPaths, ...(basePath.length ? carPaths.values() : [])])
+        for (const pt of path) {
+            const q = world(pt[0], pt[1], pt[2]);
+            if (q[0] < minU) minU = q[0]; if (q[0] > maxU) maxU = q[0];
+            if (q[1] < minV) minV = q[1]; if (q[1] > maxV) maxV = q[1];
+        }
+    }
+
     const pad = 26;
-    const spanX = Math.max(1, maxX - minX), spanZ = Math.max(1, maxZ - minZ);
+    const spanX = Math.max(1, maxU - minU), spanZ = Math.max(1, maxV - minV);
     const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanZ);
     const offX = (w - spanX * scale) / 2, offZ = (h - spanZ * scale) / 2;
 
@@ -1258,8 +1360,11 @@ function drawTrack(rows) {
     // reframes itself as more of it is traced.
     clampView(w, h, spanX * scale, spanZ * scale);
     const vs = view.scale, cx = w / 2, cy = h / 2;
-    const px = x => cx + (offX + (x - minX) * scale - cx) * vs + view.x;
-    const pz = z => cy + (offZ + (z - minZ) * scale - cy) * vs + view.y;
+    const px = u => cx + (offX + (u - minU) * scale - cx) * vs + view.x;
+    const pz = v => cy + (offZ + (v - minV) * scale - cy) * vs + view.y;
+    // One point, from the circuit to the screen. Everything that draws goes
+    // through this, so flat and tilted cannot drift apart.
+    const S = (x, z, y) => { const q = world(x, z, y); return [px(q[0]), pz(q[1])]; };
     // Line weights and markers are drawn in screen pixels, so they would
     // bloat with the zoom. Held roughly constant instead, which is what a
     // map should do, while still thickening a little so it does not look
@@ -1283,9 +1388,16 @@ function drawTrack(rows) {
         // segment gave a smooth gradient and cost a canvas call for every
         // point on the map; a dozen bands are indistinguishable by eye on a
         // 2.5px line and cost twelve calls however long the path is.
-        const bands = Array.from({ length: RELIEF_BANDS }, () => []);
+        // Keyed by colour band, and when tilted by depth as well, so that a
+        // bit of track in front of another is drawn after it. At the
+        // Nordschleife that is not a nicety: the circuit passes under itself
+        // at Breidscheid, and drawn in path order the bridge goes beneath the
+        // road it crosses.
+        const buckets = view3d ? DEPTH_BUCKETS : 1;
+        const bands = Array.from({ length: RELIEF_BANDS * buckets }, () => []);
         const flat = [];
         const span = Math.max(1, maxY - minY);
+        const dSpan = Math.max(1, maxV - minV);
         for (const path of allPaths) {
             for (let i = 0; i < path.length - 1; i++) {
                 const a = path[i], b = path[i + 1];
@@ -1294,19 +1406,27 @@ function drawTrack(rows) {
                 if (h2 == null) { flat.push(a, b); continue; }
                 const bi = Math.min(RELIEF_BANDS - 1,
                                     Math.max(0, Math.floor(((h2 - minY) / span) * RELIEF_BANDS)));
-                bands[bi].push(a, b);
+                let dk = 0;
+                if (view3d) {
+                    const qa = world(a[0], a[1], a[2]), qb = world(b[0], b[1], b[2]);
+                    const d = ((qa[2] + qb[2]) / 2 - minV) / dSpan;
+                    dk = Math.min(buckets - 1, Math.max(0, Math.floor(d * buckets)));
+                }
+                bands[dk * RELIEF_BANDS + bi].push(a, b);
             }
         }
-        bands.forEach((segs, bi) => {
+        bands.forEach((segs, key) => {
             if (!segs.length) return;
             // Low ground cool and dark, high ground warm and bright, which
             // reads as height without needing a legend.
-            const t = (bi + 0.5) / RELIEF_BANDS;
+            const t = ((key % RELIEF_BANDS) + 0.5) / RELIEF_BANDS;
             g.strokeStyle = `rgba(${Math.round(80 + 175 * t)},${Math.round(110 + 90 * t)},${Math.round(170 - 80 * t)},0.75)`;
             g.beginPath();
             for (let i = 0; i < segs.length; i += 2) {
-                g.moveTo(px(segs[i][0]), pz(segs[i][1]));
-                g.lineTo(px(segs[i + 1][0]), pz(segs[i + 1][1]));
+                const p1 = S(segs[i][0], segs[i][1], segs[i][2]);
+                const p2 = S(segs[i + 1][0], segs[i + 1][1], segs[i + 1][2]);
+                g.moveTo(p1[0], p1[1]);
+                g.lineTo(p2[0], p2[1]);
             }
             g.stroke();
         });
@@ -1314,14 +1434,16 @@ function drawTrack(rows) {
             g.strokeStyle = 'rgba(148,163,184,0.5)';
             g.beginPath();
             for (let i = 0; i < flat.length; i += 2) {
-                g.moveTo(px(flat[i][0]), pz(flat[i][1]));
-                g.lineTo(px(flat[i + 1][0]), pz(flat[i + 1][1]));
+                const p1 = S(flat[i][0], flat[i][1], flat[i][2]);
+                const p2 = S(flat[i + 1][0], flat[i + 1][1], flat[i + 1][2]);
+                g.moveTo(p1[0], p1[1]);
+                g.lineTo(p2[0], p2[1]);
             }
             g.stroke();
         }
     } else {
         g.strokeStyle = 'rgba(148,163,184,0.5)';
-        for (const path of allPaths) strokePath(g, path, px, pz, 0, path.length - 1);
+        for (const path of allPaths) strokePath(g, path, S, 0, path.length - 1);
     }
 
     // Each car: a fading tail, then the car, then its number. A focused
@@ -1330,7 +1452,12 @@ function drawTrack(rows) {
     g.font = "bold 10px 'Inter', system-ui, sans-serif";
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    rows.forEach(r => {
+    // Nearest last, so a car in front of another covers it rather than the
+    // other way about. Only worth the sort when there is a depth to sort by.
+    const order = view3d
+        ? [...rows].sort((a, b) => (world(a.x, a.z, a.y)[2]) - (world(b.x, b.z, b.y)[2]))
+        : rows;
+    order.forEach(r => {
         if (r.x == null || r.z == null) return;
         // At a different circuit entirely: listed in the table, but drawing
         // it here would put a marker in the middle of nowhere and drag the
@@ -1374,8 +1501,9 @@ function drawTrack(rows) {
                 for (let i = lo; i < hi; i++) {
                     const a = path[i], b = path[i + 1];
                     if (b[3] || Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
-                    g.moveTo(px(a[0]), pz(a[1]));
-                    g.lineTo(px(b[0]), pz(b[1]));
+                    const p1 = S(a[0], a[1], a[2]), p2 = S(b[0], b[1], b[2]);
+                    g.moveTo(p1[0], p1[1]);
+                    g.lineTo(p2[0], p2[1]);
                     drew = true;
                 }
                 if (drew) g.stroke();
@@ -1386,18 +1514,19 @@ function drawTrack(rows) {
         // A ring round the hovered car, drawn under its dot. Wide and pale
         // in the car's own colour, so it reads against the gold line and
         // against the dark infield without needing a second colour.
+        const car = S(r.x, r.z, r.y);
         if (hot) {
             g.globalAlpha = 0.35;
             g.strokeStyle = col;
             g.lineWidth = 5;
             g.beginPath();
-            g.arc(px(r.x), pz(r.z), 15, 0, Math.PI * 2);
+            g.arc(car[0], car[1], 15, 0, Math.PI * 2);
             g.stroke();
             g.globalAlpha = r.on_track ? 1 : 0.35;
         }
         g.fillStyle = col;
         g.beginPath();
-        g.arc(px(r.x), pz(r.z), hot ? 9 : 7, 0, Math.PI * 2);
+        g.arc(car[0], car[1], hot ? 9 : 7, 0, Math.PI * 2);
         g.fill();
         const num = carNumber(r, rows[0]?.mode);
         if (num != null) {
@@ -1405,7 +1534,7 @@ function drawTrack(rows) {
             // per car forces a style recalculation each time, sixty times a
             // redraw, and they never change.
             g.fillStyle = '#050608';
-            g.fillText(String(num), px(r.x), pz(r.z) + 0.5);
+            g.fillText(String(num), car[0], car[1] + 0.5);
         }
         g.globalAlpha = 1;
     });
@@ -1417,7 +1546,8 @@ function drawTrack(rows) {
         // nobody anything and still answers "is the outline saved".
         note.title = `${total.toLocaleString()} positions`
             + `${basePath.length ? ' (outline saved)' : ''} · about ${km} km across`
-            + (relief ? ` · ${Math.round(maxY - minY)} m of climb` : '');
+            + (relief ? ` · ${Math.round(maxY - minY)} m of climb` : '')
+            + (view3d ? ` · height exaggerated ${HEIGHT_EXAGGERATION}x` : '');
         setFacts(buildFacts(rows, { km, relief, climb: Math.round(maxY - minY), total }));
     }
 }
