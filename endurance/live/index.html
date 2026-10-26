@@ -659,25 +659,48 @@ async function loadBasePath(force) {
 // ---------------------------------------------------------------
 let strays = new Set();
 
+// How far off the traced line a car can be and still be on this circuit.
+// A track is maybe 15m wide and racing lines vary, so 80m is generous.
+const MATCH_M = 80;
+
 function findStrays(rows) {
     const out = new Set();
     // Nothing to judge against until the outline is a real shape. Before
     // that, every car is taken at its word.
     if (basePath.length < 60) return out;
 
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-    for (const p of basePath) {
-        if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
-        if (p[1] < minZ) minZ = p[1]; if (p[1] > maxZ) maxZ = p[1];
-    }
-    // Same tolerance the server uses: a quarter of the circuit's own
-    // diagonal, floor of 500m. Wide enough for a long pit lane or a section
-    // not yet traced, nowhere near wide enough to reach another venue.
-    const pad = Math.max(Math.hypot(maxX - minX, maxZ - minZ) * 0.25, 500);
+    // Distance to the nearest traced point, NOT to a bounding box. GT7's
+    // coordinates are per-circuit and roughly centred on each track's own
+    // origin, so circuits overlap in space: the Nordschleife's bounding box
+    // contains the whole of Sugo. Only proximity to the line itself tells
+    // one apart from the other, which a driver on Sugo proved by being drawn
+    // through the middle of the Nordschleife.
+    // Measured to the line, not to the nearest recorded point. At racing
+    // speed the points are 80 to 170m apart, so a car squarely on the track
+    // but midway between two of them is further from either than the match
+    // radius, and would be called a stray.
+    const lim = MATCH_M * MATCH_M;
+    const maxSeg = MAX_SEGMENT_M * MAX_SEGMENT_M;
     rows.forEach(r => {
         if (r.x == null || r.z == null) return;
-        if (r.x < minX - pad || r.x > maxX + pad ||
-            r.z < minZ - pad || r.z > maxZ + pad) out.add(r.driver_id);
+        let best = Infinity;
+        for (let i = 0; i < basePath.length - 1; i++) {
+            const ax = basePath[i][0], az = basePath[i][1];
+            const bx = basePath[i + 1][0], bz = basePath[i + 1][1];
+            const dx = bx - ax, dz = bz - az;
+            const l2 = dx * dx + dz * dz;
+            // A gap too big to be track: where the shape job changed hands.
+            if (l2 > maxSeg) continue;
+            let t = l2 > 0 ? ((r.x - ax) * dx + (r.z - az) * dz) / l2 : 0;
+            t = t < 0 ? 0 : t > 1 ? 1 : t;
+            const px = r.x - (ax + t * dx), pz = r.z - (az + t * dz);
+            const d = px * px + pz * pz;
+            if (d < best) {
+                best = d;
+                if (best <= lim) break;          // on the line, stop looking
+            }
+        }
+        if (best > lim) out.add(r.driver_id);
     });
     return out;
 }
