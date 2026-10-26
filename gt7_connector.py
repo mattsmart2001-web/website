@@ -59,7 +59,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "3.2"   # shown in the tray so you can confirm which build is running
+VERSION       = "3.3"   # shown in the tray so you can confirm which build is running
                         # 3.0 added GTEC live timing; 3.1 adds fuel and
                         # elevation to what it reports.
 GT7_PORT_STD  = 33740   # the port GT7 itself sends telemetry to
@@ -1020,7 +1020,21 @@ def _gtec_post(payload: dict):
     except Exception as e:
         # A dropped beacon is not queued. A stale position shown as live is
         # worse than a gap the website can age out honestly.
-        return None
+        #
+        # The reason is carried out, though, because "could not reach GTEC"
+        # covers half a dozen unrelated faults that need different fixes:
+        # a name that will not resolve, a certificate the machine does not
+        # trust (corporate TLS interception, where a browser succeeds and
+        # this does not), a firewall refusing the connection, a proxy, or
+        # simply no internet. Throwing that away leaves the driver and me
+        # guessing, which has already cost this project two long evenings.
+        reason = " ".join(str(e).split()) or e.__class__.__name__
+        inner = getattr(e, "reason", None)
+        if inner is not None and str(inner) and str(inner) not in reason:
+            reason = f"{reason} ({' '.join(str(inner).split())})"
+        if len(reason) > 220:
+            reason = reason[:217] + "..."
+        return {"ok": False, "unreachable": True, "error": reason}
 
 
 async def _gtec_beacon():
@@ -1077,9 +1091,11 @@ async def _gtec_beacon():
 
         reply = await loop.run_in_executor(None, lambda: _gtec_post(payload))
 
-        if reply is None:
+        if reply is None or reply.get("unreachable"):
             _gtec["state"] = "error"
-            _gtec["detail"] = "Could not reach GTEC. Retrying."
+            _gtec["detail"] = ("Could not reach GTEC: " + reply["error"] + ". Retrying."
+                               if reply and reply.get("error")
+                               else "Could not reach GTEC. Retrying.")
             wait = 10.0
             continue
         if not reply.get("ok"):
