@@ -4155,6 +4155,8 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
     showOutlineState(eventId);
 }
 
+let outlineWatch = null;
+
 // Whether this round has a stored map, and whether it is finished. Without
 // this the only way to tell was to open the live page and hover the map,
 // which says nothing about whether the trace had completed a lap.
@@ -4186,6 +4188,15 @@ async function showOutlineState(eventId) {
         el.className = 'badge badge-muted';
         el.textContent = `Outline: ${pts} points · restarts at the line${who}`;
     }
+
+    // Keep watching while a trace is actually running. Somebody who has just
+    // pressed Start Track Map is about to go and drive two laps, and the
+    // answer they want is "it saved", so making them navigate away and back
+    // to find that out is no good. It stops of its own accord once the
+    // outline is complete, or once the panel showing it has gone, so this is
+    // not a poll that runs for ever in the background.
+    clearTimeout(outlineWatch);
+    if (!data?.closed) outlineWatch = setTimeout(() => showOutlineState(eventId), 5000);
 }
 
 async function autoAllocateLobbies(eventId, eventName, seasonId) {
