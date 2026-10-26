@@ -832,6 +832,10 @@ function findStrays(rows) {
     return out;
 }
 
+// Drivers whose next recorded point must start a new run rather than join
+// the last one. See below.
+const trailBreak = new Set();
+
 function recordPositions(rows) {
     rows.forEach(r => {
         if (r.x == null || r.z == null) return;
@@ -840,13 +844,20 @@ function recordPositions(rows) {
         if (strays.has(r.driver_id)) { carPaths.delete(r.driver_id); return; }
         // Only cars actually circulating. A car in the menus or long gone
         // sits at one spot and would drag the whole map toward it.
-        if (!r.on_track || (r.age_ms ?? 0) > 30000) return;
+        if (!r.on_track || (r.age_ms ?? 0) > 30000) { trailBreak.add(r.driver_id); return; }
         const path = carPaths.get(r.driver_id) || [];
         const last = path[path.length - 1];
         // Skip a repeat of the same position, which is a throttled or
         // stationary car rather than movement.
         if (last && last[0] === r.x && last[1] === r.z) return;
-        path.push([r.x, r.z, r.y]);
+        // A car that was in the menus has been somewhere this page did not
+        // watch, and in GT7 that somewhere is the pit box. Nothing is recorded
+        // while it is away, so the point before and the point after end up
+        // next to each other in the trail and get joined: a line straight
+        // across the infield to the pits, which is the one part of the map
+        // that is not true. The fourth value says not to join this one.
+        const brk = trailBreak.delete(r.driver_id);
+        path.push([r.x, r.z, r.y, brk]);
         const keep = basePath.length ? PATH_KEEP_WITH_OUTLINE : PATH_MAX;
         while (path.length > keep) path.shift();
         carPaths.set(r.driver_id, path);
@@ -854,14 +865,15 @@ function recordPositions(rows) {
 }
 
 /** Draws one car's path as a line, breaking it wherever two points are too
- *  far apart to be consecutive track. */
+ *  far apart to be consecutive track, or wherever the car left the track
+ *  between them. */
 function strokePath(g, path, px, pz, from, to) {
     let started = false;
     for (let i = from; i < to; i++) {
         const a = path[i], b = path[i + 1];
         if (!b) break;
         const gap = Math.hypot(b[0] - a[0], b[1] - a[1]);
-        if (gap > MAX_SEGMENT_M) { started = false; continue; }
+        if (b[3] || gap > MAX_SEGMENT_M) { started = false; continue; }
         if (!started) { g.beginPath(); g.moveTo(px(a[0]), pz(a[1])); started = true; }
         g.lineTo(px(b[0]), pz(b[1]));
     }
@@ -1099,7 +1111,7 @@ function drawTrack(rows) {
         for (const path of allPaths) {
             for (let i = 0; i < path.length - 1; i++) {
                 const a = path[i], b = path[i + 1];
-                if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
+                if (b[3] || Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
                 const h2 = (a[2] != null && b[2] != null) ? (a[2] + b[2]) / 2 : null;
                 if (h2 == null) { flat.push(a, b); continue; }
                 const bi = Math.min(RELIEF_BANDS - 1,
@@ -1172,7 +1184,7 @@ function drawTrack(rows) {
                 let drew = false;
                 for (let i = lo; i < hi; i++) {
                     const a = path[i], b = path[i + 1];
-                    if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
+                    if (b[3] || Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
                     g.moveTo(px(a[0]), pz(a[1]));
                     g.lineTo(px(b[0]), pz(b[1]));
                     drew = true;
