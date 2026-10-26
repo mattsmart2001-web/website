@@ -27,6 +27,11 @@ on:
       - "build_connector.bat"
       - "requirements.txt"
       - ".github/workflows/build-connector.yml"
+      # The phone app lives in the same workflow, so it needs to be in the
+      # same trigger. It was not, which meant a change to the app was never
+      # compiled or unit tested until somebody remembered to publish a
+      # release: the one path where a mistake costs a driver a broken APK.
+      - "gtec-reporter/**"
 
 permissions:
   contents: write

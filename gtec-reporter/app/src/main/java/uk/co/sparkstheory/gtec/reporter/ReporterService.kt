@@ -117,7 +117,7 @@ class ReporterService : Service() {
                 bind(java.net.InetSocketAddress(LISTEN_PORT))
             }
         } catch (e: Exception) {
-            status = "Port $LISTEN_PORT busy — close other telemetry apps"
+            status = "Port $LISTEN_PORT busy · close other telemetry apps"
             update(status)
             running = false
             return
@@ -145,7 +145,7 @@ class ReporterService : Service() {
 
             if (sample == null) {
                 if (now - lastHeartbeat > 6_000 || packets == 0L) {
-                    status = "Waiting for GT7 — is the console on the same WiFi?"
+                    status = "Waiting for GT7 · is the console on the same WiFi?"
                     update(status)
                 }
                 continue
@@ -179,29 +179,45 @@ class ReporterService : Service() {
 
     // ----------------------------------------------------------------
     private fun note(text: String): Notification {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        // Channels arrived in Oreo, and so did the Builder that takes one.
+        // Below that the plain constructor is the only one there is: calling
+        // the channel one on Android 6 throws NoSuchMethodError and takes the
+        // service down the instant it starts, which is why the app used to
+        // declare Android 7 as its floor.
+        @Suppress("DEPRECATION")
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val mgr = getSystemService(NotificationManager::class.java)
             if (mgr.getNotificationChannel(CHANNEL) == null) {
                 mgr.createNotificationChannel(
                     NotificationChannel(CHANNEL, "GTEC live timing", NotificationManager.IMPORTANCE_LOW)
                 )
             }
+            Notification.Builder(this, CHANNEL)
+        } else {
+            Notification.Builder(this)
         }
+        // FLAG_IMMUTABLE is itself API 23, and neither of these intents needs
+        // to be filled in by whoever receives it, so it is asked for where it
+        // exists and left off where it does not.
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
         val open = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            this, 0, Intent(this, MainActivity::class.java), flags,
         )
         val stop = PendingIntent.getService(
-            this, 1, Intent(this, ReporterService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            this, 1, Intent(this, ReporterService::class.java).setAction(ACTION_STOP), flags,
         )
-        return Notification.Builder(this, CHANNEL)
+        @Suppress("DEPRECATION")
+        return builder
             .setContentTitle("GTEC live timing")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
             .setContentIntent(open)
-            .addAction(Notification.Action.Builder(null, "Stop", stop).build())
+            // The icon-based Action.Builder is API 23, so the old integer
+            // overload instead. Deprecated, present everywhere, and the
+            // action looks identical.
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", stop)
             .build()
     }
 

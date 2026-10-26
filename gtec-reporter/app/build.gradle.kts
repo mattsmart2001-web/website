@@ -9,12 +9,20 @@ android {
 
     defaultConfig {
         applicationId = "uk.co.sparkstheory.gtec.reporter"
-        // 24 = Android 7. Older than that is not worth supporting and is a
-        // vanishing share of devices.
-        minSdk = 24
+        // 21 = Android 5. It was 24 (Android 7), on the reasoning that older
+        // than that is a vanishing share of devices, which is true of devices
+        // in general and not true of one driver holding the phone he owns. He
+        // got "There was a problem parsing the package", which is what Android
+        // 6 says when it cannot read the signature, and the app would have
+        // refused to install anyway.
+        //
+        // Nothing in here needed API 24. The only call that did was the
+        // notification builder, which now takes the pre-Oreo path below 26,
+        // and that path was needed for Android 7 too.
+        minSdk = 21
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
     }
 
     // Android refuses to update an app whose signature has changed, so a
@@ -37,6 +45,18 @@ android {
                 keyAlias = System.getenv("GTEC_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "gtec"
                 keyPassword = System.getenv("GTEC_KEY_PASSWORD")
                     ?: System.getenv("GTEC_KEYSTORE_PASSWORD")
+                // Both schemes, stated rather than inferred. Signature scheme
+                // v2 arrived in Android 7, and an APK carrying only v2 cannot
+                // be verified by anything older: the installer finds no
+                // certificate it understands and reports a parse error, which
+                // is exactly what a driver on Android 6 saw. The old JAR
+                // signature is what those devices read.
+                //
+                // Adding v1 does not disturb anyone already running the app.
+                // Android verifies the newest scheme it supports, so a 7+
+                // phone still checks v2, against the same key as before.
+                enableV1Signing = true
+                enableV2Signing = true
             }
         }
     }
