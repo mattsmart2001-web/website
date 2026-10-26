@@ -695,11 +695,30 @@ const MATCH_M = 80;
 // started is finished; anything less is a fragment of one lap.
 const MIN_SHAPE_POINTS = 60;
 const CLOSURE_M = 200;
+const MIN_SPAN_M = 500;
 
 function outlineClosed() {
     if (basePath.length < MIN_SHAPE_POINTS) return false;
-    const a = basePath[0], b = basePath[basePath.length - 1];
-    return Math.hypot(b[0] - a[0], b[1] - a[1]) <= CLOSURE_M;
+    // A loop has to enclose something. Sixty points from a car sat in its
+    // pit box are all at one coordinate, which ends exactly where it began
+    // and so passed as a completed lap; the page then treated a single dot
+    // as the circuit and called every moving car a stray.
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const p of basePath) {
+        if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+        if (p[1] < minZ) minZ = p[1]; if (p[1] > maxZ) maxZ = p[1];
+    }
+    if (Math.hypot(maxX - minX, maxZ - minZ) < MIN_SPAN_M) return false;
+
+    // Against any earlier point, not the first one. The first point is
+    // wherever the car was when it started reporting, normally its pit box,
+    // and a car never returns there mid-lap, so first-against-last meant a
+    // finished lap never registered as finished.
+    const last = basePath[basePath.length - 1];
+    for (let i = 0; i < basePath.length - MIN_SHAPE_POINTS; i++) {
+        if (Math.hypot(last[0] - basePath[i][0], last[1] - basePath[i][1]) <= CLOSURE_M) return true;
+    }
+    return false;
 }
 
 function findStrays(rows) {
