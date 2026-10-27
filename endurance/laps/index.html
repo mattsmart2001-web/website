@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lap Log | GTEC Gran Turismo 7 Endurance Championship</title>
+    <meta name="description" content="Every lap of every GTEC round, as the cars reported it. Lap times, stints, fuel and consistency for each driver.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://sparkstheory.co.uk/endurance/laps/">
+    <link rel="icon" type="image/jpeg" href="/sparks_logo.jpg">
+    <link rel="manifest" href="/endurance/assets/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/endurance/assets/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTEC">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="GTEC">
+    <meta property="og:title"       content="GTEC Lap Log">
+    <meta property="og:description" content="Every lap of every GTEC round, as the cars reported it.">
+    <meta property="og:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <meta property="og:url"         content="https://sparkstheory.co.uk/endurance/laps/">
+    <meta name="twitter:card"        content="summary_large_image">
+    <meta name="twitter:title"       content="GTEC Lap Log">
+    <meta name="twitter:description" content="Every lap of every GTEC round, as the cars reported it.">
+    <meta name="twitter:image"       content="https://sparkstheory.co.uk/endurance/assets/og-card.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050608;
+            --bg-1: #0a0e15;
+            --bg-2: #11161f;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --gold: #ffd166;
+            --gold-deep: #c79a3a;
+            --green: #22c55e;
+            --border: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+        a { color: inherit; }
+
+        .gtec-nav { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 2rem; background: rgba(5,6,8,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        .gtec-nav .brand { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text); text-decoration: none; text-indent: 0.32em; }
+        .gtec-nav .brand-logo { height: 26px; width: auto; display: block; }
+        .gtec-nav .nav-links { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+        .gtec-nav .nav-links a { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+        .gtec-nav .nav-links a:hover { color: var(--text); }
+        .gtec-nav .nav-links a.active { color: var(--gold); }
+        .gtec-nav .apply { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: #111; background: var(--gold); text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; box-shadow: 0 2px 10px rgba(255,209,102,0.35); }
+        .gtec-nav-toggle { display: none; background: none; border: none; color: var(--text); cursor: pointer; padding: 0.35rem; }
+        .gtec-nav-toggle svg { width: 24px; height: 24px; display: block; }
+        .gtec-nav-toggle .icon-close { display: none; }
+        .gtec-nav-toggle.open .icon-open { display: none; }
+        .gtec-nav-toggle.open .icon-close { display: block; }
+        .nav-badge { display: inline-block; width: 7px; height: 7px; margin-left: 0.3rem; border-radius: 50%; background: var(--gold); }
+
+        .page-wrap { max-width: 1180px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+        .eyebrow { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold); }
+        .title { font-family: 'Anton', sans-serif; font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.02; letter-spacing: 0.01em; text-transform: uppercase; margin: 0.5rem 0 0; }
+        .subtitle { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; }
+        .state { text-align: center; padding: 4rem 1rem; color: var(--muted); }
+        .state h3 { font-family: 'Anton', sans-serif; font-size: 1.4rem; text-transform: uppercase; color: var(--text); margin: 0 0 0.6rem; }
+        .loading { text-align: center; padding: 4rem; color: var(--muted); }
+
+        /* Controls: which round, which session, which cars. */
+        .controls { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin: 2rem 0 1.5rem; }
+        .control { display: flex; flex-direction: column; gap: 0.35rem; }
+        .control label { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+        .control select { padding: 0.5rem 0.7rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: inherit; font-size: 0.85rem; }
+
+        .card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 1.5rem; }
+        .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+        .card-title { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+        .card-note { font-size: 0.7rem; color: var(--muted); }
+        .chart-wrap { padding: 0.6rem 0.4rem 0.2rem; }
+        canvas { display: block; width: 100%; height: 360px; }
+        @media (max-width: 560px) { canvas { height: 260px; } }
+
+        /* One chip per car, in its own colour, click to show or hide. */
+        .cars { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.9rem 1.1rem; border-top: 1px solid var(--border); }
+        .car-chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.28rem 0.6rem; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-2); color: var(--muted); font-size: 0.74rem; cursor: pointer; font-family: inherit; }
+        .car-chip .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+        .car-chip.on { color: var(--text); border-color: rgba(255,255,255,0.22); }
+        .car-chip.off .dot { opacity: 0.25; }
+        .chip-actions { display: flex; gap: 0.4rem; padding: 0 1.1rem 0.9rem; }
+        .chip-actions button { font-family: 'Orbitron', sans-serif; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 0.3rem 0.7rem; cursor: pointer; }
+        .chip-actions button:hover { color: var(--text); }
+
+        /* Six columns of numbers will not fit a phone, and squeezing them
+           makes them unreadable. The table scrolls inside its own box so the
+           page itself never does. */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.86rem; min-width: 520px; }
+        thead th { font-family: 'Orbitron', sans-serif; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0.7rem 1.1rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        tbody td { padding: 0.65rem 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        tbody tr:last-child td { border-bottom: none; }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        th.num { text-align: right; }
+        .who { display: flex; align-items: center; gap: 0.5rem; }
+        .who .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+        .sub2 { display: block; font-size: 0.68rem; color: var(--muted); }
+
+        .foot-note { margin-top: 2.5rem; font-size: 0.74rem; color: var(--muted); line-height: 1.7; text-align: center; }
+        .foot-note a { color: var(--gold); text-decoration: none; }
+
+        @media (max-width: 860px) {
+            .gtec-nav { padding: 1rem; flex-wrap: wrap; }
+            .gtec-nav-toggle { display: block; }
+            .gtec-nav .nav-links { display: none; width: 100%; flex-direction: column; align-items: flex-start; gap: 0.85rem; padding-top: 1rem; }
+            .gtec-nav .nav-links.open { display: flex; }
+            .page-wrap { padding: 1.75rem 1rem 3rem; }
+        }
+    </style>
+    <link rel="stylesheet" href="/endurance/assets/gtec-nav.css">
+</head>
+<body>
+
+<nav class="gtec-nav">
+    <a class="brand" href="/endurance/"><img class="brand-logo" src="/endurance/assets/gtec-logo.png" alt="GTEC"></a>
+    <button class="gtec-nav-toggle" aria-label="Toggle menu" type="button">
+        <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+    </button>
+    <div class="nav-links">
+        <a href="/endurance/calendar/">Calendar</a>
+        <a href="/endurance/news/">News</a>
+        <a href="/endurance/media/">Media</a>
+        <a href="/endurance/standings/">Standings</a>
+        <a href="/endurance/results/">Results</a>
+        <a href="/endurance/live/">Live</a>
+        <a href="/endurance/drivers/">Drivers</a>
+        <a href="/endurance/teams/">Teams</a>
+        <a href="/endurance/stats/">Stats</a>
+        <a href="/endurance/rules/">Rules</a>
+        <a href="/endurance/shop/">Shop</a>
+        <a href="/endurance/profile/login/" id="nav-signin" style="display:none">Sign In</a>
+        <a href="/endurance/profile/" id="nav-portal" style="display:none">My Profile<span id="nav-portal-badge" class="nav-badge" aria-label="Unread messages"></span></a>
+        <a class="apply" href="/endurance/apply/">Apply</a>
+        <a class="back" href="/" title="SparksTheory" aria-label="Back to SparksTheory"><img src="/sparks_logo.jpg" alt="SparksTheory" style="height:20px;width:20px;border-radius:50%;display:block"></a>
+    </div>
+</nav>
+
+<div id="app"><div class="loading">Loading&hellip;</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../assets/gtec-config.js"></script>
+<script>
+'use strict';
+const { createClient } = window.supabase;
+const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
+const app = document.getElementById('app');
+
+sb.auth.getSession().then(({ data }) => {
+    const portal = document.getElementById('nav-portal');
+    const signin = document.getElementById('nav-signin');
+    if (data?.session) { if (portal) portal.style.display = ''; }
+    else if (signin) signin.style.display = '';
+});
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/** Lap times arrive as milliseconds. */
+function lapTime(ms) {
+    if (ms == null || ms <= 0) return '—';
+    const t = Math.round(ms / 10) / 100;
+    const m = Math.floor(t / 60);
+    const s = (t - m * 60).toFixed(2).padStart(5, '0');
+    return m > 0 ? `${m}:${s}` : s;
+}
+/** A gap or a spread, where minutes would be noise. */
+function secs(ms) {
+    if (ms == null) return '—';
+    return (ms / 1000).toFixed(3) + 's';
+}
+
+// One colour per car, from the same set the live map uses, so a driver who
+// was blue on the live timing is blue here.
+const COLOURS = ['#1ab4ff', '#ff6b6b', '#4ade80', '#f472b6', '#fbbf24',
+                 '#a78bfa', '#34d399', '#fb923c', '#60a5fa', '#e879f9',
+                 '#2dd4bf', '#f87171', '#a3e635', '#c084fc', '#38bdf8',
+                 '#fdba74'];
+
+let rounds = [], laps = [], summary = [], shown = new Set();
+let eventId = null, mode = 'race', metric = 'lap';
+
+// ---------------------------------------------------------------
+// A line chart, drawn by hand.
+//
+// No charting library: the page needs one kind of chart, the site inlines
+// everything else, and a library would be more bytes than the whole page
+// for the privilege of drawing a polyline.
+// ---------------------------------------------------------------
+function drawChart() {
+    const cv = document.getElementById('chart');
+    if (!cv) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+
+    // Each car's laps in the order they were driven, which is not the same
+    // as lap number order: a restart repeats lap numbers, so the x axis is
+    // "this car's nth logged lap" and the lap number is in the tooltip.
+    const series = [];
+    for (const row of summary) {
+        if (!shown.has(row.driver_id)) continue;
+        const mine = laps.filter(l => l.driver_id === row.driver_id);
+        if (mine.length) series.push({ row, pts: mine });
+    }
+    if (!series.length) {
+        g.fillStyle = '#94a3b8';
+        g.font = "12px 'Inter', system-ui, sans-serif";
+        g.textAlign = 'center';
+        g.fillText('Pick a car below.', w / 2, h / 2);
+        return;
+    }
+
+    const val = l => metric === 'fuel' ? l.fuel_pct : l.lap_ms;
+    // Against the lap number, not against each car's own count of laps. A
+    // car that joined on lap 30 has to sit at lap 30, or it is drawn from
+    // the left edge alongside somebody's opening laps and the two look
+    // simultaneous when they are half a race apart.
+    let x0 = Infinity, x1 = -Infinity, lo = Infinity, hi = -Infinity;
+    for (const s of series) {
+        for (const l of s.pts) {
+            if (l.lap < x0) x0 = l.lap; if (l.lap > x1) x1 = l.lap;
+            const v = val(l);
+            if (v == null) continue;
+            if (v < lo) lo = v; if (v > hi) hi = v;
+        }
+    }
+    if (!Number.isFinite(lo)) { lo = 0; hi = 1; }
+    if (!Number.isFinite(x0)) { x0 = 1; x1 = 1; }
+
+    // Lap times: the scale stops at the slowest CLEAN lap, meaning the
+    // slowest lap still within 107% of its own driver's best, which is the
+    // same definition the table uses for clean laps. Everything above it is
+    // a stop, an off or a lift for traffic, and those laps are three quarters
+    // of a minute clear of the racing: scaled to include them, the racing
+    // pace the chart exists to show is squashed into the bottom third.
+    // They are still drawn, off the top, so the chart does not pretend
+    // they did not happen.
+    let clipped = 0;
+    if (metric === 'lap') {
+        let ceiling = -Infinity;
+        for (const s of series) {
+            const ownBest = s.row.best_ms;
+            for (const l of s.pts) {
+                if (l.lap_ms <= ownBest * 1.07 && l.lap_ms > ceiling) ceiling = l.lap_ms;
+            }
+        }
+        if (Number.isFinite(ceiling) && ceiling < hi) {
+            clipped = series.reduce((n, s) => n + s.pts.filter(l => l.lap_ms > ceiling).length, 0);
+            hi = ceiling;
+        }
+        const pad = Math.max(500, (hi - lo) * 0.08);
+        lo -= pad; hi += pad;
+    } else { lo = 0; hi = 100; }
+
+    const padL = 58, padR = 14, padT = 14, padB = 28;
+    const px = lap => padL + (x1 === x0 ? 0 : ((lap - x0) / (x1 - x0)) * (w - padL - padR));
+    const py = v => padT + (1 - (v - lo) / Math.max(1, hi - lo)) * (h - padT - padB);
+
+    // Gridlines and the axis, drawn first and faintly.
+    g.strokeStyle = 'rgba(255,255,255,0.06)';
+    g.lineWidth = 1;
+    g.fillStyle = '#94a3b8';
+    g.font = "10px 'Inter', system-ui, sans-serif";
+    g.textAlign = 'right';
+    g.textBaseline = 'middle';
+    for (let k = 0; k <= 4; k++) {
+        const v = lo + (hi - lo) * k / 4;
+        const y = Math.round(py(v)) + 0.5;
+        g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke();
+        g.fillText(metric === 'fuel' ? Math.round(v) + '%' : lapTime(v), padL - 8, y);
+    }
+    g.textAlign = 'center';
+    g.textBaseline = 'top';
+    const step = Math.max(1, Math.ceil((x1 - x0 + 1) / 12));
+    for (let lap = x0; lap <= x1; lap += step) {
+        g.fillText(String(lap), px(lap), h - padB + 7);
+    }
+    g.fillText('lap', w / 2, h - padB + 19);
+
+    for (const s of series) {
+        g.strokeStyle = s.row.colour;
+        g.lineWidth = 2;
+        g.beginPath();
+        let started = false;
+        for (const l of s.pts) {
+            const v = val(l);
+            if (v == null) { started = false; continue; }
+            const x = px(l.lap), y = py(Math.min(v, hi));
+            if (!started) { g.moveTo(x, y); started = true; } else { g.lineTo(x, y); }
+        }
+        g.stroke();
+        // A dot per lap, so a single-lap car is visible at all.
+        g.fillStyle = s.row.colour;
+        for (const l of s.pts) {
+            const v = val(l);
+            if (v == null) continue;
+            g.beginPath();
+            g.arc(px(l.lap), py(Math.min(v, hi)), 2.5, 0, Math.PI * 2);
+            g.fill();
+        }
+    }
+
+    // The heading belongs to the chart, not to the page it was rendered on:
+    // switching between lap times and fuel redraws the canvas and nothing
+    // else, so it was still saying LAP TIMES over a fuel chart.
+    const head = document.getElementById('chart-title');
+    if (head) head.textContent = metric === 'fuel' ? 'Fuel' : 'Lap Times';
+    const note = document.getElementById('chart-note');
+    if (note) {
+        note.textContent = metric === 'fuel'
+            ? 'Fuel as each car crossed the line. A stop is the step back up.'
+            : clipped
+                ? `${clipped} lap${clipped === 1 ? '' : 's'} above the scale, drawn off the top: in-laps, out-laps and offs.`
+                : 'Lap time as driven.';
+    }
+}
+
+// ---------------------------------------------------------------
+function chips() {
+    return summary.map(r => `<button type="button" class="car-chip ${shown.has(r.driver_id) ? 'on' : 'off'}"
+            style="color:${r.colour}" data-driver="${r.driver_id}">
+            <span class="dot"></span><span style="color:var(--text)">${esc(r.display_name)}</span>
+        </button>`).join('');
+}
+
+function table() {
+    if (!summary.length) return '';
+    return `<div class="table-wrap"><table>
+        <thead><tr>
+            <th>Driver</th>
+            <th class="num" title="Every lap we recorded, in-laps and out-laps included.">Laps</th>
+            <th class="num" title="Laps within 107% of that driver's own best: a genuine attempt at a lap, rather than a stop, an off or a lift for traffic.">Clean</th>
+            <th class="num">Best</th>
+            <th class="num" title="The middle of their clean laps.">Median</th>
+            <th class="num" title="How tightly the clean laps cluster, as a standard deviation. Over six hours this says more than one quick lap does.">Spread</th>
+        </tr></thead>
+        <tbody>${summary.map(r => `<tr>
+            <td><div class="who"><span class="dot" style="background:${r.colour}"></span>
+                <span>${esc(r.display_name)}${r.car_number != null
+                    ? `<span class="sub2">#${r.car_number}</span>` : ''}</span></div></td>
+            <td class="num">${r.laps}</td>
+            <td class="num">${r.clean_laps}</td>
+            <td class="num">${lapTime(r.best_ms)}</td>
+            <td class="num">${lapTime(r.median_ms)}</td>
+            <td class="num">${secs(r.spread_ms)}</td>
+        </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+function render() {
+    const ev = rounds.find(r => r.event_id === eventId);
+    app.innerHTML = `<div class="page-wrap">
+        <div class="eyebrow">GTEC</div>
+        <h1 class="title">Lap Log</h1>
+        <p class="subtitle">Every lap the cars reported, kept after the race rather than overwritten by the next one.</p>
+
+        <div class="controls">
+            <div class="control">
+                <label for="pick-round">Round</label>
+                <select id="pick-round">${rounds.map(r =>
+                    `<option value="${r.event_id}" ${r.event_id === eventId ? 'selected' : ''}>Round ${r.round} &middot; ${esc(r.name)}</option>`).join('')}</select>
+            </div>
+            <div class="control">
+                <label for="pick-mode">Session</label>
+                <select id="pick-mode">
+                    <option value="race"     ${mode === 'race' ? 'selected' : ''}>Race</option>
+                    <option value="practice" ${mode === 'practice' ? 'selected' : ''}>Practice</option>
+                    <option value="test"     ${mode === 'test' ? 'selected' : ''}>Test</option>
+                    <option value=""          ${mode === '' ? 'selected' : ''}>Everything</option>
+                </select>
+            </div>
+            <div class="control">
+                <label for="pick-metric">Showing</label>
+                <select id="pick-metric">
+                    <option value="lap"  ${metric === 'lap' ? 'selected' : ''}>Lap time</option>
+                    <option value="fuel" ${metric === 'fuel' ? 'selected' : ''}>Fuel</option>
+                </select>
+            </div>
+        </div>
+
+        ${!laps.length ? `<div class="state">
+            <h3>Nothing recorded for this session</h3>
+            <p>${ev ? esc(ev.name) : 'This round'} has no ${mode ? esc(mode) : ''} laps in the log.
+            Laps are only kept from rounds run since the log was switched on.</p>
+        </div>` : `
+        <div class="card">
+            <div class="card-head">
+                <span class="card-title" id="chart-title"></span>
+                <span class="card-note" id="chart-note"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart"></canvas></div>
+            <div class="cars" id="cars">${chips()}</div>
+            <div class="chip-actions">
+                <button type="button" id="all-on">Show all</button>
+                <button type="button" id="all-off">Show none</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-head"><span class="card-title">By Driver</span>
+                <span class="card-note">Sorted by best lap</span></div>
+            ${table()}
+        </div>`}
+
+        <div class="foot-note">
+            Only drivers running a paired reporter appear here, so this is part of the grid rather than all of it.
+            Each car's first lap is missing by design: a lap is only recorded once we have watched it from one
+            crossing of the line to the next, which is what keeps a part lap out of the record.<br>
+            <a href="/endurance/live/">Live timing</a> &middot;
+            Racing in GTEC? <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
+        </div>
+    </div>`;
+
+    const onRound = document.getElementById('pick-round');
+    if (onRound) onRound.onchange = e => { eventId = e.target.value; load(); };
+    const onMode = document.getElementById('pick-mode');
+    if (onMode) onMode.onchange = e => { mode = e.target.value; load(); };
+    const onMetric = document.getElementById('pick-metric');
+    if (onMetric) onMetric.onchange = e => { metric = e.target.value; drawChart(); };
+
+    const cars = document.getElementById('cars');
+    if (cars) cars.onclick = e => {
+        const chip = e.target.closest('.car-chip');
+        if (!chip) return;
+        const id = chip.dataset.driver;
+        if (shown.has(id)) shown.delete(id); else shown.add(id);
+        chip.classList.toggle('on', shown.has(id));
+        chip.classList.toggle('off', !shown.has(id));
+        drawChart();
+    };
+    const allOn = document.getElementById('all-on');
+    if (allOn) allOn.onclick = () => { summary.forEach(r => shown.add(r.driver_id)); render(); };
+    const allOff = document.getElementById('all-off');
+    if (allOff) allOff.onclick = () => { shown.clear(); render(); };
+
+    drawChart();
+}
+
+async function load() {
+    const [{ data: lg, error: e1 }, { data: sm, error: e2 }] = await Promise.all([
+        sb.rpc('live_lap_log',     { p_event_id: eventId, p_mode: mode || null }),
+        sb.rpc('live_lap_summary', { p_event_id: eventId, p_mode: mode || null }),
+    ]);
+    if (e1 || e2) {
+        app.innerHTML = `<div class="page-wrap"><div class="state">
+            <h3>Can't read the lap log</h3><p>${esc((e1 || e2).message)}</p></div></div>`;
+        return;
+    }
+    laps = lg || [];
+    summary = (sm || []).map((r, i) => ({ ...r, colour: COLOURS[i % COLOURS.length] }));
+    // Car numbers live on the laps rather than the summary, so carry one over.
+    for (const r of summary) {
+        const l = laps.find(x => x.driver_id === r.driver_id);
+        r.car_number = l ? l.car_number : null;
+    }
+    // Opening with sixteen lines on top of each other reads as noise, so the
+    // first few are shown and the rest are a click away.
+    shown = new Set(summary.slice(0, 6).map(r => r.driver_id));
+    render();
+}
+
+(async () => {
+    const { data, error } = await sb.rpc('live_lap_rounds');
+    if (error) {
+        app.innerHTML = `<div class="page-wrap"><div class="state">
+            <h3>Can't read the lap log</h3><p>${esc(error.message)}</p></div></div>`;
+        return;
+    }
+    rounds = data || [];
+    if (!rounds.length) {
+        app.innerHTML = `<div class="page-wrap">
+            <div class="eyebrow">GTEC</div><h1 class="title">Lap Log</h1>
+            <div class="state"><h3>Nothing in the log yet</h3>
+            <p>Laps are kept from the first session run after the log was switched on.
+            Come back after the next race.</p>
+            <p><a href="/endurance/live/" style="color:var(--gold)">Live timing</a></p></div></div>`;
+        return;
+    }
+    // Deep link to a round, so a result page or a Discord post can point at one.
+    const want = new URLSearchParams(location.search).get('round');
+    const picked = want && rounds.find(r => String(r.round) === want);
+    eventId = (picked || rounds[0]).event_id;
+    await load();
+})();
+
+addEventListener('resize', drawChart);
+</script>
+
+<script src="/endurance/assets/gtec-stars.js" defer></script>
+<script src="/endurance/assets/gtec-sponsors.js" defer></script>
+<script src="/endurance/assets/gtec-footer.js" defer></script>
+<script src="/endurance/assets/gtec-nav.js" defer></script>
+</body>
+</html>
