@@ -1314,6 +1314,39 @@ function bindMapControls() {
     syncZoomButtons();
 }
 
+// How wide a car's number is. Measured once per number rather than once per
+// car per redraw: measureText is not free, the font is set once and never
+// changes, and a full grid only ever has a few dozen distinct numbers.
+const badgeWidths = new Map();
+// Measured against whatever font is active at the time, and Inter arrives
+// from Google Fonts after the first redraw on a slow connection. Thrown away
+// once the real font is in, so the badges are not sized to the fallback for
+// the rest of the session.
+if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => badgeWidths.clear()).catch(() => {});
+}
+function badgeHalfWidth(g, label) {
+    if (!label) return 0;
+    let w = badgeWidths.get(label);
+    if (w == null) { w = g.measureText(label).width / 2; badgeWidths.set(label, w); }
+    return w;
+}
+
+// A capsule, which is a circle when the half-width is no more than the radius
+// and a rounded bar when the number needs the room. Built by hand rather than
+// with roundRect, which Safari only learned in 16 and some drivers are on
+// older phones than that.
+function pillPath(g, x, y, half, r) {
+    const dx = Math.max(0, half - r);
+    g.beginPath();
+    g.moveTo(x - dx, y - r);
+    g.lineTo(x + dx, y - r);
+    g.arc(x + dx, y, r, -Math.PI / 2, Math.PI / 2);
+    g.lineTo(x - dx, y + r);
+    g.arc(x - dx, y, r, Math.PI / 2, Math.PI * 1.5);
+    g.closePath();
+}
+
 function drawTrack(rows) {
     const cv = document.getElementById('track');
     if (!cv) return;
@@ -1619,9 +1652,9 @@ function drawTrack(rows) {
         for (const path of allPaths) strokePath(g, path, S, 0, path.length - 1);
     }
 
-    // Each car: a fading tail, then the car, then its number. A focused
-    // split dims the rest rather than removing them, so you can still see
-    // where the others are relative to the ones you are watching.
+    // Each car: its badge, then its number. A focused split dims the rest
+    // rather than removing them, so you can still see where the others are
+    // relative to the ones you are watching.
     g.font = "bold 10px 'Inter', system-ui, sans-serif";
     g.textAlign = 'center';
     g.textBaseline = 'middle';
@@ -1660,26 +1693,32 @@ function drawTrack(rows) {
         // in the car's own colour, so it reads against the gold line and
         // against the dark infield without needing a second colour.
         const car = S(r.x, r.z, r.y);
+        const num = carNumber(r, rows[0]?.mode);
+        const label = num == null ? '' : String(num);
+        // The badge grows to fit the number rather than the number shrinking
+        // to fit the badge. A fixed circle held two digits and no more, so a
+        // three-figure car number ran off both sides of it and was the one
+        // thing on the map you could not read. One and two digits still get a
+        // circle, since the pill is only as wide as it has to be.
+        const rad = hot ? 9 : 7;
+        const half = Math.max(rad, badgeHalfWidth(g, label) + 3.5);
         if (hot) {
             g.globalAlpha = 0.35;
             g.strokeStyle = col;
             g.lineWidth = 5;
-            g.beginPath();
-            g.arc(car[0], car[1], 15, 0, Math.PI * 2);
+            pillPath(g, car[0], car[1], half + 6, rad + 6);
             g.stroke();
             g.globalAlpha = r.on_track ? 1 : 0.35;
         }
         g.fillStyle = col;
-        g.beginPath();
-        g.arc(car[0], car[1], hot ? 9 : 7, 0, Math.PI * 2);
+        pillPath(g, car[0], car[1], half, rad);
         g.fill();
-        const num = carNumber(r, rows[0]?.mode);
-        if (num != null) {
+        if (label) {
             // Font and alignment are set once before the loop: assigning them
             // per car forces a style recalculation each time, sixty times a
             // redraw, and they never change.
             g.fillStyle = '#050608';
-            g.fillText(String(num), car[0], car[1] + 0.5);
+            g.fillText(label, car[0], car[1] + 0.5);
         }
         g.globalAlpha = 1;
     });
