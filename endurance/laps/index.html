@@ -487,8 +487,10 @@ async function load() {
         app.innerHTML = `<div class="page-wrap">
             <div class="eyebrow">GTEC</div><h1 class="title">Lap Log</h1>
             <div class="state"><h3>Nothing in the log yet</h3>
-            <p>Laps are kept from the first session run after the log was switched on.
-            Come back after the next race.</p>
+            <p>Laps are kept from the first session driven after the log was switched on,
+            practice included. Nothing before that was recorded.</p>
+            <p>A car has to cross the line twice before its first lap is kept, since a lap
+            only counts once it has been watched from one crossing to the next.</p>
             <p><a href="/endurance/live/" style="color:var(--gold)">Live timing</a></p></div></div>`;
         return;
     }
