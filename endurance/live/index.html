@@ -1711,13 +1711,28 @@ function nextFact() {
 //
 // The heights in the file are in GT7's own vertical frame, already matching
 // live_track_path.y, so nothing here has to know about sea level.
-const TERRAIN = {
-    'Nürburgring Nordschleife - 24h Layout': 'nurburgring-24h',
-};
+// Matched on words rather than on the whole string. An exact match meant one
+// different dash, or an umlaut encoded another way, silently produced no
+// terrain at all and nothing to show for it, which is exactly what happened
+// the first time this went live.
+const TERRAIN = [
+    { slug: 'nurburgring-24h', needs: ['nordschleife', '24'] },
+];
+
+function terrainSlug(name) {
+    const n = (name || '').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // umlauts and friends
+        .replace(/[^a-z0-9]+/g, ' ').trim();
+    for (const t of TERRAIN) {
+        if (t.needs.every(w => n.includes(w))) return t.slug;
+    }
+    return null;
+}
+
 let terrain = null, terrainAsked = null;
 
 async function loadTerrain(circuitName) {
-    const slug = TERRAIN[circuitName];
+    const slug = terrainSlug(circuitName);
     if (!slug || terrainAsked === slug) return;
     terrainAsked = slug;
     try {
