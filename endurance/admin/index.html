@@ -4133,6 +4133,9 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                 <button class="btn-icon danger" title="Remove this event's split-assignment and hosting messages from every driver's inbox — use once the event is over" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
                 <button class="btn-icon danger" title="Close any live timing test on this event and clear the cars it put on the live page" onclick="closeLiveTest('${eventId}','${esc(eventName)}')">End Live Test</button>
                 <button class="btn-icon danger" title="Stop the nightly practice window on this event and clear the cars it put on the live page" onclick="clearLivePractice('${eventId}','${esc(eventName)}')">End Practice</button>
+                <button class="btn btn-primary" title="Put live timing on air for the race. Press it just before the lights go out. It clears everything from qualifying and starts recording from that moment. Press it again to restart after a red flag." onclick="startLiveRace('${eventId}','${esc(eventName)}')">Start Race</button>
+                <button class="btn-icon danger" title="Take live timing off air and clear what is on it. Use when the race is over, or if Start Race was pressed too early." onclick="stopLiveRace('${eventId}','${esc(eventName)}')">Stop Race</button>
+                <span id="race-state" class="badge badge-muted" title="Whether live timing is on air for this round's race. Nothing is recorded while it is off, so qualifying never reaches the page.">Race: checking</span>
                 <button class="btn-icon" title="Clear the track outline and hand the job of tracing it to one named driver, so it is not whoever happens to report first. They keep it while they are reporting. They drive two laps: the first gets them to the start/finish line and is discarded, the second is the one that gets stored." onclick="startTrackMap('${eventId}','${esc(eventName)}')">Start Track Map</button>
                 <button class="btn-icon danger" title="Delete the track outline the cars have traced for this event, so it draws itself again from scratch. Use if the wrong circuit got captured, or if it finished short. Does not touch the cars, the splits or the practice window." onclick="clearTrackOutline('${eventId}','${esc(eventName)}')">Clear Map Outline</button>
                 <span id="outline-state" class="badge badge-muted" title="The track outline stored for this round. Complete means it will not change again: clearing it is the only way to retrace it.">Outline: checking</span>
@@ -4153,9 +4156,60 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
         ${lobbyCardsHTML}`;
 
     showOutlineState(eventId);
+    showRaceState(eventId);
 }
 
 let outlineWatch = null;
+let raceWatch = null;
+
+/** Whether live timing is on air, and since when.
+ *
+ *  Race day shows nothing at all until Start Race is pressed, which is the
+ *  point of it: qualifying is never recorded, so no qualifying time can
+ *  reach the page and no viewer can mistake a qualifying order for a race
+ *  one. The cost of that is somebody has to remember, so this badge says
+ *  plainly which it is, and keeps saying so. */
+async function showRaceState(eventId) {
+    const el = document.getElementById('race-state');
+    if (!el) { if (raceWatch) { clearTimeout(raceWatch); raceWatch = null; } return; }
+    const { data, error } = await sb.rpc('live_race_state', { p_event_id: eventId });
+    if (error) { el.textContent = 'Race: could not read'; return; }
+    if (!data?.started) {
+        el.className = 'badge badge-muted';
+        el.textContent = 'Race: off air';
+    } else if (!data.running) {
+        el.className = 'badge badge-muted';
+        el.textContent = 'Race: finished';
+    } else {
+        const since = new Date(data.from);
+        const mins = Math.max(0, Math.round((Date.now() - since.getTime()) / 60000));
+        el.className = 'badge';
+        el.style.cssText = 'background:rgba(239,68,68,0.12);color:#fca5a5;border-color:rgba(239,68,68,0.3)';
+        el.textContent = `Race: ON AIR · ${mins} min · ${data.reporting} reporting`;
+    }
+    if (raceWatch) clearTimeout(raceWatch);
+    raceWatch = setTimeout(() => showRaceState(eventId), 15000);
+}
+
+async function startLiveRace(eventId, eventName) {
+    if (!confirm(`Put live timing on air for "${eventName}"?\n\nEverything recorded so far, including anything from qualifying, is cleared. The race is timed from this moment.\n\nPress this just before the lights go out.`)) return;
+    const { data, error } = await sb.rpc('live_race_start', { p_event_id: eventId });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not start.', 'error'); return; }
+    toast(`Live timing on air for Round ${data.round}.`
+        + (data.cleared ? ` Cleared ${data.cleared} car${data.cleared === 1 ? '' : 's'} from before the start.` : ''),
+        'success');
+    showRaceState(eventId);
+}
+
+async function stopLiveRace(eventId, eventName) {
+    if (!confirm(`Take live timing off air for "${eventName}"?\n\nThe page goes back to showing the next round, and the cars currently on it are cleared.`)) return;
+    const { data, error } = await sb.rpc('live_race_stop', { p_event_id: eventId });
+    if (error)     { toast(error.message, 'error'); return; }
+    if (!data?.ok) { toast(data?.error || 'Could not stop.', 'error'); return; }
+    toast('Live timing off air.', 'success');
+    showRaceState(eventId);
+}
 
 // Whether this round has a stored map, and whether it is finished. Without
 // this the only way to tell was to open the live page and hover the map,

@@ -73,10 +73,6 @@
         /* An open practice evening is a real session, not a warning, so it
            reads as green rather than borrowing the amber of a test. */
         .practice-pill { background: rgba(34,197,94,0.12); color: #86efac; border-color: rgba(34,197,94,0.35); }
-        /* Qualifying is live and on race day, but it is not the race, and the
-           difference matters: one screen is ranked by pace, the other by
-           distance covered. Its own colour so nobody has to read the label. */
-        .quali-pill { background: rgba(96,165,250,0.12); color: #93c5fd; border-color: rgba(96,165,250,0.35); }
         .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 1.6s ease-in-out infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
         @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
@@ -689,11 +685,9 @@ function renderField(rows) {
 
     set('live-pill', ev.mode === 'practice'
         ? '<span class="live-pill practice-pill"><span class="live-dot"></span>Practice</span>'
-        : ev.mode === 'qualifying'
-            ? '<span class="live-pill quali-pill"><span class="live-dot"></span>Qualifying</span>'
-            : ev.is_test
-                ? '<span class="live-pill test-pill">Test</span>'
-                : '<span class="live-pill"><span class="live-dot"></span>Live</span>');
+        : ev.is_test
+            ? '<span class="live-pill test-pill">Test</span>'
+            : '<span class="live-pill"><span class="live-dot"></span>Live</span>');
 
     set('live-round', `Round ${ev.round}`);
     set('live-sub', `${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${lobbies.length} split${lobbies.length === 1 ? '' : 's'}`);
@@ -703,9 +697,6 @@ function renderField(rows) {
         if (ev.mode === 'practice') {
             modeNote.style.cssText = 'color:#86efac';
             modeNote.textContent = 'Open practice, not a race. Everyone here is out on their own, so laps and gaps mean nothing yet.';
-        } else if (ev.mode === 'qualifying') {
-            modeNote.style.cssText = 'color:#93c5fd';
-            modeNote.textContent = 'Qualifying. Ordered by best lap, fastest first. Nobody is racing anybody yet, and these times do not carry into the race.';
         } else if (ev.is_test) {
             modeNote.style.cssText = 'color:#fdba74';
             modeNote.textContent = 'This is a test of live timing, not a live race.';
