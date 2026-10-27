@@ -1192,6 +1192,21 @@ const DEPTH_WIDTH = [0.55, 1.45];
 // How many steps the terrain's fade is quantised into. Eight is invisible on
 // a hairline and turns thousands of strokes into dozens.
 const FADE_STEPS = 8;
+// And how many levels of brightness the hills are lit in. Height and light are
+// folded into this one number, so shading the landscape costs no strokes at
+// all: six tones is fewer buckets than the colour-per-contour-level it
+// replaced.
+const TONE_STEPS = 6;
+// Quantisation of the uphill direction stored per point, which has to agree
+// with the tool that wrote the file.
+const ASPECT_STEPS = 64;
+// Where the light comes from, as a bearing in the file's own frame: aspect 0
+// is uphill due east, counting round towards south. This is the north-west,
+// which is where cartographers have put the sun since the nineteenth century,
+// because a relief lit from anywhere below the horizontal reads inside out.
+// Fixed to the world rather than to the viewer, so turning the map swings the
+// lit slopes round and the hills look like hills rather than like a pattern.
+const LIGHT_FROM = -Math.PI * 0.75;
 let view = { scale: 1, x: 0, y: 0 };
 // view3d lives up with the stored preferences, which are read before this.
 let yaw = 0.6, tilt = 0.8;
@@ -1614,7 +1629,7 @@ function drawTrack(rows) {
             // Higher ground a little brighter, the same idea as the track's
             // own shading, so the eye reads the landscape as rising.
             const t = Math.max(0, Math.min(1, (line.h - minY) / Math.max(1, maxY - minY)));
-            const col = `${Math.round(90 + 60 * t)},${Math.round(105 + 55 * t)},${Math.round(125 + 40 * t)}`;
+            const asp = line.a;
             let prev = S(pts[0][0], pts[0][1], line.h);
             let prevW = pts[0];
             for (let i = 1; i < pts.length; i++) {
@@ -1639,12 +1654,30 @@ function drawTrack(rows) {
                 const depth = Math.max(0, Math.min(1, (q[2] - minV) / dSpan));
                 const alpha = 0.40 * edge * (0.25 + 0.75 * depth);
                 if (alpha > 0.012) {
+                    // Lit from one side, which is what turns a tangle of
+                    // hairlines into hills. Tanaka's trick, and the reason it
+                    // works on lines rather than a filled surface: a contour
+                    // running across a slope that faces the light is drawn
+                    // bright, one on the slope behind it is drawn dark, and
+                    // the eye assembles the ridge between them by itself.
+                    //
+                    // The file says which way is uphill at each point, since
+                    // the geometry cannot: marching squares emits a cell's two
+                    // ends in whatever order its case table gives.
+                    const sh = asp ? 0.5 + 0.5 * Math.cos(
+                        (asp[i] / ASPECT_STEPS) * Math.PI * 2 - LIGHT_FROM) : 0.5;
+                    // Height and light together, as one brightness, so that
+                    // shading costs no extra strokes. Keying on tone rather
+                    // than on a colour per contour level actually costs fewer:
+                    // six tones against seventeen levels.
+                    const tone = Math.min(TONE_STEPS - 1, Math.max(0, Math.floor(
+                        (0.18 + 0.38 * t + 0.62 * sh) * TONE_STEPS)));
                     // Collected into a few steps rather than stroked one at a
                     // time. A stroke per segment came to 3,727 of them and
                     // 5.7 ms, which a drag would feel; eight steps of fade are
                     // invisible on a hairline and cost a stroke each.
                     const step = Math.min(FADE_STEPS - 1, Math.floor(alpha / 0.40 * FADE_STEPS));
-                    const key = col + '|' + step;
+                    const key = tone + '|' + step;
                     let bucket = fade.get(key);
                     if (!bucket) fade.set(key, bucket = []);
                     bucket.push(a0[0], a0[1], cur[0], cur[1]);
@@ -1652,10 +1685,27 @@ function drawTrack(rows) {
             }
         }
         for (const [key, segs] of fade) {
-            const [col2, step] = key.split('|');
+            const [toneS, step] = key.split('|');
             const k = (Number(step) + 0.5) / FADE_STEPS;
-            g.strokeStyle = `rgba(${col2},${(0.40 * k).toFixed(3)})`;
-            g.lineWidth = 0.7 + 0.8 * k;
+            const b = (Number(toneS) + 0.5) / TONE_STEPS;
+            // Cool and nearly black where the slope turns away, near white
+            // where it faces the light. One ramp, so the landscape reads as
+            // one material rather than as coloured bands.
+            //
+            // The light works on the opacity as well as the colour, and that
+            // is what makes it read at all. A contour capped at 0.40 alpha
+            // over a near-black ground has so little range left that a
+            // brightness ramp inside it is almost invisible; letting the
+            // shaded side fade towards the background as well as darken gives
+            // four times the contrast for nothing, since both are set once
+            // per bucket either way.
+            const op = Math.min(0.78, 0.40 * k * (0.35 + 1.10 * b));
+            g.strokeStyle = `rgba(${Math.round(48 + 174 * b)},`
+                + `${Math.round(60 + 170 * b)},${Math.round(80 + 150 * b)},`
+                + `${op.toFixed(3)})`;
+            // Lit contours are drawn a shade heavier as well as brighter,
+            // which is the other half of the same trick.
+            g.lineWidth = (0.6 + 0.7 * k) * (0.78 + 0.44 * b);
             g.beginPath();
             for (let i = 0; i < segs.length; i += 4) {
                 g.moveTo(segs[i], segs[i + 1]);
@@ -1663,6 +1713,33 @@ function drawTrack(rows) {
             }
             g.stroke();
         }
+    }
+
+    // A dark edge under the circuit, so it sits ON the landscape instead of
+    // being tangled in it. Without it the gold line and the contours are two
+    // sets of lines at the same depth and the eye has to work out which is
+    // which; a couple of pixels of near-black either side and the track reads
+    // as the nearer object immediately. Drawn in one pass over the whole
+    // outline, so it costs a single stroke, and only when there is terrain
+    // under it to be separated from.
+    if (view3d && terrain) {
+        g.strokeStyle = 'rgba(5,6,8,0.85)';
+        g.lineWidth = 2.5 * zw + 3.5;
+        g.beginPath();
+        for (const path of allPaths) {
+            let started = false;
+            for (let i = 0; i < path.length - 1; i++) {
+                const a = path[i], b = path[i + 1];
+                if (b[3] || Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) {
+                    started = false; continue;
+                }
+                const p1 = S(a[0], a[1], a[2]);
+                if (!started) { g.moveTo(p1[0], p1[1]); started = true; }
+                const p2 = S(b[0], b[1], b[2]);
+                g.lineTo(p2[0], p2[1]);
+            }
+        }
+        g.stroke();
     }
 
     // The track itself: every car's whole path, joined into lines. Drawn

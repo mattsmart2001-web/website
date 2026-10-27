@@ -276,6 +276,29 @@ def simplify(line, tol):
     return [p for p, k in zip(line, keep) if k]
 
 
+ASPECT_STEPS = 64
+
+
+def aspect_at(grid, x0, z0, step, nx, nz, x, z):
+    """Which way is uphill at a point, in 64ths of a turn from east to south.
+
+    Nothing downstream can work this out for itself. Marching squares emits a
+    cell's two ends in whatever order its case table gives, and the stitching
+    reverses runs to join them, so a contour's direction carries no sign and
+    its normal could point either up the hill or down it. Here the height grid
+    is still in hand, which makes it a central difference.
+
+    Returns None where the ground is flat enough to have no aspect at all.
+    """
+    i0 = min(max(int((x - x0) / step), 1), nx - 2)
+    j0 = min(max(int((z - z0) / step), 1), nz - 2)
+    dx = grid[j0][i0 + 1] - grid[j0][i0 - 1]
+    dz = grid[j0 + 1][i0] - grid[j0 - 1][i0]
+    if dx == 0 and dz == 0:
+        return None
+    return int(round(math.atan2(dz, dx) / (2 * math.pi) * ASPECT_STEPS)) % ASPECT_STEPS
+
+
 # ---------------------------------------------------------------- main ----
 def main():
     ap = argparse.ArgumentParser()
@@ -385,16 +408,34 @@ def main():
             runs.append(cur)
         return runs
 
-    out, total = [], 0
+    # Which way the ground faces at each point, so the page can light the
+    # contours from one side. The marching squares above emit a cell's two
+    # ends in whatever order the case table gives, and stitching reverses runs
+    # to join them, so nothing downstream can tell uphill from downhill out of
+    # the geometry alone. Here the height grid is still in hand, which makes
+    # it a central difference and an arctangent.
+    #
+    # Stored as a sixth of a turn's worth of resolution, 0 to 63, because a
+    # degree would cost three times the characters to say nothing the eye can
+    # see. 0 is uphill due east, counting round towards south.
+    aspect = lambda x, z: aspect_at(grid, minx, minz, a.grid, nx, nz, x, z)
+
+    out, total, flat_pts = [], 0, 0
     for lv in levels:
         for ln in stitch(contours(grid, minx, minz, a.grid, lv)):
             for piece in clip(ln):
                 s = simplify(piece, a.simplify)
                 if len(s) >= 2:
+                    asp = [aspect(p[0], p[1]) for p in s]
+                    flat_pts += sum(1 for v in asp if v is None)
                     out.append({"h": round(lv - offset, 1),
-                                "p": [[round(p[0], 1), round(p[1], 1)] for p in s]})
+                                "p": [[round(p[0], 1), round(p[1], 1)] for p in s],
+                                "a": [0 if v is None else v for v in asp]})
                     total += len(s)
     print(f"{len(levels)} contour levels, {len(out)} lines, {total:,} points")
+    if flat_pts:
+        print(f"{flat_pts:,} of them on ground too flat to have an aspect, "
+              f"lit as though facing east")
     if radius:
         print(f"clipped to a circle of radius {radius:.0f} m about "
               f"({cx:.0f}, {cz:.0f}) in GT7 coordinates")
@@ -405,6 +446,10 @@ def main():
            # needs to know where the middle is and how far it reaches.
            "centre": [round(cx, 1), round(cz, 1)],
            "radius_m": round(radius, 1),
+           # Which way is uphill at each point of each line, in 64ths of a
+           # turn from due east towards south. The page lights the hills with
+           # it; a file without it is simply drawn unlit.
+           "aspect_steps": ASPECT_STEPS,
            "note": "Heights are in GT7's own vertical frame, matching live_track_path.y",
            "attribution": ATTRIBUTION, "lines": out}
     with open(a.out, "w") as fh:
