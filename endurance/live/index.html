@@ -853,7 +853,6 @@ let baseArmed = false;
 // memory earning nothing.
 const PATH_MAX = 4000;
 const PATH_KEEP_WITH_OUTLINE = 48;
-const RELIEF_BANDS = 12;          // height bands; see the banded shading below
 // Two points further apart than this are not consecutive track: a car has
 // been reset to the pits, or its reporter dropped out for a while. Joining
 // them would draw a line straight across the infield.
@@ -1182,9 +1181,6 @@ const DEPTH_BUCKETS = 16;
 // 2.6 was a long lens and the result read as a squashed flat map. Closer
 // than this and the near side of the circuit bows unpleasantly.
 const EYE_DISTANCE = 1.5;
-// Far track is drawn fainter, which is the other half of reading depth. Free,
-// because the segments are already grouped by how far away they are.
-const DEPTH_FADE = 0.55;
 // Near track thicker than far, which turns out to be the strongest depth cue
 // of the three and the cheapest: the segments are already stroked a depth
 // bucket at a time, so a width per bucket costs nothing at all.
@@ -1857,56 +1853,50 @@ function drawTrack(rows) {
         g.stroke();
     }
 
-    // The track itself: every car's whole path, joined into lines. Drawn
-    // segment by segment when there is elevation to colour by, and in one
-    // pass when there is not.
+    // The track itself: every car's whole path, joined into lines, in one
+    // colour.
+    //
+    // It used to be coloured by height, cool and dark at the bottom of the
+    // circuit and warm and bright at the top, which was the only way the map
+    // had of showing elevation at all. The landscape shows it now, and far
+    // better, so that colouring was doing a job already done and charging
+    // legibility for it: the low sections came out a dark blue sitting in
+    // almost the same place as the shaded ground, and the circuit vanished
+    // into the terrain exactly where the terrain was darkest.
+    //
+    // So: the circuit is gold, all of it, and the ground underneath says how
+    // high each part of it is.
     g.lineWidth = 2.5 * zw;
-    if (relief) {
-        // Sorted into height bands and drawn one band at a time. A stroke per
-        // segment gave a smooth gradient and cost a canvas call for every
-        // point on the map; a dozen bands are indistinguishable by eye on a
-        // 2.5px line and cost twelve calls however long the path is.
-        // Keyed by colour band, and when tilted by depth as well, so that a
-        // bit of track in front of another is drawn after it. At the
-        // Nordschleife that is not a nicety: the circuit passes under itself
-        // at Breidscheid, and drawn in path order the bridge goes beneath the
-        // road it crosses.
-        const buckets = view3d ? DEPTH_BUCKETS : 1;
-        const bands = Array.from({ length: RELIEF_BANDS * buckets }, () => []);
-        const flat = [];
-        const span = Math.max(1, maxY - minY);
+    if (view3d) {
+        // Still grouped by depth, which is not about colour. A bit of track in
+        // front of another has to be drawn after it: at the Nordschleife that
+        // is not a nicety, since the circuit passes under itself at
+        // Breidscheid and in path order the bridge goes beneath the road it
+        // crosses. Sixteen depths, where this used to be sixteen depths times
+        // twelve height bands, so dropping the colour took 192 strokes down to
+        // 16.
+        const buckets = DEPTH_BUCKETS;
+        const bands = Array.from({ length: buckets }, () => []);
         const dSpan = Math.max(1, maxV - minV);
         for (const path of allPaths) {
             for (let i = 0; i < path.length - 1; i++) {
                 const a = path[i], b = path[i + 1];
                 if (b[3] || Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
-                const h2 = (a[2] != null && b[2] != null) ? (a[2] + b[2]) / 2 : null;
-                if (h2 == null) { flat.push(a, b); continue; }
-                const bi = Math.min(RELIEF_BANDS - 1,
-                                    Math.max(0, Math.floor(((h2 - minY) / span) * RELIEF_BANDS)));
-                let dk = 0;
-                if (view3d) {
-                    const qa = world(a[0], a[1], a[2]), qb = world(b[0], b[1], b[2]);
-                    const d = ((qa[2] + qb[2]) / 2 - minV) / dSpan;
-                    dk = Math.min(buckets - 1, Math.max(0, Math.floor(d * buckets)));
-                }
-                bands[dk * RELIEF_BANDS + bi].push(a, b);
+                const qa = world(a[0], a[1], a[2]), qb = world(b[0], b[1], b[2]);
+                const d = ((qa[2] + qb[2]) / 2 - minV) / dSpan;
+                bands[Math.min(buckets - 1, Math.max(0, Math.floor(d * buckets)))].push(a, b);
             }
         }
         bands.forEach((segs, key) => {
             if (!segs.length) return;
-            // Low ground cool and dark, high ground warm and bright, which
-            // reads as height without needing a legend.
-            const t = ((key % RELIEF_BANDS) + 0.5) / RELIEF_BANDS;
-            // And far track fainter than near, which is the other half of
-            // reading depth. The grouping needed for draw order already
-            // knows how far away each segment is, so this costs nothing.
-            const depth = buckets > 1 ? Math.floor(key / RELIEF_BANDS) / (buckets - 1) : 1;
-            const a = view3d ? 0.75 * (DEPTH_FADE + (1 - DEPTH_FADE) * depth) : 0.75;
-            if (view3d) {
-                g.lineWidth = 2.5 * zw * (DEPTH_WIDTH[0] + (DEPTH_WIDTH[1] - DEPTH_WIDTH[0]) * depth);
-            }
-            g.strokeStyle = `rgba(${Math.round(80 + 175 * t)},${Math.round(110 + 90 * t)},${Math.round(170 - 80 * t)},${a.toFixed(3)})`;
+            // Far track fainter and finer than near, which is the depth cue
+            // the height colouring was never giving. The grouping needed for
+            // draw order already knows how far away each segment is, so this
+            // costs nothing.
+            const depth = buckets > 1 ? key / (buckets - 1) : 1;
+            const a = 0.78 + 0.22 * depth;
+            g.lineWidth = 2.5 * zw * (DEPTH_WIDTH[0] + (DEPTH_WIDTH[1] - DEPTH_WIDTH[0]) * depth);
+            g.strokeStyle = `rgba(255,209,102,${a.toFixed(3)})`;
             g.beginPath();
             for (let i = 0; i < segs.length; i += 2) {
                 const p1 = S(segs[i][0], segs[i][1], segs[i][2]);
@@ -1916,19 +1906,8 @@ function drawTrack(rows) {
             }
             g.stroke();
         });
-        if (flat.length) {
-            g.strokeStyle = 'rgba(148,163,184,0.5)';
-            g.beginPath();
-            for (let i = 0; i < flat.length; i += 2) {
-                const p1 = S(flat[i][0], flat[i][1], flat[i][2]);
-                const p2 = S(flat[i + 1][0], flat[i + 1][1], flat[i + 1][2]);
-                g.moveTo(p1[0], p1[1]);
-                g.lineTo(p2[0], p2[1]);
-            }
-            g.stroke();
-        }
     } else {
-        g.strokeStyle = 'rgba(148,163,184,0.5)';
+        g.strokeStyle = 'rgba(255,209,102,0.85)';
         for (const path of allPaths) strokePath(g, path, S, 0, path.length - 1);
     }
 
@@ -2044,7 +2023,10 @@ function buildFacts(rows, geo) {
         f.push(`Nobody drew this map. The cars traced it themselves, ${geo.total.toLocaleString()} positions so far`);
     }
     if (geo.relief && geo.climb >= 15) {
-        f.push(`${geo.climb} m between its highest and lowest points, shaded by height`);
+        // Said plainly now. The track used to be shaded by height and this
+        // line pointed at that; the landscape under it carries the elevation
+        // instead, and the circuit is one colour.
+        f.push(`${geo.climb} m between its highest and lowest points`);
     }
     if (Number(geo.km) > 0) f.push(`About ${geo.km} km from end to end`);
 
