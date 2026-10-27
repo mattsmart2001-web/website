@@ -1662,8 +1662,15 @@ function drawTrack(rows) {
                 const dk = Math.min(DEPTHS - 1, Math.floor(depth * DEPTHS));
                 // Height, light and both fades in one number, so that none of
                 // them costs a fill.
+                //
+                // Height carries more of it than the flat floor it replaced.
+                // A constant floor lit every valley as brightly as the ridge
+                // above it, which is the one thing that stops a relief
+                // reading as relief: low ground should go towards the dark
+                // whatever the light is doing to it, so the eye reads depth
+                // from the altitude as well as from the shading.
                 const tone = Math.min(TONES - 1, Math.max(0, Math.floor(
-                    (0.12 + 0.30 * t + 0.58 * sh) * edge * (0.45 + 0.55 * depth) * TONES)));
+                    (0.03 + 0.42 * t + 0.55 * sh) * edge * (0.45 + 0.55 * depth) * TONES)));
                 const key = dk * TONES + tone;
                 let bucket = cells.get(key);
                 if (!bucket) cells.set(key, bucket = []);
@@ -1676,8 +1683,14 @@ function drawTrack(rows) {
             // the circuit against, not scenery to look at instead of it. A
             // first attempt ran to a mid grey and the landscape took the page
             // over, which is the opposite of what shading it was meant to do.
-            const col = `rgb(${Math.round(10 + 32 * b)},${Math.round(13 + 36 * b)},`
-                      + `${Math.round(18 + 44 * b)})`;
+            // The span matters as much as the top of it. Dimming the peak and
+            // darkening the valleys at the same time squeezed the whole
+            // landscape into sixteen greys above the background and the lit
+            // ridges lost their punch, so the top goes back up while the
+            // altitude weighting above keeps the average down where it
+            // belongs. Turning the mass down is not the same as flattening it.
+            const col = `rgb(${Math.round(9 + 30 * b)},${Math.round(12 + 34 * b)},`
+                      + `${Math.round(17 + 43 * b)})`;
             g.fillStyle = col;
             g.strokeStyle = col;
             g.lineWidth = 1;
