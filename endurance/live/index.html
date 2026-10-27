@@ -1644,9 +1644,17 @@ function drawTrack(rows) {
                 // is cheaper and smoother than anything stored per point.
                 const dzdx = (h10 + h11 - h00 - h01) / 2;
                 const dzdz = (h01 + h11 - h00 - h10) / 2;
+                // Gentle ground gets gentle shading, but "gentle" has to be
+                // measured against the ground there actually is. The first
+                // figure here saturated at a 22% slope, which left the median
+                // Eifel cell at half shading and the landscape nearly flat;
+                // measured, half the cells change by 16 m across 150 and a
+                // tenth by 36, so saturating at 18 m puts the middle of the
+                // range at full strength while leaving the drop into the
+                // Adenau valley somewhere to go.
                 const sh = (dzdx === 0 && dzdz === 0) ? 0.5
                     : 0.5 + 0.5 * Math.cos(Math.atan2(dzdz, dzdx) - LIGHT_FROM)
-                          * Math.min(1, Math.hypot(dzdx, dzdz) / (R.step * 0.22));
+                          * Math.min(1, Math.hypot(dzdx, dzdz) / (R.step * 0.12));
                 const t = Math.max(0, Math.min(1,
                     ((h00 + h10 + h01 + h11) / 4 - minY) / hSpan));
                 const q = world(xm, zm, (h00 + h10 + h01 + h11) / 4);
