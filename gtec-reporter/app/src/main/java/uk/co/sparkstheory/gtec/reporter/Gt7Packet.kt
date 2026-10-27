@@ -50,9 +50,12 @@ object Gt7Packet {
 
     /**
      * `positionInRace` and `numCars` come from offsets the connector's own
-     * source marks as needing confirmation on a real capture. The app sends
-     * them anyway, and the server treats them as optional, so a wrong offset
-     * degrades the running order rather than breaking the map.
+     * source marks as needing confirmation on a real capture, and they are
+     * decoded here but NOT sent: Beacon.kt puts neither in the payload, and
+     * the server has no column for them. Confirm the offsets against a real
+     * race before wiring them up — GT7's own position counts every car in
+     * the lobby, including those with no reporter running, which is what a
+     * true running order and live points would need.
      */
     const val KNOWN_UNVERIFIED = "positionInRace(0x84), numCars(0x86)"
 
