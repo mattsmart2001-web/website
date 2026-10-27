@@ -1290,7 +1290,12 @@ function bindMapControls() {
         // deltaMode 1 is lines rather than pixels, which a few mice still use.
         const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
         zoomAt(sx, sy, Math.exp(-d * 0.0022));
-        mapWasTurned();
+        // Deliberately does NOT dismiss the hint. The map swallows the wheel,
+        // so somebody scrolling the page with the cursor over it zooms by
+        // accident, and counting that as "they have worked out how to turn
+        // it" retires the hint for good without them having learned anything.
+        // Only turning it counts, or a pinch, which is the gesture the hint
+        // asks for on a touchscreen.
     }, { passive: false });
 
     // Mouse drag to pan. Pointer capture so a drag that leaves the canvas
