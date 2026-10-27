@@ -1123,6 +1123,9 @@ const DEPTH_FADE = 0.55;
 // of the three and the cheapest: the segments are already stroked a depth
 // bucket at a time, so a width per bucket costs nothing at all.
 const DEPTH_WIDTH = [0.55, 1.45];
+// How many steps the terrain's fade is quantised into. Eight is invisible on
+// a hairline and turns thousands of strokes into dozens.
+const FADE_STEPS = 8;
 let view = { scale: 1, x: 0, y: 0 };
 let view3d = false;
 let yaw = 0.6, tilt = 0.8;
@@ -1417,25 +1420,94 @@ function drawTrack(rows) {
     // contours would be a second set of lines competing with the track for
     // attention and telling a reader nothing they can use.
     //
-    // Deliberately NOT part of the fit above. The contours reach 700 m past
-    // the circuit on every side, so framing them would shrink the track by a
-    // third to show hills nobody is racing on. They are drawn where they fall
-    // and clipped by the canvas.
+    // Deliberately NOT part of the fit above. The contours reach a couple of
+    // kilometres past the circuit on every side, so framing them would shrink
+    // the track to a scribble to show hills nobody is racing on. They are
+    // drawn where they fall, and the ones off the edge are dropped.
     if (view3d && terrain) {
-        g.lineWidth = 1;
+        // Faded three ways, so the landscape has no edge to find. The file is
+        // a disc rather than a square, which removes the corners; this takes
+        // the rim of that disc down to nothing, so there is no line where the
+        // ground stops however far you turn it.
+        //
+        // Drawn segment by segment rather than as one path per contour,
+        // because the fade varies along a contour: a line that runs from the
+        // near side to the far side of the circuit is nearly invisible at one
+        // end and clear at the other, which is what distance looks like.
+        const tc = terrain.centre || [0, 0];
+        const tr = terrain.radius_m || 0;
+        const dSpan = Math.max(1, maxV - minV);
+        const fade = new Map();
+        // Most of the landscape is off the edge of the canvas at any one
+        // moment, and there is no point shading ground nobody can see. The
+        // margin is generous so that a line entering the frame is already
+        // being drawn by the time its first point arrives.
+        const offW = -80, offE = w + 80, offN = -80, offS = h + 80;
         for (const line of terrain.lines) {
             const pts = line.p;
             if (pts.length < 2) continue;
+            // The whole contour off one edge of the frame: four corners
+            // instead of two hundred points. Perspective keeps a box convex,
+            // so a box entirely past one edge has nothing inside the frame.
+            if (line.b) {
+                const [x0, z0, x1, z1] = line.b;
+                let bw = Infinity, be = -Infinity, bn = Infinity, bs = -Infinity;
+                for (const c of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) {
+                    const s = S(c[0], c[1], line.h);
+                    if (s[0] < bw) bw = s[0]; if (s[0] > be) be = s[0];
+                    if (s[1] < bn) bn = s[1]; if (s[1] > bs) bs = s[1];
+                }
+                if (be < offW || bw > offE || bs < offN || bn > offS) continue;
+            }
             // Higher ground a little brighter, the same idea as the track's
             // own shading, so the eye reads the landscape as rising.
             const t = Math.max(0, Math.min(1, (line.h - minY) / Math.max(1, maxY - minY)));
-            g.strokeStyle = `rgba(${Math.round(90 + 60 * t)},${Math.round(105 + 55 * t)},${Math.round(125 + 40 * t)},0.33)`;
-            g.beginPath();
-            let a = S(pts[0][0], pts[0][1], line.h);
-            g.moveTo(a[0], a[1]);
+            const col = `${Math.round(90 + 60 * t)},${Math.round(105 + 55 * t)},${Math.round(125 + 40 * t)}`;
+            let prev = S(pts[0][0], pts[0][1], line.h);
+            let prevW = pts[0];
             for (let i = 1; i < pts.length; i++) {
-                const b = S(pts[i][0], pts[i][1], line.h);
-                g.lineTo(b[0], b[1]);
+                const cur = S(pts[i][0], pts[i][1], line.h);
+                const wp = pts[i];
+                const a0 = prev, prevPt = prevW;
+                prev = cur; prevW = wp;
+                if ((a0[0] < offW && cur[0] < offW) || (a0[0] > offE && cur[0] > offE)
+                 || (a0[1] < offN && cur[1] < offN) || (a0[1] > offS && cur[1] > offS)) continue;
+                // How near the rim this bit of ground is. The outer third of
+                // the disc fades out.
+                let edge = 1;
+                if (tr) {
+                    const r = Math.hypot((wp[0] + prevPt[0]) / 2 - tc[0],
+                                         (wp[1] + prevPt[1]) / 2 - tc[1]) / tr;
+                    edge = Math.max(0, Math.min(1, (1 - r) / 0.34));
+                }
+                // And how far from the viewer, which is the haze. Measured
+                // the same way the track's own depth fade is, so the ground
+                // and the circuit on it recede together.
+                const q = world(wp[0], wp[1], line.h);
+                const depth = Math.max(0, Math.min(1, (q[2] - minV) / dSpan));
+                const alpha = 0.40 * edge * (0.25 + 0.75 * depth);
+                if (alpha > 0.012) {
+                    // Collected into a few steps rather than stroked one at a
+                    // time. A stroke per segment came to 3,727 of them and
+                    // 5.7 ms, which a drag would feel; eight steps of fade are
+                    // invisible on a hairline and cost a stroke each.
+                    const step = Math.min(FADE_STEPS - 1, Math.floor(alpha / 0.40 * FADE_STEPS));
+                    const key = col + '|' + step;
+                    let bucket = fade.get(key);
+                    if (!bucket) fade.set(key, bucket = []);
+                    bucket.push(a0[0], a0[1], cur[0], cur[1]);
+                }
+            }
+        }
+        for (const [key, segs] of fade) {
+            const [col2, step] = key.split('|');
+            const k = (Number(step) + 0.5) / FADE_STEPS;
+            g.strokeStyle = `rgba(${col2},${(0.40 * k).toFixed(3)})`;
+            g.lineWidth = 0.7 + 0.8 * k;
+            g.beginPath();
+            for (let i = 0; i < segs.length; i += 4) {
+                g.moveTo(segs[i], segs[i + 1]);
+                g.lineTo(segs[i + 2], segs[i + 3]);
             }
             g.stroke();
         }
@@ -1740,6 +1812,18 @@ async function loadTerrain(circuitName) {
         if (!r.ok) return;
         const d = await r.json();
         if (Array.isArray(d.lines)) {
+            // A box round each contour, worked out once. Most of the landscape
+            // is off the edge of the canvas at any one angle, and four corners
+            // is a far cheaper way to find that out than projecting the two
+            // hundred points of a contour that is nowhere near the frame.
+            for (const line of d.lines) {
+                let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+                for (const p of line.p) {
+                    if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0];
+                    if (p[1] < z0) z0 = p[1]; if (p[1] > z1) z1 = p[1];
+                }
+                line.b = [x0, z0, x1, z1];
+            }
             terrain = d;
             // Credit where it is due, and only while it is on screen.
             const c = document.getElementById('terrain-credit');

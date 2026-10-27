@@ -284,7 +284,10 @@ def main():
     ap.add_argument("--name", required=True, help="circuit slug for the output file")
     ap.add_argument("--out", required=True)
     ap.add_argument("--interval", type=float, default=25.0, help="contour spacing, metres")
-    ap.add_argument("--margin", type=float, default=700.0, help="how far beyond the circuit")
+    ap.add_argument("--margin", type=float, default=2500.0,
+                    help="how far beyond the circuit to sample")
+    ap.add_argument("--square", action="store_true",
+                    help="keep the sampled square instead of clipping to a circle")
     ap.add_argument("--grid", type=float, default=25.0, help="sampling step, metres")
     ap.add_argument("--zoom", type=int, default=13)
     ap.add_argument("--simplify", type=float, default=6.0)
@@ -305,8 +308,16 @@ def main():
         raise SystemExit("no points in that CSV")
 
     xs = [p[0] for p in pts]; zs = [p[1] for p in pts]
-    minx, maxx = min(xs) - a.margin, max(xs) + a.margin
-    minz, maxz = min(zs) - a.margin, max(zs) + a.margin
+    cx = (min(xs) + max(xs)) / 2.0
+    cz = (min(zs) + max(zs)) / 2.0
+    # A square about the circuit rather than a rectangle hugging it, because
+    # the output is clipped to the circle inscribed in this region: from a
+    # rectangle that circle reaches the asked-for margin only on the short
+    # axis and falls short at the ends of a long circuit, which is exactly
+    # where a reader is most likely to notice the ground running out.
+    half = max(max(xs) - cx, max(zs) - cz) + a.margin
+    minx, maxx = cx - half, cx + half
+    minz, maxz = cz - half, cz + half
     nx = int((maxx - minx) / a.grid) + 1
     nz = int((maxz - minz) / a.grid) + 1
     print(f"circuit spans {max(xs)-min(xs):.0f} x {max(zs)-min(zs):.0f} m, "
@@ -354,19 +365,46 @@ def main():
     while lv <= hi_h:
         levels.append(lv); lv += a.interval
 
+    # Clipped to the circle inscribed in that square. A square has corners,
+    # and rotating the map brings them into view as a hard straight edge where
+    # the contours stop. A disc has no such edge from any angle, and the page
+    # fades the outer part of it to nothing.
+    radius = 0.0 if a.square else half
+
+    def clip(line):
+        """Runs of the line that lie inside the circle, as separate lines."""
+        if not radius:
+            return [line]
+        runs, cur = [], []
+        for p in line:
+            if math.hypot(p[0] - cx, p[1] - cz) <= radius:
+                cur.append(p)
+            elif cur:
+                runs.append(cur); cur = []
+        if cur:
+            runs.append(cur)
+        return runs
+
     out, total = [], 0
     for lv in levels:
-        lines = stitch(contours(grid, minx, minz, a.grid, lv))
-        for ln in lines:
-            s = simplify(ln, a.simplify)
-            if len(s) >= 2:
-                out.append({"h": round(lv - offset, 1),
-                            "p": [[round(p[0], 1), round(p[1], 1)] for p in s]})
-                total += len(s)
+        for ln in stitch(contours(grid, minx, minz, a.grid, lv)):
+            for piece in clip(ln):
+                s = simplify(piece, a.simplify)
+                if len(s) >= 2:
+                    out.append({"h": round(lv - offset, 1),
+                                "p": [[round(p[0], 1), round(p[1], 1)] for p in s]})
+                    total += len(s)
     print(f"{len(levels)} contour levels, {len(out)} lines, {total:,} points")
+    if radius:
+        print(f"clipped to a circle of radius {radius:.0f} m about "
+              f"({cx:.0f}, {cz:.0f}) in GT7 coordinates")
 
     doc = {"circuit": a.name, "interval_m": a.interval,
            "y_offset_m": round(offset, 1),
+           # The page fades the outer part of this disc to nothing, so it
+           # needs to know where the middle is and how far it reaches.
+           "centre": [round(cx, 1), round(cz, 1)],
+           "radius_m": round(radius, 1),
            "note": "Heights are in GT7's own vertical frame, matching live_track_path.y",
            "attribution": ATTRIBUTION, "lines": out}
     with open(a.out, "w") as fh:
