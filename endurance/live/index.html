@@ -809,15 +809,14 @@ let baseFetchedAt = 0;
 let baseServerPoints = 0;
 let baseArmed = false;
 // Per car. Only needed in full while the cars ARE the map, which is before
-// the server's outline has been captured. Once there is an outline the trail
-// is all that gets drawn, so the history is trimmed to just over it: sixty
-// cars holding 4,000 points each is 240,000 points of browser memory earning
-// nothing.
+// the server's outline has been captured. Once there is an outline nothing of
+// a car's history is drawn at all, so it is trimmed to a short tail: enough to
+// keep the car inside the frame and to tell a drive from a teleport, and no
+// more. Sixty cars holding 4,000 points each is 240,000 points of browser
+// memory earning nothing.
 const PATH_MAX = 4000;
 const PATH_KEEP_WITH_OUTLINE = 48;
 const RELIEF_BANDS = 12;          // height bands; see the banded shading below
-const TRAIL_LEN = 14;             // how much of the tail is drawn bright
-const TRAIL_STEPS = 4;            // alpha steps along it; see the trail drawing
 // Two points further apart than this are not consecutive track: a car has
 // been reset to the pits, or its reporter dropped out for a while. Joining
 // them would draw a line straight across the infield.
@@ -1338,9 +1337,11 @@ function drawTrack(rows) {
     // has been captured the cars are still the only map there is, so they draw
     // it then.
     const allPaths = baseLoop.length ? [baseLoop] : [...carPaths.values()];
-    const total = basePath.length
-        ? basePath.length + [...carPaths.values()].reduce((n, p) => n + Math.min(p.length, TRAIL_LEN + 1), 0)
-        : allPaths.reduce((n, p) => n + p.length, 0);
+    // How many positions the picture is made of, which is also what the note
+    // beside the title reports. With an outline that is the outline: the cars'
+    // own histories are no longer drawn, so counting them in would inflate the
+    // figure by whatever each car happened to be holding.
+    const total = basePath.length || allPaths.reduce((n, p) => n + p.length, 0);
 
     if (total < 2) {
         // Nothing to say yet, and the cycle must not paint over it.
@@ -1644,44 +1645,16 @@ function drawTrack(rows) {
         const dim = (focusedSplit !== null && String(r.lobby_number ?? 0) !== focusedSplit)
                  || (hoveredDriver !== null && !hot);
         const col = carColour(r);
-        // The tail fades, which needs a different alpha along its length, but
-        // not a different alpha per segment: a stroke each cost 14 canvas
-        // calls per car, 840 across a full grid, and the map is redrawn on
-        // every pointer move while dragging. Four steps are indistinguishable
-        // on a 3px line and cost four.
-        // A car in the menus keeps beaconing, so it is still a live row and
-        // its dot moves to the pit box, but nothing is recorded for its trail
-        // while it is away. The trail therefore sat on the circuit, bright,
-        // at the last place the car actually was, while the car itself was
-        // somewhere else: a tail with no car on the end of it. It comes back
-        // when the driver does.
-        const path = r.on_track ? (carPaths.get(r.driver_id) || []) : [];
-        const from = Math.max(0, path.length - 1 - TRAIL_LEN);
-        const n = path.length - 1 - from;
-        if (n > 0) {
-            g.strokeStyle = col;
-            g.lineWidth = 3 * zw;
-            const per = Math.ceil(n / TRAIL_STEPS);
-            for (let step = 0; step < TRAIL_STEPS; step++) {
-                const lo = from + step * per;
-                const hi = Math.min(path.length - 1, lo + per);
-                if (lo >= hi) break;
-                g.globalAlpha = dim ? 0.08
-                    : 0.15 + 0.7 * ((step + 0.5) / TRAIL_STEPS);
-                g.beginPath();
-                let drew = false;
-                for (let i = lo; i < hi; i++) {
-                    const a = path[i], b = path[i + 1];
-                    if (b[3] || Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
-                    const p1 = S(a[0], a[1], a[2]), p2 = S(b[0], b[1], b[2]);
-                    g.moveTo(p1[0], p1[1]);
-                    g.lineTo(p2[0], p2[1]);
-                    drew = true;
-                }
-                if (drew) g.stroke();
-            }
-        }
-        g.globalAlpha = 1;
+        // No tail behind the car any more. It was never decoration: before a
+        // circuit had a traced outline, the accumulated car paths WERE the
+        // map, and the bright end of each one was simply the live part of it.
+        // With an outline and terrain under it the tail is a leftover from
+        // the version of this page that had neither, and it brought its own
+        // failure modes with it: a line drawn across the infield to the pit
+        // box, and a tail left stranded on the circuit by a driver who quit.
+        //
+        // carPaths stays. On a circuit nobody has traced yet it is still the
+        // whole map, which is what `allPaths` falls back to.
         g.globalAlpha = dim ? 0.3 : (r.on_track ? 1 : 0.35);
         // A ring round the hovered car, drawn under its dot. Wide and pale
         // in the car's own colour, so it reads against the gold line and
