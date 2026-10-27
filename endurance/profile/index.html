@@ -748,6 +748,14 @@
     </div>
 
 
+    <!-- Lap log: the driver's own race laps, kept since the log went in -->
+    <div class="card" id="card-my-laps" style="display:none">
+        <div class="card-title">Lap Log</div>
+        <div class="results-list" id="my-laps-list"></div>
+        <div class="field-hint" id="my-laps-note" style="font-size:0.72rem;color:var(--muted);margin-top:0.75rem;line-height:1.6"></div>
+    </div>
+
+
     <!-- Split journey -->
     <div class="card" id="card-split-journey" style="display:none">
         <div class="card-title">Split Journey</div>
@@ -2169,6 +2177,55 @@ async function loadRecentResults(driverId) {
 }
 
 // ============================================================
+// Lap Log — this driver's own race laps.
+//
+// Race only. Practice is recorded too, and is useful for a circuit record
+// and for form over a season, but a practice window that runs every night
+// would bury the one round they actually raced.
+//
+// The rank is within their own split, so a driver in split 7 is not being
+// measured against split 1, and it is labelled as a rank among the cars
+// that were REPORTING rather than as a finishing position, because that is
+// all it is: the rest of the grid may not have been paired.
+// ============================================================
+async function loadMyLaps() {
+    const { data, error } = await sb.rpc('my_lap_rounds');
+    if (error || !data?.length) return;
+    document.getElementById('card-my-laps').style.display = '';
+
+    document.getElementById('my-laps-list').innerHTML = data.map(r => {
+        const spread = r.spread_ms != null ? (r.spread_ms / 1000).toFixed(2) + 's' : '—';
+        const rank = r.split_cars > 1
+            ? `<span class="result-pts" title="Fastest lap among the ${r.split_cars} cars in your split that were reporting. Not a finishing position.">P${r.best_rank} of ${r.split_cars} on pace</span>`
+            : '';
+        return `
+        <a class="result-row" href="/endurance/laps/?round=${encodeURIComponent(r.round)}">
+            <div class="result-info">
+                <div class="result-name">${esc(r.name || '—')}</div>
+                <div class="result-meta">Round ${r.round ?? '—'} · ${r.laps} lap${r.laps === 1 ? '' : 's'}
+                    · best ${lapMs(r.best_ms)} · median ${lapMs(r.median_ms)}
+                    · ${spread} spread over ${r.clean_laps} clean</div>
+            </div>
+            ${rank}
+        </a>`;
+    }).join('');
+
+    const note = document.getElementById('my-laps-note');
+    if (note) note.textContent = 'Your own laps, as your reporter sent them. '
+        + 'Spread is how tightly your clean laps clustered, which over six hours '
+        + 'says more than one quick lap. Tap a round for the full chart.';
+}
+
+/** Lap times arrive as milliseconds. */
+function lapMs(ms) {
+    if (ms == null || ms <= 0) return '—';
+    const t = Math.round(ms / 10) / 100;
+    const m = Math.floor(t / 60);
+    const sec = (t - m * 60).toFixed(2).padStart(5, '0');
+    return m > 0 ? `${m}:${sec}` : sec;
+}
+
+// ============================================================
 // Stewards & Incidents — file an on-track dispute, see its status.
 // Clips are links only (no upload); visibility is stewards-private, so
 // this only ever shows incidents THIS driver filed.
@@ -2476,6 +2533,7 @@ async function init() {
     loadHostScreenshots(driver.id);
     initPushUI(driver.id);
     loadRecentResults(driver.id);
+    loadMyLaps();
     loadIncidents(driver.id);
     loadSplitJourney(driver.id);
     // Stamp "last seen" for the admin roster view (fire and forget).
