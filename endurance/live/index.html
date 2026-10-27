@@ -82,7 +82,7 @@
            without calibration. */
         .map-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; margin-top: 2rem; overflow: hidden; }
         .map-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
-        .map-title { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+        .map-title { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); flex: 0 0 auto; }
         /* The note rotates through facts, so it fades rather than snapping.
            Width is reserved by the flex row, not by the text, so a longer
            fact cannot shuffle the title next to it. */
@@ -91,6 +91,13 @@
         @media (prefers-reduced-motion: reduce) {
             .map-note { transition: none; }
             .map-note.fading { opacity: 1; }
+        }
+        /* On a phone the title now carries the split as well, which leaves
+           the rotating note too little room to sit beside it. It drops to a
+           line of its own instead of squeezing the two things that matter. */
+        @media (max-width: 560px) {
+            .map-head { flex-wrap: wrap; }
+            .map-note { order: 3; flex-basis: 100%; text-align: left; }
         }
         /* pan-y leaves one-finger vertical scrolling to the page, so the map
            cannot trap a reader halfway down it. Two fingers come to us. */
@@ -633,7 +640,7 @@ function renderField(rows) {
         <div class="splits" id="live-splits"></div>
         <div class="map-card">
             <div class="map-head">
-                <span class="map-title">Track Map</span>
+                <span class="map-title" id="map-title">Track Map</span>
                 <span class="map-note" id="map-note"></span>
                 <span class="map-zoom">
                     <button type="button" id="zoom-out" aria-label="Zoom out" title="Zoom out">&minus;</button>
@@ -684,6 +691,29 @@ function renderField(rows) {
 
     set('live-splits', lobbies.map(l => splitHtml(l, byLobby.get(l), showFuel)).join(''));
     bindDriverCards();
+    setMapTitle();
+}
+
+/** Which split the map is showing, in the map's own title.
+ *
+ *  It used to be one of the facts rotating beside the title, which meant a
+ *  viewer who picked a split and then watched for five minutes had to wait
+ *  for it to come round again to remember which one they were watching. The
+ *  title holds still, so that is where it belongs. The tooltip says how to
+ *  get back, because somebody who has forgotten what they clicked has also
+ *  forgotten how to unclick it. */
+function setMapTitle() {
+    const el = document.getElementById('map-title');
+    if (!el) return;
+    if (focusedSplit === null) {
+        el.textContent = 'Track Map';
+        el.removeAttribute('title');
+        return;
+    }
+    const name = focusedSplit === '0' ? 'Unassigned' : 'Split ' + focusedSplit;
+    el.innerHTML = `Track Map <span class="map-only">&middot; ${esc(name)}</span>`;
+    el.title = `The map is showing ${focusedSplit === '0' ? 'unassigned cars' : name} only. `
+             + `Click that heading in the list above to put every split back on the map.`;
 }
 
 // ---------------------------------------------------------------
@@ -1711,9 +1741,10 @@ let circuitAsked = null;       // event id we already looked the record up for
 function buildFacts(rows, geo) {
     const f = [];
 
-    if (focusedSplit !== null) {
-        f.push(`Showing ${focusedSplit === '0' ? 'unassigned' : 'Split ' + focusedSplit} only`);
-    }
+    // Which split is on the map used to be a fact here, and it was the wrong
+    // place for it: the notes rotate, and a viewer needs to know which split
+    // they are watching at any moment rather than every twentieth second. It
+    // is in the map's title now, which holds still.
 
     // The point most people miss: this is not a stock graphic. The drivers
     // drew it, tonight, by driving round it.
