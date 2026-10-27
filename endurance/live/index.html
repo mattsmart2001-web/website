@@ -648,6 +648,10 @@ function renderField(rows) {
             Only drivers who have paired a reporter appear here, so this is part of the grid rather than all of it.
             ${ev?.mode === 'race' ? 'Order is by laps completed.' : 'Order is by best lap.'}<br>
             Racing in GTEC? <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
+            <span id="terrain-credit" hidden><br>Terrain from SRTM via
+            <a href="https://registry.opendata.aws/terrain-tiles/">AWS Open Data</a>;
+            the circuit's position on the map was fitted against
+            <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> (ODbL).</span>
         </div>
     </div>`;
     }
@@ -1408,6 +1412,35 @@ function drawTrack(rows) {
     g.lineJoin = 'round';
     g.lineCap = 'round';
 
+    // The ground, before anything else and faintly, so the circuit sits on a
+    // landscape rather than in a void. Only when tilted: on the flat map the
+    // contours would be a second set of lines competing with the track for
+    // attention and telling a reader nothing they can use.
+    //
+    // Deliberately NOT part of the fit above. The contours reach 700 m past
+    // the circuit on every side, so framing them would shrink the track by a
+    // third to show hills nobody is racing on. They are drawn where they fall
+    // and clipped by the canvas.
+    if (view3d && terrain) {
+        g.lineWidth = 1;
+        for (const line of terrain.lines) {
+            const pts = line.p;
+            if (pts.length < 2) continue;
+            // Higher ground a little brighter, the same idea as the track's
+            // own shading, so the eye reads the landscape as rising.
+            const t = Math.max(0, Math.min(1, (line.h - minY) / Math.max(1, maxY - minY)));
+            g.strokeStyle = `rgba(${Math.round(90 + 60 * t)},${Math.round(105 + 55 * t)},${Math.round(125 + 40 * t)},0.33)`;
+            g.beginPath();
+            let a = S(pts[0][0], pts[0][1], line.h);
+            g.moveTo(a[0], a[1]);
+            for (let i = 1; i < pts.length; i++) {
+                const b = S(pts[i][0], pts[i][1], line.h);
+                g.lineTo(b[0], b[1]);
+            }
+            g.stroke();
+        }
+    }
+
     // The track itself: every car's whole path, joined into lines. Drawn
     // segment by segment when there is elevation to colour by, and in one
     // pass when there is not.
@@ -1671,6 +1704,38 @@ function nextFact() {
     setTimeout(() => { paintFact(); note.classList.remove('fading'); }, 450);
 }
 
+// Contour lines for the ground around a circuit, baked once per circuit by
+// tools/terrain_contours.py and shipped as a static file. Keyed by the
+// circuit's name because that is what the events table holds; a circuit with
+// no file simply gets no terrain.
+//
+// The heights in the file are in GT7's own vertical frame, already matching
+// live_track_path.y, so nothing here has to know about sea level.
+const TERRAIN = {
+    'Nürburgring Nordschleife - 24h Layout': 'nurburgring-24h',
+};
+let terrain = null, terrainAsked = null;
+
+async function loadTerrain(circuitName) {
+    const slug = TERRAIN[circuitName];
+    if (!slug || terrainAsked === slug) return;
+    terrainAsked = slug;
+    try {
+        const r = await fetch(`/endurance/assets/terrain/${slug}.json`);
+        if (!r.ok) return;
+        const d = await r.json();
+        if (Array.isArray(d.lines)) {
+            terrain = d;
+            // Credit where it is due, and only while it is on screen.
+            const c = document.getElementById('terrain-credit');
+            if (c) c.hidden = false;
+            if (lastRows) drawTrack(lastRows);
+        }
+    } catch (_) {
+        // No terrain is a missing backdrop, not a broken map.
+    }
+}
+
 /** The circuit's GTEC record and this season's form, looked up once per
  *  round. Both are public views, so this needs no migration and no sign-in. */
 async function loadCircuitRecord(eventId) {
@@ -1686,6 +1751,7 @@ async function loadCircuitRecord(eventId) {
                 .maybeSingle();
             if (rec) circuitRecord = rec;
         }
+        if (ev?.circuit_name) loadTerrain(ev.circuit_name);
         if (ev?.season_id) await loadDriverCards(ev.season_id);
     } catch (_) {
         // A missing record is not worth a broken map.
