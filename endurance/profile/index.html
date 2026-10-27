@@ -2190,10 +2190,27 @@ async function loadRecentResults(driverId) {
 // ============================================================
 async function loadMyLaps() {
     const { data, error } = await sb.rpc('my_lap_rounds');
-    if (error || !data?.length) return;
-    document.getElementById('card-my-laps').style.display = '';
+    if (error) return;                       // a broken card is worse than none
+    const card = document.getElementById('card-my-laps');
+    const list = document.getElementById('my-laps-list');
+    const note = document.getElementById('my-laps-note');
+    card.style.display = '';
 
-    document.getElementById('my-laps-list').innerHTML = data.map(r => {
+    // Shown even with nothing in it. Hidden, a driver who has heard about
+    // this goes looking, finds no card at all and concludes it is broken or
+    // that they have missed it; and there is no sign anywhere that pairing a
+    // reporter is what fills it. An empty card says both.
+    if (!data?.length) {
+        list.innerHTML = '';
+        note.innerHTML = 'Your race laps will appear here after your next round: '
+            + 'every lap you complete, your best, and how tightly your laps cluster. '
+            + 'Laps are recorded by the reporter app, so if you have not paired one yet, '
+            + '<a href="#account" onclick="showTab(\'account\');return false;" '
+            + 'style="color:var(--gold);font-weight:600">set it up in your Account tab</a>.';
+        return;
+    }
+
+    list.innerHTML = data.map(r => {
         const spread = r.spread_ms != null ? (r.spread_ms / 1000).toFixed(2) + 's' : '—';
         const rank = r.split_cars > 1
             ? `<span class="result-pts" title="Fastest lap among the ${r.split_cars} cars in your split that were reporting. Not a finishing position.">P${r.best_rank} of ${r.split_cars} on pace</span>`
@@ -2210,8 +2227,7 @@ async function loadMyLaps() {
         </a>`;
     }).join('');
 
-    const note = document.getElementById('my-laps-note');
-    if (note) note.textContent = 'Your own laps, as your reporter sent them. '
+    note.textContent = 'Your own laps, as your reporter sent them. '
         + 'Spread is how tightly your clean laps clustered, which over six hours '
         + 'says more than one quick lap. Tap a round for the full chart.';
 }
