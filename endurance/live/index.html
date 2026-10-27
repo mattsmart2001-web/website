@@ -1591,6 +1591,104 @@ function drawTrack(rows) {
     // kilometres past the circuit on every side, so framing them would shrink
     // the track to a scribble to show hills nobody is racing on. They are
     // drawn where they fall, and the ones off the edge are dropped.
+    // The ground between the lines, shaded, under the contours that describe
+    // it. Drawn as one quad per cell of a coarse height grid, lit the same way
+    // the contours are and from the same direction, so the two agree.
+    //
+    // Opaque, deliberately. Semi-transparent neighbours sharing an edge blend
+    // twice along it where both are antialiased, and a grid of them shows
+    // every seam; the tone is taken most of the way to the background colour
+    // instead, which looks the same and has no seams. Being opaque also means
+    // the draw order settles what is in front of what, which matters once the
+    // ground has hills in it that can hide the ground behind them.
+    // Most of the landscape is off the edge of the canvas at any one moment,
+    // and there is no point shading ground nobody can see. The margin is
+    // generous so that something entering the frame is already being drawn by
+    // the time its first corner arrives. Shared by the surface and the lines.
+    const offW0 = -80, offE0 = w + 80, offN0 = -80, offS0 = h + 80;
+
+    if (view3d && terrain && terrain.relief && terrain.relief.h) {
+        const R = terrain.relief;
+        const tc0 = terrain.centre || [0, 0];
+        const tr0 = terrain.radius_m || 0;
+        const dSpan0 = Math.max(1, maxV - minV);
+        const hSpan = Math.max(1, maxY - minY);
+        // Keyed by depth first and tone second, so the fills can go back to
+        // front while still being batched: ten depths by twelve tones is at
+        // worst a hundred and twenty fills for the whole landscape, against
+        // one per cell, which would be thousands.
+        const DEPTHS = 10, TONES = 16;
+        const cells = new Map();
+        const hAt = (i, j) => R.h[j * R.nx + i];
+        for (let j = 0; j < R.nz - 1; j++) {
+            for (let i = 0; i < R.nx - 1; i++) {
+                const h00 = hAt(i, j), h10 = hAt(i + 1, j),
+                      h01 = hAt(i, j + 1), h11 = hAt(i + 1, j + 1);
+                if (h00 == null || h10 == null || h01 == null || h11 == null) continue;
+                const x = R.x0 + i * R.step, z = R.z0 + j * R.step;
+                const xm = x + R.step / 2, zm = z + R.step / 2;
+                // Outside the disc, where the file's own contours stop.
+                let edge = 1;
+                if (tr0) {
+                    const r = Math.hypot(xm - tc0[0], zm - tc0[1]) / tr0;
+                    if (r >= 1) continue;
+                    edge = Math.max(0, Math.min(1, (1 - r) / 0.34));
+                }
+                const p00 = S(x, z, h00), p10 = S(x + R.step, z, h10);
+                const p11 = S(x + R.step, z + R.step, h11), p01 = S(x, z + R.step, h01);
+                if ((p00[0] < offW0 && p10[0] < offW0 && p11[0] < offW0 && p01[0] < offW0)
+                 || (p00[0] > offE0 && p10[0] > offE0 && p11[0] > offE0 && p01[0] > offE0)
+                 || (p00[1] < offN0 && p10[1] < offN0 && p11[1] < offN0 && p01[1] < offN0)
+                 || (p00[1] > offS0 && p10[1] > offS0 && p11[1] > offS0 && p01[1] > offS0)) continue;
+                // The cell's own slope, straight from its four corners, which
+                // is cheaper and smoother than anything stored per point.
+                const dzdx = (h10 + h11 - h00 - h01) / 2;
+                const dzdz = (h01 + h11 - h00 - h10) / 2;
+                const sh = (dzdx === 0 && dzdz === 0) ? 0.5
+                    : 0.5 + 0.5 * Math.cos(Math.atan2(dzdz, dzdx) - LIGHT_FROM)
+                          * Math.min(1, Math.hypot(dzdx, dzdz) / (R.step * 0.22));
+                const t = Math.max(0, Math.min(1,
+                    ((h00 + h10 + h01 + h11) / 4 - minY) / hSpan));
+                const q = world(xm, zm, (h00 + h10 + h01 + h11) / 4);
+                const depth = Math.max(0, Math.min(1, (q[2] - minV) / dSpan0));
+                const dk = Math.min(DEPTHS - 1, Math.floor(depth * DEPTHS));
+                // Height, light and both fades in one number, so that none of
+                // them costs a fill.
+                const tone = Math.min(TONES - 1, Math.max(0, Math.floor(
+                    (0.12 + 0.30 * t + 0.58 * sh) * edge * (0.45 + 0.55 * depth) * TONES)));
+                const key = dk * TONES + tone;
+                let bucket = cells.get(key);
+                if (!bucket) cells.set(key, bucket = []);
+                bucket.push(p00, p10, p11, p01);
+            }
+        }
+        for (const key of [...cells.keys()].sort((a, b) => a - b)) {
+            const b = ((key % TONES) + 0.5) / TONES;
+            // Dark, and never far from the background: this is ground to read
+            // the circuit against, not scenery to look at instead of it. A
+            // first attempt ran to a mid grey and the landscape took the page
+            // over, which is the opposite of what shading it was meant to do.
+            const col = `rgb(${Math.round(10 + 32 * b)},${Math.round(13 + 36 * b)},`
+                      + `${Math.round(18 + 44 * b)})`;
+            g.fillStyle = col;
+            g.strokeStyle = col;
+            g.lineWidth = 1;
+            g.beginPath();
+            const quads = cells.get(key);
+            for (let i = 0; i < quads.length; i += 4) {
+                g.moveTo(quads[i][0], quads[i][1]);
+                g.lineTo(quads[i + 1][0], quads[i + 1][1]);
+                g.lineTo(quads[i + 2][0], quads[i + 2][1]);
+                g.lineTo(quads[i + 3][0], quads[i + 3][1]);
+                g.closePath();
+            }
+            g.fill();
+            // The same path stroked in its own colour, which covers the
+            // hairline the antialiasing leaves between neighbours.
+            g.stroke();
+        }
+    }
+
     if (view3d && terrain) {
         // Faded three ways, so the landscape has no edge to find. The file is
         // a disc rather than a square, which removes the corners; this takes
@@ -1605,11 +1703,7 @@ function drawTrack(rows) {
         const tr = terrain.radius_m || 0;
         const dSpan = Math.max(1, maxV - minV);
         const fade = new Map();
-        // Most of the landscape is off the edge of the canvas at any one
-        // moment, and there is no point shading ground nobody can see. The
-        // margin is generous so that a line entering the frame is already
-        // being drawn by the time its first point arrives.
-        const offW = -80, offE = w + 80, offN = -80, offS = h + 80;
+        const offW = offW0, offE = offE0, offN = offN0, offS = offS0;
         for (const line of terrain.lines) {
             const pts = line.p;
             if (pts.length < 2) continue;

@@ -314,6 +314,8 @@ def main():
     ap.add_argument("--grid", type=float, default=25.0, help="sampling step, metres")
     ap.add_argument("--zoom", type=int, default=13)
     ap.add_argument("--simplify", type=float, default=6.0)
+    ap.add_argument("--relief-grid", type=int, default=80,
+                    help="cells across for the shaded surface; 0 for none")
     ap.add_argument("--url", default=TILE_URL)
     a = ap.parse_args()
 
@@ -440,6 +442,29 @@ def main():
         print(f"clipped to a circle of radius {radius:.0f} m about "
               f"({cx:.0f}, {cz:.0f}) in GT7 coordinates")
 
+    # The surface itself, coarsely, so the page can shade between the contour
+    # lines rather than only drawing them. Contours alone cannot be filled:
+    # marching squares gives open polylines, the disc cuts them open again,
+    # and working out which line encloses which to tint the band between them
+    # is a nesting problem that this does not have to solve. A grid of heights
+    # is the same information in the form the page can actually use, one quad
+    # per cell, and a coarse one at that: the relief has nothing in it below a
+    # few hundred metres, so a sample every hundred-odd metres loses nothing a
+    # backdrop needs.
+    gstep = max(1, int(round(nx / a.relief_grid)))
+    gx = list(range(0, nx, gstep))
+    gz = list(range(0, nz, gstep))
+    relief = {
+        "x0": round(minx + 0, 1), "z0": round(minz + 0, 1),
+        "step": round(a.grid * gstep, 2),
+        "nx": len(gx), "nz": len(gz),
+        # In GT7's own vertical frame, like every other height in this file,
+        # and rounded to the metre because a backdrop cannot show better.
+        "h": [int(round(grid[j][i] - offset)) for j in gz for i in gx],
+    }
+    print(f"relief grid {len(gx)} x {len(gz)} at {a.grid * gstep:.0f} m "
+          f"= {len(gx) * len(gz):,} cells")
+
     doc = {"circuit": a.name, "interval_m": a.interval,
            "y_offset_m": round(offset, 1),
            # The page fades the outer part of this disc to nothing, so it
@@ -450,6 +475,8 @@ def main():
            # turn from due east towards south. The page lights the hills with
            # it; a file without it is simply drawn unlit.
            "aspect_steps": ASPECT_STEPS,
+           # The surface between the lines, for the page to shade.
+           "relief": relief,
            "note": "Heights are in GT7's own vertical frame, matching live_track_path.y",
            "attribution": ATTRIBUTION, "lines": out}
     with open(a.out, "w") as fh:
