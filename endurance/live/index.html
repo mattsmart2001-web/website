@@ -104,6 +104,20 @@
         #track { display: block; width: 100%; height: 420px; touch-action: pan-y; cursor: grab; }
         #track.grabbing { cursor: grabbing; }
         @media (max-width: 560px) { #track { height: 300px; } }
+        /* The canvas needs a positioned parent for the hint to sit over it.
+           No padding or background of its own: it is the canvas's frame. */
+        .map-stage { position: relative; }
+        /* How to turn the map, for somebody who has never tried. Sits over
+           the top left of the circuit, which is the emptiest part of a map
+           fitted to a wide box, and goes away for good once they have done
+           it once. Not a button, so it takes no pointer events and cannot
+           swallow the first drag it is asking for. */
+        .map-hint { position: absolute; top: 0.7rem; left: 0.9rem; pointer-events: none;
+                    font-size: 0.66rem; color: var(--muted); letter-spacing: 0.04em;
+                    opacity: 0.85; transition: opacity 0.5s ease; }
+        .map-hint.gone { opacity: 0; }
+        .map-hint kbd { font: inherit; color: var(--text); background: none; border: none; padding: 0; }
+        @media (prefers-reduced-motion: reduce) { .map-hint { transition: none; } }
         /* Buttons as well as gestures: a phone has no scroll wheel, and not
            everyone thinks to try pinching a picture of a racetrack. */
         .map-zoom { display: flex; align-items: center; gap: 0.3rem; }
@@ -649,7 +663,10 @@ function renderField(rows) {
                     <button type="button" class="reset" id="view-3d" aria-pressed="false" aria-label="Tilt the map">3D</button>
                 </span>
             </div>
-            <canvas id="track"></canvas>
+            <div class="map-stage">
+                <canvas id="track"></canvas>
+                <div class="map-hint" id="map-hint" hidden></div>
+            </div>
         </div>
         <div class="foot-note">
             Only drivers who have paired a reporter appear here, so this is part of the grid rather than all of it.
@@ -692,6 +709,7 @@ function renderField(rows) {
     set('live-splits', lobbies.map(l => splitHtml(l, byLobby.get(l), showFuel)).join(''));
     bindDriverCards();
     setMapTitle();
+    setMapHint();
 }
 
 /** Which split the map is showing, in the map's own title.
@@ -733,6 +751,14 @@ function setMapTitle() {
 // every time they open the page, not just this once.
 const collapsedSplits = new Set();
 let focusedSplit = null;        // null means every split
+// Declared here rather than beside the rest of the map's state further down,
+// because the stored preferences are read just below and a `let` cannot be
+// assigned before its declaration. It was down there, the assignment threw a
+// reference error, the catch below swallowed it, and the upshot was that the
+// 3D choice silently reset to flat on every reload for everybody.
+let view3d = true;              // the tilted map is the one worth seeing first
+let viewChosen = false;         // whether the viewer has pressed the button
+let mapTurned = false;          // whether they have worked out how to turn it
 // The driver the pointer is over in the list, so the map can say which dot
 // that is. Pointer only: there is no hover on a phone, and the card that
 // opens on a tap already answers "who is this".
@@ -743,7 +769,13 @@ try {
         const v = JSON.parse(raw);
         (v.collapsed || []).forEach(k => collapsedSplits.add(String(k)));
         focusedSplit = v.focused != null ? String(v.focused) : null;
-        view3d = !!v.view3d;
+        // Absent means they have never pressed the button, which is not the
+        // same as having chosen the flat map. Plenty of viewers have a stored
+        // preference only because they collapsed a split, and reading that as
+        // a decision would leave every one of them on the old default for
+        // good. Only a real press is honoured.
+        if (v.view3d != null) { view3d = !!v.view3d; viewChosen = true; }
+        mapTurned = !!v.turned;
     }
 } catch (e) { /* private window, blocked storage: defaults are fine */ }
 
@@ -753,8 +785,13 @@ function saveSplitPrefs() {
             collapsed: [...collapsedSplits], focused: focusedSplit,
             // Which way up the map was. Not the angle: coming back to a
             // circuit turned to a strange angle you do not remember choosing
-            // is worse than coming back to the default one.
-            view3d,
+            // is worse than coming back to the default one. Left out
+            // altogether until the viewer presses the button, so that the
+            // default can change without overriding anybody's choice.
+            view3d: viewChosen ? view3d : undefined,
+            // Whether they have worked out how to turn it, so the hint stops
+            // appearing once they have.
+            turned: mapTurned || undefined,
         }));
     } catch (e) { /* nothing to do, and nothing depends on it */ }
 }
@@ -1156,7 +1193,7 @@ const DEPTH_WIDTH = [0.55, 1.45];
 // a hairline and turns thousands of strokes into dozens.
 const FADE_STEPS = 8;
 let view = { scale: 1, x: 0, y: 0 };
-let view3d = false;
+// view3d lives up with the stored preferences, which are read before this.
 let yaw = 0.6, tilt = 0.8;
 
 function resetView() {
@@ -1169,12 +1206,17 @@ function resetView() {
 function setView3d(on) {
     if (view3d === on) return;
     view3d = on;
+    // Now it IS a choice, and gets stored as one. Until this, the absence of
+    // a stored value is what lets the default change under a viewer who has
+    // never expressed an opinion either way.
+    viewChosen = true;
     // The fit is computed from the projected shape, which changes completely
     // between flat and tilted, so a pan carried across would point at
     // somewhere else entirely.
     view = { scale: 1, x: 0, y: 0 };
     syncZoomButtons();
     saveSplitPrefs();
+    setMapHint();
     if (lastRows) drawTrack(lastRows);
 }
 
@@ -1237,6 +1279,7 @@ function bindMapControls() {
         // deltaMode 1 is lines rather than pixels, which a few mice still use.
         const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
         zoomAt(sx, sy, Math.exp(-d * 0.0022));
+        mapWasTurned();
     }, { passive: false });
 
     // Mouse drag to pan. Pointer capture so a drag that leaves the canvas
@@ -1256,6 +1299,7 @@ function bindMapControls() {
             // tilted. Panning is given up for it rather than hidden behind a
             // modifier nobody would find: zoom still frames what you want,
             // and Fit is one press away.
+            mapWasTurned();
             yaw += (p[0] - lastPt[0]) * 0.008;
             tilt = Math.min(TILT_MAX, Math.max(TILT_MIN, tilt - (p[1] - lastPt[1]) * 0.005));
         } else {
@@ -1298,6 +1342,7 @@ function bindMapControls() {
         if (pinch.d > 0) zoomAt(m[0], m[1], d / pinch.d);
         else { syncZoomButtons(); if (lastRows) drawTrack(lastRows); }
         pinch = { d, m };
+        mapWasTurned();   // on a touchscreen this is the gesture the hint asks for
     }, { passive: false });
     cv.addEventListener('touchend', () => { pinch = null; }, { passive: true });
 
@@ -1312,6 +1357,49 @@ function bindMapControls() {
     document.getElementById('view-3d')?.addEventListener('click', () => setView3d(!view3d));
 
     syncZoomButtons();
+}
+
+/** How to turn the map, shown over it until the viewer has done it once.
+ *
+ *  Worded by what the device can actually do, which is not the same thing on
+ *  both. A mouse drag turns and tips the circuit; one finger is deliberately
+ *  left to the page so a map halfway down a long page does not trap the
+ *  scroll, so on a touchscreen there is no rotating at all and telling
+ *  somebody to drag would be a lie. Only the flat map is on offer there,
+ *  pinched and panned with two fingers. */
+let hintState = null;
+function setMapHint() {
+    const el = document.getElementById('map-hint');
+    if (!el) return;
+    const show = view3d && !mapTurned;
+    // Called from the poll, so it must not rewrite the DOM twice a second for
+    // no reason.
+    if (hintState === show) return;
+    hintState = show;
+    if (!show) {
+        // Faded rather than cut, then taken out of the layout once it is
+        // invisible, so the first drag does not make it blink out.
+        if (!el.hidden) {
+            el.classList.add('gone');
+            setTimeout(() => { if (el.classList.contains('gone')) el.hidden = true; }, 550);
+        }
+        return;
+    }
+    const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    el.innerHTML = touch
+        ? 'Pinch with two fingers to zoom &middot; <kbd>2D</kbd> for the flat map'
+        : '<kbd>Drag</kbd> to turn and tip &middot; <kbd>Scroll</kbd> to zoom';
+    el.hidden = false;
+    el.classList.remove('gone');
+}
+
+/** They have turned it, so stop telling them how. Remembered per viewer: a
+ *  regular who learned this in practice should not be told again on race day. */
+function mapWasTurned() {
+    if (mapTurned) return;
+    mapTurned = true;
+    saveSplitPrefs();
+    setMapHint();
 }
 
 // How wide a car's number is. Measured once per number rather than once per
