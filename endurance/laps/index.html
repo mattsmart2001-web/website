@@ -349,6 +349,40 @@ function drawChart() {
     // The heading belongs to the chart, not to the page it was rendered on:
     // switching between lap times and fuel redraws the canvas and nothing
     // else, so it was still saying LAP TIMES over a fuel chart.
+    // What the laps off the top actually were. Their height cannot say it:
+    // every one sits on the ceiling, so an 11:03 and a 9:10 are the same
+    // mark and a car with four of them reads as having driven the same lap
+    // four times. Two rows of labels, and one that cannot find room in
+    // either is dropped, since the note already gives the count.
+    if (clipped) {
+        g.font = "9px 'Inter', system-ui, sans-serif";
+        g.textAlign = 'center';
+        g.textBaseline = 'top';
+        const placed = [];
+        for (const s of series) {
+            g.fillStyle = s.row.colour;
+            for (const l of s.pts) {
+                const v = val(l);
+                if (v == null || v <= hi) continue;
+                const text = lapTime(v);
+                const tw = g.measureText(text).width;
+                // Kept inside the plot, or a lap 1 label hangs over the
+                // times running down the left hand edge.
+                const x = Math.min(Math.max(px(l.lap), padL + tw / 2),
+                                   w - padR - tw / 2);
+                let y = null;
+                for (let row = 0; row < 2; row++) {
+                    const ry = padT + 10 + row * 11;
+                    if (!placed.some(p => p.y === ry
+                        && Math.abs(p.x - x) < (p.w + tw) / 2 + 5)) { y = ry; break; }
+                }
+                if (y == null) continue;
+                placed.push({ x, y, w: tw });
+                g.fillText(text, x, y);
+            }
+        }
+    }
+
     const head = document.getElementById('chart-title');
     if (head) head.textContent = metric === 'fuel' ? 'Fuel' : 'Lap Times';
     const note = document.getElementById('chart-note');

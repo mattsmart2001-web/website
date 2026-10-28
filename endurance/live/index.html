@@ -2751,6 +2751,46 @@ function drawLapChart() {
         }
     }
 
+    // What the laps off the top actually were.
+    //
+    // Their height cannot say it. Every one of them sits on the ceiling, so
+    // an 11:03 and a 9:10 are the same mark, and a car with four of them
+    // reads as having driven the same lap four times, joined by a flat line
+    // at a time nobody set. The figure goes beside the mark instead, which
+    // is the only place left to put it.
+    //
+    // Two rows, and a label that cannot find room in either is dropped: the
+    // note beside the heading already says how many went past the top, and a
+    // pile of overlapping numbers would say less than the count does.
+    if (clipped) {
+        g.font = "9px 'Inter', system-ui, sans-serif";
+        g.textAlign = 'center';
+        g.textBaseline = 'top';
+        const placed = [];
+        for (const c of drawn) {
+            g.fillStyle = lapColour(c);
+            for (const l of c.pts) {
+                if (l.lap_ms <= hi) continue;
+                const text = axisTime(l.lap_ms);
+                const tw = g.measureText(text).width;
+                // Kept inside the plot, or a lap 1 label hangs over the
+                // times running down the left hand edge.
+                const x = Math.min(Math.max(px(l.lap), padL + tw / 2),
+                                   w - padR - tw / 2);
+                let y = null;
+                for (let row = 0; row < 2; row++) {
+                    const ry = padT + 10 + row * 11;
+                    const clash = placed.some(p => p.y === ry
+                        && Math.abs(p.x - x) < (p.w + tw) / 2 + 5);
+                    if (!clash) { y = ry; break; }
+                }
+                if (y == null) continue;
+                placed.push({ x, y, w: tw });
+                g.fillText(text, x, y);
+            }
+        }
+    }
+
     if (note) {
         const n = drawn.reduce((t, c) => t + c.pts.length, 0);
         note.textContent = clipped
