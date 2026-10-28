@@ -1265,12 +1265,18 @@ const ASPECT_STEPS = 64;
 // lit slopes round and the hills look like hills rather than like a pattern.
 const LIGHT_FROM = -Math.PI * 0.75;
 let view = { scale: 1, x: 0, y: 0 };
+// Where the tilted map sits when nobody has turned it: a three-quarter view,
+// far enough round to show the circuit has a shape and far enough over to
+// show it has a hillside. Named because three other things have to agree
+// with it, including the opening move below.
+const VIEW_YAW = 0.6, VIEW_TILT = 0.8;
 // view3d lives up with the stored preferences, which are read before this.
-let yaw = 0.6, tilt = 0.8;
+let yaw = VIEW_YAW, tilt = VIEW_TILT;
 
 function resetView() {
     view = { scale: 1, x: 0, y: 0 };
-    yaw = 0.6; tilt = 0.8;
+    yaw = VIEW_YAW; tilt = VIEW_TILT;
+    endIntro();
     syncZoomButtons();
     if (lastRows) drawTrack(lastRows);
 }
@@ -1317,6 +1323,58 @@ function zoomAt(sx, sy, factor) {
     if (lastRows) drawTrack(lastRows);
 }
 
+// ---------------------------------------------------------------
+// The opening move.
+//
+// The map arrives flat, as a plan of the circuit, and over five seconds
+// turns and tips itself into the three-quarter view. It is the one gesture
+// that explains the whole map: the first second says "this is the
+// Nordschleife", the last says "and it is draped over a mountain range".
+// Nothing else on the page can say the second part, and a viewer who never
+// thinks to drag never finds out.
+//
+// Time-based rather than frame-based, so it takes five seconds on anything:
+// a redraw of the real terrain costs ten milliseconds on a desktop and
+// fifteen on a phone, and the phone simply draws fewer frames of the same
+// five seconds rather than a slower animation.
+//
+// It gets out of the way instantly. Any drag, pinch, zoom, Fit or 2D press
+// ends it where it stands, because somebody reaching for the map wants the
+// map, not the end of an animation. It is skipped for anyone who asks for
+// reduced motion, and it never runs twice in a page's life.
+// ---------------------------------------------------------------
+const INTRO_MS = 5000;
+let introAt = 0, introRaf = 0, introDone = false;
+
+function endIntro() {
+    if (introRaf) cancelAnimationFrame(introRaf);
+    introRaf = 0;
+    introAt = 0;
+    introDone = true;
+}
+
+function startIntro() {
+    if (introDone || introAt || !view3d) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { introDone = true; return; }
+    introAt = performance.now();
+    yaw = 0; tilt = 0;
+    const frame = () => {
+        introRaf = 0;
+        if (!introAt) return;
+        // Eased at both ends: it leans into the move and settles out of it,
+        // which is what makes five seconds read as deliberate rather than as
+        // the page still loading.
+        const t = Math.min(1, (performance.now() - introAt) / INTRO_MS);
+        const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        yaw  = VIEW_YAW  * e;
+        tilt = VIEW_TILT * e;
+        if (lastRows) drawTrack(lastRows);
+        if (t >= 1) { endIntro(); syncZoomButtons(); return; }
+        introRaf = requestAnimationFrame(frame);
+    };
+    introRaf = requestAnimationFrame(frame);
+}
+
 function syncZoomButtons() {
     const out = document.getElementById('zoom-out');
     const inn = document.getElementById('zoom-in');
@@ -1324,7 +1382,8 @@ function syncZoomButtons() {
     if (out) out.disabled = view.scale <= ZOOM_MIN + 0.001;
     if (inn) inn.disabled = view.scale >= ZOOM_MAX - 0.001;
     if (rst) rst.disabled = view.scale <= ZOOM_MIN + 0.001 && !view.x && !view.y
-                            && (!view3d || (Math.abs(yaw - 0.6) < 0.001 && Math.abs(tilt - 0.8) < 0.001));
+                            && (!view3d || (Math.abs(yaw - VIEW_YAW) < 0.001
+                                         && Math.abs(tilt - VIEW_TILT) < 0.001));
     const btn = document.getElementById('view-3d');
     if (btn) {
         btn.textContent = view3d ? '2D' : '3D';
@@ -1339,6 +1398,15 @@ function bindMapControls() {
     const cv = document.getElementById('track');
     if (!cv || cv.dataset.bound) return;
     cv.dataset.bound = '1';
+
+    // Anything at all aimed at the map ends the opening move where it
+    // stands. Bound here, before the handlers that do the actual work, and
+    // deliberately blunter than they are: a wheel does not dismiss the hint
+    // because scrolling past the map is not learning to turn it, but it is
+    // still somebody touching the map, and the animation must get out of the
+    // way of that.
+    ['pointerdown', 'wheel', 'touchstart'].forEach(ev =>
+        cv.addEventListener(ev, endIntro, { passive: true }));
 
     const at = e => {
         const r = cv.getBoundingClientRect();
@@ -1427,11 +1495,12 @@ function bindMapControls() {
     cv.addEventListener('dblclick', e => { e.preventDefault(); resetView(); });
 
     document.getElementById('zoom-in')?.addEventListener('click',
-        () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1.6));
+        () => { endIntro(); zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1.6); });
     document.getElementById('zoom-out')?.addEventListener('click',
-        () => zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.6));
+        () => { endIntro(); zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.6); });
     document.getElementById('zoom-reset')?.addEventListener('click', resetView);
-    document.getElementById('view-3d')?.addEventListener('click', () => setView3d(!view3d));
+    document.getElementById('view-3d')?.addEventListener('click',
+        () => { endIntro(); setView3d(!view3d); });
 
     syncZoomButtons();
 }
@@ -1552,6 +1621,12 @@ function drawTrack(rows) {
         g.fillText('The circuit draws itself as cars report their position.', w / 2, h / 2);
         return;
     }
+
+    // The first draw with a finished outline under it is the moment there is
+    // something worth tipping. Before that the map is a part-traced squiggle
+    // and the move would be about nothing. Safe to call from inside the draw:
+    // it only sets the angles and books a frame, and refuses a second time.
+    if (baseLoop.length) startIntro();
 
     // Fit whatever has been seen, keeping the aspect ratio so the shape of
     // the circuit is true rather than stretched to the box.
