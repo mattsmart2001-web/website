@@ -2606,16 +2606,66 @@ function lapX(l) {
     return l.mode === 'race' ? l.lap : (l.seq ?? l.lap);
 }
 
-/** The colour this car is on the map, so the two agree at a glance. */
-function lapColour(c) {
-    const r = (lastRows || []).find(x => x.driver_id === c.driver_id);
-    return r ? carColour(r) : splitColour(c.lobby);
+/**
+ * A colour per car on the chart.
+ *
+ * A car that is out keeps the colour it has on the map, so the two agree at
+ * a glance. A car that has stopped reporting is not in the live field at
+ * all, so it has no map colour to keep, and carColour falls through to the
+ * colour of its split: every driver who had finished for the evening came
+ * out the same amber, which was five of the seven lines on the card.
+ *
+ * Those take the colours nobody else is using, in the order the cars are
+ * listed, which is by best lap and therefore the same on every redraw.
+ */
+function lapColours(cars) {
+    const out = new Map(), used = new Set();
+    for (const c of cars) {
+        const r = (lastRows || []).find(x => x.driver_id === c.driver_id);
+        const live = r && teamColours.get(r.team_id || r.driver_id);
+        if (live) { out.set(c.driver_id, live); used.add(live); }
+    }
+    for (const c of cars) {
+        if (out.has(c.driver_id)) continue;
+        // The free colour that sits furthest round the wheel from everything
+        // already on the chart, rather than simply the next one in the list.
+        // Walking the list in order gave two cars neighbouring greens while
+        // half the palette went unused.
+        let best = null, bestGap = -1;
+        for (const col of TEAM_COLOURS) {
+            if (used.has(col)) continue;
+            let gap = 360;
+            for (const u of used) gap = Math.min(gap, hueGap(col, u));
+            if (gap > bestGap) { bestGap = gap; best = col; }
+        }
+        // Everything taken, which needs more cars than the chart draws:
+        // start round again rather than leaving a car with no colour.
+        const col = best || TEAM_COLOURS[out.size % TEAM_COLOURS.length];
+        out.set(c.driver_id, col);
+        used.add(col);
+    }
+    return out;
+}
+
+/** How far apart two hex colours are round the hue wheel, in degrees. */
+function hueGap(a, b) {
+    const d = Math.abs(hueOf(a) - hueOf(b)) % 360;
+    return d > 180 ? 360 - d : d;
+}
+function hueOf(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const hi = Math.max(r, g, b), lo = Math.min(r, g, b), d = hi - lo;
+    if (!d) return 0;
+    const h = hi === r ? ((g - b) / d) % 6 : hi === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return (h * 60 + 360) % 360;
 }
 
 function drawLapChart() {
     const cv = document.getElementById('lap-chart');
     if (!cv) return;
     const cars = lapCars();
+    const colour = lapColours(cars);
     const empty = document.getElementById('lap-empty');
     const note  = document.getElementById('lap-note');
     const chips = document.getElementById('lap-cars');
@@ -2663,7 +2713,7 @@ function drawLapChart() {
     // missed. The number says what was actually recorded.
     chips.innerHTML = cars.map(c => `<button type="button"
         class="chart-chip${lapOff.has(c.driver_id) ? ' off' : ''}"
-        style="color:${lapColour(c)}" data-driver="${c.driver_id}"
+        style="color:${colour.get(c.driver_id)}" data-driver="${c.driver_id}"
         title="${c.pts.length} lap${c.pts.length === 1 ? '' : 's'} recorded, best ${esc(lapTime(c.best))}">
         <span class="dot"></span>${esc(c.name)}
         <span class="chip-n">${c.pts.length}</span></button>`).join('');
@@ -2745,7 +2795,7 @@ function drawLapChart() {
                w / 2, h - padB + 19);
 
     for (const c of drawn) {
-        const col = lapColour(c);
+        const col = colour.get(c.driver_id);
         g.strokeStyle = col;
         g.lineWidth = 2;
         // Every lap joined to the next, including the ones that run off the
