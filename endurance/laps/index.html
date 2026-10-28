@@ -314,14 +314,29 @@ function drawChart() {
         // A dot per lap, so a single-lap car is visible at all. Laps off the
         // top keep a hollow mark at the ceiling: something happened on that
         // lap, and it is not being hidden.
-        for (const l of s.pts) {
-            const v = val(l);
+        for (let i = 0; i < s.pts.length; i++) {
+            const v = val(s.pts[i]);
             if (v == null) continue;
-            const over = v > hi;
-            g.beginPath();
-            g.arc(px(l.lap), over ? padT + 3 : py(v), over ? 2.2 : 2.5, 0, Math.PI * 2);
-            if (over) { g.lineWidth = 1.2; g.stroke(); g.lineWidth = 2; }
-            else { g.fillStyle = s.row.colour; g.fill(); }
+            if (v > hi) {
+                g.beginPath();
+                g.arc(px(s.pts[i].lap), padT + 3, 2.2, 0, Math.PI * 2);
+                g.lineWidth = 1.2; g.stroke(); g.lineWidth = 2;
+                continue;
+            }
+            // A lap with nothing drawn either side of it, because its
+            // neighbours went off the top or it is the only one there is.
+            // Ringed, so it reads as a lap standing alone rather than as a
+            // speck of something unfinished.
+            const before = s.pts[i - 1] && val(s.pts[i - 1]), after = s.pts[i + 1] && val(s.pts[i + 1]);
+            const lone = (before == null || before > hi) && (after == null || after > hi);
+            const x = px(s.pts[i].lap), y = py(v);
+            g.fillStyle = s.row.colour;
+            g.beginPath(); g.arc(x, y, lone ? 3.2 : 2.5, 0, Math.PI * 2); g.fill();
+            if (lone) {
+                g.globalAlpha = 0.45; g.lineWidth = 1.2;
+                g.beginPath(); g.arc(x, y, 6.5, 0, Math.PI * 2); g.stroke();
+                g.globalAlpha = 1; g.lineWidth = 2;
+            }
         }
     }
 

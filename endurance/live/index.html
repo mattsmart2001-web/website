@@ -145,6 +145,8 @@
             padding: 0.28rem 0.7rem; transition: opacity 0.15s, border-color 0.15s; }
         .chart-chip .dot { width: 8px; height: 8px; border-radius: 50%;
             background: currentColor; flex: 0 0 auto; }
+        .chart-chip .chip-n { color: var(--muted); font-size: 0.66rem;
+            font-variant-numeric: tabular-nums; }
         .chart-chip.off { opacity: 0.4; }
         .chart-chip:hover { border-color: rgba(255,255,255,0.25); }
         .chart-empty { padding: 2.2rem 1.1rem; text-align: center;
@@ -2539,10 +2541,17 @@ function drawLapChart() {
     }
     cv.hidden = false; chips.hidden = false; empty.hidden = true;
 
+    // With the count, because a car can have laps in the log and almost
+    // nothing on the chart: a lap above the scale is a ring at the ceiling
+    // and breaks the line either side of it, so a car with two laps, one of
+    // them an out-lap, is drawn as a single dot. That looks like a car we
+    // missed. The number says what was actually recorded.
     chips.innerHTML = cars.map(c => `<button type="button"
         class="chart-chip${lapOff.has(c.driver_id) ? ' off' : ''}"
-        style="color:${lapColour(c)}" data-driver="${c.driver_id}">
-        <span class="dot"></span>${esc(c.name)}</button>`).join('');
+        style="color:${lapColour(c)}" data-driver="${c.driver_id}"
+        title="${c.pts.length} lap${c.pts.length === 1 ? '' : 's'} recorded, best ${esc(lapTime(c.best))}">
+        <span class="dot"></span>${esc(c.name)}
+        <span class="chip-n">${c.pts.length}</span></button>`).join('');
     chips.onclick = e => {
         const chip = e.target.closest('.chart-chip');
         if (!chip) return;
@@ -2638,12 +2647,28 @@ function drawLapChart() {
         // A dot per lap, or a car with one lap to its name draws nothing.
         // Laps off the top keep a hollow mark at the ceiling: something
         // happened on that lap, and it is not being hidden.
-        for (const l of c.pts) {
-            const over = l.lap_ms > hi;
-            g.beginPath();
-            g.arc(px(l.lap), over ? padT + 3 : py(l.lap_ms), over ? 2.2 : 2.5, 0, Math.PI * 2);
-            if (over) { g.lineWidth = 1.2; g.stroke(); }
-            else { g.fillStyle = col; g.fill(); }
+        for (let i = 0; i < c.pts.length; i++) {
+            const l = c.pts[i];
+            if (l.lap_ms > hi) {
+                g.beginPath();
+                g.arc(px(l.lap), padT + 3, 2.2, 0, Math.PI * 2);
+                g.lineWidth = 1.2; g.stroke(); g.lineWidth = 2;
+                continue;
+            }
+            // A lap with nothing drawn on either side of it, because its
+            // neighbours were off the top or it is the only one. Given a
+            // ring so it reads as a lap standing alone rather than as a
+            // speck of something unfinished.
+            const prev = c.pts[i - 1], next = c.pts[i + 1];
+            const lone = (!prev || prev.lap_ms > hi) && (!next || next.lap_ms > hi);
+            const x = px(l.lap), y = py(l.lap_ms);
+            g.fillStyle = col;
+            g.beginPath(); g.arc(x, y, lone ? 3.2 : 2.5, 0, Math.PI * 2); g.fill();
+            if (lone) {
+                g.globalAlpha = 0.45; g.lineWidth = 1.2;
+                g.beginPath(); g.arc(x, y, 6.5, 0, Math.PI * 2); g.stroke();
+                g.globalAlpha = 1; g.lineWidth = 2;
+            }
         }
     }
 
