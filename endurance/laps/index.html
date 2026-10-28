@@ -323,16 +323,23 @@ function drawChart() {
         // ceiling and the segments reaching it are faded, so the line stays
         // continuous while being plain that the real time is higher than the
         // chart goes.
+        // Dashed, not faded, where a segment reaches a lap off the top: a
+        // car with most of its laps above the scale was otherwise drawn
+        // almost entirely at a third opacity, which reads as a thinner line
+        // than everybody else's rather than as laps off the scale.
         const yAt = v => v > hi ? padT + 3 : py(v);
         for (let i = 1; i < s.pts.length; i++) {
             const a = val(s.pts[i - 1]), b = val(s.pts[i]);
             if (a == null || b == null) continue;
-            g.globalAlpha = (a > hi || b > hi) ? 0.33 : 1;
+            const off = a > hi || b > hi;
+            g.setLineDash(off ? [4, 3] : []);
+            g.globalAlpha = off ? 0.8 : 1;
             g.beginPath();
             g.moveTo(px(lapX(s.pts[i - 1])), yAt(a));
             g.lineTo(px(lapX(s.pts[i])), yAt(b));
             g.stroke();
         }
+        g.setLineDash([]);
         g.globalAlpha = 1;
         // A dot per lap, so a single-lap car is visible at all. Laps off the
         // top keep a hollow mark at the ceiling: something happened on that

@@ -2743,15 +2743,25 @@ function drawLapChart() {
         // chart goes: a stop and a spin both end up at the top, and the
         // faded run up to it is the chart saying "this one left the scale"
         // rather than "this one was 9:01".
+        // Dashed, not faded, where a segment reaches a lap off the top.
+        // Fading was the first attempt and it cost the line its weight: a
+        // car with most of its laps above the scale was drawn almost
+        // entirely at a third opacity, which does not read as "these are off
+        // the scale", it reads as a thinner line than everybody else's. A
+        // dash says the same thing at full strength, so every car's line
+        // carries the same weight whatever its laps did.
         const yAt = l => l.lap_ms > hi ? padT + 3 : py(l.lap_ms);
         for (let i = 1; i < c.pts.length; i++) {
             const a = c.pts[i - 1], b = c.pts[i];
-            g.globalAlpha = (a.lap_ms > hi || b.lap_ms > hi) ? 0.33 : 1;
+            const off = a.lap_ms > hi || b.lap_ms > hi;
+            g.setLineDash(off ? [4, 3] : []);
+            g.globalAlpha = off ? 0.8 : 1;
             g.beginPath();
             g.moveTo(px(lapX(a)), yAt(a));
             g.lineTo(px(lapX(b)), yAt(b));
             g.stroke();
         }
+        g.setLineDash([]);
         g.globalAlpha = 1;
         // A dot per lap, or a car with one lap to its name draws nothing.
         // Laps off the top keep a hollow mark at the ceiling: something
