@@ -2631,19 +2631,25 @@ function drawLapChart() {
         const col = lapColour(c);
         g.strokeStyle = col;
         g.lineWidth = 2;
-        // The line breaks at a lap that is off the top rather than being
-        // bent up to meet it. Pinning those to the ceiling drew a spike to
-        // the same height whatever the lap actually was, and with a whole
-        // split stopping within a lap of each other the spikes met in one
-        // point, which looked like an event and was an artefact.
-        g.beginPath();
-        let started = false;
-        for (const l of c.pts) {
-            if (l.lap_ms > hi) { started = false; continue; }
-            const x = px(l.lap), y = py(l.lap_ms);
-            if (started) g.lineTo(x, y); else { g.moveTo(x, y); started = true; }
+        // Every lap joined to the next, including the ones that run off the
+        // top. A driver reads their own run as one line, and a break in it
+        // looks like laps that were never recorded, which is the one thing a
+        // log must never suggest. A lap above the scale is drawn at the
+        // ceiling and the segments reaching it are faded, so the line stays
+        // continuous while being plain that the real time is higher than the
+        // chart goes: a stop and a spin both end up at the top, and the
+        // faded run up to it is the chart saying "this one left the scale"
+        // rather than "this one was 9:01".
+        const yAt = l => l.lap_ms > hi ? padT + 3 : py(l.lap_ms);
+        for (let i = 1; i < c.pts.length; i++) {
+            const a = c.pts[i - 1], b = c.pts[i];
+            g.globalAlpha = (a.lap_ms > hi || b.lap_ms > hi) ? 0.33 : 1;
+            g.beginPath();
+            g.moveTo(px(a.lap), yAt(a));
+            g.lineTo(px(b.lap), yAt(b));
+            g.stroke();
         }
-        g.stroke();
+        g.globalAlpha = 1;
         // A dot per lap, or a car with one lap to its name draws nothing.
         // Laps off the top keep a hollow mark at the ceiling: something
         // happened on that lap, and it is not being hidden.
@@ -2655,12 +2661,10 @@ function drawLapChart() {
                 g.lineWidth = 1.2; g.stroke(); g.lineWidth = 2;
                 continue;
             }
-            // A lap with nothing drawn on either side of it, because its
-            // neighbours were off the top or it is the only one. Given a
-            // ring so it reads as a lap standing alone rather than as a
+            // The only lap this car has to its name, with no line anywhere.
+            // Ringed, so it reads as one lap standing alone rather than as a
             // speck of something unfinished.
-            const prev = c.pts[i - 1], next = c.pts[i + 1];
-            const lone = (!prev || prev.lap_ms > hi) && (!next || next.lap_ms > hi);
+            const lone = c.pts.length === 1;
             const x = px(l.lap), y = py(l.lap_ms);
             g.fillStyle = col;
             g.beginPath(); g.arc(x, y, lone ? 3.2 : 2.5, 0, Math.PI * 2); g.fill();
@@ -2675,7 +2679,7 @@ function drawLapChart() {
     if (note) {
         const n = drawn.reduce((t, c) => t + c.pts.length, 0);
         note.textContent = clipped
-            ? `${clipped} lap${clipped === 1 ? '' : 's'} above the scale, drawn off the top: in-laps, out-laps and offs.`
+            ? `${n} laps · ${clipped} ran past the top of the scale and sit on it: in-laps, out-laps and offs.`
             : `${n} lap${n === 1 ? '' : 's'} recorded this session.`;
     }
 }
