@@ -1076,8 +1076,22 @@ async function loadCoverage(eventId) {
 }
 
 // How far off the traced line a car can be and still be on this circuit.
-// A track is maybe 15m wide and racing lines vary, so 80m is generous.
-const MATCH_M = 80;
+//
+// 80 m was the first answer, from "a track is 15 m wide and racing lines
+// vary", and it is the right answer to a different question: the server
+// uses that figure to decide who may take over DRAWING the outline, where
+// being strict costs nothing because somebody else is already drawing it.
+//
+// Being on the circuit is a wider thing than being on the racing line. A
+// pit lane runs beside the track and its boxes further still, a Nordschleife
+// run-off goes a long way into the trees, and the outline itself is one
+// car's line rather than the middle of the road. At 80 m a driver came in
+// to the pits and was told he was at another track.
+//
+// 250 m is the figure 189 settled on server side for the same question, and
+// the two should agree. It is still a thousandth of the distance between two
+// circuits that merely overlap in coordinates.
+const MATCH_M = 250;
 
 // Whether the outline is a finished lap, as the server records it.
 //
