@@ -151,6 +151,22 @@
         .chart-chip:hover { border-color: rgba(255,255,255,0.25); }
         .chart-empty { padding: 2.2rem 1.1rem; text-align: center;
             font-size: 0.8rem; color: var(--muted); }
+        /* What a point on the chart actually is. The chart drew shapes and
+           withheld every number on it, so the only way to read a lap was to
+           squint at the axis. */
+        .chart-tip { position: absolute; pointer-events: none; z-index: 5;
+            background: rgba(5,6,8,0.94); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.45rem 0.6rem; min-width: 7.5rem;
+            font-size: 0.72rem; line-height: 1.45; color: var(--text);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.55); }
+        .chart-tip[hidden] { display: none; }
+        .chart-tip .t-name { font-weight: 700; display: flex; align-items: center; gap: 0.35rem; }
+        .chart-tip .t-name .dot { width: 8px; height: 8px; border-radius: 50%;
+            background: currentColor; flex: 0 0 auto; }
+        .chart-tip .t-lap { font-family: 'Orbitron', sans-serif; font-size: 0.95rem;
+            font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+        .chart-tip .t-sub { color: var(--muted); font-variant-numeric: tabular-nums; }
+        .chart-tip .t-stop { color: #fb923c; }
 
         /* The lap log, alongside the round it belongs to. It used to be a
            sentence in the footnote under the map, which is the last place
@@ -792,7 +808,10 @@ function renderField(rows) {
                 <span class="map-title" id="lap-title">Lap Times</span>
                 <span class="map-note" id="lap-note"></span>
             </div>
-            <div class="map-stage"><canvas id="lap-chart"></canvas></div>
+            <div class="map-stage">
+                <canvas id="lap-chart"></canvas>
+                <div class="chart-tip" id="lap-tip" hidden></div>
+            </div>
             <div class="chart-cars" id="lap-cars"></div>
             <div class="chart-empty" id="lap-empty" hidden></div>
         </div>
@@ -898,6 +917,25 @@ let mapTurned = false;          // whether they have worked out how to turn it
 // that is. Pointer only: there is no hover on a phone, and the card that
 // opens on a tap already answers "who is this".
 let hoveredDriver = null;
+// Where each car's badge ended up on the map, in CSS pixels, so the canvas
+// can say which car the pointer is over. Rebuilt on every redraw, because
+// turning the map moves every one of them.
+let carMarks = [];
+
+/**
+ * The car being looked at, wherever the pointer happens to be.
+ *
+ * The list, the map and the chart all show the same field, so hovering a car
+ * in any of them should pick it out in all three. Redrawn at once rather
+ * than at the next poll, or the highlight would arrive up to a second and a
+ * half after the pointer did.
+ */
+function hoverDriver(id) {
+    if (hoveredDriver === id) return;
+    hoveredDriver = id;
+    if (lastRows) drawTrack(lastRows);
+    drawLapChart();
+}
 try {
     const raw = localStorage.getItem('gtecLiveSplits');
     if (raw) {
@@ -1579,6 +1617,38 @@ function bindMapControls() {
     }, { passive: false });
     cv.addEventListener('touchend', () => { pinch = null; }, { passive: true });
 
+    // Hovering a car on the map, which until now did nothing at all: the
+    // list could pick a car out on the map but the map could not pick one
+    // out of the list, and the dot is the thing people are looking at. Same
+    // highlight, same card, anchored to the badge itself.
+    cv.addEventListener('mousemove', e => {
+        if (dragging) return;
+        const [mx, my] = at(e);
+        const hit = carMarks.find(m =>
+            Math.abs(mx - m.x) <= m.half && Math.abs(my - m.y) <= m.rad);
+        if (hit) {
+            hoverDriver(hit.driver_id);
+            const box = cv.getBoundingClientRect();
+            // showCard positions against a rectangle, and a badge on a canvas
+            // has no element to hand it, so it is given the badge's own.
+            showCard({ getBoundingClientRect: () => ({
+                left:  box.left + hit.x - hit.half,
+                right: box.left + hit.x + hit.half,
+                top:   box.top  + hit.y - hit.rad,
+                bottom: box.top + hit.y + hit.rad,
+                width: hit.half * 2, height: hit.rad * 2,
+            }) }, hit.driver_id);
+            cv.style.cursor = 'pointer';
+        } else if (hoveredDriver !== null) {
+            hoverDriver(null);
+            hideCard();
+            cv.style.cursor = '';
+        }
+    });
+    cv.addEventListener('mouseleave', () => {
+        if (hoveredDriver !== null) { hoverDriver(null); hideCard(); }
+    });
+
     // Double click or double tap to fit, the usual way out of a lost view.
     cv.addEventListener('dblclick', e => { e.preventDefault(); resetView(); });
 
@@ -2151,6 +2221,7 @@ function drawTrack(rows) {
     const order = view3d
         ? [...rows].sort((a, b) => (world(a.x, a.z, a.y)[2]) - (world(b.x, b.z, b.y)[2]))
         : rows;
+    carMarks = [];
     order.forEach(r => {
         if (r.x == null || r.z == null) return;
         // At a different circuit entirely: listed in the table, but drawing
@@ -2198,6 +2269,8 @@ function drawTrack(rows) {
             g.stroke();
             g.globalAlpha = r.on_track ? 1 : 0.35;
         }
+        carMarks.push({ driver_id: r.driver_id, x: car[0], y: car[1],
+                        half: half + 4, rad: rad + 4 });
         g.fillStyle = col;
         pillPath(g, car[0], car[1], half, rad);
         g.fill();
@@ -2539,13 +2612,7 @@ function bindDriverCards() {
     const nameAt = e => e.target.closest?.('.who[data-driver]');
     const rowAt  = e => e.target.closest?.('tr[data-driver]');
 
-    // Redrawn at once rather than at the next poll, or the highlight would
-    // arrive up to a second and a half after the pointer did.
-    const hover = (id) => {
-        if (hoveredDriver === id) return;
-        hoveredDriver = id;
-        if (lastRows) drawTrack(lastRows);
-    };
+    const hover = hoverDriver;
     splits.addEventListener('mouseover', e => {
         const row = rowAt(e);
         if (row) hover(row.dataset.driver);
@@ -2608,6 +2675,11 @@ function axisTime(ms) {
     const m = Math.floor(t / 60);
     return m > 0 ? `${m}:${(t - m * 60).toFixed(1).padStart(4, '0')}` : t.toFixed(1);
 }
+
+// Where every drawn point ended up, so the pointer can be told what it is
+// over. Rebuilt on each redraw, since switching a car off moves the scale
+// and therefore every other point on the card.
+let lapMarks = [];
 
 const LAP_FEED_MS  = 10000;   // laps take minutes; this is still immediate
 const LAP_MAX_LINES = 10;     // beyond this the chart is a ball of wool
@@ -2728,9 +2800,63 @@ function hueOf(hex) {
     return (h * 60 + 360) % 360;
 }
 
+/**
+ * What the pointer is over on the chart.
+ *
+ * Nearest point within a dozen pixels, which is forgiving enough to hit a
+ * 2.5px dot without a steady hand and tight enough not to claim a point the
+ * pointer is nowhere near. Hovering also picks that car out everywhere else,
+ * through the same hover the list and the map use.
+ */
+function bindLapChart() {
+    const cv = document.getElementById('lap-chart');
+    const tip = document.getElementById('lap-tip');
+    if (!cv || !tip || cv.dataset.bound) return;
+    cv.dataset.bound = '1';
+
+    const HIT = 12;
+    cv.addEventListener('mousemove', e => {
+        const b = cv.getBoundingClientRect();
+        const mx = e.clientX - b.left, my = e.clientY - b.top;
+        let hit = null, best = HIT * HIT;
+        for (const m of lapMarks) {
+            const d = (mx - m.x) ** 2 + (my - m.y) ** 2;
+            if (d <= best) { best = d; hit = m; }
+        }
+        if (!hit) {
+            tip.hidden = true;
+            if (hoveredDriver !== null) hoverDriver(null);
+            return;
+        }
+        hoverDriver(hit.driver_id);
+        tip.innerHTML = `
+            <div class="t-name" style="color:${hit.colour}"><span class="dot"></span>
+                <span style="color:var(--text)">${esc(hit.name)}</span></div>
+            <div class="t-lap">${lapTime(hit.lap_ms)}</div>
+            <div class="t-sub">${hit.mode === 'race' ? 'lap' : 'their lap'} ${hit.lap}${
+                hit.fuel_pct != null ? ` · ${Math.round(hit.fuel_pct)}% fuel` : ''}</div>
+            ${hit.stop ? '<div class="t-stop">came in this lap</div>' : ''}`;
+        tip.hidden = false;
+        // Above and to the right of the point, flipped at either edge so it
+        // never leaves the card.
+        const box = tip.getBoundingClientRect();
+        let left = hit.x + 12, top = hit.y - box.height - 10;
+        if (left + box.width > cv.clientWidth - 6) left = hit.x - box.width - 12;
+        if (left < 6) left = 6;
+        if (top < 6) top = hit.y + 14;
+        tip.style.left = Math.round(left) + 'px';
+        tip.style.top = Math.round(top) + 'px';
+    });
+    cv.addEventListener('mouseleave', () => {
+        tip.hidden = true;
+        if (hoveredDriver !== null) hoverDriver(null);
+    });
+}
+
 function drawLapChart() {
     const cv = document.getElementById('lap-chart');
     if (!cv) return;
+    bindLapChart();
     const cars = lapCars();
     const colour = lapColours(cars);
     const empty = document.getElementById('lap-empty');
@@ -2801,6 +2927,7 @@ function drawLapChart() {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, w, h);
 
+    lapMarks = [];
     const drawn = cars.filter(c => !lapOff.has(c.driver_id));
     if (!drawn.length) {
         g.fillStyle = '#94a3b8';
@@ -2863,8 +2990,12 @@ function drawLapChart() {
 
     for (const c of drawn) {
         const col = colour.get(c.driver_id);
+        // The same dimming the map does, from the same hover, so picking a
+        // car out in one picks it out in all three.
+        const hot = hoveredDriver === c.driver_id;
+        g.globalAlpha = (hoveredDriver !== null && !hot) ? 0.25 : 1;
         g.strokeStyle = col;
-        g.lineWidth = 2;
+        g.lineWidth = hot ? 3 : 2;
         // Every lap joined to the next, including the ones that run off the
         // top. A driver reads their own run as one line, and a break in it
         // looks like laps that were never recorded, which is the one thing a
@@ -2908,14 +3039,20 @@ function drawLapChart() {
             // down. The foot of the chart is empty, and the car's own colour
             // is what ties the mark to its line.
             const prev = c.pts[i - 1];
-            if (prev && l.fuel_pct != null && prev.fuel_pct != null
-                && l.fuel_pct - prev.fuel_pct > STOP_RISE_PCT) {
+            const stop = !!(prev && l.fuel_pct != null && prev.fuel_pct != null
+                            && l.fuel_pct - prev.fuel_pct > STOP_RISE_PCT);
+            if (stop) {
                 g.lineWidth = 2;
                 g.beginPath();
                 g.moveTo(x, h - padB - 1); g.lineTo(x, h - padB - 9);
                 g.stroke();
             }
+            lapMarks.push({ driver_id: c.driver_id, name: c.name, colour: col,
+                            x, y, lap: lapX(l), lap_ms: l.lap_ms,
+                            fuel_pct: l.fuel_pct, mode: l.mode, stop });
         }
+        g.globalAlpha = 1;
+        g.lineWidth = 2;
     }
 
     if (note) {
