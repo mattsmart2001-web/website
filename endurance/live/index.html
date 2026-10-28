@@ -212,8 +212,13 @@
         tbody tr:hover { background: rgba(255,255,255,0.035); }
         @media (hover: none) { tbody tr:hover { background: none; } }
         th:nth-child(1), td:nth-child(1) { width: 26px; }
-        th:nth-child(3), td:nth-child(3) { width: 46px; }
-        th:nth-child(6), td:nth-child(6) { width: 82px; }
+        /* The lap column carries the stint count under it, which is a dozen
+           characters against a two or three digit number, so the column is
+           sized for the line underneath rather than the one above. At 46px
+           the sub-line simply overflowed into Last and the two ran together.
+           The width comes back off Fuel, which had slack in it. */
+        th:nth-child(3), td:nth-child(3) { width: 72px; }
+        th:nth-child(6), td:nth-child(6) { width: 76px; }
         /* Sized in pixels, not ch: a Nordschleife lap reads 7:54.471, and ch
            units under-measured it once cell padding was counted, which clipped
            the Best column on the narrowest cards. */
