@@ -190,6 +190,9 @@ const COLOURS = ['#1ab4ff', '#ff6b6b', '#4ade80', '#f472b6', '#fbbf24',
 
 let rounds = [], laps = [], summary = [], shown = new Set();
 let eventId = null, mode = 'race', metric = 'lap';
+// Whether the session showing is the viewer's choice or ours. Until it is
+// theirs, the page opens on whichever session the round actually has.
+let modeChosen = false;
 
 // ---------------------------------------------------------------
 // A line chart, drawn by hand.
@@ -457,7 +460,7 @@ function render() {
     const onRound = document.getElementById('pick-round');
     if (onRound) onRound.onchange = e => { eventId = e.target.value; load(); };
     const onMode = document.getElementById('pick-mode');
-    if (onMode) onMode.onchange = e => { mode = e.target.value; load(); };
+    if (onMode) onMode.onchange = e => { mode = e.target.value; modeChosen = true; load(); };
     const onMetric = document.getElementById('pick-metric');
     if (onMetric) onMetric.onchange = e => { metric = e.target.value; drawChart(); };
 
@@ -480,6 +483,12 @@ function render() {
 }
 
 async function load() {
+    // Open on a session that has laps in it. A round's practice window runs
+    // for days before the race, and a page that opens on Race told everyone
+    // who came to look during that week that there was nothing in the log.
+    const picked = rounds.find(r => r.event_id === eventId);
+    if (!modeChosen && picked) mode = picked.race_laps > 0 ? 'race' : 'practice';
+
     const [{ data: lg, error: e1 }, { data: sm, error: e2 }] = await Promise.all([
         sb.rpc('live_lap_log',     { p_event_id: eventId, p_mode: mode || null }),
         sb.rpc('live_lap_summary', { p_event_id: eventId, p_mode: mode || null }),
