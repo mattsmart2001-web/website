@@ -625,12 +625,15 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
              from whatever the lobby happens to be set to. A driver sitting
              in the menus with a two lap race set up elsewhere in the game
              made it read "8/2". -->
-        <!-- Laps completed, and how many of them are on this stint, which is
-             the pairing that answers "how long has he been out": the fuel
-             cell says how much longer he can stay out. It read "5 in" beside
-             the fuel to begin with, which fitted and meant nothing. -->
+        <!-- Laps completed, and how many of them are on this stint, which
+             is the pairing that answers "how long has he been out": the
+             fuel cell answers how much longer he can stay out.
+             Two goes at the wording before this one. "5 in" beside the fuel
+             fitted and meant nothing. "stint 9" reads as his ninth stint,
+             which is the opposite of what it says. A count needs the thing
+             it counts next to it. -->
         <td class="num">${r.lap ?? 0}<span class="sub2">${
-            stintLaps(r.driver_id) != null ? 'stint ' + stintLaps(r.driver_id) : ''}</span></td>
+            stintLaps(r.driver_id) != null ? stintLaps(r.driver_id) + ' this stint' : ''}</span></td>
         <td class="num"><span${lapWorth(r.last_lap_ms, r)}>${lapTime(r.last_lap_ms)}</span><span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
         <td class="num">${isRace ? gapHtml(r, ahead)
             : `<span${lapWorth(bestLap(r), r)}>${lapTime(bestLap(r))}</span>`}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
