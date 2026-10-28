@@ -129,6 +129,40 @@
         .map-zoom button:disabled { opacity: 0.35; cursor: default; }
         .map-zoom .reset { width: auto; padding: 0 0.5rem; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; }
 
+        /* The lap chart, under the map and built from the same parts, so the
+           two read as one instrument rather than two widgets. */
+        #lap-chart { display: block; width: 100%; height: 300px; }
+        @media (max-width: 560px) { #lap-chart { height: 240px; } }
+        .chart-cars { display: flex; flex-wrap: wrap; gap: 0.4rem;
+            padding: 0 1.1rem 1rem; }
+        /* display:block and display:flex both beat the browser's own rule for
+           [hidden], so the empty card kept a 300px hole where the chart was. */
+        #lap-chart[hidden], .chart-cars[hidden] { display: none; }
+        .chart-chip { display: inline-flex; align-items: center; gap: 0.4rem;
+            font-family: 'Inter', system-ui, sans-serif; font-size: 0.72rem;
+            color: var(--text); background: var(--bg-2); cursor: pointer;
+            border: 1px solid var(--border); border-radius: 999px;
+            padding: 0.28rem 0.7rem; transition: opacity 0.15s, border-color 0.15s; }
+        .chart-chip .dot { width: 8px; height: 8px; border-radius: 50%;
+            background: currentColor; flex: 0 0 auto; }
+        .chart-chip.off { opacity: 0.4; }
+        .chart-chip:hover { border-color: rgba(255,255,255,0.25); }
+        .chart-empty { padding: 2.2rem 1.1rem; text-align: center;
+            font-size: 0.8rem; color: var(--muted); }
+
+        /* The lap log, alongside the round it belongs to. It used to be a
+           sentence in the footnote under the map, which is the last place
+           anybody looks on a page whose top half moves. */
+        .head-link { margin-left: auto; display: inline-flex; align-items: center; gap: 0.4rem;
+            font-family: 'Orbitron', sans-serif; font-size: 0.56rem; font-weight: 700;
+            letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none;
+            color: var(--gold); background: rgba(255,209,102,0.08);
+            border: 1px solid rgba(255,209,102,0.3); border-radius: 999px;
+            padding: 0.4rem 0.8rem; transition: background 0.15s, border-color 0.15s; }
+        .head-link:hover { background: rgba(255,209,102,0.16); border-color: rgba(255,209,102,0.55); }
+        .head-link svg { width: 11px; height: 11px; }
+        @media (max-width: 560px) { .head-link { margin-left: 0; } }
+
         /* A split header is a button: it collapses its table and filters the
            map. Both from one control, because they are the same intent. */
         .split-head { cursor: pointer; user-select: none; border: none; width: 100%; text-align: left; font: inherit; color: inherit; }
@@ -293,6 +327,7 @@
         <a href="/endurance/standings/">Standings</a>
         <a href="/endurance/results/">Results</a>
         <a href="/endurance/live/" class="active">Live</a>
+        <a href="/endurance/laps/">Lap Log</a>
         <a href="/endurance/drivers/">Drivers</a>
         <a href="/endurance/teams/">Teams</a>
         <a href="/endurance/stats/">Stats</a>
@@ -580,8 +615,13 @@ async function renderIdle() {
 
     app.innerHTML = `
     <div class="page-wrap">
-        <div class="eyebrow">Live Timing</div>
-        <div class="title">Live</div>
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+            <div class="eyebrow" style="margin:0">Live Timing</div>
+            <a class="head-link" href="/endurance/laps/">Lap Log
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+        <div class="title" style="margin-top:0.4rem">Live</div>
         <div class="state">
             <h3>${practiceOpen ? 'Practice is open' : 'No race running'}</h3>
             <p>${practiceOpen
@@ -647,6 +687,9 @@ function renderField(rows) {
         <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
             <div class="eyebrow" style="margin:0">Live Timing</div>
             <span id="live-pill"></span>
+            <a class="head-link" id="lap-log-link" href="/endurance/laps/">Lap Log
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         </div>
         <div class="title" style="margin-top:0.4rem" id="live-round"></div>
         <div class="subtitle" id="live-sub"></div>
@@ -668,11 +711,19 @@ function renderField(rows) {
                 <div class="map-hint" id="map-hint" hidden></div>
             </div>
         </div>
+        <div class="map-card" id="lap-card">
+            <div class="map-head">
+                <span class="map-title" id="lap-title">Lap Times</span>
+                <span class="map-note" id="lap-note"></span>
+            </div>
+            <div class="map-stage"><canvas id="lap-chart"></canvas></div>
+            <div class="chart-cars" id="lap-cars"></div>
+            <div class="chart-empty" id="lap-empty" hidden></div>
+        </div>
         <div class="foot-note">
             Only drivers who have paired a reporter appear here, so this is part of the grid rather than all of it.
             ${ev?.mode === 'race' ? 'Order is by laps completed.' : 'Order is by best lap.'}<br>
-            Racing in GTEC? <a href="/endurance/profile/#account">Pair live timing in your portal</a>.<br>
-            Every lap of every round is kept: <a href="/endurance/laps/">the lap log</a>.
+            Racing in GTEC? <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
             <span id="terrain-credit" hidden><br>Terrain from SRTM via
             <a href="https://registry.opendata.aws/terrain-tiles/">AWS Open Data</a>;
             the circuit's position on the map was fitted against
@@ -691,6 +742,10 @@ function renderField(rows) {
             : '<span class="live-pill"><span class="live-dot"></span>Live</span>');
 
     set('live-round', `Round ${ev.round}`);
+    // Straight to this round rather than to whichever the log opens on, so
+    // the link lands where the person was already looking.
+    const logLink = document.getElementById('lap-log-link');
+    if (logLink && ev.round != null) logLink.href = `/endurance/laps/?round=${encodeURIComponent(ev.round)}`;
     set('live-sub', `${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${lobbies.length} split${lobbies.length === 1 ? '' : 's'}`);
 
     const modeNote = document.getElementById('live-mode-note');
@@ -711,6 +766,9 @@ function renderField(rows) {
     bindDriverCards();
     setMapTitle();
     setMapHint();
+    // Here as well as when laps arrive, because focusing a split comes
+    // through this and changes which cars the chart is about.
+    drawLapChart();
 }
 
 /** Which split the map is showing, in the map's own title.
@@ -2365,6 +2423,240 @@ function bindDriverCards() {
 let failures = 0;
 let lastRows = null;       // so a click redraws at once rather than at the next poll
 
+// ---------------------------------------------------------------
+// Lap times, while they are happening.
+//
+// The whole log of a round is a separate page, which is where a finished
+// race belongs. A race that is running wants its pace on the same screen as
+// the map: who is holding it, who is dropping away, and where the stops
+// went. The table above says what each car is doing now; this says what it
+// has been doing for the last hour.
+//
+// Fetched from a marker rather than refetched. live_lap_feed returns the
+// laps recorded after the highest id already held, which is nothing at all
+// on most polls and one row when somebody crosses the line, so this costs
+// about as much as asking whether anything happened.
+// ---------------------------------------------------------------
+/** A lap time for an axis label, where thousandths are only clutter. */
+function axisTime(ms) {
+    const t = Math.max(0, Math.round(ms / 100) / 10);
+    const m = Math.floor(t / 60);
+    return m > 0 ? `${m}:${(t - m * 60).toFixed(1).padStart(4, '0')}` : t.toFixed(1);
+}
+
+const LAP_FEED_MS  = 10000;   // laps take minutes; this is still immediate
+const LAP_MAX_LINES = 10;     // beyond this the chart is a ball of wool
+
+let lapRows = [], lapAfterId = null, lapKey = null, lapAt = 0, lapBusy = false;
+let lapScopeKey = null;
+const lapOff = new Set();     // cars the viewer has switched off
+
+async function loadLaps(ev) {
+    // A different round, or the same round in a different session, is a
+    // different log: the race's laps are not a continuation of qualifying's.
+    const key = `${ev.event_id}|${ev.mode}`;
+    if (key !== lapKey) {
+        lapKey = key; lapRows = []; lapAfterId = null; lapAt = 0;
+        lapScopeKey = null; lapOff.clear();
+    } else if (lapBusy || Date.now() - lapAt < LAP_FEED_MS) {
+        return;
+    }
+    lapBusy = true;
+    try {
+        const { data, error } = await sb.rpc('live_lap_feed', {
+            p_event_id: ev.event_id, p_mode: ev.mode, p_after_id: lapAfterId });
+        lapAt = Date.now();
+        if (error || !data || !data.length) return;
+        lapRows = lapRows.concat(data);
+        lapAfterId = data[data.length - 1].id;   // the feed is ordered by it
+        drawLapChart();
+    } finally { lapBusy = false; }
+}
+
+/** The chart follows the map: a focused split shows that split alone. */
+function lapCars() {
+    const scope = focusedSplit === null ? lapRows
+        : lapRows.filter(l => String(l.lobby_number ?? 0) === focusedSplit);
+    const by = new Map();
+    for (const l of scope) {
+        let c = by.get(l.driver_id);
+        if (!c) by.set(l.driver_id, c = {
+            driver_id: l.driver_id, name: l.display_name,
+            number: l.car_number, lobby: l.lobby_number, pts: [], best: Infinity });
+        c.pts.push(l);
+        if (l.lap_ms < c.best) c.best = l.lap_ms;
+    }
+    return [...by.values()].sort((a, b) => a.best - b.best);
+}
+
+/** The colour this car is on the map, so the two agree at a glance. */
+function lapColour(c) {
+    const r = (lastRows || []).find(x => x.driver_id === c.driver_id);
+    return r ? carColour(r) : splitColour(c.lobby);
+}
+
+function drawLapChart() {
+    const cv = document.getElementById('lap-chart');
+    if (!cv) return;
+    const cars = lapCars();
+    const empty = document.getElementById('lap-empty');
+    const note  = document.getElementById('lap-note');
+    const chips = document.getElementById('lap-cars');
+
+    // Which split this is about, said the same way the map says it, because
+    // the two are showing the same cars and sit one above the other.
+    const title = document.getElementById('lap-title');
+    if (title) {
+        const name = focusedSplit === null ? null
+            : focusedSplit === '0' ? 'Unassigned' : 'Split ' + focusedSplit;
+        title.innerHTML = name
+            ? `Lap Times <span class="map-only">&middot; ${esc(name)}</span>`
+            : 'Lap Times';
+    }
+
+    // Opening on sixteen lines on top of each other reads as noise, so the
+    // quickest are drawn and the rest are one click away. Worked out when
+    // the set of cars in view changes, not on every redraw, or a viewer's
+    // own choices would be undone by the next lap anybody completed.
+    // Not before there is anything to choose between: the card is drawn once
+    // on the first poll, before the log has arrived, and settling the default
+    // against an empty list left every car switched on for the rest of the
+    // session however many of them turned up.
+    const scopeKey = focusedSplit ?? 'all';
+    if (cars.length && scopeKey !== lapScopeKey) {
+        lapScopeKey = scopeKey;
+        lapOff.clear();
+        cars.slice(LAP_MAX_LINES).forEach(c => lapOff.add(c.driver_id));
+    }
+
+    if (!cars.length) {
+        cv.hidden = true; chips.hidden = true; empty.hidden = false;
+        empty.innerHTML = `Lap times appear here as cars cross the line.<br>
+            A car's first lap is never kept: a lap only counts once it has been
+            watched from one crossing of the line to the next.`;
+        if (note) note.textContent = '';
+        return;
+    }
+    cv.hidden = false; chips.hidden = false; empty.hidden = true;
+
+    chips.innerHTML = cars.map(c => `<button type="button"
+        class="chart-chip${lapOff.has(c.driver_id) ? ' off' : ''}"
+        style="color:${lapColour(c)}" data-driver="${c.driver_id}">
+        <span class="dot"></span>${esc(c.name)}</button>`).join('');
+    chips.onclick = e => {
+        const chip = e.target.closest('.chart-chip');
+        if (!chip) return;
+        const id = chip.dataset.driver;
+        if (lapOff.has(id)) lapOff.delete(id); else lapOff.add(id);
+        drawLapChart();
+    };
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+
+    const drawn = cars.filter(c => !lapOff.has(c.driver_id));
+    if (!drawn.length) {
+        g.fillStyle = '#94a3b8';
+        g.font = "12px 'Inter', system-ui, sans-serif";
+        g.textAlign = 'center';
+        g.fillText('Pick a car below.', w / 2, h / 2);
+        if (note) note.textContent = '';
+        return;
+    }
+
+    // Against the lap number rather than each car's own count of laps, so a
+    // car that joined on lap 30 sits at lap 30 instead of being drawn from
+    // the left edge alongside somebody else's opening laps.
+    let x0 = Infinity, x1 = -Infinity, lo = Infinity, hi = -Infinity;
+    for (const c of drawn) for (const l of c.pts) {
+        if (l.lap < x0) x0 = l.lap;
+        if (l.lap > x1) x1 = l.lap;
+        if (l.lap_ms < lo) lo = l.lap_ms;
+        if (l.lap_ms > hi) hi = l.lap_ms;
+    }
+
+    // The scale stops at the slowest lap still within 107% of its own
+    // driver's best. Above that is a stop, an off or a lift for traffic, and
+    // those are a minute clear of the racing: scaled to include them, the
+    // pace the chart exists to show is squashed into the bottom third. They
+    // are still drawn, off the top, so the chart does not pretend they did
+    // not happen.
+    let ceiling = -Infinity;
+    for (const c of drawn) for (const l of c.pts) {
+        if (l.lap_ms <= c.best * 1.07 && l.lap_ms > ceiling) ceiling = l.lap_ms;
+    }
+    if (Number.isFinite(ceiling) && ceiling < hi) hi = ceiling;
+    const pad = Math.max(500, (hi - lo) * 0.08);
+    lo -= pad; hi += pad;
+    const clipped = drawn.reduce((n, c) => n + c.pts.filter(l => l.lap_ms > hi).length, 0);
+
+    const padL = 58, padR = 14, padT = 14, padB = 28;
+    const px = lap => padL + (x1 === x0 ? 0 : ((lap - x0) / (x1 - x0)) * (w - padL - padR));
+    const py = v   => padT + (1 - (v - lo) / Math.max(1, hi - lo)) * (h - padT - padB);
+
+    g.strokeStyle = 'rgba(255,255,255,0.06)';
+    g.lineWidth = 1;
+    g.fillStyle = '#94a3b8';
+    g.font = "10px 'Inter', system-ui, sans-serif";
+    g.textAlign = 'right';
+    g.textBaseline = 'middle';
+    for (let k = 0; k <= 4; k++) {
+        const v = lo + (hi - lo) * k / 4;
+        const y = Math.round(py(v)) + 0.5;
+        g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke();
+        g.fillText(axisTime(v), padL - 8, y);
+    }
+    g.textAlign = 'center';
+    g.textBaseline = 'top';
+    const step = Math.max(1, Math.ceil((x1 - x0 + 1) / 12));
+    for (let lap = x0; lap <= x1; lap += step) g.fillText(String(lap), px(lap), h - padB + 7);
+    g.fillText('lap', w / 2, h - padB + 19);
+
+    for (const c of drawn) {
+        const col = lapColour(c);
+        g.strokeStyle = col;
+        g.lineWidth = 2;
+        // The line breaks at a lap that is off the top rather than being
+        // bent up to meet it. Pinning those to the ceiling drew a spike to
+        // the same height whatever the lap actually was, and with a whole
+        // split stopping within a lap of each other the spikes met in one
+        // point, which looked like an event and was an artefact.
+        g.beginPath();
+        let started = false;
+        for (const l of c.pts) {
+            if (l.lap_ms > hi) { started = false; continue; }
+            const x = px(l.lap), y = py(l.lap_ms);
+            if (started) g.lineTo(x, y); else { g.moveTo(x, y); started = true; }
+        }
+        g.stroke();
+        // A dot per lap, or a car with one lap to its name draws nothing.
+        // Laps off the top keep a hollow mark at the ceiling: something
+        // happened on that lap, and it is not being hidden.
+        for (const l of c.pts) {
+            const over = l.lap_ms > hi;
+            g.beginPath();
+            g.arc(px(l.lap), over ? padT + 3 : py(l.lap_ms), over ? 2.2 : 2.5, 0, Math.PI * 2);
+            if (over) { g.lineWidth = 1.2; g.stroke(); }
+            else { g.fillStyle = col; g.fill(); }
+        }
+    }
+
+    if (note) {
+        const n = drawn.reduce((t, c) => t + c.pts.length, 0);
+        note.textContent = clipped
+            ? `${clipped} lap${clipped === 1 ? '' : 's'} above the scale, drawn off the top: in-laps, out-laps and offs.`
+            : `${n} lap${n === 1 ? '' : 's'} recorded this session.`;
+    }
+}
+
+addEventListener('resize', () => drawLapChart());
+
 async function tick() {
     // Asked together, in one round trip's worth of waiting. The outline state
     // is three numbers; fetching it every poll is what lets the map notice an
@@ -2390,6 +2682,7 @@ async function tick() {
     await loadBasePath(trackState?.error ? null : trackState?.data);
     loadCoverage(data[0].event_id);        // cached, not awaited
     loadCircuitRecord(data[0].event_id);   // once per round, not awaited
+    loadLaps(data[0]);                     // throttled to its own cadence
     lastRows = data;
     // Worked out before anything uses it: the table labels these cars, the
     // map leaves them out, and their trails are not kept.

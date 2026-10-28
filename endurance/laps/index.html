@@ -134,6 +134,7 @@
         <a href="/endurance/standings/">Standings</a>
         <a href="/endurance/results/">Results</a>
         <a href="/endurance/live/">Live</a>
+        <a href="/endurance/laps/" class="active">Lap Log</a>
         <a href="/endurance/drivers/">Drivers</a>
         <a href="/endurance/teams/">Teams</a>
         <a href="/endurance/stats/">Stats</a>
@@ -260,12 +261,12 @@ function drawChart() {
                 if (l.lap_ms <= ownBest * 1.07 && l.lap_ms > ceiling) ceiling = l.lap_ms;
             }
         }
-        if (Number.isFinite(ceiling) && ceiling < hi) {
-            clipped = series.reduce((n, s) => n + s.pts.filter(l => l.lap_ms > ceiling).length, 0);
-            hi = ceiling;
-        }
+        if (Number.isFinite(ceiling) && ceiling < hi) hi = ceiling;
         const pad = Math.max(500, (hi - lo) * 0.08);
         lo -= pad; hi += pad;
+        // Counted against the scale as drawn rather than against the ceiling
+        // before it was padded, so the note agrees with the picture.
+        clipped = series.reduce((n, s) => n + s.pts.filter(l => l.lap_ms > hi).length, 0);
     } else { lo = 0; hi = 100; }
 
     const padL = 58, padR = 14, padT = 14, padB = 28;
@@ -297,22 +298,30 @@ function drawChart() {
         g.strokeStyle = s.row.colour;
         g.lineWidth = 2;
         g.beginPath();
+        // The line breaks at a lap that is off the top rather than being bent
+        // up to meet it. Pinned to the ceiling, every stop drew a spike to
+        // exactly the same height whatever the lap really was, and a split
+        // stopping within a lap of each other met in one point, which looked
+        // like an event and was an artefact of the scale.
         let started = false;
         for (const l of s.pts) {
             const v = val(l);
-            if (v == null) { started = false; continue; }
-            const x = px(l.lap), y = py(Math.min(v, hi));
+            if (v == null || v > hi) { started = false; continue; }
+            const x = px(l.lap), y = py(v);
             if (!started) { g.moveTo(x, y); started = true; } else { g.lineTo(x, y); }
         }
         g.stroke();
-        // A dot per lap, so a single-lap car is visible at all.
-        g.fillStyle = s.row.colour;
+        // A dot per lap, so a single-lap car is visible at all. Laps off the
+        // top keep a hollow mark at the ceiling: something happened on that
+        // lap, and it is not being hidden.
         for (const l of s.pts) {
             const v = val(l);
             if (v == null) continue;
+            const over = v > hi;
             g.beginPath();
-            g.arc(px(l.lap), py(Math.min(v, hi)), 2.5, 0, Math.PI * 2);
-            g.fill();
+            g.arc(px(l.lap), over ? padT + 3 : py(v), over ? 2.2 : 2.5, 0, Math.PI * 2);
+            if (over) { g.lineWidth = 1.2; g.stroke(); g.lineWidth = 2; }
+            else { g.fillStyle = s.row.colour; g.fill(); }
         }
     }
 
