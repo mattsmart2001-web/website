@@ -225,6 +225,12 @@
            use vertical space the rows already have rather than two more
            columns, which these cards cannot spare. */
         .sub2 { display: block; font-variant-numeric: tabular-nums; font-size: 0.66rem; color: var(--muted); }
+        /* What a lap was worth, the way every timing screen in the world
+           says it: purple for the fastest anybody has done this session,
+           green for a driver's own best. Both are facts we already hold,
+           and a column of times becomes readable at a glance with them. */
+        .lap-session { color: #c084fc; font-weight: 700; }
+        .lap-personal { color: #4ade80; font-weight: 700; }
         .dr { display: flex; align-items: center; min-width: 0; }
         .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; cursor: help; }
         /* Quiet: it is a detail, not a status. Never shrinks, so a long name
@@ -404,6 +410,32 @@ function liveness(ageMs, onTrack, elsewhere) {
  * or two. Turning that into "laps remaining" needs each driver's own
  * consumption, which is a later job and not worth faking from one reading.
  */
+/**
+ * How many laps this car has been out since it last stopped.
+ *
+ * Read off the log rather than tracked separately: every lap carries the
+ * fuel the car crossed the line with, so a stop is the figure going back
+ * up. Counting back from the latest lap to the last rise gives the stint,
+ * which over six hours is the number a pit wall actually watches. Null
+ * before the log has anything for the car, which is their first lap or two.
+ *
+ * A rise of more than two points, so that a reading that wobbles by a
+ * tenth is not mistaken for a splash of fuel.
+ */
+const STOP_RISE_PCT = 2;
+
+function stintLaps(driverId) {
+    const mine = lapRows.filter(l => l.driver_id === driverId);
+    if (!mine.length) return null;
+    for (let i = mine.length - 1; i > 0; i--) {
+        const now = mine[i].fuel_pct, before = mine[i - 1].fuel_pct;
+        if (now != null && before != null && now - before > STOP_RISE_PCT) {
+            return mine.length - i;
+        }
+    }
+    return mine.length;
+}
+
 function fuelHtml(r) {
     const pct = r.fuel_pct;
     if (pct == null) return '<span class="fuel-pct">&mdash;</span>';
@@ -419,16 +451,27 @@ function fuelHtml(r) {
     // consumption switched off.
     const burn = r.burn_per_lap;
     const laps = burn > 0 ? Math.floor(v / burn) : null;
-    const note = laps != null
-        ? `<span class="sub2" style="display:inline">${laps} lap${laps === 1 ? '' : 's'}</span>`
-        : '';
-    const title = laps != null
-        ? `${v.toFixed(1)}% of tank, about ${laps} more lap${laps === 1 ? '' : 's'} at ${burn.toFixed(1)}% a lap`
-        : `${v.toFixed(1)}% of tank`;
+    // And how long they have been out on it. Two figures about the same
+    // tank, one looking forwards and one back, which together are the whole
+    // of a stint: "nine laps in, two to go" is a pit call.
+    const stint = stintLaps(r.driver_id);
+    const note = [
+        // Short enough for both to sit on one line in a card that is 430px
+        // wide at its narrowest. The tooltip says it in words.
+        laps != null ? `${laps} left` : null,
+        stint != null ? `${stint} in` : null,
+    ].filter(Boolean).join(' · ');
+    const noteHtml = note
+        ? `<span class="sub2" style="display:inline">${note}</span>` : '';
+    const title = [
+        `${v.toFixed(1)}% of tank`,
+        laps != null ? `about ${laps} more lap${laps === 1 ? '' : 's'} at ${burn.toFixed(1)}% a lap` : null,
+        stint != null ? `${stint} lap${stint === 1 ? '' : 's'} since its last stop` : null,
+    ].filter(Boolean).join(', ');
     return `<div class="fuel-wrap ${cls}" title="${title}">
         <span class="fuel-pct">${Math.round(v)}%</span>
         <span class="fuel-bar"><span class="fuel-fill" style="width:${v}%"></span></span>
-    </div>${note}`;
+    </div>${noteHtml}`;
 }
 
 /**
@@ -500,6 +543,22 @@ function gapHtml(r, ahead) {
     return `<span title="${Math.round(m)} m round the lap">+${shown}</span>`;
 }
 
+// The fastest lap anybody in the round has set this session, worked out
+// once per render from the same figures the rows show. Null until somebody
+// has completed a watched lap.
+let sessionBest = null;
+
+/** What a lap was worth: the session's fastest, this driver's own best, or
+ *  neither. The classes are purple and green, which is what every timing
+ *  screen has meant by those colours for thirty years. */
+function lapWorth(ms, r) {
+    if (ms == null) return '';
+    if (sessionBest != null && ms <= sessionBest) return ' class="lap-session"';
+    const own = bestLap(r);
+    if (own != null && ms <= own) return ' class="lap-personal"';
+    return '';
+}
+
 function rowHtml(r, idx, showFuel, isRace, ahead) {
     const st = liveness(r.age_ms ?? 0, r.on_track, strays.has(r.driver_id));
     const live = st.cls === 's-live' && r.on_track;
@@ -531,8 +590,9 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
              in the menus with a two lap race set up elsewhere in the game
              made it read "8/2". -->
         <td class="num">${r.lap ?? 0}</td>
-        <td class="num">${lapTime(r.last_lap_ms)}<span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
-        <td class="num">${isRace ? gapHtml(r, ahead) : lapTime(bestLap(r))}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
+        <td class="num"><span${lapWorth(r.last_lap_ms, r)}>${lapTime(r.last_lap_ms)}</span><span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
+        <td class="num">${isRace ? gapHtml(r, ahead)
+            : `<span${lapWorth(bestLap(r), r)}>${lapTime(bestLap(r))}</span>`}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
         ${showFuel ? `<td>${fuelHtml(r)}</td>` : ''}
     </tr>`;
 }
@@ -681,6 +741,13 @@ function renderField(rows) {
     // that predates fuel would otherwise give every car a dash, and the
     // column reappears by itself once one does.
     const showFuel = rows.some(r => r.fuel_pct != null);
+    // The fastest lap in the round this session, across every split, which
+    // is what purple means. Worked out before any row is drawn so that every
+    // row is measured against the same figure.
+    sessionBest = rows.reduce((b, r) => {
+        const v = bestLap(r);
+        return v != null && (b == null || v < b) ? v : b;
+    }, null);
 
     // The shell is built once and then only its volatile parts are updated.
     // Rebuilding it every poll would destroy and recreate the canvas twice a
@@ -2820,7 +2887,8 @@ function drawLapChart() {
         // car has, so one lap on its own reads as a lap rather than a speck.
         const lone = c.pts.length === 1;
         g.fillStyle = col;
-        for (const l of c.pts) {
+        for (let i = 0; i < c.pts.length; i++) {
+            const l = c.pts[i];
             const x = px(lapX(l)), y = py(l.lap_ms);
             g.beginPath(); g.arc(x, y, lone ? 3.2 : 2.5, 0, Math.PI * 2); g.fill();
             if (lone) {
@@ -2828,12 +2896,37 @@ function drawLapChart() {
                 g.beginPath(); g.arc(x, y, 6.5, 0, Math.PI * 2); g.stroke();
                 g.globalAlpha = 1; g.lineWidth = 2;
             }
+            // A stop, which the log records as the fuel going back up. Now
+            // that the scale is not capped, the chart tells its story in
+            // spikes, and this is what separates the spike that was a stop
+            // from the spike that was a trip into the barriers.
+            //
+            // Marked on the baseline rather than against the lap itself. A
+            // tick under the dot was the obvious place and it was invisible:
+            // the dot of a stop sits at the top of a spike, so the few
+            // pixels below it are already occupied by the line coming back
+            // down. The foot of the chart is empty, and the car's own colour
+            // is what ties the mark to its line.
+            const prev = c.pts[i - 1];
+            if (prev && l.fuel_pct != null && prev.fuel_pct != null
+                && l.fuel_pct - prev.fuel_pct > STOP_RISE_PCT) {
+                g.lineWidth = 2;
+                g.beginPath();
+                g.moveTo(x, h - padB - 1); g.lineTo(x, h - padB - 9);
+                g.stroke();
+            }
         }
     }
 
     if (note) {
         const n = drawn.reduce((t, c) => t + c.pts.length, 0);
-        note.textContent = `${n} lap${n === 1 ? '' : 's'} recorded this session.`;
+        // The stop marks need saying once, or a row of coloured ticks along
+        // the bottom is just decoration.
+        const stops = drawn.reduce((t, c) => t + c.pts.filter((l, i) =>
+            i > 0 && l.fuel_pct != null && c.pts[i - 1].fuel_pct != null
+            && l.fuel_pct - c.pts[i - 1].fuel_pct > STOP_RISE_PCT).length, 0);
+        note.textContent = `${n} lap${n === 1 ? '' : 's'} recorded this session`
+            + (stops ? `, and the ticks along the bottom are pit stops.` : '.');
     }
 }
 
