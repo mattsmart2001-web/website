@@ -3,7 +3,10 @@
 'use strict';
 
 // Bump this string to force every client to refetch their shell.
-const CACHE_NAME = 'gtec-shell-v32';
+// v33: the asset strategy below changed from cache-first-for-ever to
+// stale-while-revalidate, and the bump is also what evicts the terrain file
+// that everyone was stuck on. See the fetch handler for the whole story.
+const CACHE_NAME = 'gtec-shell-v33';
 
 // Assets to pre-cache on install. Keep this short - fonts and Supabase
 // data are intentionally omitted so they always come fresh. The list is
@@ -110,21 +113,41 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Same-origin static assets: cache-first, then network.
+    // Same-origin static assets: the cached copy at once, and a refetch in
+    // the background so the next load has the current one.
+    //
+    // This used to be cache-first and nothing else, which meant an asset
+    // replaced at the same path was served from the first version a browser
+    // ever saw, for ever, until this file's cache name changed. The pages
+    // themselves are network-first and so were always current, which made it
+    // look like one specific feature had broken: the live map's terrain file
+    // was rebuilt three times, and anyone who had loaded the first one got a
+    // map with no shading, on every normal refresh, with a hard refresh
+    // putting it right because that bypasses the service worker entirely.
+    //
+    // Stale-while-revalidate keeps the offline shell instant and heals a
+    // changed asset by itself on the load after. Versioned query strings on
+    // a few scripts are now belt to this file's braces rather than the only
+    // thing standing between a deploy and a stale page.
     if (url.origin === location.origin) {
         event.respondWith((async () => {
             const cached = await caches.match(req);
-            if (cached) return cached;
-            try {
-                const fresh = await fetch(req);
+            const network = fetch(req).then(async (fresh) => {
                 if (fresh && fresh.status === 200) {
                     const cache = await caches.open(CACHE_NAME);
                     cache.put(req, fresh.clone()).catch(() => null);
                 }
                 return fresh;
-            } catch (err) {
-                return cached || new Response('', { status: 503 });
+            }).catch(() => null);
+
+            if (cached) {
+                // Keep the worker alive until the refetch finishes, or it
+                // can be killed before the new copy is stored and nothing
+                // ever updates.
+                event.waitUntil(network);
+                return cached;
             }
+            return (await network) || new Response('', { status: 503 });
         })());
     }
 });
