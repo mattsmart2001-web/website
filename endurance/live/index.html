@@ -2566,6 +2566,25 @@ function lapCars() {
     return [...by.values()].sort((a, b) => a.best - b.best);
 }
 
+/**
+ * Where a lap sits along the bottom.
+ *
+ * A race is plotted against the lap number, which is shared: everybody's lap
+ * 30 is the same point in the race, and a car that joined on lap 30 belongs
+ * at lap 30 rather than drawn from the left edge alongside somebody else's
+ * opening laps.
+ *
+ * Practice has no such clock. Each driver is out on their own, across as
+ * many evenings as they feel like, and GT7 hands back a lap one every time
+ * one of those evenings starts, so tomorrow's laps would land on top of
+ * tonight's. There it is plotted against the driver's own count of laps for
+ * the round, which 191 records with each lap and which carries across every
+ * session they ever drive.
+ */
+function lapX(l) {
+    return l.mode === 'race' ? l.lap : (l.seq ?? l.lap);
+}
+
 /** The colour this car is on the map, so the two agree at a glance. */
 function lapColour(c) {
     const r = (lastRows || []).find(x => x.driver_id === c.driver_id);
@@ -2659,8 +2678,9 @@ function drawLapChart() {
     // the left edge alongside somebody else's opening laps.
     let x0 = Infinity, x1 = -Infinity, lo = Infinity, hi = -Infinity;
     for (const c of drawn) for (const l of c.pts) {
-        if (l.lap < x0) x0 = l.lap;
-        if (l.lap > x1) x1 = l.lap;
+        const lx = lapX(l);
+        if (lx < x0) x0 = lx;
+        if (lx > x1) x1 = lx;
         if (l.lap_ms < lo) lo = l.lap_ms;
         if (l.lap_ms > hi) hi = l.lap_ms;
     }
@@ -2700,7 +2720,8 @@ function drawLapChart() {
     g.textBaseline = 'top';
     const step = Math.max(1, Math.ceil((x1 - x0 + 1) / 12));
     for (let lap = x0; lap <= x1; lap += step) g.fillText(String(lap), px(lap), h - padB + 7);
-    g.fillText('lap', w / 2, h - padB + 19);
+    g.fillText(drawn[0].pts[0].mode === 'race' ? 'lap' : 'laps driven',
+               w / 2, h - padB + 19);
 
     for (const c of drawn) {
         const col = lapColour(c);
@@ -2720,8 +2741,8 @@ function drawLapChart() {
             const a = c.pts[i - 1], b = c.pts[i];
             g.globalAlpha = (a.lap_ms > hi || b.lap_ms > hi) ? 0.33 : 1;
             g.beginPath();
-            g.moveTo(px(a.lap), yAt(a));
-            g.lineTo(px(b.lap), yAt(b));
+            g.moveTo(px(lapX(a)), yAt(a));
+            g.lineTo(px(lapX(b)), yAt(b));
             g.stroke();
         }
         g.globalAlpha = 1;
@@ -2732,7 +2753,7 @@ function drawLapChart() {
             const l = c.pts[i];
             if (l.lap_ms > hi) {
                 g.beginPath();
-                g.arc(px(l.lap), padT + 3, 2.2, 0, Math.PI * 2);
+                g.arc(px(lapX(l)), padT + 3, 2.2, 0, Math.PI * 2);
                 g.lineWidth = 1.2; g.stroke(); g.lineWidth = 2;
                 continue;
             }
@@ -2740,7 +2761,7 @@ function drawLapChart() {
             // Ringed, so it reads as one lap standing alone rather than as a
             // speck of something unfinished.
             const lone = c.pts.length === 1;
-            const x = px(l.lap), y = py(l.lap_ms);
+            const x = px(lapX(l)), y = py(l.lap_ms);
             g.fillStyle = col;
             g.beginPath(); g.arc(x, y, lone ? 3.2 : 2.5, 0, Math.PI * 2); g.fill();
             if (lone) {
@@ -2775,7 +2796,7 @@ function drawLapChart() {
                 const tw = g.measureText(text).width;
                 // Kept inside the plot, or a lap 1 label hangs over the
                 // times running down the left hand edge.
-                const x = Math.min(Math.max(px(l.lap), padL + tw / 2),
+                const x = Math.min(Math.max(px(lapX(l)), padL + tw / 2),
                                    w - padR - tw / 2);
                 let y = null;
                 for (let row = 0; row < 2; row++) {
