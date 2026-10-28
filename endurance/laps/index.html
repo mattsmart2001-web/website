@@ -270,21 +270,19 @@ function drawChart() {
     // pace the chart exists to show is squashed into the bottom third.
     // They are still drawn, off the top, so the chart does not pretend
     // they did not happen.
-    let clipped = 0;
+    // Every lap drawn where it was driven.
+    //
+    // The scale used to stop at the slowest lap within 107% of its own
+    // driver's best, so a stop or a spin sat on the ceiling instead of
+    // stretching the axis. It worked, and it cost more than it was worth: a
+    // lap on the ceiling is not where it says it is, so its marks had to be
+    // rings rather than dots, the line either side of it had to be dashed,
+    // and its real time had to be printed next to it. Three devices, all of
+    // them explaining the chart's machinery rather than the racing. A tall
+    // spike explains itself.
     if (metric === 'lap') {
-        let ceiling = -Infinity;
-        for (const s of series) {
-            const ownBest = s.row.best_ms;
-            for (const l of s.pts) {
-                if (l.lap_ms <= ownBest * 1.07 && l.lap_ms > ceiling) ceiling = l.lap_ms;
-            }
-        }
-        if (Number.isFinite(ceiling) && ceiling < hi) hi = ceiling;
         const pad = Math.max(500, (hi - lo) * 0.08);
         lo -= pad; hi += pad;
-        // Counted against the scale as drawn rather than against the ceiling
-        // before it was padded, so the note agrees with the picture.
-        clipped = series.reduce((n, s) => n + s.pts.filter(l => l.lap_ms > hi).length, 0);
     } else { lo = 0; hi = 100; }
 
     const padL = 58, padR = 14, padT = 14, padB = 28;
@@ -323,43 +321,28 @@ function drawChart() {
         // ceiling and the segments reaching it are faded, so the line stays
         // continuous while being plain that the real time is higher than the
         // chart goes.
-        // Dashed, not faded, where a segment reaches a lap off the top: a
-        // car with most of its laps above the scale was otherwise drawn
-        // almost entirely at a third opacity, which reads as a thinner line
-        // than everybody else's rather than as laps off the scale.
-        const yAt = v => v > hi ? padT + 3 : py(v);
-        for (let i = 1; i < s.pts.length; i++) {
-            const a = val(s.pts[i - 1]), b = val(s.pts[i]);
-            if (a == null || b == null) continue;
-            const off = a > hi || b > hi;
-            g.setLineDash(off ? [4, 3] : []);
-            g.globalAlpha = off ? 0.8 : 1;
-            g.beginPath();
-            g.moveTo(px(lapX(s.pts[i - 1])), yAt(a));
-            g.lineTo(px(lapX(s.pts[i])), yAt(b));
-            g.stroke();
+        g.beginPath();
+        let started = false;
+        for (const l of s.pts) {
+            const v = val(l);
+            if (v == null) { started = false; continue; }
+            const x = px(lapX(l)), y = py(v);
+            if (!started) { g.moveTo(x, y); started = true; } else { g.lineTo(x, y); }
         }
-        g.setLineDash([]);
-        g.globalAlpha = 1;
+        g.stroke();
         // A dot per lap, so a single-lap car is visible at all. Laps off the
         // top keep a hollow mark at the ceiling: something happened on that
         // lap, and it is not being hidden.
+        // A dot per lap, and a ring round one that has no line either side
+        // of it, so a single lap reads as a lap rather than a speck.
+        g.fillStyle = s.row.colour;
         for (let i = 0; i < s.pts.length; i++) {
             const v = val(s.pts[i]);
             if (v == null) continue;
-            if (v > hi) {
-                g.beginPath();
-                g.arc(px(lapX(s.pts[i])), padT + 3, 2.2, 0, Math.PI * 2);
-                g.lineWidth = 1.2; g.stroke(); g.lineWidth = 2;
-                continue;
-            }
-            // A lap with no line anywhere near it: the only one this car has,
-            // or the only one with a reading. Ringed, so it reads as a lap
-            // standing alone rather than a speck of something unfinished.
-            const before = s.pts[i - 1] && val(s.pts[i - 1]), after = s.pts[i + 1] && val(s.pts[i + 1]);
+            const before = s.pts[i - 1] && val(s.pts[i - 1]);
+            const after  = s.pts[i + 1] && val(s.pts[i + 1]);
             const lone = before == null && after == null;
             const x = px(lapX(s.pts[i])), y = py(v);
-            g.fillStyle = s.row.colour;
             g.beginPath(); g.arc(x, y, lone ? 3.2 : 2.5, 0, Math.PI * 2); g.fill();
             if (lone) {
                 g.globalAlpha = 0.45; g.lineWidth = 1.2;
@@ -372,49 +355,13 @@ function drawChart() {
     // The heading belongs to the chart, not to the page it was rendered on:
     // switching between lap times and fuel redraws the canvas and nothing
     // else, so it was still saying LAP TIMES over a fuel chart.
-    // What the laps off the top actually were. Their height cannot say it:
-    // every one sits on the ceiling, so an 11:03 and a 9:10 are the same
-    // mark and a car with four of them reads as having driven the same lap
-    // four times. Two rows of labels, and one that cannot find room in
-    // either is dropped, since the note already gives the count.
-    if (clipped) {
-        g.font = "9px 'Inter', system-ui, sans-serif";
-        g.textAlign = 'center';
-        g.textBaseline = 'top';
-        const placed = [];
-        for (const s of series) {
-            g.fillStyle = s.row.colour;
-            for (const l of s.pts) {
-                const v = val(l);
-                if (v == null || v <= hi) continue;
-                const text = lapTime(v);
-                const tw = g.measureText(text).width;
-                // Kept inside the plot, or a lap 1 label hangs over the
-                // times running down the left hand edge.
-                const x = Math.min(Math.max(px(lapX(l)), padL + tw / 2),
-                                   w - padR - tw / 2);
-                let y = null;
-                for (let row = 0; row < 2; row++) {
-                    const ry = padT + 10 + row * 11;
-                    if (!placed.some(p => p.y === ry
-                        && Math.abs(p.x - x) < (p.w + tw) / 2 + 5)) { y = ry; break; }
-                }
-                if (y == null) continue;
-                placed.push({ x, y, w: tw });
-                g.fillText(text, x, y);
-            }
-        }
-    }
-
     const head = document.getElementById('chart-title');
     if (head) head.textContent = metric === 'fuel' ? 'Fuel' : 'Lap Times';
     const note = document.getElementById('chart-note');
     if (note) {
         note.textContent = metric === 'fuel'
             ? 'Fuel as each car crossed the line. A stop is the step back up.'
-            : clipped
-                ? `${clipped} lap${clipped === 1 ? '' : 's'} ran past the top of the scale and sit on it: in-laps, out-laps and offs.`
-                : 'Lap time as driven.';
+            : 'Lap time as driven. A spike is a stop, an off, or a lap spent in the barriers.';
     }
 }
 

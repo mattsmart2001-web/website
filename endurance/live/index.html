@@ -2692,20 +2692,20 @@ function drawLapChart() {
         if (l.lap_ms > hi) hi = l.lap_ms;
     }
 
-    // The scale stops at the slowest lap still within 107% of its own
-    // driver's best. Above that is a stop, an off or a lift for traffic, and
-    // those are a minute clear of the racing: scaled to include them, the
-    // pace the chart exists to show is squashed into the bottom third. They
-    // are still drawn, off the top, so the chart does not pretend they did
-    // not happen.
-    let ceiling = -Infinity;
-    for (const c of drawn) for (const l of c.pts) {
-        if (l.lap_ms <= c.best * 1.07 && l.lap_ms > ceiling) ceiling = l.lap_ms;
-    }
-    if (Number.isFinite(ceiling) && ceiling < hi) hi = ceiling;
+    // Every lap drawn where it was driven.
+    //
+    // The scale used to stop at the slowest lap within 107% of its own
+    // driver's best, so a stop or a spin sat on the ceiling instead of
+    // stretching the axis, which kept the racing out of the bottom third.
+    // It worked, and it cost more than it was worth: a lap on the ceiling is
+    // not where it says it is, so its marks had to be rings instead of dots,
+    // the line either side of it had to be dashed, and the real time had to
+    // be printed next to it. Three devices, all of them explaining the
+    // chart's own machinery rather than the racing.
+    //
+    // A tall spike explains itself.
     const pad = Math.max(500, (hi - lo) * 0.08);
     lo -= pad; hi += pad;
-    const clipped = drawn.reduce((n, c) => n + c.pts.filter(l => l.lap_ms > hi).length, 0);
 
     const padL = 58, padR = 14, padT = 14, padB = 28;
     const px = lap => padL + (x1 === x0 ? 0 : ((lap - x0) / (x1 - x0)) * (w - padL - padR));
@@ -2743,43 +2743,21 @@ function drawLapChart() {
         // chart goes: a stop and a spin both end up at the top, and the
         // faded run up to it is the chart saying "this one left the scale"
         // rather than "this one was 9:01".
-        // Dashed, not faded, where a segment reaches a lap off the top.
-        // Fading was the first attempt and it cost the line its weight: a
-        // car with most of its laps above the scale was drawn almost
-        // entirely at a third opacity, which does not read as "these are off
-        // the scale", it reads as a thinner line than everybody else's. A
-        // dash says the same thing at full strength, so every car's line
-        // carries the same weight whatever its laps did.
-        const yAt = l => l.lap_ms > hi ? padT + 3 : py(l.lap_ms);
-        for (let i = 1; i < c.pts.length; i++) {
-            const a = c.pts[i - 1], b = c.pts[i];
-            const off = a.lap_ms > hi || b.lap_ms > hi;
-            g.setLineDash(off ? [4, 3] : []);
-            g.globalAlpha = off ? 0.8 : 1;
-            g.beginPath();
-            g.moveTo(px(lapX(a)), yAt(a));
-            g.lineTo(px(lapX(b)), yAt(b));
-            g.stroke();
-        }
-        g.setLineDash([]);
-        g.globalAlpha = 1;
+        g.beginPath();
+        c.pts.forEach((l, i) => {
+            const x = px(lapX(l)), y = py(l.lap_ms);
+            if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+        });
+        g.stroke();
         // A dot per lap, or a car with one lap to its name draws nothing.
         // Laps off the top keep a hollow mark at the ceiling: something
         // happened on that lap, and it is not being hidden.
-        for (let i = 0; i < c.pts.length; i++) {
-            const l = c.pts[i];
-            if (l.lap_ms > hi) {
-                g.beginPath();
-                g.arc(px(lapX(l)), padT + 3, 2.2, 0, Math.PI * 2);
-                g.lineWidth = 1.2; g.stroke(); g.lineWidth = 2;
-                continue;
-            }
-            // The only lap this car has to its name, with no line anywhere.
-            // Ringed, so it reads as one lap standing alone rather than as a
-            // speck of something unfinished.
-            const lone = c.pts.length === 1;
+        // A dot per lap, and a ring round it when it is the only lap this
+        // car has, so one lap on its own reads as a lap rather than a speck.
+        const lone = c.pts.length === 1;
+        g.fillStyle = col;
+        for (const l of c.pts) {
             const x = px(lapX(l)), y = py(l.lap_ms);
-            g.fillStyle = col;
             g.beginPath(); g.arc(x, y, lone ? 3.2 : 2.5, 0, Math.PI * 2); g.fill();
             if (lone) {
                 g.globalAlpha = 0.45; g.lineWidth = 1.2;
@@ -2789,51 +2767,9 @@ function drawLapChart() {
         }
     }
 
-    // What the laps off the top actually were.
-    //
-    // Their height cannot say it. Every one of them sits on the ceiling, so
-    // an 11:03 and a 9:10 are the same mark, and a car with four of them
-    // reads as having driven the same lap four times, joined by a flat line
-    // at a time nobody set. The figure goes beside the mark instead, which
-    // is the only place left to put it.
-    //
-    // Two rows, and a label that cannot find room in either is dropped: the
-    // note beside the heading already says how many went past the top, and a
-    // pile of overlapping numbers would say less than the count does.
-    if (clipped) {
-        g.font = "9px 'Inter', system-ui, sans-serif";
-        g.textAlign = 'center';
-        g.textBaseline = 'top';
-        const placed = [];
-        for (const c of drawn) {
-            g.fillStyle = lapColour(c);
-            for (const l of c.pts) {
-                if (l.lap_ms <= hi) continue;
-                const text = axisTime(l.lap_ms);
-                const tw = g.measureText(text).width;
-                // Kept inside the plot, or a lap 1 label hangs over the
-                // times running down the left hand edge.
-                const x = Math.min(Math.max(px(lapX(l)), padL + tw / 2),
-                                   w - padR - tw / 2);
-                let y = null;
-                for (let row = 0; row < 2; row++) {
-                    const ry = padT + 10 + row * 11;
-                    const clash = placed.some(p => p.y === ry
-                        && Math.abs(p.x - x) < (p.w + tw) / 2 + 5);
-                    if (!clash) { y = ry; break; }
-                }
-                if (y == null) continue;
-                placed.push({ x, y, w: tw });
-                g.fillText(text, x, y);
-            }
-        }
-    }
-
     if (note) {
         const n = drawn.reduce((t, c) => t + c.pts.length, 0);
-        note.textContent = clipped
-            ? `${n} laps · ${clipped} ran past the top of the scale and sit on it: in-laps, out-laps and offs.`
-            : `${n} lap${n === 1 ? '' : 's'} recorded this session.`;
+        note.textContent = `${n} lap${n === 1 ? '' : 's'} recorded this session.`;
     }
 }
 
