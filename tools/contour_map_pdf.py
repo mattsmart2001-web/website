@@ -35,6 +35,12 @@ class Pdf:
     def __init__(self, w, h):
         self.w, self.h = w, h
         self.ops = []
+        self.pages = []          # finished pages, as op lists
+
+    def page_break(self):
+        """Bank the current page and start a new one."""
+        self.pages.append(self.ops)
+        self.ops = []
 
     def line_width(self, pt):      self.ops.append(f"{pt:.2f} w")
     def grey(self, g):             self.ops.append(f"{g:.3f} G")
@@ -53,9 +59,11 @@ class Pdf:
         self.ops.append("f" if fill else "S")
 
     def text(self, x, y, size, s, grey=0.0, angle=None):
-        # Only the ASCII the base fonts cover, and the two characters that
-        # would otherwise end a string early.
-        s = "".join(ch if 32 <= ord(ch) < 127 else "?" for ch in str(s))
+        # WinAnsi covers the whole of latin-1's printable range, so a middle
+        # dot or an accent is fine; only what falls outside it becomes a
+        # question mark. Filtering at 127 turned every separator into one.
+        s = "".join(ch if 32 <= ord(ch) <= 255 and ord(ch) != 127 else "?"
+                    for ch in str(s))
         s = s.replace("\\", r"\\").replace("(", r"\(").replace(")", r"\)")
         self.ops.append("BT")
         self.ops.append(f"{grey:.3f} g")
@@ -69,16 +77,27 @@ class Pdf:
         self.ops.append("ET")
 
     def write(self, path):
-        stream = zlib.compress("\n".join(self.ops).encode("latin-1"))
+        pages = self.pages + ([self.ops] if self.ops else [])
+        if not pages:
+            pages = [[]]
+        # Object numbering: 1 catalog, 2 pages, 3 font, then a page object
+        # and a content stream for each page.
+        first = 4
+        kids = " ".join(f"{first + 2*i} 0 R" for i in range(len(pages)))
         objs = [
             b"<< /Type /Catalog /Pages 2 0 R >>",
-            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-            (f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {self.w:.2f} {self.h:.2f}] "
-             f"/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>").encode(),
-            b"<< /Length " + str(len(stream)).encode() + b" /Filter /FlateDecode >>\nstream\n"
-            + stream + b"\nendstream",
+            (f"<< /Type /Pages /Kids [{kids}] /Count {len(pages)} >>").encode(),
             b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
         ]
+        for i, ops in enumerate(pages):
+            stream = zlib.compress("\n".join(ops).encode("latin-1"))
+            objs.append(
+                (f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {self.w:.2f} {self.h:.2f}] "
+                 f"/Resources << /Font << /F1 3 0 R >> >> "
+                 f"/Contents {first + 2*i + 1} 0 R >>").encode())
+            objs.append(
+                b"<< /Length " + str(len(stream)).encode() + b" /Filter /FlateDecode >>\nstream\n"
+                + stream + b"\nendstream")
         out = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
         offsets = []
         for i, body in enumerate(objs, start=1):
