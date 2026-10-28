@@ -523,7 +523,14 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
             <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${clientBadge(r.client)}${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
             ${sub ? `<span class="team">${swatch}${sub}</span>` : ''}
         </td>
-        <td class="num">${r.lap ?? 0}${r.laps_in_race ? `<span class="sub2" style="display:inline">/${r.laps_in_race}</span>` : ''}</td>
+        <!-- The lap they are on, and nothing after it. GT7's "laps in race"
+             used to follow it as "12/60", which is the right thing to show
+             in a race run to a lap count and a wrong thing to show in one
+             run to a clock: a GTEC round is six hours, so the figure comes
+             from whatever the lobby happens to be set to. A driver sitting
+             in the menus with a two lap race set up elsewhere in the game
+             made it read "8/2". -->
+        <td class="num">${r.lap ?? 0}</td>
         <td class="num">${lapTime(r.last_lap_ms)}<span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
         <td class="num">${isRace ? gapHtml(r, ahead) : lapTime(bestLap(r))}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
         ${showFuel ? `<td>${fuelHtml(r)}</td>` : ''}
