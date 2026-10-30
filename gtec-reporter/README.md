@@ -153,15 +153,20 @@ reported.
 
 ## Limits
 
-- **Port 33740 can only be held by one app per device.** A driver running
-  another telemetry app on the same phone will see "port busy". On a
-  separate device it is fine, which is the usual case: connector on a PC,
-  this on a phone.
+- **Port 33740 can only be held by one app per device**, and GT7 always
+  sends there. On a separate device there is nothing to sort out, which is
+  the usual case: connector on a PC, this on a phone. On the *same* phone,
+  the two apps have to agree who owns the port, and the **Sharing**
+  settings are how: `Listen on port` makes this one second in the chain
+  and stops it pinging the console, `Copy to ports` makes it first and
+  sends every raw datagram on to the other app. Same two settings as the
+  desktop connector, for the same reason. It only works if the other app
+  can also be told to listen somewhere, and plenty cannot.
 - **Whether a PS5 streams to two devices at once is unconfirmed.** It
   should, since each sends its own heartbeat from its own IP, but it has
   not been tested. Matters for a driver running a dashboard as well.
-- **No iOS.** UDP is fine on iOS, but sideloading needs re-signing every
-  seven days, so it would mean the App Store, a paid account and a Mac.
+- **iOS is a separate app**, in `gtec-reporter-ios`. UDP is fine there;
+  what it costs is an Apple account and a Mac to sign with.
 - **A twelve-hour race is a twelve-hour foreground service.** Phone on
   charge, and expect Android vendors with aggressive battery management
   (Xiaomi, Huawei, OnePlus) to need the app excluded by hand.

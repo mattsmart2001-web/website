@@ -33,12 +33,14 @@ class ReporterService : Service() {
         private const val CHANNEL = "gtec_reporter"
         private const val NOTE_ID = 1
 
-        /** GT7 sends telemetry here. */
-        private const val LISTEN_PORT = 33740
+        /** GT7 sends telemetry here, and only one app per device can hold it. */
+        private const val STD_PORT = 33740
         /** And listens for the heartbeat here. */
         private const val CONSOLE_PORT = 33739
         /** GT7 stops streaming 1 to 2 seconds after the last heartbeat. */
         private const val HEARTBEAT_MS = 1_500L
+        /** Where a forwarded copy goes: another app on this same phone. */
+        private val LOOPBACK: InetAddress = InetAddress.getByName("127.0.0.1")
 
         @Volatile var status: String = "Stopped"
             private set
@@ -101,6 +103,28 @@ class ReporterService : Service() {
             prefs.getString("console_ip", null) ?: "255.255.255.255"
         )
 
+        // Sharing the console with another telemetry app on this same phone.
+        // Only one app can hold 33740, and GT7 always sends there, so the two
+        // of them have to agree who owns it. Same two settings as the desktop
+        // connector, for the same reason:
+        //
+        //   listen_port  listen somewhere other than 33740, so this can be
+        //                second in the chain and take a forwarded copy from
+        //                whatever owns it
+        //   forward_to   when this one owns 33740, send a copy of every raw
+        //                datagram on to local ports, so the other app can be
+        //                second instead
+        //
+        // The heartbeat follows the port. A connector that is second must not
+        // ping the console: the app that owns 33740 is already doing that, and
+        // the console answers whoever asked, on the port it owns.
+        val listenPort = prefs.getInt("listen_port", STD_PORT)
+        val weOwnThePort = listenPort == STD_PORT
+        val forwardTo = (prefs.getString("forward_to", "") ?: "")
+            .split(',', ';')
+            .mapNotNull { it.trim().toIntOrNull() }
+            .filter { it in 1..65535 }
+
         val buf = ByteArray(1024)
         var lastHeartbeat = 0L
         var nextBeaconAt = 0L
@@ -114,10 +138,18 @@ class ReporterService : Service() {
                 reuseAddress = true
                 broadcast = true
                 soTimeout = 1_000
-                bind(java.net.InetSocketAddress(LISTEN_PORT))
+                bind(java.net.InetSocketAddress(listenPort))
             }
         } catch (e: Exception) {
-            status = "Port $LISTEN_PORT busy · close other telemetry apps"
+            // A dashboard on another device is never the cause: the console
+            // answers each device separately. This only happens when another
+            // telemetry app on this phone already holds the port.
+            status = if (weOwnThePort) {
+                "Another app on this phone is using port $STD_PORT · close it, " +
+                    "or set a listen port under Sharing"
+            } else {
+                "Port $listenPort is in use · pick another under Sharing"
+            }
             update(status)
             running = false
             return
@@ -126,7 +158,7 @@ class ReporterService : Service() {
         while (running) {
             val now = System.currentTimeMillis()
 
-            if (now - lastHeartbeat >= HEARTBEAT_MS) {
+            if (weOwnThePort && now - lastHeartbeat >= HEARTBEAT_MS) {
                 try {
                     socket?.send(DatagramPacket(byteArrayOf('A'.code.toByte()), 1, consoleAddr, CONSOLE_PORT))
                 } catch (_: Exception) { /* a missed heartbeat self-corrects next tick */ }
@@ -136,6 +168,13 @@ class ReporterService : Service() {
             val dp = DatagramPacket(buf, buf.size)
             val sample = try {
                 socket?.receive(dp)
+                // Pass the datagram on untouched, before anything is read from
+                // it, so the other app sees exactly what the console sent.
+                for (port in forwardTo) {
+                    try {
+                        socket?.send(DatagramPacket(buf, dp.length, LOOPBACK, port))
+                    } catch (_: Exception) { /* its problem, not ours */ }
+                }
                 Gt7Packet.decode(buf, dp.length)
             } catch (_: java.net.SocketTimeoutException) {
                 null
@@ -145,7 +184,11 @@ class ReporterService : Service() {
 
             if (sample == null) {
                 if (now - lastHeartbeat > 6_000 || packets == 0L) {
-                    status = "Waiting for GT7 · is the console on the same WiFi?"
+                    status = if (weOwnThePort) {
+                        "Waiting for GT7 · is the console on the same WiFi?"
+                    } else {
+                        "Waiting on port $listenPort · is the other app forwarding to it?"
+                    }
                     update(status)
                 }
                 continue

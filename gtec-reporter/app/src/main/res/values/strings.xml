@@ -7,4 +7,8 @@
     <string name="stop">Stop</string>
     <string name="need_token">That does not look like a pairing code. Copy it from your portal.</string>
     <string name="status_idle">Stopped</string>
+    <string name="sharing_title">Sharing with another telemetry app</string>
+    <string name="sharing_blurb">Leave both of these empty unless you run another telemetry app on this same phone. An app on another device is never a problem: the console answers each device separately.\n\nOnly one app per phone can hold port 33740, and GT7 always sends there, so the two have to agree. Either let this one own it and copy the data on, or let the other own it and listen for its copy.</string>
+    <string name="listen_port_hint">Listen on port (default 33740)</string>
+    <string name="forward_to_hint">Copy to ports on this phone, e.g. 33741</string>
 </resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- iOS shows this sentence when it asks whether the app may talk to
+         things on the owner's own network. It is the only permission the
+         app wants, and the console is the only thing it talks to. -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>GTEC Live Timing reads your PlayStation's telemetry over your own WiFi so your car appears on the live timing board.</string>
+    <!-- Declared because the permission prompt is raised by starting a
+         Bonjour browse. Nothing is published and nothing is joined; it
+         exists so iOS recognises what the app is doing and asks properly,
+         rather than dropping the traffic silently. -->
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_gtec._udp</string>
+    </array>
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UIRequiresFullScreen</key>
+    <false/>
+</dict>
+</plist>

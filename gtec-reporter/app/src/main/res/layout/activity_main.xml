@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- A ScrollView because the sharing settings push the page past a short
+     screen, and a clipped Start button is worse than a scroll. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<LinearLayout
     android:orientation="vertical"
     android:padding="24dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="wrap_content">
 
     <TextView
         android:layout_width="match_parent"
@@ -41,4 +47,36 @@
         android:layout_marginTop="24dp"
         android:textStyle="bold"
         android:text="@string/status_idle" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:textStyle="bold"
+        android:text="@string/sharing_title" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/sharing_blurb"
+        android:lineSpacingMultiplier="1.3"
+        android:textSize="13sp"
+        android:paddingBottom="12dp" />
+
+    <EditText
+        android:id="@+id/listen_port"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/listen_port_hint"
+        android:inputType="number"
+        android:autofillHints="" />
+
+    <EditText
+        android:id="@+id/forward_to"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/forward_to_hint"
+        android:inputType="textNoSuggestions"
+        android:autofillHints="" />
 </LinearLayout>
+</ScrollView>

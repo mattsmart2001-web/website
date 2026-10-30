@@ -525,6 +525,10 @@ function fuelHtml(r) {
  */
 const CLIENT_BADGE = {
     android: ['Phone', 'M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm3 18h4'],
+    // Same outline as the Android badge with a round home button rather
+    // than a speaker slot, because at fourteen pixels those are the only
+    // two phones anyone can tell apart.
+    ios:     ['iPhone', 'M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm5 16.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z'],
     windows: ['PC', 'M3 5l8-1v7H3V5zm0 8h8v7l-8-1v-6zm10-9.2L21 3v8h-8V3.8zM13 13h8v8l-8-1.2V13z'],
     mac:     ['Mac', 'M3 5a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5zM2 19h20'],
     linux:   ['Linux', 'M12 2a5 5 0 0 1 5 5v4l2 5a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l2-5V7a5 5 0 0 1 5-5z'],

@@ -1,0 +1,37 @@
+# An XcodeGen spec rather than a checked-in .xcodeproj.
+#
+# A pbxproj is six hundred lines of generated XML that nobody can review in
+# a diff, and it is the file that conflicts every time two people touch the
+# project. This is the same thing in twenty readable lines, and the build
+# generates the project from it.
+name: GTECReporter
+options:
+  bundleIdPrefix: uk.co.sparkstheory
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  GTECReporter:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+    info:
+      path: Resources/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.sparkstheory.gtec.reporter
+        INFOPLIST_FILE: Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: GTEC Timing
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        TARGETED_DEVICE_FAMILY: "1,2"

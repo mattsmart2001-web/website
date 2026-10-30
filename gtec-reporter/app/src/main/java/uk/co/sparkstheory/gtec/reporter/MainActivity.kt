@@ -23,6 +23,8 @@ import android.widget.TextView
 class MainActivity : Activity() {
 
     private lateinit var tokenField: EditText
+    private lateinit var portField: EditText
+    private lateinit var forwardField: EditText
     private lateinit var statusLine: TextView
     private lateinit var startBtn: Button
     private lateinit var stopBtn: Button
@@ -40,12 +42,20 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
 
         tokenField = findViewById(R.id.token)
+        portField = findViewById(R.id.listen_port)
+        forwardField = findViewById(R.id.forward_to)
         statusLine = findViewById(R.id.status)
         startBtn = findViewById(R.id.start)
         stopBtn = findViewById(R.id.stop)
 
         val prefs = getSharedPreferences("gtec", Context.MODE_PRIVATE)
         tokenField.setText(prefs.getString("token", ""))
+        // Shown empty when it is the standard port, so the field reads as
+        // untouched rather than as something the driver has configured.
+        prefs.getInt("listen_port", 33740).let {
+            if (it != 33740) portField.setText(it.toString())
+        }
+        forwardField.setText(prefs.getString("forward_to", ""))
 
         startBtn.setOnClickListener {
             val token = tokenField.text.toString().trim()
@@ -53,7 +63,15 @@ class MainActivity : Activity() {
                 statusLine.text = getString(R.string.need_token)
                 return@setOnClickListener
             }
-            prefs.edit().putString("token", token).apply()
+            // An unreadable or out-of-range port falls back to the standard
+            // one rather than refusing to start.
+            val port = portField.text.toString().trim().toIntOrNull()
+                ?.takeIf { it in 1..65535 } ?: 33740
+            prefs.edit()
+                .putString("token", token)
+                .putInt("listen_port", port)
+                .putString("forward_to", forwardField.text.toString().trim())
+                .apply()
             askForNotifications()
             startService(
                 Intent(this, ReporterService::class.java)
