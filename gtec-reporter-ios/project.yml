@@ -32,7 +32,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: uk.co.sparkstheory.gtec.reporter
         INFOPLIST_FILE: Resources/Info.plist
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: GTEC Timing
+        INFOPLIST_KEY_CFBundleDisplayName: GTEC Live Timing
         # The league's own mark, square and without an alpha channel, which
         # is what the App Store requires. iOS rounds the corners itself.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
