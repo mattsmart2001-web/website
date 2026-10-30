@@ -104,10 +104,20 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
+          # altool exits 0 on a rejected upload, so its own exit code cannot
+          # be trusted: a build that Apple refused came back here as a green
+          # tick and an empty TestFlight page. The output is what says.
+          log=$(mktemp)
           xcrun altool --upload-app -t ios \
             -f "$(ls build/export/*.ipa | head -1)" \
             --apiKey "$ASC_KEY_ID" \
-            --apiIssuer "$ASC_ISSUER_ID"
+            --apiIssuer "$ASC_ISSUER_ID" 2>&1 | tee "$log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ] \
+             || grep -qE 'UPLOAD FAILED|Failed to upload package' "$log"; then
+            echo "::error::Apple refused the upload. The reason is above."
+            exit 1
+          fi
 
       - name: Where it went
         run: |
