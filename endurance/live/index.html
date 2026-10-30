@@ -1141,6 +1141,50 @@ function carNumber(r, mode) {
         : (r.career_number ?? r.car_number);
 }
 
+// How long the outline has to sit still before this page stops watching it
+// closely. Long enough that finishing a trace, which lands several changes
+// in a row, does not fall back to the slow cadence between them.
+const STATE_SETTLED_MS = 30000;
+// And how often to look once it has. Ten seconds is the longest a clear can
+// go unnoticed, against forty-five before any of this existed.
+const STATE_SLOW_MS = 10000;
+
+let stateCache = null, stateAskedAt = 0, stateChangedAt = 0;
+
+/**
+ * The outline's state, asked for as often as it can actually change.
+ *
+ * While somebody is drawing the outline the map has to see a clear or a
+ * restart at once, so every poll asks. But a closed outline that has not
+ * moved for half a minute is only going to change when an admin changes it,
+ * which happens about weekly, and asking every poll costs as much as the
+ * whole rest of the page put together: two hundred people watching a race
+ * is three hundred requests a second, and half of them are this.
+ *
+ * So once it has settled, this drops to a glance every ten seconds. Nobody
+ * watching a race can tell. Whoever is drawing a track never gets there,
+ * because their outline is open and therefore never settled.
+ */
+async function trackStateNow() {
+    const now = Date.now();
+    const settled = stateCache?.data?.closed && now - stateChangedAt > STATE_SETTLED_MS;
+    if (stateCache && now - stateAskedAt < (settled ? STATE_SLOW_MS : 0)) return stateCache;
+
+    const r = await sb.rpc('live_track_state');
+    stateAskedAt = now;
+    // A failed poll keeps whatever was last known, rather than telling the
+    // map the outline has gone.
+    if (r.error) return stateCache ?? r;
+
+    const was = stateCache?.data, is = r.data;
+    if (!was || is?.points !== was?.points
+        || !!is?.closed !== !!was?.closed || !!is?.armed !== !!was?.armed) {
+        stateChangedAt = now;
+    }
+    stateCache = r;
+    return r;
+}
+
 async function loadBasePath(state) {
     // The state is three numbers and comes with every poll. The outline
     // itself can be two thousand points, so it is only refetched when those
@@ -3109,11 +3153,10 @@ addEventListener('resize', () => drawLapChart());
 
 async function tick() {
     // Asked together, in one round trip's worth of waiting. The outline state
-    // is three numbers; fetching it every poll is what lets the map notice an
-    // outline being cleared or restarted straight away.
+    // usually answers from memory rather than the server: see trackStateNow.
     const [{ data, error }, trackState] = await Promise.all([
         sb.rpc('live_field'),
-        sb.rpc('live_track_state'),
+        trackStateNow(),
     ]);
 
     if (error) {
