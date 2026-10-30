@@ -1,0 +1,117 @@
+name: Send GTEC iOS reporter to TestFlight
+
+# Signs the iPhone app and uploads it to TestFlight, from which the league
+# installs it by link.
+#
+# Run by hand, never on a push: every upload burns a build number and, for
+# the first one of a version, Apple's review time. build-ios.yml is the one
+# that runs on every change, and it only proves the thing compiles.
+#
+# Needs four repository secrets, all from App Store Connect:
+#   ASC_KEY_ID      the ten characters naming the API key
+#   ASC_ISSUER_ID   the UUID of the account the key belongs to
+#   ASC_PRIVATE_KEY the .p8 file's contents, BEGIN line and all
+# The team ID is not a secret and lives in project.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version shown to testers, e.g. 1.0'
+        required: true
+        default: '1.0'
+
+jobs:
+  testflight:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use the newest Xcode on this runner
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      # xcodebuild and altool both look here by convention, which saves
+      # passing the path to the second one.
+      - name: Put the App Store Connect key where the tools look for it
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          mkdir -p ~/private_keys
+          printf '%s\n' "$ASC_PRIVATE_KEY" > ~/private_keys/AuthKey_$ASC_KEY_ID.p8
+          chmod 600 ~/private_keys/AuthKey_$ASC_KEY_ID.p8
+
+      - name: Generate the Xcode project
+        working-directory: gtec-reporter-ios
+        run: xcodegen generate
+
+      # -allowProvisioningUpdates lets Xcode register the app identifier and
+      # issue the certificate and profile itself, using the API key above.
+      # Without it a certificate has to be exported from a Mac by hand and
+      # kept here as another secret, which then expires at an awkward moment.
+      - name: Archive
+        working-directory: gtec-reporter-ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project GTECReporter.xcodeproj \
+            -scheme GTECReporter \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/GTECReporter.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_$ASC_KEY_ID.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            MARKETING_VERSION='${{ inputs.version }}' \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }}
+
+      - name: Export the .ipa
+        working-directory: gtec-reporter-ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild -exportArchive \
+            -archivePath build/GTECReporter.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/private_keys/AuthKey_$ASC_KEY_ID.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      # Kept whether or not the upload works, so a rejected upload can be
+      # looked at rather than rebuilt.
+      - name: Keep the .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: GTECReporter-${{ inputs.version }}-${{ github.run_number }}
+          path: gtec-reporter-ios/build/export/*.ipa
+          if-no-files-found: error
+
+      - name: Upload to TestFlight
+        working-directory: gtec-reporter-ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcrun altool --upload-app -t ios \
+            -f "$(ls build/export/*.ipa | head -1)" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
+
+      - name: Where it went
+        run: |
+          echo "Uploaded. Apple processes the build for a few minutes, then"
+          echo "it appears in App Store Connect under TestFlight."
+          echo "The first build of a version waits on review before testers"
+          echo "can install it."
