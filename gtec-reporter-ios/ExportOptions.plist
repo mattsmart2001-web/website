@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Built for TestFlight and the App Store, not for ad-hoc sideloading:
+         a league of two hundred installs from a link, and later builds reach
+         them without a fresh review each time. -->
+    <key>method</key>
+    <string>app-store-connect</string>
+    <key>teamID</key>
+    <string>G3QDCF3JT9</string>
+    <key>signingStyle</key>
+    <string>automatic</string>
+    <!-- Export an .ipa and upload it as a separate step, rather than letting
+         the export do both. The upload then has its own log, and the .ipa is
+         kept as an artefact of the run that made it. -->
+    <key>destination</key>
+    <string>export</string>
+    <!-- Symbols go up so a crash report names a function rather than an
+         address. Nothing about the driver goes with them. -->
+    <key>uploadSymbols</key>
+    <true/>
+</dict>
+</plist>

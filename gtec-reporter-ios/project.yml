@@ -15,7 +15,8 @@ settings:
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.9"
-    DEVELOPMENT_TEAM: ""
+    # Not a secret: it is in every signed app, and in the receipt of one.
+    DEVELOPMENT_TEAM: G3QDCF3JT9
     CODE_SIGN_STYLE: Automatic
 targets:
   GTECReporter:
@@ -23,6 +24,7 @@ targets:
     platform: iOS
     sources:
       - Sources
+      - Resources/Assets.xcassets
     info:
       path: Resources/Info.plist
     settings:
@@ -31,6 +33,9 @@ targets:
         INFOPLIST_FILE: Resources/Info.plist
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: GTEC Timing
+        # The league's own mark, square and without an alpha channel, which
+        # is what the App Store requires. iOS rounds the corners itself.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
