@@ -28,9 +28,18 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+
+      # Homebrew always installs the current XcodeGen, which writes a project
+      # in the current format, so the Xcode reading it has to be at least as
+      # new. The default on a runner image is not: macos-14 defaults to 15.4,
+      # which refuses the file outright. Rather than name a version that will
+      # be stale in six months, take whichever is newest on the image.
+      - name: Use the newest Xcode on this runner
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
 
       - name: Show the toolchain
         run: xcodebuild -version && swift --version
