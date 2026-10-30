@@ -17,7 +17,7 @@ struct ContentView: View {
     /// Blank, unreadable or out of range all mean the standard port, rather
     /// than refusing to start over a typo in a setting almost nobody touches.
     private var port: UInt16 {
-        UInt16(listenPort.trimmingCharacters(in: .whitespaces)) ?? Reporter.stdPort
+        UInt16(listenPort.trimmingCharacters(in: .whitespaces)) ?? GT7Net.telemetryPort
     }
 
     private var forwardPorts: [UInt16] {
@@ -29,7 +29,7 @@ struct ContentView: View {
     /// Second in the chain, the data arrives from the app that owns the port.
     private var ready: Bool {
         !token.trimmingCharacters(in: .whitespaces).isEmpty
-            && (!consoleIP.isEmpty || port != Reporter.stdPort)
+            && (!consoleIP.isEmpty || port != GT7Net.telemetryPort)
     }
 
     var body: some View {

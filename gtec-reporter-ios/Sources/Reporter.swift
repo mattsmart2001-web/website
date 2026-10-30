@@ -20,15 +20,20 @@ import UIKit
 /// granted by Apple on application. Instead the console's address is typed
 /// in once, or found by asking every address on the local network in turn,
 /// which is ordinary unicast and needs nobody's permission.
+/// Outside the class on purpose. Reporter runs on the main actor, so anything
+/// declared inside it belongs to the main actor too, including constants, and
+/// the reporting loop reads these from a background task.
+enum GT7Net {
+    /// GT7 sends telemetry here, and only one app per phone can hold it.
+    static let telemetryPort: UInt16 = 33740
+    /// And listens for the heartbeat here.
+    static let consolePort: UInt16 = 33739
+    /// GT7 stops streaming one to two seconds after the last heartbeat.
+    static let heartbeat: TimeInterval = 1.5
+}
+
 @MainActor
 final class Reporter: ObservableObject {
-
-    /// GT7 sends telemetry here, and only one app per phone can hold it.
-    static let stdPort: UInt16 = 33740
-    /// And listens for the heartbeat here.
-    private static let consolePort: UInt16 = 33739
-    /// GT7 stops streaming one to two seconds after the last heartbeat.
-    private static let heartbeat: TimeInterval = 1.5
 
     @Published private(set) var running = false
     @Published private(set) var status = "Stopped"
@@ -48,7 +53,7 @@ final class Reporter: ObservableObject {
     /// An app on another device needs none of this: the console answers each
     /// device separately.
     func start(token: String, consoleIP: String,
-               listenPort: UInt16 = Reporter.stdPort, forwardTo: [UInt16] = []) {
+               listenPort: UInt16 = GT7Net.telemetryPort, forwardTo: [UInt16] = []) {
         guard !running else { return }
         running = true
         status = "Starting…"
@@ -91,11 +96,11 @@ final class Reporter: ObservableObject {
         permissionProbe = browser
     }
 
-    private func set(_ text: String) {
+    nonisolated private func set(_ text: String) {
         Task { @MainActor in self.status = text }
     }
 
-    private func bump() {
+    nonisolated private func bump() {
         Task { @MainActor in self.packets += 1 }
     }
 
@@ -105,7 +110,7 @@ final class Reporter: ObservableObject {
         // A reporter that is second in the chain must not ping the console:
         // the app that owns 33740 is already doing that, and the console
         // answers whoever asked, on the port it owns.
-        let weOwnThePort = listenPort == Reporter.stdPort
+        let weOwnThePort = listenPort == GT7Net.telemetryPort
 
         guard let sock = UDP.bound(to: listenPort) else {
             // Another app on THIS phone is holding the port. Apps on other
@@ -130,10 +135,10 @@ final class Reporter: ObservableObject {
         while !Task.isCancelled {
             let now = Date()
 
-            if weOwnThePort, now.timeIntervalSince(lastHeartbeat) >= Reporter.heartbeat {
+            if weOwnThePort, now.timeIntervalSince(lastHeartbeat) >= GT7Net.heartbeat {
                 // A missed heartbeat corrects itself on the next tick.
                 _ = UDP.send(sock, byte: UInt8(ascii: "A"),
-                             to: consoleIP, port: Reporter.consolePort)
+                             to: consoleIP, port: GT7Net.consolePort)
                 lastHeartbeat = now
             }
 
@@ -194,7 +199,7 @@ final class Reporter: ObservableObject {
             status = "No WiFi connection to search"
             return nil
         }
-        guard let sock = UDP.bound(to: Reporter.stdPort) else {
+        guard let sock = UDP.bound(to: GT7Net.telemetryPort) else {
             // The search has to listen on 33740, because that is where the
             // console will answer, so it cannot run while another app on this
             // phone holds it. The address can still be typed in by hand.
@@ -211,7 +216,7 @@ final class Reporter: ObservableObject {
         for round in 0..<2 {
             for host in 1...254 {
                 _ = UDP.send(sock, byte: UInt8(ascii: "A"),
-                             to: "\(prefix).\(host)", port: Reporter.consolePort)
+                             to: "\(prefix).\(host)", port: GT7Net.consolePort)
                 // A short pause every so often, so a burst of 254 packets
                 // does not simply overrun the phone's send buffer.
                 if host % 32 == 0 { try? await Task.sleep(nanoseconds: 60_000_000) }
