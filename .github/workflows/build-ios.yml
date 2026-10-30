@@ -1,8 +1,8 @@
 name: Build GTEC iOS reporter
 
 # Compiles the iPhone reporter on a macOS runner, which is also how the
-# macOS connector is built: nobody on this project owns a Mac, and a
-# GitHub runner is one for ten minutes at a time.
+# macOS connector is built: a GitHub runner is a Mac for ten minutes at a
+# time, and nobody has to have Xcode open to get a build out.
 #
 # This builds for the simulator with signing switched off, so it needs no
 # Apple Developer account and no certificates. It proves the thing

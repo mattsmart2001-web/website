@@ -89,21 +89,35 @@ open GTECReporter.xcodeproj
 ```
 
 CI builds it on every push, on a macOS runner, for the simulator with
-signing off. That needs no Apple account and answers the only question
-that can be answered without one: does it compile.
+signing off, and `release-ios.yml` signs a real build and sends it to
+TestFlight when run by hand. Neither needs a Mac in front of you.
+
+## It does not work on a Mac
+
+An iPhone app runs on Apple Silicon, and this one starts, draws and takes
+a console address. It never receives a packet. The macOS sandbox an iOS
+app inherits does not let it listen on a UDP port, and nothing in the app
+can ask for that, because on iOS there is nothing to ask for: the search
+sweeps all 254 addresses and hears nothing, exactly as if the console
+were switched off.
+
+Worth knowing before spending an afternoon on it, as happened. A real
+macOS build with the server entitlement would work, and would be a
+separate target rather than a fix to this one.
 
 ## Getting it onto a phone
 
-Three things, none of them code:
+All of it is in place. For the record, what it took:
 
-1. **Apple Developer Program**, ninety-nine pounds a year. Nothing can be
-   signed without it.
-2. **A certificate and provisioning profile**, stored here as repository
-   secrets so the runner can sign.
-3. **An upload step to TestFlight.** TestFlight allows ten thousand
-   external testers, so a league of two hundred installs from a link and
-   later builds arrive without a fresh review each time. The first build
-   is reviewed, more lightly than an App Store submission.
+1. **Apple Developer Program**, ninety-nine pounds a year.
+2. **An App Store Connect API key with the Admin role.** App Manager is
+   not enough: the archive signs with it and then the export fails with
+   "Cloud signing permission error", which names neither the cause nor
+   the cure. There is no certificate to export from a Mac and no profile
+   to renew, because Xcode issues both itself from that key.
+3. **Three repository secrets**, listed in `release-ios.yml`.
 
-Until then the app compiles and can run in the simulator, which exercises
-everything but the console itself.
+Two things the store rejected on the way, both now fixed and both worth
+knowing: every iPad-capable app must declare all four orientations, and
+`altool` exits zero when Apple refuses an upload, so the workflow reads
+its output rather than its exit code.
