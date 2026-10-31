@@ -6,7 +6,7 @@
 // v33: the asset strategy below changed from cache-first-for-ever to
 // stale-while-revalidate, and the bump is also what evicts the terrain file
 // that everyone was stuck on. See the fetch handler for the whole story.
-const CACHE_NAME = 'gtec-shell-v37';
+const CACHE_NAME = 'gtec-shell-v38';
 
 // Assets to pre-cache on install. Keep this short - fonts and Supabase
 // data are intentionally omitted so they always come fresh. The list is

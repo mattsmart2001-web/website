@@ -154,6 +154,13 @@
            currentColor is the car's own colour, set inline on the chip. */
         .chart-chip.hot { border-color: currentColor;
             background: rgba(255,255,255,0.06); }
+        /* The fold. Deliberately not a chip: it is not a car. */
+        .chart-more { font-family: 'Orbitron', sans-serif; font-size: 0.6rem;
+            font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--muted); background: none; cursor: pointer;
+            border: 1px dashed var(--border); border-radius: 999px;
+            padding: 0.3rem 0.8rem; transition: color 0.15s, border-color 0.15s; }
+        .chart-more:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
         .chart-empty { padding: 2.2rem 1.1rem; text-align: center;
             font-size: 0.8rem; color: var(--muted); }
         /* What a point on the chart actually is. The chart drew shapes and
@@ -2946,6 +2953,13 @@ const LAP_MAX_LINES = 10;     // beyond this the chart is a ball of wool
 let lapRows = [], lapAfterId = null, lapKey = null, lapAt = 0, lapBusy = false;
 let lapScopeKey = null;
 const lapOff = new Set();     // cars the viewer has switched off
+// Of those, the ones the page switched off by itself because their best lap
+// put them outside the ten it draws. Kept apart from the viewer's own
+// choices: a car somebody switched off by hand keeps its name under the
+// chart, so they can switch it back on, while the ones nobody has ever
+// asked about fold away behind a count.
+const lapAuto = new Set();
+let chipsOpen = false;        // whether that fold is open
 // What the chips said last time they were built, so they are only rebuilt
 // when something about them changed rather than on every redraw.
 let chipKey = null;
@@ -3148,10 +3162,13 @@ function drawLapChart() {
     if (cars.length && scopeKey !== lapScopeKey) {
         lapScopeKey = scopeKey;
         lapOff.clear();
+        lapAuto.clear();
         // A followed car keeps its line whatever its best lap ranks, which
         // is the point of following it.
         cars.slice(LAP_MAX_LINES).forEach(c => {
-            if (!pinned.has(c.driver_id)) lapOff.add(c.driver_id);
+            if (pinned.has(c.driver_id)) return;
+            lapOff.add(c.driver_id);
+            lapAuto.add(c.driver_id);
         });
     }
 
@@ -3175,16 +3192,32 @@ function drawLapChart() {
     // rewriting this every time would replace the very chip the pointer is
     // on: the browser then fires mouseout on a node that no longer exists
     // and the highlight flickers on and off under a stationary pointer.
-    const chipsNow = cars.map(c => `${c.driver_id}|${c.name}|${c.pts.length}`
-        + `|${colour.get(c.driver_id)}|${lapOff.has(c.driver_id) ? 1 : 0}`).join(',');
+    // Only the cars this is actually about. With nine splits on the page
+    // every driver got a chip, so a hundred and thirty five names sat under
+    // a chart drawing ten lines, a block of them larger than the chart
+    // itself and every one of them switched off. The rest fold away behind
+    // a count, which is also how somebody finds them.
+    const folded = chipsOpen ? [] : cars.filter(c => lapAuto.has(c.driver_id));
+    const listed = chipsOpen ? cars : cars.filter(c => !lapAuto.has(c.driver_id));
+
+    const chipsNow = listed.map(c => `${c.driver_id}|${c.name}|${c.pts.length}`
+        + `|${colour.get(c.driver_id)}|${lapOff.has(c.driver_id) ? 1 : 0}`).join(',')
+        + `#${folded.length}#${chipsOpen ? 1 : 0}`;
     if (chipsNow !== chipKey) {
         chipKey = chipsNow;
-        chips.innerHTML = cars.map(c => `<button type="button"
+        chips.innerHTML = listed.map(c => `<button type="button"
             class="chart-chip${lapOff.has(c.driver_id) ? ' off' : ''}"
             style="color:${colour.get(c.driver_id)}" data-driver="${c.driver_id}"
             title="${c.pts.length} lap${c.pts.length === 1 ? '' : 's'} recorded, best ${esc(lapTime(c.best))}">
             <span class="dot"></span>${esc(c.name)}
-            <span class="chip-n">${c.pts.length}</span></button>`).join('');
+            <span class="chip-n">${c.pts.length}</span></button>`).join('')
+            + (folded.length
+                ? `<button type="button" class="chart-more" data-more="1"
+                     title="Every other car that has logged a lap. Clicking one puts its line on the chart.">${
+                     folded.length} more</button>`
+                : chipsOpen && cars.some(c => lapAuto.has(c.driver_id))
+                    ? `<button type="button" class="chart-more" data-more="1">Show fewer</button>`
+                    : '');
     }
     // The highlight is a class rather than part of the rebuild, so it can be
     // put on and taken off without touching the rest of the row.
@@ -3192,10 +3225,18 @@ function drawLapChart() {
         chip.classList.toggle('hot', chip.dataset.driver === String(hoveredDriver));
     }
     chips.onclick = e => {
+        if (e.target.closest('.chart-more')) {
+            chipsOpen = !chipsOpen;
+            drawLapChart();
+            return;
+        }
         const chip = e.target.closest('.chart-chip');
         if (!chip) return;
         const id = chip.dataset.driver;
         if (lapOff.has(id)) lapOff.delete(id); else lapOff.add(id);
+        // Touched by hand, so it is the viewer's choice now and stops
+        // folding away with the ones nobody has looked at.
+        lapAuto.delete(id);
         drawLapChart();
     };
     // The names under the chart are the fourth place a car can be hovered,
