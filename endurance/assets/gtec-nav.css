@@ -13,9 +13,37 @@
    and the back-link to the corners and let the nav-links sit dead
    centre. nav.gtec-nav has higher specificity than the inline
    .gtec-nav rule so this wins without per-page edits. */
+/* The nav stays in view.
+   
+   Every page already asks for `position: sticky; top: 0`. The rule below
+   used to turn that back into `relative` above 721px, which was not the
+   point of it: the brand and the back-link are absolutely positioned to
+   the corners and need a positioned ancestor to hang off, and `relative`
+   was simply the first word that does that. `sticky` does it too, so the
+   corners still land where they should and the nav now follows the page
+   down, which on standings or a roster of two hundred is the difference
+   between a long scroll back and none.
+   
+   The blur goes with it, everywhere rather than only here. A backdrop
+   filter on a sticky element is where the drivers page picked up a ghost
+   of itself: the filter samples what is behind the element, a sticky
+   element does not reliably invalidate that sample while the page moves
+   under it, and the leftovers are painted over the content. It shows in
+   the compositor and not in the DOM, so a screenshot comes back innocent.
+   A page this dark loses nothing to a solid colour.
+   
+   Set here rather than in seventeen pages, and `nav.gtec-nav` outweighs
+   each page's own `.gtec-nav`. */
+nav.gtec-nav {
+    background: var(--bg, #050608);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
 @media (min-width: 721px) {
     nav.gtec-nav {
-        position: relative;
+        position: sticky;
+        top: 0;
         justify-content: center !important;
     }
     nav.gtec-nav .brand {

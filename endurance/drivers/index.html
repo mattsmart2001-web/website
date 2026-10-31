@@ -238,16 +238,13 @@
            going back for them meant scrolling past everything they had
            already looked at. They stay put instead.
            
-           Hard against the top, because on a desktop the nav is not sticky:
-           gtec-nav.css sets it to relative above 721px, with more weight
-           than this page's own sticky rule, so it scrolls away and leaves
-           the top of the window free. Below that breakpoint the nav does
-           stick, and this moves down to clear it. That is the opposite way
-           round from what it looks like, and the measurement is where it
-           came from rather than a guess. */
+           Under the nav, which is now sticky at every width and 68px tall
+           at both of them. It used to sit at 0 on a desktop, back when
+           gtec-nav.css turned the nav relative above 721px and let it
+           scroll away. */
         .driver-controls {
             position: sticky;
-            top: 0;
+            top: 68px;
             z-index: 6;
             padding: 0.9rem 0 0.2rem;
             margin: 0 -2rem 0.4rem;
@@ -291,11 +288,6 @@
            So the stuck state is colour only. The view toggle moved out of
            the bar instead of being hidden by it, which keeps the bar short
            without anything resizing. */
-        /* Where the nav does stick, which is phone width. 68px measured,
-           not assumed. */
-        @media (max-width: 720px) {
-            .driver-controls { top: 68px; }
-        }
         @media (max-width: 860px) {
             .driver-controls { margin-left: -1rem; margin-right: -1rem;
                 padding-left: 1rem; padding-right: 1rem; }
@@ -1496,7 +1488,9 @@ function watchControls() {
     bar.parentNode.insertBefore(mark, bar);
     new IntersectionObserver(
         ([e]) => bar.classList.toggle('stuck', !e.isIntersecting),
-        { rootMargin: '-76px 0px 0px 0px', threshold: 0 }
+        // Matches the bar's own offset: it counts as stuck once the
+        // sentinel above it passes under the nav, not under the window.
+        { rootMargin: '-69px 0px 0px 0px', threshold: 0 }
     ).observe(mark);
 }
 
