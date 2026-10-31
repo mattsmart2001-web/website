@@ -2785,22 +2785,20 @@ function drawTrack(rows) {
         g.globalAlpha = 1;
     });
 
-    // Said on the picture, not in a tooltip. A replay of real drivers by
-    // name, moving smoothly on an official page, looks more certain than it
-    // is: positions arrive every second and a half, and everything between
-    // two of them is a straight line drawn by this page. It is for watching
-    // a move again, and GT7's own replay is the one that settles arguments.
+    // That the map is wound back, and how far. Without it a replay of a
+    // quiet moment is indistinguishable from a live one.
+    //
+    // The line under it explaining what a replay is made of has gone:
+    // stewarding happens elsewhere, against GT7's own replays, so nobody is
+    // being invited to treat this as evidence, and a caption nobody needs
+    // was sitting over the circuit every time.
     if (replayAt != null) {
         const range = replayRange();
-        const label = 'Replay · ' + (range ? agoText(range[1] - replayAt) : '');
         g.textAlign = 'left';
         g.textBaseline = 'alphabetic';
         g.font = "bold 12px 'Inter', system-ui, sans-serif";
         g.fillStyle = '#ffd166';
-        g.fillText(label, 18, h - 30);
-        g.font = "10px 'Inter', system-ui, sans-serif";
-        g.fillStyle = '#94a3b8';
-        g.fillText('Positions every 1.5s, joined up. Not a recording.', 18, h - 15);
+        g.fillText('Replay · ' + (range ? agoText(range[1] - replayAt) : ''), 18, h - 18);
     }
 
     if (note) {
