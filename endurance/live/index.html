@@ -2935,6 +2935,24 @@ let lastRows = null;       // so a click redraws at once rather than at the next
 // on most polls and one row when somebody crosses the line, so this costs
 // about as much as asking whether anything happened.
 // ---------------------------------------------------------------
+/** Back to the quickest few, with whatever is being followed.
+ *
+ *  Run when the set of cars in view changes, and again when the fold is
+ *  closed, which is what makes closing it mean something after somebody has
+ *  switched every car on by hand.
+ */
+function cullLapCars(cars) {
+    lapOff.clear();
+    lapAuto.clear();
+    // A followed car keeps its line whatever its best lap ranks, which is
+    // the point of following it.
+    cars.slice(LAP_MAX_LINES).forEach(c => {
+        if (pinned.has(c.driver_id)) return;
+        lapOff.add(c.driver_id);
+        lapAuto.add(c.driver_id);
+    });
+}
+
 /** A lap time for an axis label, where thousandths are only clutter. */
 function axisTime(ms) {
     const t = Math.max(0, Math.round(ms / 100) / 10);
@@ -3161,15 +3179,7 @@ function drawLapChart() {
     const scopeKey = focusedSplit ?? 'all';
     if (cars.length && scopeKey !== lapScopeKey) {
         lapScopeKey = scopeKey;
-        lapOff.clear();
-        lapAuto.clear();
-        // A followed car keeps its line whatever its best lap ranks, which
-        // is the point of following it.
-        cars.slice(LAP_MAX_LINES).forEach(c => {
-            if (pinned.has(c.driver_id)) return;
-            lapOff.add(c.driver_id);
-            lapAuto.add(c.driver_id);
-        });
+        cullLapCars(cars);
     }
 
     if (!cars.length) {
@@ -3211,12 +3221,18 @@ function drawLapChart() {
             title="${c.pts.length} lap${c.pts.length === 1 ? '' : 's'} recorded, best ${esc(lapTime(c.best))}">
             <span class="dot"></span>${esc(c.name)}
             <span class="chip-n">${c.pts.length}</span></button>`).join('')
-            + (folded.length
+            // While the fold is open the way back is always offered. It used
+            // to depend on there still being something folded, so switching
+            // every car on by hand emptied that set and took the button with
+            // it, leaving no way back to a readable chart.
+            + (chipsOpen
                 ? `<button type="button" class="chart-more" data-more="1"
-                     title="Every other car that has logged a lap. Clicking one puts its line on the chart.">${
-                     folded.length} more</button>`
-                : chipsOpen && cars.some(c => lapAuto.has(c.driver_id))
-                    ? `<button type="button" class="chart-more" data-more="1">Show fewer</button>`
+                     title="Back to the quickest ${LAP_MAX_LINES}, and whoever you are following."
+                     >Show fewer</button>`
+                : folded.length
+                    ? `<button type="button" class="chart-more" data-more="1"
+                         title="Every other car that has logged a lap. Clicking one puts its line on the chart."
+                         >${folded.length} more</button>`
                     : '');
     }
     // The highlight is a class rather than part of the rebuild, so it can be
@@ -3226,6 +3242,10 @@ function drawLapChart() {
     }
     chips.onclick = e => {
         if (e.target.closest('.chart-more')) {
+            // Closing it puts the chart back to the quickest few rather than
+            // leaving every line somebody switched on still drawn, which is
+            // the whole reason they pressed it.
+            if (chipsOpen) cullLapCars(lapCars());
             chipsOpen = !chipsOpen;
             drawLapChart();
             return;
