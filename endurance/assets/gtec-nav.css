@@ -45,9 +45,31 @@ nav.gtec-nav {
        Soft and long rather than tight and dark: the point is a sense of
        height, not a drawn edge. The hairline border does the edge. */
     background: var(--bg-1, #0a0e15);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
     box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.9);
+}
+
+/* And the content goes soft as it passes behind.
+   
+   Only where the browser can actually do it. The background above is
+   opaque, so anything that cannot blur keeps a solid bar and loses
+   nothing but the effect; here it is turned translucent so there is
+   something to see through in the first place.
+   
+   This is the one thing on the page that costs per frame: the strip is
+   re-blurred whenever anything moves under it. Worth knowing on the live
+   timing page, where a canvas redraws twice a second and the map can be
+   dragged.
+   
+   And if a ghost of the header ever appears over the content again, this
+   is the first thing to take out. It was wrongly suspected of causing one
+   before, so it is kept in a block of its own, and deleting the block is
+   the whole of the undo. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    nav.gtec-nav {
+        background: color-mix(in srgb, var(--bg-1, #0a0e15) 80%, transparent);
+        backdrop-filter: blur(26px) saturate(135%);
+        -webkit-backdrop-filter: blur(26px) saturate(135%);
+    }
 }
 
 @media (min-width: 721px) {
