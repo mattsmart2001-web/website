@@ -325,10 +325,23 @@
         .foot-note a { color: var(--gold); text-decoration: none; }
 
         /* Phone: drop Best so the driver name and status flag stay readable.
-           Last lap and fuel are what matter while a race is running. */
+           Last lap and fuel are what matter while a race is running.
+
+           Last gets more room than it looks as though it needs. A lap here
+           reads 8:07.800, and at 66px that overflowed its cell and ran into
+           the fuel percentage beside it: "8:07.800100%" with the 1 clipped.
+           It only shows at a circuit whose laps are minutes long, which is
+           to say at the one the next round is held on.
+
+           The width comes off Fuel, by dropping the percentage and keeping
+           the bar. The bar is what the column is read for, the laps left are
+           still written underneath, and a number that has to be squinted at
+           on a phone was never the point of it. */
         @media (max-width: 560px) {
             th:nth-child(5), td:nth-child(5) { display: none; }
-            th:nth-child(6), td:nth-child(6) { width: 70px; }
+            th:nth-child(4), td:nth-child(4) { width: 78px; }
+            th:nth-child(6), td:nth-child(6) { width: 58px; }
+            .fuel-pct { display: none; }
             .flag { font-size: 0.46rem; letter-spacing: 0.06em; }
         }
 
