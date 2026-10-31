@@ -1644,7 +1644,10 @@ function recordPositions(rows) {
             const m  = Math.hypot(r.x - last[0], r.z - last[1]);
             if (dt > 0 && (m / dt) * 3.6 > TELEPORT_KPH) brk = true;
         }
-        path.push([r.x, r.z, r.y, brk, now]);
+        // Speed goes with the point, because the thing that makes a trail
+        // worth looking at is not where a car went but how fast it was
+        // going when it went there.
+        path.push([r.x, r.z, r.y, brk, now, r.speed_kph]);
         const keep = basePath.length ? PATH_KEEP_WITH_OUTLINE : PATH_MAX;
         while (path.length > keep) path.shift();
         carPaths.set(r.driver_id, path);
@@ -2557,6 +2560,85 @@ function drawTrack(rows) {
         for (const path of allPaths) strokePath(g, path, S, 0, path.length - 1);
     }
 
+    // ------------------------------------------------------------------
+    // The speed trace.
+    //
+    // One car's own trail, drawn over the circuit in the colour of how fast
+    // it was going: deep red where it was slow, pale gold where it was flat
+    // out. The braking zones show up as red smears and the straights go
+    // bright, and none of it needs a number read.
+    //
+    // For the car being pointed at, or for the ones being followed when
+    // nothing is. Never for all of them: fourteen of these at once is a
+    // rainbow with no circuit under it.
+    //
+    // Honest about what it is. A car reports every 1.5 seconds, which at
+    // racing pace is a point every seventy or eighty metres, so this is the
+    // shape of a lap rather than a braking trace. The legend says the range
+    // it is drawn against rather than implying a precision it has not got.
+    const traceFor = hoveredDriver !== null ? [hoveredDriver] : [...pinned];
+    let traceLo = Infinity, traceHi = -Infinity, traceName = null;
+    for (const id of traceFor) {
+        const path = carPaths.get(id);
+        if (!path) continue;
+        for (const pt of path) {
+            if (pt[5] == null) continue;
+            if (pt[5] < traceLo) traceLo = pt[5];
+            if (pt[5] > traceHi) traceHi = pt[5];
+        }
+    }
+    if (traceHi - traceLo >= 15) {
+        // A scale of its own rather than a fixed one: a slow circuit would
+        // otherwise come out entirely red, which says nothing about where
+        // the driver was quick on it.
+        const span = Math.max(1, traceHi - traceLo);
+        g.lineCap = 'round';
+        for (const id of traceFor) {
+            const path = carPaths.get(id);
+            if (!path) continue;
+            const row = rows.find(r => r.driver_id === id);
+            if (row) traceName = row.display_name;
+            for (let i = 0; i < path.length - 1; i++) {
+                const a = path[i], b = path[i + 1];
+                if (b[3] || a[5] == null || b[5] == null) continue;
+                if (Math.hypot(b[0] - a[0], b[1] - a[1]) > MAX_SEGMENT_M) continue;
+                const p1 = S(a[0], a[1], a[2]), p2 = S(b[0], b[1], b[2]);
+                g.strokeStyle = speedColour(((a[5] + b[5]) / 2 - traceLo) / span);
+                g.lineWidth = 4.2 * zw;
+                g.beginPath();
+                g.moveTo(p1[0], p1[1]); g.lineTo(p2[0], p2[1]);
+                g.stroke();
+            }
+        }
+        g.lineCap = 'butt';
+
+        // The scale, without which the picture means nothing. On a panel of
+        // its own, because the trace runs wherever the circuit does and the
+        // legend was being drawn on top of it.
+        const bw = 128, bx = w - bw - 18, by = h - 34;
+        g.fillStyle = 'rgba(5,6,8,0.78)';
+        g.beginPath();
+        if (g.roundRect) g.roundRect(bx - 12, by - 28, bw + 24, 54, 8);
+        else g.rect(bx - 12, by - 28, bw + 24, 54);
+        g.fill();
+        for (let i = 0; i < bw; i++) {
+            g.fillStyle = speedColour(i / bw);
+            g.fillRect(bx + i, by, 1.5, 7);
+        }
+        g.font = "10px 'Inter', system-ui, sans-serif";
+        g.textBaseline = 'top';
+        g.fillStyle = '#94a3b8';
+        g.textAlign = 'left';  g.fillText(Math.round(traceLo) + ' kph', bx, by + 11);
+        g.textAlign = 'right'; g.fillText(Math.round(traceHi) + ' kph', bx + bw, by + 11);
+        if (traceName) {
+            g.textAlign = 'right';
+            g.fillStyle = '#f1f5f9';
+            g.fillText(traceName, bx + bw, by - 15);
+        }
+        g.textAlign = 'left';
+        g.textBaseline = 'alphabetic';
+    }
+
     // Each car: its badge, then its number. A focused split dims the rest
     // rather than removing them, so you can still see where the others are
     // relative to the ones you are watching.
@@ -3138,6 +3220,30 @@ function panLapChart(dx, dy) {
 }
 
 function fitLapChart() { lapView = null; drawLapChart(); }
+
+/**
+ * Slow to quick, as one ramp from deep red to near white.
+ *
+ * One hue sweeping through red, orange and gold, rather than a rainbow: the
+ * eye reads a single ramp as an ordered scale and a rainbow as categories,
+ * and the question here is "faster or slower", which is an order.
+ *
+ * Takes a position on the scale rather than a speed, because the scale is
+ * the range this car actually used.
+ */
+function speedColour(t) {
+    const k = Math.max(0, Math.min(1, t));
+    const stops = [[0, [120, 16, 28]], [0.35, [220, 48, 48]], [0.6, [249, 145, 60]],
+                   [0.82, [255, 209, 102]], [1, [255, 246, 214]]];
+    for (let i = 1; i < stops.length; i++) {
+        if (k <= stops[i][0]) {
+            const [t0, a] = stops[i - 1], [t1, b] = stops[i];
+            const f = (k - t0) / (t1 - t0);
+            return `rgb(${a.map((v, j) => Math.round(v + (b[j] - v) * f)).join(',')})`;
+        }
+    }
+    return 'rgb(255,246,214)';
+}
 
 /** How far apart two fingers are. */
 function touchSpan(t) {
