@@ -197,65 +197,6 @@
             margin-top: 0.25rem;
         }
 
-        /* Ticker */
-        .driver-ticker-wrap {
-            position: relative;
-            overflow: hidden;
-            margin: 0 auto 2rem;
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-            padding: 0.55rem 0;
-        }
-        .driver-ticker-wrap::before,
-        .driver-ticker-wrap::after {
-            content: '';
-            position: absolute;
-            top: 0; bottom: 0;
-            width: 80px;
-            z-index: 2;
-            pointer-events: none;
-        }
-        .driver-ticker-wrap::before {
-            left: 0;
-            background: linear-gradient(to right, var(--bg), transparent);
-        }
-        .driver-ticker-wrap::after {
-            right: 0;
-            background: linear-gradient(to left, var(--bg), transparent);
-        }
-        .driver-ticker-track {
-            display: flex;
-            width: max-content;
-            animation: gtec-ticker 96s linear infinite;
-        }
-        .driver-ticker-track:hover { animation-play-state: paused; }
-        @keyframes gtec-ticker {
-            from { transform: translateX(0); }
-            to   { transform: translateX(-50%); }
-        }
-        .driver-ticker-item {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.62rem;
-            font-weight: 700;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--muted);
-            white-space: nowrap;
-            padding: 0 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .driver-ticker-item .tic-num {
-            color: var(--gold);
-            opacity: 0.7;
-        }
-        .driver-ticker-sep {
-            color: var(--gold);
-            opacity: 0.3;
-            font-size: 0.5rem;
-            align-self: center;
-        }
 
         /* Portrait card grid */
         .driver-grid {
@@ -1333,20 +1274,6 @@ async function showListing() {
     const totalNations = new Set((data || []).map(d => d.nationality).filter(Boolean)).size;
     const totalMfrs    = new Set((data || []).map(d => d.manufacturers?.name).filter(Boolean)).size;
 
-    // Ticker — build a list of all driver names (sorted A-Z) then duplicate for seamless loop
-    const tickerNames = (data || [])
-        .slice()
-        .sort((a, b) => (a.display_name || '').localeCompare(b.display_name || ''))
-        .map(d => {
-            const num = d.career_number ? `<span class="tic-num">#${d.career_number}</span>` : '';
-            return `<span class="driver-ticker-item">${num}${esc(d.display_name)}</span><span class="driver-ticker-sep">◆</span>`;
-        }).join('');
-    const tickerHTML = tickerNames
-        ? `<div class="driver-ticker-wrap">
-               <div class="driver-ticker-track">${tickerNames}${tickerNames}</div>
-           </div>`
-        : '';
-
     app.innerHTML = `
         <div class="hero">
             <div class="hero-eyebrow">Championship</div>
@@ -1373,7 +1300,6 @@ async function showListing() {
                         <span class="dss-label">Manufacturers</span>
                     </div>
                 </div>
-                ${tickerHTML}
                 <div class="driver-controls" id="driver-controls">
                 <div class="gtec-search-wrap" style="margin-bottom:0.65rem">
                     <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
