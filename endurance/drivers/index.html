@@ -278,13 +278,19 @@
         /* Tighter once it is a bar rather than a page section: the sort row
            and the filter row both carry a bottom margin meant for open
            space, which stacked up to a very tall sticky header. */
-        .driver-controls.stuck .sort-pills { margin-bottom: 0.55rem; }
-        .driver-controls.stuck .gtec-search-wrap { margin-bottom: 0.5rem; }
-        /* The Grid and Cards toggle goes while scrolling. It is a choice
-           somebody makes once and it is remembered, where searching and
-           sorting are what they came back up for, and a bar holding all
-           four was a fifth of the window. */
-        .driver-controls.stuck .view-bar { display: none; }
+        /* Nothing here may change the bar's SIZE.
+           
+           It used to tighten its margins and drop the view toggle once
+           stuck, which is a layout change at the exact moment the element
+           stops being sticky: the bar's height jumped, the page reflowed
+           under it, and the browser was left painting the old arrangement
+           over the new one. It showed on scrolling back up to the top,
+           which is where that transition happens, and went away on
+           scrolling down again, which is where it happens in reverse.
+           
+           So the stuck state is colour only. The view toggle moved out of
+           the bar instead of being hidden by it, which keeps the bar short
+           without anything resizing. */
         /* Where the nav does stick, which is phone width. 68px measured,
            not assumed. */
         @media (max-width: 720px) {
@@ -1311,14 +1317,6 @@ async function showListing() {
                         <span class="dss-label">Manufacturers</span>
                     </div>
                 </div>
-                <div class="driver-controls" id="driver-controls">
-                <div class="gtec-search-wrap" style="margin-bottom:0.65rem">
-                    <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                    <input class="gtec-search-input" id="drivers-search" type="search" autocomplete="off"
-                           placeholder="Search driver, team, nationality or #number" oninput="applyDriverFilters()">
-                </div>
                 <div class="view-bar">
                     <div class="view-toggle" role="tablist" aria-label="Roster layout">
                         <button class="vt-btn" id="vt-grid" onclick="setDriverView('grid',this)" aria-label="Starting grid view">
@@ -1328,6 +1326,14 @@ async function showListing() {
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Cards
                         </button>
                     </div>
+                </div>
+                <div class="driver-controls" id="driver-controls">
+                <div class="gtec-search-wrap" style="margin-bottom:0.65rem">
+                    <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input class="gtec-search-input" id="drivers-search" type="search" autocomplete="off"
+                           placeholder="Search driver, team, nationality or #number" oninput="applyDriverFilters()">
                 </div>
                 <div class="sort-pills">
                     <span class="sort-label">Sort:</span>
