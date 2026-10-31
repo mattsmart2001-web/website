@@ -252,8 +252,19 @@
             padding: 0.9rem 0 0.2rem;
             margin: 0 -2rem 0.4rem;
             padding-left: 2rem; padding-right: 2rem;
-            background: rgba(5,6,8,0.92);
-            backdrop-filter: blur(10px);
+            /* Opaque, and no backdrop-filter.
+               
+               A blur here reads nicely and ghosts: the filter samples what
+               is behind the element, a sticky element does not always
+               invalidate that sample as the page moves under it, and the
+               result is a frozen copy of the header painted over the cards.
+               It lives in the compositor rather than in the DOM, so a
+               screenshot comes back clean and only a photograph of the
+               screen shows it, which is a miserable thing to debug.
+               
+               The page is almost black, so a solid background costs the
+               look nothing. */
+            background: var(--bg);
             border-bottom: 1px solid transparent;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
