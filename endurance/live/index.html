@@ -113,6 +113,23 @@
            column beside the map rather than a share of it, because a wide
            circuit fills its box and would have nothing to give. */
         .map-body { display: flex; align-items: stretch; }
+
+        /* Replay. A show feature, and said to be one: the line underneath
+           is not a disclaimer in a tooltip, it is the label. */
+        .replay { display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.7rem 1.1rem; border-top: 1px solid var(--border); }
+        .replay-live { font-family: 'Orbitron', sans-serif; font-size: 0.56rem;
+            font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--muted); background: none; cursor: pointer;
+            border: 1px solid var(--border); border-radius: 999px;
+            padding: 0.3rem 0.7rem; flex: 0 0 auto; }
+        .replay-live.on { color: var(--gold); border-color: rgba(255,209,102,0.45); }
+        .replay-live:hover { color: var(--text); }
+        #replay-bar { flex: 1 1 auto; min-width: 0; accent-color: var(--gold);
+            height: 4px; cursor: pointer; }
+        .replay-at { flex: 0 0 auto; font-size: 0.72rem; color: var(--muted);
+            font-variant-numeric: tabular-nums; min-width: 8.5ch; text-align: right; }
+        .replay-at.back { color: var(--gold); }
         .map-side { flex: 0 0 236px; border-left: 1px solid var(--border);
             padding: 0.85rem 0.95rem; }
         .map-side-head { font-family: 'Orbitron', sans-serif; font-size: 0.58rem;
@@ -1046,6 +1063,12 @@ function renderField(rows) {
                     <div id="map-best"></div>
                 </aside>
             </div>
+            <div class="replay" id="replay" hidden>
+                <button type="button" class="replay-live" id="replay-live">Live</button>
+                <input type="range" id="replay-bar" min="0" max="1000" value="1000"
+                       aria-label="Scrub back through the last few minutes">
+                <span class="replay-at" id="replay-at">Live</span>
+            </div>
         </div>
         <div class="map-card" id="lap-card">
             <div class="map-head">
@@ -1329,6 +1352,19 @@ let baseArmed = false;
 // memory earning nothing.
 const PATH_MAX = 4000;
 const PATH_KEEP_WITH_OUTLINE = 48;
+// Replay keeps its own history, because the trail does not keep enough of
+// one. With an outline traced a car's trail is the last 48 points, about
+// seventy seconds, which is all the drawn trail behind a car needs to be
+// and nothing like enough to watch an overtake back.
+//
+// 200 points is five minutes a car. At 200 cars that is a few megabytes,
+// which a phone can hold, and it is thrown away when the page closes.
+const REPLAY_KEEP = 200;
+const carHistory = new Map();
+// Where the replay is paused, as a timestamp. Null is live, which is the
+// normal state and the one it returns to by itself when the handle is put
+// back at the right-hand end.
+let replayAt = null;
 // Two points further apart than this are not consecutive track: a car has
 // been reset to the pits, or its reporter dropped out for a while. Joining
 // them would draw a line straight across the infield.
@@ -1648,6 +1684,16 @@ function recordPositions(rows) {
         // worth looking at is not where a car went but how fast it was
         // going when it went there.
         path.push([r.x, r.z, r.y, brk, now, r.speed_kph]);
+
+        // The same point, kept for longer and without the trail's rules
+        // about joining: replay places a car, it does not draw a line, so a
+        // gap in it is a gap rather than something to be bridged.
+        const hist = carHistory.get(r.driver_id) || [];
+        if (!hist.length || hist[hist.length - 1][3] !== now) {
+            hist.push([r.x, r.z, r.y, now, r.speed_kph]);
+            if (hist.length > REPLAY_KEEP) hist.splice(0, hist.length - REPLAY_KEEP);
+            carHistory.set(r.driver_id, hist);
+        }
         const keep = basePath.length ? PATH_KEEP_WITH_OUTLINE : PATH_MAX;
         while (path.length > keep) path.shift();
         carPaths.set(r.driver_id, path);
@@ -2093,6 +2139,24 @@ function drawTrack(rows) {
     const cv = document.getElementById('track');
     if (!cv) return;
     bindMapControls();
+    bindReplay();
+    updateReplayBar();
+
+    // Wound back: every car is placed where it was at that moment instead
+    // of where it is. Only the map moves. The tables beside it go on saying
+    // what is true now, because a board that quietly went stale while
+    // somebody dragged a handle would be worse than one that disagrees with
+    // the picture for a moment.
+    //
+    // A car with nothing recorded at that moment loses its position and is
+    // simply not drawn, rather than being parked wherever it first appeared.
+    if (replayAt != null) {
+        rows = rows.map(r => {
+            const at = sampleHistory(r.driver_id, replayAt);
+            return at ? { ...r, x: at[0], z: at[1], y: at[2], speed_kph: at[4], age_ms: 0 }
+                      : { ...r, x: null, z: null };
+        });
+    }
     const note = document.getElementById('map-note');
 
     const dpr = window.devicePixelRatio || 1;
@@ -2721,6 +2785,24 @@ function drawTrack(rows) {
         g.globalAlpha = 1;
     });
 
+    // Said on the picture, not in a tooltip. A replay of real drivers by
+    // name, moving smoothly on an official page, looks more certain than it
+    // is: positions arrive every second and a half, and everything between
+    // two of them is a straight line drawn by this page. It is for watching
+    // a move again, and GT7's own replay is the one that settles arguments.
+    if (replayAt != null) {
+        const range = replayRange();
+        const label = 'Replay · ' + (range ? agoText(range[1] - replayAt) : '');
+        g.textAlign = 'left';
+        g.textBaseline = 'alphabetic';
+        g.font = "bold 12px 'Inter', system-ui, sans-serif";
+        g.fillStyle = '#ffd166';
+        g.fillText(label, 18, h - 30);
+        g.font = "10px 'Inter', system-ui, sans-serif";
+        g.fillStyle = '#94a3b8';
+        g.fillText('Positions every 1.5s, joined up. Not a recording.', 18, h - 15);
+    }
+
     if (note) {
         const km = (Math.max(maxX - minX, maxZ - minZ) / 1000).toFixed(1);
         // The old readout was a diagnostic, useful while building this and
@@ -3220,6 +3302,109 @@ function panLapChart(dx, dy) {
 }
 
 function fitLapChart() { lapView = null; drawLapChart(); }
+
+/** The scrubber, bound once. */
+function bindReplay() {
+    const bar = document.getElementById('replay-bar');
+    if (!bar || bar.dataset.bound) return;
+    bar.dataset.bound = '1';
+    bar.addEventListener('input', () => {
+        const range = replayRange();
+        if (!range) return;
+        const k = +bar.value / +bar.max;
+        // The right-hand end is live, not "the newest sample": a replay
+        // pinned a second and a half behind would be a bug nobody could
+        // name, since it would look almost right.
+        replayAt = k >= 0.999 ? null : range[0] + (range[1] - range[0]) * k;
+        if (lastRows) drawTrack(lastRows);
+        updateReplayBar();
+    });
+    const live = document.getElementById('replay-live');
+    if (live) live.onclick = () => {
+        replayAt = null;
+        bar.value = bar.max;
+        if (lastRows) drawTrack(lastRows);
+        updateReplayBar();
+    };
+}
+
+/** What the bar says, and whether it is worth offering at all. */
+function updateReplayBar() {
+    const wrap = document.getElementById('replay');
+    if (!wrap) return;
+    const range = replayRange();
+    // Not until there is something to wind back through. A handle that can
+    // only move four seconds is an invitation to be disappointed.
+    const enough = range && range[1] - range[0] > 25000;
+    wrap.hidden = !enough;
+    if (!enough) { replayAt = null; return; }
+
+    const bar = document.getElementById('replay-bar');
+    const at  = document.getElementById('replay-at');
+    const live = document.getElementById('replay-live');
+    // Held where the viewer put it while they are dragging, or the handle
+    // would creep rightwards under their finger as new positions arrive.
+    if (bar && replayAt == null && document.activeElement !== bar) bar.value = bar.max;
+    if (at) {
+        at.textContent = replayAt == null ? 'Live' : agoText(range[1] - replayAt);
+        at.classList.toggle('back', replayAt != null);
+    }
+    if (live) live.classList.toggle('on', replayAt != null);
+}
+
+/** The window replay can move through: the oldest and newest moments any
+ *  car has been seen at. */
+function replayRange() {
+    let from = Infinity, to = -Infinity;
+    for (const hist of carHistory.values()) {
+        if (!hist.length) continue;
+        if (hist[0][3] < from) from = hist[0][3];
+        if (hist[hist.length - 1][3] > to) to = hist[hist.length - 1][3];
+    }
+    return Number.isFinite(from) && to > from ? [from, to] : null;
+}
+
+/**
+ * Where a car was at a given moment.
+ *
+ * Between two reports, straight from one to the other. A car reports every
+ * 1.5 seconds, which even flat out is eighty metres, and on a map where the
+ * whole circuit is a few hundred pixels wide that is about three pixels: a
+ * chord across a corner lands within a pixel or two of the road. Following
+ * the traced outline instead would be more correct and would not look any
+ * different.
+ *
+ * Null before the car's first report or after its last, so a car that was
+ * not out yet is absent rather than parked at the place it later appeared.
+ */
+function sampleHistory(id, at) {
+    const hist = carHistory.get(id);
+    if (!hist || hist.length === 0) return null;
+    if (at < hist[0][3] || at > hist[hist.length - 1][3]) return null;
+    let lo = 0, hi = hist.length - 1;
+    while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (hist[mid][3] <= at) lo = mid; else hi = mid;
+    }
+    const a = hist[lo], b = hist[hi];
+    const span = b[3] - a[3];
+    // Two reports far apart are a car that went away and came back, not a
+    // car that crawled between them. Held at the earlier one rather than
+    // slid across the infield.
+    if (span <= 0 || span > 10000) return a;
+    const k = (at - a[3]) / span;
+    return [a[0] + (b[0] - a[0]) * k,
+            a[1] + (b[1] - a[1]) * k,
+            a[2] == null || b[2] == null ? a[2] : a[2] + (b[2] - a[2]) * k,
+            at,
+            a[4] == null || b[4] == null ? a[4] : a[4] + (b[4] - a[4]) * k];
+}
+
+/** How long ago, in words. */
+function agoText(ms) {
+    const s = Math.round(ms / 1000);
+    return s < 60 ? `${s}s ago` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s ago`;
+}
 
 /**
  * Slow to quick, as one ramp from deep red to near white.
