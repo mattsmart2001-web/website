@@ -106,7 +106,39 @@
         @media (max-width: 560px) { #track { height: 300px; } }
         /* The canvas needs a positioned parent for the hint to sit over it.
            No padding or background of its own: it is the canvas's frame. */
-        .map-stage { position: relative; }
+        .map-stage { position: relative; flex: 1 1 auto; min-width: 0; }
+
+        /* A circuit is drawn to fit, so a tall narrow one like the
+           Nordschleife leaves a column of nothing either side of it. A fixed
+           column beside the map rather than a share of it, because a wide
+           circuit fills its box and would have nothing to give. */
+        .map-body { display: flex; align-items: stretch; }
+        .map-side { flex: 0 0 236px; border-left: 1px solid var(--border);
+            padding: 0.85rem 0.95rem; }
+        .map-side-head { font-family: 'Orbitron', sans-serif; font-size: 0.58rem;
+            font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+            color: var(--muted); margin-bottom: 0.5rem; }
+        .mb-row { display: flex; align-items: baseline; gap: 0.55rem;
+            padding: 0.42rem 0.3rem; border-radius: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .mb-row:last-child { border-bottom: none; }
+        .mb-row.hot { background: rgba(255,255,255,0.07); }
+        .mb-pos { font-family: 'Anton', sans-serif; font-size: 0.82rem;
+            color: var(--gold); flex: 0 0 auto; width: 1.3ch; }
+        .mb-who { flex: 1 1 auto; min-width: 0; font-size: 0.76rem;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .mb-who .mb-split { display: block; font-size: 0.63rem; color: var(--muted); }
+        .mb-t { flex: 0 0 auto; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+        /* The same purple the tables use for the session's quickest lap. */
+        .mb-t.mb-first { color: #c084fc; font-weight: 600; }
+        .mb-empty { font-size: 0.72rem; color: var(--muted); line-height: 1.6; }
+        /* Narrow enough that a column beside the map would squeeze both, so
+           it goes underneath instead. */
+        @media (max-width: 860px) {
+            .map-body { flex-direction: column; }
+            .map-side { flex: 1 1 auto; border-left: 0;
+                border-top: 1px solid var(--border); }
+        }
         /* How to turn the map, for somebody who has never tried. Sits over
            the top left of the circuit, which is the emptiest part of a map
            fitted to a wide box, and goes away for good once they have done
@@ -670,6 +702,31 @@ function lapWorth(ms, r) {
     return '';
 }
 
+/** The quickest laps of the session, across every split.
+ *
+ *  The best of them already goes past in the rotating facts above the map,
+ *  but it goes past: it is gone again in seven seconds, it is one line, and
+ *  it does not say which split it came from. With ten splits each ranking
+ *  only itself, the order across all of them is a thing the board never
+ *  holds still. This holds it still.
+ */
+function bestBoardHtml(rows) {
+    const best = rows.map(r => ({ r, ms: bestLap(r) }))
+        .filter(b => b.ms != null && b.ms > 0)
+        .sort((a, b) => a.ms - b.ms)
+        .slice(0, 5);
+    if (!best.length) {
+        return `<div class="mb-empty">Nobody has set one yet. A lap counts
+            once it has been driven start to finish.</div>`;
+    }
+    return best.map((b, i) => `<div class="mb-row" data-driver="${b.r.driver_id}">
+        <span class="mb-pos">${i + 1}</span>
+        <span class="mb-who">${esc(b.r.display_name)}<span class="mb-split">${
+            b.r.lobby_number ? 'Split ' + b.r.lobby_number : 'Unassigned'}</span></span>
+        <span class="mb-t${i === 0 ? ' mb-first' : ''}">${lapTime(b.ms)}</span>
+    </div>`).join('');
+}
+
 /** Whether a car answers the name in the find box.
  *
  *  Matched on the name and on the car number, because half the league knows
@@ -975,9 +1032,15 @@ function renderField(rows) {
                     <button type="button" class="reset" id="view-3d" aria-pressed="false" aria-label="Tilt the map">3D</button>
                 </span>
             </div>
-            <div class="map-stage">
-                <canvas id="track"></canvas>
-                <div class="map-hint" id="map-hint" hidden></div>
+            <div class="map-body">
+                <div class="map-stage">
+                    <canvas id="track"></canvas>
+                    <div class="map-hint" id="map-hint" hidden></div>
+                </div>
+                <aside class="map-side">
+                    <div class="map-side-head">Fastest laps</div>
+                    <div id="map-best"></div>
+                </aside>
             </div>
         </div>
         <div class="map-card" id="lap-card">
@@ -1020,6 +1083,17 @@ function renderField(rows) {
                 }
             });
         }
+        // Pointing at a time beside the map picks that car out on it, the
+        // same as pointing at it anywhere else. Delegated, because the
+        // column is rewritten whenever somebody improves.
+        const side = document.getElementById('map-best');
+        if (side) {
+            side.addEventListener('mouseover', e => {
+                const row = e.target.closest('.mb-row');
+                if (row) hoverDriver(row.dataset.driver);
+            });
+            side.addEventListener('mouseleave', () => hoverDriver(null));
+        }
     }
 
     // ---- the parts that change ----
@@ -1057,6 +1131,7 @@ function renderField(rows) {
             ? `${shown.length} of ${rows.length} drivers`
             : `<span style="color:#fdba74">Nobody out there by that name</span>`)
         : '');
+    set('map-best', bestBoardHtml(rows));
     set('following', followingHtml(rows));
     const foll = document.getElementById('following');
     if (foll) foll.hidden = !pinned.size;
@@ -1147,6 +1222,10 @@ let carMarks = [];
 function hoverDriver(id) {
     if (hoveredDriver === id) return;
     hoveredDriver = id;
+    // The fastest-laps column beside the map is the fifth place a car shows
+    // up, and takes the highlight as a class rather than a redraw.
+    document.querySelectorAll('.mb-row').forEach(el =>
+        el.classList.toggle('hot', id !== null && el.dataset.driver === id));
     if (lastRows) drawTrack(lastRows);
     drawLapChart();
 }
