@@ -200,6 +200,47 @@
         .split.focused { border-color: rgba(255,209,102,0.45); }
         .split.focused .split-name { color: var(--gold); }
 
+        /* Find and follow.
+
+           A spectator arrives with one question, and it is nearly always
+           about one driver. With ten splits on the page, answering it means
+           reading ten tables. The box filters them down to the name typed;
+           the star keeps that car in front of you once you have found it. */
+        .board-tools { display: flex; align-items: center; gap: 0.7rem;
+            margin-top: 1.5rem; flex-wrap: wrap; }
+        #driver-find { flex: 0 1 240px; min-width: 0; background: var(--bg-1);
+            color: var(--text); border: 1px solid var(--border); border-radius: 999px;
+            padding: 0.5rem 0.9rem; font-family: 'Inter', system-ui, sans-serif;
+            font-size: 0.8rem; }
+        #driver-find:focus { outline: none; border-color: rgba(255,209,102,0.45); }
+        #driver-find::placeholder { color: var(--muted); }
+        .find-note { font-size: 0.72rem; color: var(--muted); }
+
+        /* The cars being followed, held above the board so they are never
+           the thing you have to scroll for. */
+        .following { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
+        .foll { display: flex; align-items: center; gap: 0.65rem; background: var(--bg-1);
+            border: 1px solid rgba(255,209,102,0.35); border-radius: 10px;
+            padding: 0.45rem 0.5rem 0.45rem 0.75rem; }
+        .foll .fn { font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
+        .foll .fs { font-size: 0.72rem; color: var(--muted);
+            font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .foll .drop { background: none; border: 0; color: var(--muted); cursor: pointer;
+            font-size: 0.95rem; line-height: 1; padding: 0.1rem 0.25rem; border-radius: 4px; }
+        .foll .drop:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+
+        /* Faint until pointed at, because every row has one and a column of
+           bright stars would read as a column of warnings. */
+        .pin { background: none; border: 0; cursor: pointer; color: var(--muted);
+            opacity: 0.3; font-size: 0.76rem; line-height: 1; padding: 0.15rem 0.2rem;
+            margin-left: 0.1rem; flex: 0 0 auto;
+            transition: opacity 0.15s, color 0.15s; }
+        tr:hover .pin { opacity: 0.75; }
+        .pin:hover, .pin:focus-visible { opacity: 1; color: var(--text); }
+        .pin.on, tr:hover .pin.on { color: var(--gold); opacity: 1; }
+        /* No hover on a phone, so they have to be visible enough to tap. */
+        @media (hover: none) { .pin { opacity: 0.55; } }
+
         .splits { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 1.25rem; margin-top: 2rem; align-items: start; }
 
         .split { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
@@ -622,6 +663,62 @@ function lapWorth(ms, r) {
     return '';
 }
 
+/** Whether a car answers the name in the find box.
+ *
+ *  Matched on the name and on the car number, because half the league knows
+ *  each other by number and a search that only takes names tells somebody
+ *  looking for 23 that nobody is out there.
+ */
+function matchesFind(r) {
+    if (!findText) return true;
+    const num = carNumber(r, r.mode);
+    return (r.display_name || '').toLowerCase().includes(findText)
+        || (r.team_name || '').toLowerCase().includes(findText)
+        || (num != null && String(num) === findText.replace(/^#/, ''));
+}
+
+/** The strip of followed cars above the board. */
+function followingHtml(rows) {
+    if (!pinned.size) return '';
+    const mine = rows.filter(r => pinned.has(r.driver_id));
+    // A pinned car that has stopped reporting is still worth a tile saying
+    // so, rather than vanishing as though it had been unpinned.
+    const gone = [...pinned].filter(id => !mine.some(r => r.driver_id === id));
+    return mine.map(r => {
+        const num = carNumber(r, r.mode);
+        const st = liveness(r.age_ms ?? 0, r.on_track, strays.has(r.driver_id));
+        return `<div class="foll" data-driver="${r.driver_id}">
+            <span class="team-dot" style="background:${carColour(r)}"></span>
+            <span class="fn">${esc(r.display_name)}</span>
+            <span class="fs">${num != null ? '#' + num + ' · ' : ''}${
+                r.lobby_number ? 'Split ' + r.lobby_number + ' · ' : ''}lap ${r.lap ?? 0}${
+                st.flag ? ' · ' + esc(st.flag) : ` · ${lapTime(r.last_lap_ms)}`}</span>
+            <button type="button" class="drop" title="Stop following"
+                    aria-label="Stop following ${esc(r.display_name)}"
+                    onclick="togglePin(event, '${r.driver_id}')">&times;</button>
+        </div>`;
+    }).join('') + gone.map(id => `<div class="foll">
+            <span class="fs">Not reporting</span>
+            <button type="button" class="drop" title="Stop following"
+                    onclick="togglePin(event, '${id}')">&times;</button>
+        </div>`).join('');
+}
+
+/** Follow a car, or stop. */
+function togglePin(e, id) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    if (pinned.has(id)) {
+        pinned.delete(id);
+    } else {
+        pinned.add(id);
+        // A car beyond the chart's ten-line limit was switched off when the
+        // chart was drawn. Following it is a request to see its line.
+        lapOff.delete(id);
+    }
+    if (lastRows) { renderField(lastRows); drawTrack(lastRows); }
+    drawLapChart();
+}
+
 function rowHtml(r, idx, showFuel, isRace, ahead) {
     const st = liveness(r.age_ms ?? 0, r.on_track, strays.has(r.driver_id));
     const live = st.cls === 's-live' && r.on_track;
@@ -642,7 +739,12 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
     return `<tr class="${st.cls}" data-driver="${r.driver_id}">
         <td class="pos">${idx + 1}</td>
         <td>
-            <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${clientBadge(r.client)}${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}</div>
+            <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${clientBadge(r.client)}${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}<button
+                type="button" class="pin${pinned.has(r.driver_id) ? ' on' : ''}"
+                aria-pressed="${pinned.has(r.driver_id)}"
+                title="${pinned.has(r.driver_id) ? 'Stop following' : 'Follow'} ${esc(r.display_name)}"
+                aria-label="${pinned.has(r.driver_id) ? 'Stop following' : 'Follow'} ${esc(r.display_name)}"
+                onclick="togglePin(event, '${r.driver_id}')">${pinned.has(r.driver_id) ? '★' : '☆'}</button></div>
             ${sub ? `<span class="team">${swatch}${sub}</span>` : ''}
         </td>
         <!-- The lap they are on, and nothing after it. GT7's "laps in race"
@@ -801,8 +903,14 @@ function opensIn(iso) {
 
 function renderField(rows) {
     const ev = rows[0];
+    // The board below is filtered; everything else is about the whole field.
+    // The headline still says how many cars are out there, because that is
+    // what is true, and a count that drops to one while somebody types a
+    // name would read as cars dropping out.
+    const shown = findText ? rows.filter(r => matchesFind(r)) : rows;
+    const allLobbies = new Set(rows.map(r => r.lobby_number ?? 0));
     const byLobby = new Map();
-    rows.forEach(r => {
+    shown.forEach(r => {
         const k = r.lobby_number ?? 0;
         if (!byLobby.has(k)) byLobby.set(k, []);
         byLobby.get(k).push(r);
@@ -842,6 +950,12 @@ function renderField(rows) {
         <div class="title" style="margin-top:0.4rem" id="live-round"></div>
         <div class="subtitle" id="live-sub"></div>
         <div class="subtitle" id="live-mode-note"></div>
+        <div class="board-tools">
+            <input id="driver-find" type="search" placeholder="Find a driver"
+                   aria-label="Find a driver" autocomplete="off" spellcheck="false">
+            <span class="find-note" id="find-note"></span>
+        </div>
+        <div class="following" id="following" hidden></div>
         <div class="splits" id="live-splits"></div>
         <div class="map-card">
             <div class="map-head">
@@ -881,6 +995,24 @@ function renderField(rows) {
             <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> (ODbL).</span>
         </div>
     </div>`;
+        // Bound once, with the shell. The board below is rewritten on every
+        // poll; this box is not, so what has been typed and where the caret
+        // is both survive a field that changes twice a second underneath it.
+        const find = document.getElementById('driver-find');
+        if (find) {
+            find.addEventListener('input', () => {
+                findText = find.value.trim().toLowerCase();
+                if (lastRows) renderField(lastRows);
+            });
+            // Escape clears it, which is what the little cross does and what
+            // anyone who has typed into a box expects.
+            find.addEventListener('keydown', e => {
+                if (e.key === 'Escape' && find.value) {
+                    find.value = ''; findText = '';
+                    if (lastRows) renderField(lastRows);
+                }
+            });
+        }
     }
 
     // ---- the parts that change ----
@@ -897,7 +1029,7 @@ function renderField(rows) {
     // the link lands where the person was already looking.
     const logLink = document.getElementById('lap-log-link');
     if (logLink && ev.round != null) logLink.href = `/endurance/laps/?round=${encodeURIComponent(ev.round)}`;
-    set('live-sub', `${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${lobbies.length} split${lobbies.length === 1 ? '' : 's'}`);
+    set('live-sub', `${esc(ev.event_name)} · ${rows.length} car${rows.length === 1 ? '' : 's'} reporting across ${allLobbies.size} split${allLobbies.size === 1 ? '' : 's'}`);
 
     const modeNote = document.getElementById('live-mode-note');
     if (modeNote) {
@@ -913,7 +1045,18 @@ function renderField(rows) {
         modeNote.hidden = !modeNote.textContent;
     }
 
-    set('live-splits', lobbies.map(l => splitHtml(l, byLobby.get(l), showFuel)).join(''));
+    set('find-note', findText
+        ? (shown.length
+            ? `${shown.length} of ${rows.length} drivers`
+            : `<span style="color:#fdba74">Nobody out there by that name</span>`)
+        : '');
+    set('following', followingHtml(rows));
+    const foll = document.getElementById('following');
+    if (foll) foll.hidden = !pinned.size;
+
+    set('live-splits', lobbies.length
+        ? lobbies.map(l => splitHtml(l, byLobby.get(l), showFuel)).join('')
+        : '');
     bindDriverCards();
     setMapTitle();
     setMapHint();
@@ -973,6 +1116,14 @@ let mapTurned = false;          // whether they have worked out how to turn it
 // that is. Pointer only: there is no hover on a phone, and the card that
 // opens on a tap already answers "who is this".
 let hoveredDriver = null;
+// Cars being followed, and the name being looked for.
+//
+// Neither is remembered between visits, unlike the collapsed splits. A pin
+// is for watching somebody's stint, not a standing preference, and opening
+// the page a week later to a stranger's name ringed on the map is worse
+// than pinning them again.
+const pinned = new Set();
+let findText = '';
 // Where each car's badge ended up on the map, in CSS pixels, so the canvas
 // can say which car the pointer is over. Rebuilt on every redraw, because
 // turning the map moves every one of them.
@@ -2381,6 +2532,14 @@ function drawTrack(rows) {
             g.fillStyle = '#050608';
             g.fillText(label, car[0], car[1] + 0.5);
         }
+        // A ring in the league's gold round a car being followed, so it can
+        // be picked out of a train of them without reading every number.
+        if (pinned.has(r.driver_id)) {
+            g.strokeStyle = '#ffd166';
+            g.lineWidth = 2;
+            pillPath(g, car[0], car[1], half + 3.5, rad + 3.5);
+            g.stroke();
+        }
         g.globalAlpha = 1;
     });
 
@@ -2989,7 +3148,11 @@ function drawLapChart() {
     if (cars.length && scopeKey !== lapScopeKey) {
         lapScopeKey = scopeKey;
         lapOff.clear();
-        cars.slice(LAP_MAX_LINES).forEach(c => lapOff.add(c.driver_id));
+        // A followed car keeps its line whatever its best lap ranks, which
+        // is the point of following it.
+        cars.slice(LAP_MAX_LINES).forEach(c => {
+            if (!pinned.has(c.driver_id)) lapOff.add(c.driver_id);
+        });
     }
 
     if (!cars.length) {
