@@ -289,6 +289,60 @@
         .view-toggle .vt-btn.active { color:#0c0d10; background:var(--gold); }
         .view-bar { display:flex; justify-content:center; margin:0 auto 1.1rem; }
 
+        /* The controls follow you down.
+           
+           Two hundred cards is nine screens, and the search, the sort and
+           the manufacturer filter all used to live at the top of the first
+           one: by the time somebody had scrolled far enough to want them,
+           going back for them meant scrolling past everything they had
+           already looked at. They stay put instead.
+           
+           Hard against the top, because on a desktop the nav is not sticky:
+           gtec-nav.css sets it to relative above 721px, with more weight
+           than this page's own sticky rule, so it scrolls away and leaves
+           the top of the window free. Below that breakpoint the nav does
+           stick, and this moves down to clear it. That is the opposite way
+           round from what it looks like, and the measurement is where it
+           came from rather than a guess. */
+        .driver-controls {
+            position: sticky;
+            top: 0;
+            z-index: 6;
+            padding: 0.9rem 0 0.2rem;
+            margin: 0 -2rem 0.4rem;
+            padding-left: 2rem; padding-right: 2rem;
+            background: rgba(5,6,8,0.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        /* Only once it has actually come away from the page does it earn a
+           edge: a line under a bar that is still in its place is a line for
+           no reason. */
+        .driver-controls.stuck {
+            border-bottom-color: var(--border);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+        }
+        /* Tighter once it is a bar rather than a page section: the sort row
+           and the filter row both carry a bottom margin meant for open
+           space, which stacked up to a very tall sticky header. */
+        .driver-controls.stuck .sort-pills { margin-bottom: 0.55rem; }
+        .driver-controls.stuck .gtec-search-wrap { margin-bottom: 0.5rem; }
+        /* The Grid and Cards toggle goes while scrolling. It is a choice
+           somebody makes once and it is remembered, where searching and
+           sorting are what they came back up for, and a bar holding all
+           four was a fifth of the window. */
+        .driver-controls.stuck .view-bar { display: none; }
+        /* Where the nav does stick, which is phone width. 68px measured,
+           not assumed. */
+        @media (max-width: 720px) {
+            .driver-controls { top: 68px; }
+        }
+        @media (max-width: 860px) {
+            .driver-controls { margin-left: -1rem; margin-right: -1rem;
+                padding-left: 1rem; padding-right: 1rem; }
+        }
+
         /* Start-lights gantry — the ceremony above the formation */
         .grid-gantry { display:none; flex-direction:column; align-items:center; gap:0.55rem; margin:0.4rem auto 1.6rem; }
         .driver-grid.view-grid ~ .grid-gantry, .grid-gantry.show { display:flex; }
@@ -303,6 +357,9 @@
         .driver-grid.view-grid { align-items:start; }
         .driver-grid.view-grid .driver-card[data-col-odd] { position:relative; top:2.15rem; }
         .driver-grid.view-grid { margin-bottom:2.15rem; }
+        /* The row that follows the last staggered one, closing the step the
+           echelon leaves behind rather than inheriting a gap nothing fills. */
+        .driver-grid.view-grid .driver-card.grid-settles { margin-top:2.15rem; }
 
         /* Rank chip (P1, P2 …) — hidden in card view, shown in the formation */
         .grid-pos { display:none; position:absolute; top:0; left:0; z-index:4;
@@ -1317,6 +1374,7 @@ async function showListing() {
                     </div>
                 </div>
                 ${tickerHTML}
+                <div class="driver-controls" id="driver-controls">
                 <div class="gtec-search-wrap" style="margin-bottom:0.65rem">
                     <svg class="gtec-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -1341,6 +1399,7 @@ async function showListing() {
                     <button class="sort-btn" data-sort="points" onclick="sortCards('.driver-grid','.driver-card','points')">Points</button>
                 </div>
                 ${mfrFilterHtml}
+                </div>
                 <div class="grid-gantry" id="grid-gantry">
                     <div class="gantry-lights" id="gantry-lights">
                         <span class="lamp"></span><span class="lamp"></span><span class="lamp"></span><span class="lamp"></span><span class="lamp"></span>
@@ -1355,6 +1414,7 @@ async function showListing() {
     // Apply the saved layout. The Grid is the default — a merit-ranked
     // starting formation with a lights-out reveal on load.
     if (data.length) {
+        watchControls();
         document.getElementById('vt-grid')?.classList.toggle('active', _driverView === 'grid');
         document.getElementById('vt-cards')?.classList.toggle('active', _driverView === 'cards');
         if (_driverView === 'grid') {
@@ -1477,6 +1537,26 @@ function sortCards(gridSel, cardSel, sortKey) {
     if (grid.classList.contains('view-grid')) layoutGrid();
 }
 
+/**
+ * Tell the controls bar when it has come away from the page.
+ *
+ * A sentinel above it rather than a scroll listener: the browser says when
+ * the thing has gone off the top, which is exactly the question, and costs
+ * nothing while the page sits still.
+ */
+function watchControls() {
+    const bar = document.getElementById('driver-controls');
+    if (!bar || bar.dataset.watched) return;
+    bar.dataset.watched = '1';
+    const mark = document.createElement('div');
+    mark.style.cssText = 'position:absolute;height:1px;width:1px;';
+    bar.parentNode.insertBefore(mark, bar);
+    new IntersectionObserver(
+        ([e]) => bar.classList.toggle('stuck', !e.isIntersecting),
+        { rootMargin: '-76px 0px 0px 0px', threshold: 0 }
+    ).observe(mark);
+}
+
 // ===== THE GRID — starting-grid formation =====
 let _driverView = 'grid';
 try { const v = localStorage.getItem('gtec_driver_view'); if (v === 'cards' || v === 'grid') _driverView = v; } catch (e) {}
@@ -1489,9 +1569,23 @@ function layoutGrid() {
     const cardW = 160 + 0.85 * 16;                       // min card width + grid gap
     const cols = Math.max(1, Math.floor((grid.clientWidth + 0.85 * 16) / cardW));
     const vis = Array.from(grid.querySelectorAll('.driver-card')).filter(c => c.style.display !== 'none');
+    // The echelon is the front of the field, and only the front of it.
+    //
+    // Offsetting every other column is what makes this read as a starting
+    // grid rather than a table, and it works for as long as a starting grid
+    // is what the eye is looking at. Two hundred cards in, it is no longer
+    // reading a grid: it is reading a list that will not sit still, and
+    // every row costs it the same zigzag for nothing. So the formation
+    // holds for the rows a grid would actually have, and the rest settles.
+    const echelonRows = 4;
+    const staggerTo = cols * echelonRows;
     vis.forEach((c, i) => {
         const col = i % cols;
-        if (col % 2 === 1) c.setAttribute('data-col-odd', ''); else c.removeAttribute('data-col-odd');
+        if (i < staggerTo && col % 2 === 1) c.setAttribute('data-col-odd', '');
+        else c.removeAttribute('data-col-odd');
+        // The last staggered row leaves a step behind it, so the first row
+        // of the plain grid is pulled up level with it.
+        c.classList.toggle('grid-settles', i >= staggerTo && i < staggerTo + cols);
         c.classList.toggle('gp-1', i === 0);
         c.classList.toggle('gp-2', i === 1);
         c.classList.toggle('gp-3', i === 2);
