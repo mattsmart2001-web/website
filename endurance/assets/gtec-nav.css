@@ -35,9 +35,19 @@
    Set here rather than in seventeen pages, and `nav.gtec-nav` outweighs
    each page's own `.gtec-nav`. */
 nav.gtec-nav {
-    background: var(--bg, #050608);
+    /* Raised off the page, which on a dark interface is mostly a matter
+       of being lighter than it. A drop shadow alone does nothing here:
+       the page is very nearly black, and black on black is nothing. So
+       the nav sits one step up the palette, the same surface the cards
+       use, and the shadow is there for where it falls across those cards
+       as they pass underneath, which is the one place it can be seen.
+       
+       Soft and long rather than tight and dark: the point is a sense of
+       height, not a drawn edge. The hairline border does the edge. */
+    background: var(--bg-1, #0a0e15);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.9);
 }
 
 @media (min-width: 721px) {

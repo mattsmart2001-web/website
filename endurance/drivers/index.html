@@ -261,7 +261,11 @@
                
                The page is almost black, so a solid background costs the
                look nothing. */
-            background: var(--bg);
+            /* The same surface as the nav above it. These two stack into
+               one header while scrolling, and a nav raised off the page
+               sitting on a bar that is not looked like one floating over
+               the other. */
+            background: var(--bg-1);
             border-bottom: 1px solid transparent;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
