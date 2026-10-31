@@ -165,6 +165,10 @@
            two read as one instrument rather than two widgets. */
         #lap-chart { display: block; width: 100%; height: 300px; }
         @media (max-width: 560px) { #lap-chart { height: 240px; } }
+        /* One finger still scrolls the page; two zoom the chart. Same as
+           the map, which is the point. */
+        #lap-chart { touch-action: pan-y; cursor: grab; }
+        #lap-chart.grabbing { cursor: grabbing; }
         .chart-cars { display: flex; flex-wrap: wrap; gap: 0.4rem;
             padding: 0 1.1rem 1rem; }
         /* display:block and display:flex both beat the browser's own rule for
@@ -1047,6 +1051,12 @@ function renderField(rows) {
             <div class="map-head">
                 <span class="map-title" id="lap-title">Lap Times</span>
                 <span class="map-note" id="lap-note"></span>
+                <span class="map-zoom">
+                    <button type="button" id="lap-out" aria-label="Zoom out" title="Zoom out">&minus;</button>
+                    <button type="button" id="lap-in" aria-label="Zoom in" title="Zoom in">+</button>
+                    <button type="button" class="reset" id="lap-fit"
+                            aria-label="Show every lap" title="Back to every lap">Fit</button>
+                </span>
             </div>
             <div class="map-stage">
                 <canvas id="lap-chart"></canvas>
@@ -3060,6 +3070,80 @@ let chipsOpen = false;        // whether that fold is open
 // What the chips said last time they were built, so they are only rebuilt
 // when something about them changed rather than on every redraw.
 let chipKey = null;
+// The whole log, and the part of it being looked at. Null means the whole
+// of it, which is what Fit goes back to. Not remembered between sessions:
+// a scale is about the question being asked now.
+let lapFit = null, lapView = null, lapPlot = null;
+// Far enough in that a handful of laps and a couple of seconds fill the
+// card. Past that the lines are further apart than they are long.
+const LAP_MIN_SPAN_X = 2;        // laps
+const LAP_MIN_SPAN_Y = 1500;     // milliseconds
+
+/** A view that stays over the data: never wider than the whole log, never
+ *  narrower than is readable, and never panned off the end of it. */
+function clampLapView(view) {
+    if (!view || !lapFit) return null;
+    const fitW = lapFit.x1 - lapFit.x0, fitH = lapFit.hi - lapFit.lo;
+    let { x0, x1, lo, hi } = view;
+    // Width first, then position, or clamping the edges of a window that is
+    // too wide would quietly move it instead of resizing it.
+    let wSpan = Math.min(Math.max(x1 - x0, Math.min(LAP_MIN_SPAN_X, fitW)), fitW);
+    let hSpan = Math.min(Math.max(hi - lo, Math.min(LAP_MIN_SPAN_Y, fitH)), fitH);
+    const cx = (x0 + x1) / 2, cy = (lo + hi) / 2;
+    x0 = cx - wSpan / 2; x1 = cx + wSpan / 2;
+    lo = cy - hSpan / 2; hi = cy + hSpan / 2;
+    if (x0 < lapFit.x0) { x1 += lapFit.x0 - x0; x0 = lapFit.x0; }
+    if (x1 > lapFit.x1) { x0 -= x1 - lapFit.x1; x1 = lapFit.x1; }
+    if (lo < lapFit.lo) { hi += lapFit.lo - lo; lo = lapFit.lo; }
+    if (hi > lapFit.hi) { lo -= hi - lapFit.hi; hi = lapFit.hi; }
+    return { x0, x1, lo, hi };
+}
+
+/** Whether the chart is showing anything other than the whole log. */
+function lapZoomed() {
+    if (!lapView || !lapFit) return false;
+    return Math.abs(lapView.x1 - lapView.x0 - (lapFit.x1 - lapFit.x0)) > 1e-6
+        || Math.abs(lapView.hi - lapView.lo - (lapFit.hi - lapFit.lo)) > 1e-6;
+}
+
+/** Zoom about a point on the canvas, so whatever is under the pointer
+ *  stays under it. Anything else and zooming walks the chart sideways. */
+function zoomLapChart(k, cx, cy) {
+    if (!lapPlot || !lapFit) return;
+    const p = lapPlot, v = lapView || lapFit;
+    const iw = p.w - p.padL - p.padR, ih = p.h - p.padT - p.padB;
+    const fx = Math.min(1, Math.max(0, (cx - p.padL) / Math.max(1, iw)));
+    const fy = Math.min(1, Math.max(0, (cy - p.padT) / Math.max(1, ih)));
+    const ax = v.x0 + (v.x1 - v.x0) * fx;              // lap under the pointer
+    const ay = v.hi - (v.hi - v.lo) * fy;              // and the time
+    lapView = clampLapView({
+        x0: ax - (ax - v.x0) * k, x1: ax + (v.x1 - ax) * k,
+        lo: ay - (ay - v.lo) * k, hi: ay + (v.hi - ay) * k,
+    });
+    if (!lapZoomed()) lapView = null;                  // back to the whole log
+    drawLapChart();
+}
+
+/** Drag the view by a distance in pixels. */
+function panLapChart(dx, dy) {
+    if (!lapPlot || !lapFit) return;
+    const p = lapPlot, v = lapView || lapFit;
+    const sx = (v.x1 - v.x0) / Math.max(1, p.w - p.padL - p.padR);
+    const sy = (v.hi - v.lo) / Math.max(1, p.h - p.padT - p.padB);
+    lapView = clampLapView({
+        x0: v.x0 - dx * sx, x1: v.x1 - dx * sx,
+        lo: v.lo + dy * sy, hi: v.hi + dy * sy,
+    });
+    drawLapChart();
+}
+
+function fitLapChart() { lapView = null; drawLapChart(); }
+
+/** How far apart two fingers are. */
+function touchSpan(t) {
+    return t.length < 2 ? 0
+        : Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+}
 
 async function loadLaps(ev) {
     // A different round, or the same round in a different session, is a
@@ -3187,8 +3271,93 @@ function bindLapChart() {
     if (!cv || !tip || cv.dataset.bound) return;
     cv.dataset.bound = '1';
 
+    // The buttons, which zoom about the middle of what is on screen.
+    // Horizontally the middle of what is on screen; vertically the median
+    // lap, so + closes in on the racing rather than on the gap above it.
+    const mid = () => {
+        const p = lapPlot;
+        if (!p) return [cv.clientWidth / 2, cv.clientHeight / 2];
+        const ih = p.h - p.padT - p.padB;
+        const fy = (p.v.hi - p.midT) / Math.max(1, p.v.hi - p.v.lo);
+        return [p.w / 2, p.padT + Math.min(1, Math.max(0, fy)) * ih];
+    };
+    const zoomBtn = (id, k) => {
+        const el = document.getElementById(id);
+        if (el) el.onclick = () => zoomLapChart(k, ...mid());
+    };
+    zoomBtn('lap-in', 1 / 1.4);
+    zoomBtn('lap-out', 1.4);
+    const fitBtn = document.getElementById('lap-fit');
+    if (fitBtn) fitBtn.onclick = fitLapChart;
+    // And a double click, which is what people try first.
+    cv.addEventListener('dblclick', fitLapChart);
+
+    // Zooming and panning, with the map's controls rather than a chart's
+    // usual drag-a-box: two canvases on one page that behave the same way
+    // beats each following its own convention.
+    cv.addEventListener('wheel', e => {
+        e.preventDefault();
+        const b = cv.getBoundingClientRect();
+        zoomLapChart(Math.exp(e.deltaY * 0.0016), e.clientX - b.left, e.clientY - b.top);
+    }, { passive: false });
+
+    let drag = null;
+    cv.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        drag = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId };
+    });
+    // On the window, not the canvas. A drag that leaves the card and is
+    // released out there never sends the canvas its pointerup, and the
+    // chart then believes a button is still held: hovering a lap did
+    // nothing afterwards, because every move was read as a pan.
+    const endDrag = () => { drag = null; cv.classList.remove('grabbing'); };
+    addEventListener('pointerup', endDrag);
+    addEventListener('pointercancel', endDrag);
+    // And a button released anywhere while no button is down, which covers
+    // a release the page never saw at all.
+    cv.addEventListener('mousemove', e => { if (drag && !e.buttons) endDrag(); }, true);
+
+    // Two fingers: the span between them is the zoom.
+    const touches = new Map();
+    let pinch = 0;
+    cv.addEventListener('touchstart', e => {
+        for (const t of e.changedTouches) touches.set(t.identifier, t);
+        if (touches.size === 2) pinch = touchSpan(e.touches);
+    }, { passive: true });
+    cv.addEventListener('touchmove', e => {
+        if (e.touches.length !== 2) return;
+        e.preventDefault();
+        const span = touchSpan(e.touches);
+        if (pinch > 0 && span > 0) {
+            const b = cv.getBoundingClientRect();
+            const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - b.left;
+            const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - b.top;
+            zoomLapChart(pinch / span, mx, my);
+        }
+        pinch = span;
+    }, { passive: false });
+    const endTouch = e => {
+        for (const t of e.changedTouches) touches.delete(t.identifier);
+        if (touches.size < 2) pinch = 0;
+    };
+    cv.addEventListener('touchend', endTouch, { passive: true });
+    cv.addEventListener('touchcancel', endTouch, { passive: true });
+
     const HIT = 12;
     cv.addEventListener('mousemove', e => {
+        // A drag of more than a few pixels is a pan, not a point: below that
+        // it is somebody hovering with a slightly unsteady hand.
+        if (drag) {
+            const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+            if (drag.moved || Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                drag.moved = true;
+                cv.classList.add('grabbing');
+                drag.x = e.clientX; drag.y = e.clientY;
+                panLapChart(dx, dy);
+                tip.hidden = true;
+                return;
+            }
+        }
         const b = cv.getBoundingClientRect();
         const mx = e.clientX - b.left, my = e.clientY - b.top;
         let hit = null, best = HIT * HIT;
@@ -3399,9 +3568,29 @@ function drawLapChart() {
     const pad = Math.max(500, (hi - lo) * 0.08);
     lo -= pad; hi += pad;
 
+    // What the whole log looks like, which is where Fit goes back to and
+    // what no amount of zooming out may go past.
+    lapFit = { x0, x1, lo, hi };
+    // And the part of it being looked at. Two out-laps can stretch the axis
+    // until the racing is in the bottom third, and the answer to that is to
+    // let the viewer choose rather than to have the chart decide, which it
+    // used to and which cost more than it was worth.
+    const v = clampLapView(lapView) || lapFit;
+
     const padL = 58, padR = 14, padT = 14, padB = 28;
-    const px = lap => padL + (x1 === x0 ? 0 : ((lap - x0) / (x1 - x0)) * (w - padL - padR));
-    const py = v   => padT + (1 - (v - lo) / Math.max(1, hi - lo)) * (h - padT - padB);
+    const px = lap => padL + (v.x1 === v.x0 ? 0
+                        : ((lap - v.x0) / (v.x1 - v.x0)) * (w - padL - padR));
+    const py = t   => padT + (1 - (t - v.lo) / Math.max(1, v.hi - v.lo)) * (h - padT - padB);
+    // Where the racing is, as opposed to where the middle of the axis is.
+    // The two are not the same, and least of all in the case this zoom
+    // exists for: a couple of out-laps stretch the scale, the midpoint
+    // lands in the empty band between them and the pace, and pressing + is
+    // rewarded with a close-up of nothing. The median lap is the racing.
+    const allMs = [];
+    for (const c of drawn) for (const l of c.pts) allMs.push(l.lap_ms);
+    allMs.sort((a, b) => a - b);
+    const midT = allMs.length ? allMs[allMs.length >> 1] : (v.lo + v.hi) / 2;
+    lapPlot = { padL, padR, padT, padB, w, h, v, midT };
 
     g.strokeStyle = 'rgba(255,255,255,0.06)';
     g.lineWidth = 1;
@@ -3410,17 +3599,28 @@ function drawLapChart() {
     g.textAlign = 'right';
     g.textBaseline = 'middle';
     for (let k = 0; k <= 4; k++) {
-        const v = lo + (hi - lo) * k / 4;
-        const y = Math.round(py(v)) + 0.5;
+        const t = v.lo + (v.hi - v.lo) * k / 4;
+        const y = Math.round(py(t)) + 0.5;
         g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke();
-        g.fillText(axisTime(v), padL - 8, y);
+        g.fillText(axisTime(t), padL - 8, y);
     }
     g.textAlign = 'center';
     g.textBaseline = 'top';
-    const step = Math.max(1, Math.ceil((x1 - x0 + 1) / 12));
-    for (let lap = x0; lap <= x1; lap += step) g.fillText(String(lap), px(lap), h - padB + 7);
+    // Whole laps only, and only the ones in view: zoomed in far enough that
+    // a step of one is still too many, the axis thins out rather than
+    // repeating the same number along the bottom.
+    const first = Math.ceil(v.x0), last = Math.floor(v.x1);
+    const step = Math.max(1, Math.ceil((last - first + 1) / 12));
+    for (let lap = first; lap <= last; lap += step) g.fillText(String(lap), px(lap), h - padB + 7);
     g.fillText(drawn[0].pts[0].mode === 'race' ? 'lap' : 'laps driven',
                w / 2, h - padB + 19);
+
+    // Zoomed in, most of the data is outside the box. Without this it is
+    // drawn over the axis labels and out to the edge of the card.
+    g.save();
+    g.beginPath();
+    g.rect(padL, padT, w - padL - padR, h - padT - padB);
+    g.clip();
 
     for (const c of drawn) {
         const col = colour.get(c.driver_id);
@@ -3488,6 +3688,7 @@ function drawLapChart() {
         g.globalAlpha = 1;
         g.lineWidth = 2;
     }
+    g.restore();
 
     if (note) {
         const n = drawn.reduce((t, c) => t + c.pts.length, 0);
