@@ -126,6 +126,30 @@
         .who .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
         .sub2 { display: block; font-size: 0.68rem; color: var(--muted); }
 
+        /* Setting a driver's times aside, and putting them back. Quiet in
+           the table, where it sits beside every row and must not read as a
+           warning; plain in the list, where pressing it is the point. */
+        .aside-btn { background: none; border: 0; cursor: pointer; color: var(--muted);
+            opacity: 0.3; font-size: 0.9rem; line-height: 1; padding: 0.1rem 0.2rem;
+            transition: opacity 0.15s, color 0.15s; }
+        tbody tr:hover .aside-btn { opacity: 0.7; }
+        .aside-btn:hover, .aside-btn:focus-visible { opacity: 1; color: #fca5a5; }
+        .aside-btn.back { opacity: 0.85; color: #fca5a5; }
+        @media (hover: none) { .aside-btn { opacity: 0.55; } }
+
+        .aside-card { margin-top: 1.5rem; }
+        .aside-body { padding: 0 1.1rem 1.1rem; }
+        .aside-why { margin: 0 0 0.9rem; font-size: 0.78rem; color: var(--muted);
+            line-height: 1.6; max-width: 60ch; }
+        .aside-list { list-style: none; margin: 0; padding: 0;
+            display: flex; flex-direction: column; gap: 0.1rem; }
+        .aside-list li { display: flex; align-items: baseline; gap: 0.6rem;
+            flex-wrap: wrap; padding: 0.5rem 0;
+            border-top: 1px solid rgba(255,255,255,0.04); }
+        .aside-name { font-size: 0.86rem; text-decoration: line-through;
+            text-decoration-thickness: 1px; text-decoration-color: var(--muted); }
+        .aside-meta { font-size: 0.72rem; color: var(--muted); }
+
         .foot-note { margin-top: 2.5rem; font-size: 0.74rem; color: var(--muted); line-height: 1.7; text-align: center; }
         .foot-note a { color: var(--gold); text-decoration: none; }
 
@@ -177,11 +201,23 @@ const { createClient } = window.supabase;
 const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
 const app = document.getElementById('app');
 
-sb.auth.getSession().then(({ data }) => {
+// Whether the viewer may set a driver's times aside. Nothing else on the
+// page depends on it, so somebody who is not signed in never makes the
+// second request.
+let isAdmin = false;
+
+sb.auth.getSession().then(async ({ data }) => {
     const portal = document.getElementById('nav-portal');
     const signin = document.getElementById('nav-signin');
     if (data?.session) { if (portal) portal.style.display = ''; }
     else if (signin) signin.style.display = '';
+    if (!data?.session) return;
+    // RLS on user_roles answers this for us: an admin reads their own row,
+    // everybody else reads nothing, so an empty result IS the answer.
+    const { data: roles } = await sb.from('user_roles')
+        .select('role').eq('user_id', data.session.user.id).eq('role', 'admin');
+    isAdmin = !!(roles && roles.length);
+    if (isAdmin && summary.length) render();
 });
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -233,6 +269,10 @@ let lapMarks = [];
 let hoveredDriver = null;
 
 let rounds = [], laps = [], summary = [], shown = new Set();
+// Drivers whose times an admin has set aside for this round and session.
+// They are filtered out of the log and the summary by the server, so this
+// list is the only trace of them on the page, and the only way back.
+let setAsideList = [];
 let eventId = null, mode = 'race', metric = 'lap';
 // Whether the session showing is the viewer's choice or ours. Until it is
 // theirs, the page opens on whichever session the round actually has.
@@ -503,7 +543,15 @@ function table() {
         <tbody>${summary.map(r => `<tr data-driver="${r.driver_id}">
             <td><div class="who"><span class="dot" style="background:${r.colour}"></span>
                 <span>${esc(r.display_name)}${r.car_number != null
-                    ? `<span class="sub2">#${r.car_number}</span>` : ''}</span></div></td>
+                    ? `<span class="sub2">#${r.car_number}</span>` : ''}</span>${
+                // Beside the name rather than in a column of its own. The
+                // sponsor rail is fixed to the right edge and overlaps the
+                // last column at some widths, which is survivable for a
+                // number and not for something you click.
+                isAdmin ? `<button type="button" class="aside-btn"
+                    data-aside-driver="${r.driver_id}" data-aside-name="${esc(r.display_name)}"
+                    title="Set ${esc(r.display_name)}'s times aside for ${mode ? 'this session' : 'this round'}. Use it when a car was not in the class it should have been in. Nothing is deleted."
+                    aria-label="Set these times aside">&#8856;</button>` : ''}</div></td>
             <td class="num">${r.laps}</td>
             <td class="num">${r.clean_laps}</td>
             <td class="num">${lapTime(r.best_ms)}</td>
@@ -511,6 +559,64 @@ function table() {
             <td class="num">${secs(r.spread_ms)}</td>
         </tr>`).join('')}</tbody>
     </table></div>`;
+}
+
+/**
+ * The cars whose times have been set aside, and the way back.
+ *
+ * Shown to everybody, not only to admins. The server leaves these drivers
+ * out of the log and the summary entirely, so somebody who watched them
+ * lapping on Tuesday and cannot find them on Wednesday deserves a sentence
+ * saying why rather than silence.
+ */
+function asideHtml() {
+    if (!setAsideList.length) return '';
+    return `<div class="card aside-card">
+        <div class="card-head">
+            <span class="card-title">Set aside</span>
+            <span class="card-note">Not counted in anything above</span>
+        </div>
+        <div class="aside-body">
+            <p class="aside-why">GT7 reports how quick a lap was and never what
+            it was driven in. An admin has set these cars' times aside for
+            ${mode ? 'this session' : 'this round'}. Nothing has been deleted:
+            every lap is still recorded and can be counted again.</p>
+            <ul class="aside-list">${setAsideList.map(v => `<li>
+                <span class="aside-name">${esc(v.display_name)}</span>
+                <span class="aside-meta">${v.laps} lap${v.laps === 1 ? '' : 's'}${
+                    !mode ? ' · ' + v.modes.join(', ') : ''}${
+                    v.reason ? ' · ' + esc(v.reason) : ''}</span>
+                ${isAdmin ? `<button type="button" class="aside-btn back"
+                    data-back-driver="${v.driver_id}" data-back-name="${esc(v.display_name)}"
+                    title="Count ${esc(v.display_name)}'s times again">&#8634;</button>` : ''}
+            </li>`).join('')}</ul>
+        </div>
+    </div>`;
+}
+
+/**
+ * Set a driver's times aside for what the picker is showing, or put them
+ * back. With the picker on Everything the server works out which sessions
+ * that driver actually has laps in and covers all of them.
+ */
+async function setAside(id, name, back) {
+    const args = { p_event_id: eventId, p_driver_id: id, p_mode: mode || null };
+    let res;
+    if (back) {
+        if (!confirm(`Count ${name}'s times again?\n\n`
+            + `Their laps go back into the chart, the log and the table.`)) return;
+        res = await sb.rpc('live_lap_unvoid', args);
+    } else {
+        const why = prompt(`Set ${name}'s times aside for `
+            + `${mode ? 'this session' : 'this whole round'}?\n\n`
+            + `Their laps leave the chart, the log, the pace table and live `
+            + `timing. Nothing is deleted and this can be undone.\n\n`
+            + `Why, for whoever undoes it later:`, 'Wrong car');
+        if (why === null) return;
+        res = await sb.rpc('live_lap_void', { ...args, p_reason: why });
+    }
+    if (res.error) { alert(res.error.message); return; }
+    await load();
 }
 
 function render() {
@@ -571,6 +677,8 @@ function render() {
             ${table()}
         </div>`}
 
+        ${asideHtml()}
+
         <div class="foot-note">
             Only drivers running a paired reporter appear here, so this is part of the grid rather than all of it.
             Each car's first lap is missing by design: a lap is only recorded once we have watched it from one
@@ -586,6 +694,16 @@ function render() {
     if (onMode) onMode.onchange = e => { mode = e.target.value; modeChosen = true; load(); };
     const onMetric = document.getElementById('pick-metric');
     if (onMetric) onMetric.onchange = e => { metric = e.target.value; drawChart(); };
+
+    // Both directions of setting aside, bound once on the page rather than
+    // on each button, because the table and the list are both rewritten
+    // whenever anything is loaded.
+    app.onclick = e => {
+        const off = e.target.closest('[data-aside-driver]');
+        if (off) return setAside(off.dataset.asideDriver, off.dataset.asideName, false);
+        const on = e.target.closest('[data-back-driver]');
+        if (on) return setAside(on.dataset.backDriver, on.dataset.backName, true);
+    };
 
     const cars = document.getElementById('cars');
     if (cars) cars.onclick = e => {
@@ -625,16 +743,32 @@ async function load() {
     const picked = rounds.find(r => r.event_id === eventId);
     if (!modeChosen && picked) mode = picked.race_laps > 0 ? 'race' : 'practice';
 
-    const [{ data: lg, error: e1 }, { data: sm, error: e2 }] = await Promise.all([
-        sb.rpc('live_lap_log',     { p_event_id: eventId, p_mode: mode || null }),
-        sb.rpc('live_lap_summary', { p_event_id: eventId, p_mode: mode || null }),
-    ]);
+    const [{ data: lg, error: e1 }, { data: sm, error: e2 }, { data: va }] =
+        await Promise.all([
+            sb.rpc('live_lap_log',       { p_event_id: eventId, p_mode: mode || null }),
+            sb.rpc('live_lap_summary',   { p_event_id: eventId, p_mode: mode || null }),
+            sb.rpc('live_lap_void_list', { p_event_id: eventId, p_mode: mode || null }),
+        ]);
     if (e1 || e2) {
         app.innerHTML = `<div class="page-wrap"><div class="state">
             <h3>Can't read the lap log</h3><p>${esc((e1 || e2).message)}</p></div></div>`;
         return;
     }
     laps = lg || [];
+    // One row per session a driver is set aside in, so with the picker on
+    // Everything the same name can come back three times. Folded into one
+    // entry per driver, with the sessions named, because the page shows
+    // people and not rows.
+    const byDriver = new Map();
+    for (const v of (va || [])) {
+        const e = byDriver.get(v.driver_id);
+        if (e) { e.laps += v.laps || 0; e.modes.push(v.mode); }
+        else byDriver.set(v.driver_id, { driver_id: v.driver_id,
+            display_name: v.display_name, reason: v.reason,
+            laps: v.laps || 0, modes: [v.mode] });
+    }
+    setAsideList = [...byDriver.values()]
+        .sort((a, b) => a.display_name.localeCompare(b.display_name));
     summary = (sm || []).map((r, i) => ({ ...r, colour: COLOURS[i % COLOURS.length] }));
     // Car numbers live on the laps rather than the summary, so carry one over.
     for (const r of summary) {

@@ -207,6 +207,23 @@
            currentColor is the car's own colour, set inline on the chip. */
         .chart-chip.hot { border-color: currentColor;
             background: rgba(255,255,255,0.06); }
+        /* A car whose times an admin has set aside. It keeps its place in
+           the legend rather than vanishing, because a name that was there
+           ten minutes ago and is gone now needs explaining, and because
+           this is the only way back to it once it has left the session. */
+        .chart-chip.aside { opacity: 0.45; border-style: dashed; cursor: default; }
+        .chart-chip.aside .nm { text-decoration: line-through;
+            text-decoration-thickness: 1px; }
+        .chart-chip.aside:hover { border-color: var(--border); }
+        /* Set aside, and put back. Admins only, and quiet: on a chip this
+           small a bright control invites a stray tap. */
+        .chip-act { background: none; border: 0; cursor: pointer; padding: 0 0.1rem;
+            margin: -0.2rem -0.3rem -0.2rem 0.1rem; font-size: 0.72rem; line-height: 1;
+            color: var(--muted); opacity: 0.35; transition: opacity 0.15s, color 0.15s; }
+        .chart-chip:hover .chip-act { opacity: 0.8; }
+        .chip-act:hover, .chip-act:focus-visible { opacity: 1; color: #fca5a5; }
+        .chart-chip.aside .chip-act { opacity: 0.9; color: #fca5a5; }
+        @media (hover: none) { .chip-act { opacity: 0.6; } }
         /* The fold. Deliberately not a chip: it is not a car. */
         .chart-more { font-family: 'Orbitron', sans-serif; font-size: 0.6rem;
             font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
@@ -513,10 +530,17 @@ const app = document.getElementById('app');
 // that is admin only and nothing else on this page depends on it, so a
 // viewer who is not signed in never makes the second request.
 let isAdmin = false;
-// Drivers whose times are currently set aside, by id. Kept from live_field
-// so that laps already pulled down before the void was set are dropped from
-// the chart too, rather than lingering until somebody reloads.
+// Drivers whose times are currently set aside, by id. Kept so that laps
+// already pulled down before the void was set are dropped from the chart
+// too, rather than lingering until somebody reloads.
 let voided = new Set();
+// The same thing with names on it, for the legend. A driver who has quit
+// has no row in the field at all, so this is the only place their name
+// survives once their laps stop arriving, and the only way back to them.
+let voidList = [];
+// live_field's signature of the voids for this round and session. Null when
+// there are none, which is the ordinary case and costs a poll nothing.
+let voidRev = null;
 
 sb.auth.getSession().then(async ({ data }) => {
     const portal = document.getElementById('nav-portal');
@@ -843,23 +867,19 @@ function togglePin(e, id) {
  * Confirmed rather than instant, because it changes what everybody watching
  * sees. Undone by pressing it again.
  */
-async function toggleVoid(e, id) {
-    if (e) { e.stopPropagation(); e.preventDefault(); }
-    const row = (lastRows || []).find(r => r.driver_id === id);
-    if (!row) return;
-    const args = { p_event_id: row.event_id, p_driver_id: id, p_mode: row.mode };
-    // Read before the request rather than after it: a poll can land while
-    // the request is in the air and rewrite the row underneath us, and then
-    // the second half of this function would undo what the first half did.
-    const wasVoid = !!row.times_void;
+async function setAside(id, name, wasVoid) {
+    const ev = lastRows && lastRows[0];
+    if (!ev) return;
+    const args = { p_event_id: ev.event_id, p_driver_id: id, p_mode: ev.mode };
     let res;
     if (wasVoid) {
-        if (!confirm(`Count ${row.display_name}'s times again?\n\n`
-            + `Their laps go back on the chart and their Best and Last come back.`)) return;
+        if (!confirm(`Count ${name}'s times again?\n\n`
+            + `Their laps go back on the chart and, if they are still out, `
+            + `their Best and Last come back.`)) return;
         res = await sb.rpc('live_lap_unvoid', args);
     } else {
-        const why = prompt(`Set ${row.display_name}'s times aside for this `
-            + `${row.mode === 'race' ? 'race' : 'session'}?\n\n`
+        const why = prompt(`Set ${name}'s times aside for this `
+            + `${ev.mode === 'race' ? 'race' : 'session'}?\n\n`
             + `Their laps leave the chart, the log and the pace table, and `
             + `their Best and Last are blanked for everyone watching. The car `
             + `stays on the board and the map, the lap counter keeps running, `
@@ -871,16 +891,53 @@ async function toggleVoid(e, id) {
     if (res.error) { alert(res.error.message); return; }
     // Answered straight away rather than waiting for the next poll, which is
     // up to a second and a half and feels like the button did nothing.
-    if (wasVoid) voided.delete(id); else voided.add(id);
-    row.times_void = !wasVoid;
-    if (row.times_void) { row.best_lap_ms = null; row.last_lap_ms = null; }
-    // Setting aside needs nothing more: the laps already in memory are
-    // filtered out by lapCars, and the feed stops sending new ones. Counting
-    // them again does, because every one of that driver's laps is behind our
-    // cursor and only a read from the top brings them back. Done this way
-    // round so the common case never blanks the chart for a poll.
-    if (wasVoid) resetLapFeed();
-    renderField(lastRows);
+    const row = (lastRows || []).find(r => r.driver_id === id);
+    if (wasVoid) {
+        voided.delete(id);
+        voidList = voidList.filter(v => v.driver_id !== id);
+        if (row) row.times_void = false;
+        // Every one of that driver's laps is behind our cursor, and only a
+        // read from the top brings them back.
+        resetLapFeed();
+    } else {
+        voided.add(id);
+        if (!voidList.some(v => v.driver_id === id)) {
+            voidList = voidList.concat([{ driver_id: id, display_name: name,
+                reason: null, laps: null }]);
+        }
+        if (row) { row.times_void = true; row.best_lap_ms = null; row.last_lap_ms = null; }
+        // Nothing else needed: the laps already in memory are filtered out by
+        // lapCars and the feed stops sending new ones, so the chart never
+        // blanks for a poll in the direction this is normally used.
+    }
+    if (lastRows) renderField(lastRows);
+    drawLapChart();
+}
+
+/** The board row's control. The driver is out there, so the field has them. */
+function toggleVoid(e, id) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    const row = (lastRows || []).find(r => r.driver_id === id);
+    // Read before the request rather than after it: a poll can land while
+    // the request is in the air and rewrite the row underneath us.
+    if (row) setAside(id, row.display_name, !!row.times_void);
+}
+
+/**
+ * Who is currently set aside, with their names.
+ *
+ * Asked for only when live_field says the voids have changed, so an evening
+ * with none of them never makes this request at all. The names matter
+ * because a driver who has quit has no row in the field: without this their
+ * line would simply disappear off the chart with no explanation and no way
+ * back to it.
+ */
+async function loadVoidList(ev) {
+    const { data, error } = await sb.rpc('live_lap_void_list',
+        { p_event_id: ev.event_id, p_mode: ev.mode });
+    if (error) return;
+    voidList = data || [];
+    for (const v of voidList) voided.add(v.driver_id);
     drawLapChart();
 }
 
@@ -3539,6 +3596,9 @@ async function loadLaps(ev) {
     if (key !== lapKey) {
         lapKey = key; resetLapFeed();
         lapScopeKey = null; lapOff.clear();
+        // A different round, or the same round in a different session, has
+        // its own voids. Forgetting the signature makes the next poll ask.
+        voidRev = null; voidList = [];
     } else if (lapBusy || Date.now() - lapAt < LAP_FEED_MS) {
         return;
     }
@@ -3853,17 +3913,28 @@ function drawLapChart() {
     const folded = chipsOpen ? [] : cars.filter(c => lapAuto.has(c.driver_id));
     const listed = chipsOpen ? cars : cars.filter(c => !lapAuto.has(c.driver_id));
 
+    // Cars whose times have been set aside keep a chip, struck through at
+    // the end of the row. They have no line to switch on, and most of them
+    // are no longer in the field at all, so without this a name that was
+    // there ten minutes ago is simply gone with nothing to explain it and,
+    // for an admin, no way back to it.
+    const aside = voidList.filter(v => !listed.some(c => c.driver_id === v.driver_id));
+
     const chipsNow = listed.map(c => `${c.driver_id}|${c.name}|${c.pts.length}`
         + `|${colour.get(c.driver_id)}|${lapOff.has(c.driver_id) ? 1 : 0}`).join(',')
-        + `#${folded.length}#${chipsOpen ? 1 : 0}`;
+        + `#${folded.length}#${chipsOpen ? 1 : 0}#${isAdmin ? 1 : 0}`
+        + `#${aside.map(v => v.driver_id + '|' + v.laps).join(',')}`;
     if (chipsNow !== chipKey) {
         chipKey = chipsNow;
         chips.innerHTML = listed.map(c => `<button type="button"
             class="chart-chip${lapOff.has(c.driver_id) ? ' off' : ''}"
             style="color:${colour.get(c.driver_id)}" data-driver="${c.driver_id}"
             title="${c.pts.length} lap${c.pts.length === 1 ? '' : 's'} recorded, best ${esc(lapTime(c.best))}">
-            <span class="dot"></span>${esc(c.name)}
-            <span class="chip-n">${c.pts.length}</span></button>`).join('')
+            <span class="dot"></span><span class="nm">${esc(c.name)}</span>
+            <span class="chip-n">${c.pts.length}</span>${
+            isAdmin ? `<span class="chip-act" role="button" tabindex="0" data-aside="0"
+                title="Set ${esc(c.name)}'s times aside for this session. Use it when a car is not in the class it should be in. Nothing is deleted."
+                >&#8856;</span>` : ''}</button>`).join('')
             // While the fold is open the way back is always offered. It used
             // to depend on there still being something folded, so switching
             // every car on by hand emptied that set and took the button with
@@ -3876,7 +3947,18 @@ function drawLapChart() {
                     ? `<button type="button" class="chart-more" data-more="1"
                          title="Every other car that has logged a lap. Clicking one puts its line on the chart."
                          >${folded.length} more</button>`
-                    : '');
+                    : '')
+            + aside.map(v => `<button type="button" class="chart-chip aside"
+                data-driver="${v.driver_id}"
+                title="An admin set these times aside${v.reason ? ': ' + esc(v.reason) : ''}. ${
+                    v.laps != null ? v.laps + ' lap' + (v.laps === 1 ? '' : 's') + ' are still recorded and nothing has been deleted.'
+                                   : 'Nothing has been deleted.'}">
+                <span class="dot" style="background:var(--muted)"></span>
+                <span class="nm">${esc(v.display_name)}</span>
+                <span class="chip-n">set aside</span>${
+                isAdmin ? `<span class="chip-act" role="button" tabindex="0" data-aside="1"
+                    title="Count ${esc(v.display_name)}'s times again"
+                    >&#8634;</span>` : ''}</button>`).join('');
     }
     // The highlight is a class rather than part of the rebuild, so it can be
     // put on and taken off without touching the rest of the row.
@@ -3896,6 +3978,16 @@ function drawLapChart() {
         const chip = e.target.closest('.chart-chip');
         if (!chip) return;
         const id = chip.dataset.driver;
+        // The admin control sits inside the chip, so it has to be tested for
+        // before the chip's own job of switching a line on and off.
+        const act = e.target.closest('.chip-act');
+        if (act) {
+            e.stopPropagation();
+            const name = chip.querySelector('.nm')?.textContent || 'this driver';
+            setAside(id, name, act.dataset.aside === '1');
+            return;
+        }
+        if (chip.classList.contains('aside')) return;   // no line to switch
         if (lapOff.has(id)) lapOff.delete(id); else lapOff.add(id);
         // Touched by hand, so it is the viewer's choice now and stops
         // folding away with the ones nobody has looked at.
@@ -4120,13 +4212,22 @@ async function tick() {
 
     failures = 0;
     if (!data || data.length === 0) { await renderIdle(); return; }
-    // Who is currently set aside, straight off the field rather than a
-    // request of its own. Read before the laps are asked for, because
-    // lifting a void means the feed has to be re-read from the top: the
+    // Who is currently set aside. Read before the laps are asked for,
+    // because a change means the feed has to be re-read from the top: a
     // restored driver's laps are all behind our cursor.
-    const wasVoided = voided;
+    //
+    // The field only knows about cars that are still reporting, so the ones
+    // who have quit come from the void list, which is fetched only when
+    // live_field's signature of the voids changes. On an evening with none
+    // of them that request is never made.
     voided = new Set(data.filter(r => r.times_void).map(r => r.driver_id));
-    if ([...wasVoided].some(id => !voided.has(id))) resetLapFeed();
+    const rev = data[0].void_rev ?? null;
+    if (rev !== voidRev) {
+        voidRev = rev;
+        resetLapFeed();
+        if (rev === null) voidList = []; else loadVoidList(data[0]);
+    }
+    for (const v of voidList) voided.add(v.driver_id);
 
     await loadBasePath(trackState?.error ? null : trackState?.data);
     loadCoverage(data[0].event_id);        // cached, not awaited
