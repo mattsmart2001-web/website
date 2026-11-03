@@ -135,6 +135,8 @@
         tbody tr:hover .aside-btn { opacity: 0.7; }
         .aside-btn:hover, .aside-btn:focus-visible { opacity: 1; color: #fca5a5; }
         .aside-btn.back { opacity: 0.85; color: #fca5a5; }
+        .aside-btn.go   { opacity: 0.85; color: #86efac; }
+        .aside-btn.go:hover, .aside-btn.go:focus-visible { color: #bbf7d0; }
         @media (hover: none) { .aside-btn { opacity: 0.55; } }
 
         .aside-card { margin-top: 1.5rem; }
@@ -148,6 +150,9 @@
             border-top: 1px solid rgba(255,255,255,0.04); }
         .aside-name { font-size: 0.86rem; text-decoration: line-through;
             text-decoration-thickness: 1px; text-decoration-color: var(--muted); }
+        /* Only part of this driver's evening is set aside, so striking the
+           whole name out would say the wrong thing. */
+        .aside-name.part { text-decoration: none; color: var(--muted); }
         .aside-meta { font-size: 0.72rem; color: var(--muted); }
 
         .foot-note { margin-top: 2.5rem; font-size: 0.74rem; color: var(--muted); line-height: 1.7; text-align: center; }
@@ -548,8 +553,8 @@ function table() {
                 // sponsor rail is fixed to the right edge and overlaps the
                 // last column at some widths, which is survivable for a
                 // number and not for something you click.
-                isAdmin ? `<button type="button" class="aside-btn"
-                    data-aside-driver="${r.driver_id}" data-aside-name="${esc(r.display_name)}"
+                isAdmin ? `<button type="button" class="aside-btn" data-act="void"
+                    data-driver="${r.driver_id}" data-name="${esc(r.display_name)}"
                     title="Set ${esc(r.display_name)}'s times aside for ${mode ? 'this session' : 'this round'}. Use it when a car was not in the class it should have been in. Nothing is deleted."
                     aria-label="Set these times aside">&#8856;</button>` : ''}</div></td>
             <td class="num">${r.laps}</td>
@@ -574,41 +579,74 @@ function asideHtml() {
     return `<div class="card aside-card">
         <div class="card-head">
             <span class="card-title">Set aside</span>
-            <span class="card-note">Not counted in anything above</span>
+            <span class="card-note">Laps an admin is not counting</span>
         </div>
         <div class="aside-body">
             <p class="aside-why">GT7 reports how quick a lap was and never what
-            it was driven in. An admin has set these cars' times aside for
+            it was driven in. An admin has set these cars' earlier times aside for
             ${mode ? 'this session' : 'this round'}. Nothing has been deleted:
             every lap is still recorded and can be counted again.</p>
             <ul class="aside-list">${setAsideList.map(v => `<li>
-                <span class="aside-name">${esc(v.display_name)}</span>
-                <span class="aside-meta">${v.laps} lap${v.laps === 1 ? '' : 's'}${
+                <span class="aside-name${v.through ? ' part' : ''}">${esc(v.display_name)}</span>
+                <span class="aside-meta">${v.laps} lap${v.laps === 1 ? '' : 's'} set aside${
+                    v.kept ? ` · ${v.kept} counted since ${esc(clockTime(v.through))}`
+                           : v.through ? ` · counted again since ${esc(clockTime(v.through))}` : ''}${
                     !mode ? ' · ' + v.modes.join(', ') : ''}${
                     v.reason ? ' · ' + esc(v.reason) : ''}</span>
-                ${isAdmin ? `<button type="button" class="aside-btn back"
-                    data-back-driver="${v.driver_id}" data-back-name="${esc(v.display_name)}"
-                    title="Count ${esc(v.display_name)}'s times again">&#8634;</button>` : ''}
+                ${isAdmin ? (v.through
+                    ? `<button type="button" class="aside-btn" data-act="void"
+                        data-driver="${v.driver_id}" data-name="${esc(v.display_name)}"
+                        title="Set aside everything ${esc(v.display_name)} has done, including since ${esc(clockTime(v.through))}">&#8856;</button>`
+                    : `<button type="button" class="aside-btn go" data-act="resume"
+                        data-driver="${v.driver_id}" data-name="${esc(v.display_name)}"
+                        title="Start counting ${esc(v.display_name)} again from now. What they have already done stays set aside.">&#9205;</button>`)
+                    + `<button type="button" class="aside-btn back" data-act="restore"
+                        data-driver="${v.driver_id}" data-name="${esc(v.display_name)}"
+                        title="Count everything ${esc(v.display_name)} has done, set-aside laps included. The undo for having picked the wrong driver.">&#8634;</button>`
+                 : ''}
             </li>`).join('')}</ul>
         </div>
     </div>`;
 }
 
+/** A clock time for a cut, in the reader's own zone. */
+function clockTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    // en-GB rather than the browser's locale: a UK league reads 21:14, and
+    // a viewer in Texas looking at a British race wants the same string
+    // everybody in the Discord is using.
+    return isNaN(d) ? '' : d.toLocaleTimeString('en-GB',
+        { hour: '2-digit', minute: '2-digit' });
+}
+
 /**
- * Set a driver's times aside for what the picker is showing, or put them
- * back. With the picker on Everything the server works out which sessions
- * that driver actually has laps in and covers all of them.
+ * Set a driver's times aside for what the picker is showing, count them
+ * again from now, or count the lot. With the picker on Everything the
+ * server works out which sessions that driver has laps in and covers them.
+ *
+ * Counting from now is the route back for a driver who has swapped into
+ * the car he is entered in: what he has already done stays set aside.
+ * Counting everything is the undo for having picked the wrong driver, and
+ * says so, because only one of the two puts a Gr.1 lap back on the board.
  */
-async function setAside(id, name, back) {
+async function setAside(id, name, act) {
     const args = { p_event_id: eventId, p_driver_id: id, p_mode: mode || null };
+    const span = mode ? 'this session' : 'this whole round';
     let res;
-    if (back) {
-        if (!confirm(`Count ${name}'s times again?\n\n`
-            + `Their laps go back into the chart, the log and the table.`)) return;
+    if (act === 'restore') {
+        if (!confirm(`Count everything ${name} has done in ${span}?\n\n`
+            + `Every lap goes back into the chart, the log and the table, `
+            + `including the ones that were set aside.`)) return;
         res = await sb.rpc('live_lap_unvoid', args);
+    } else if (act === 'resume') {
+        if (!confirm(`Start counting ${name} again from now?\n\n`
+            + `What they have already done stays set aside. Every lap they `
+            + `finish from this moment counts normally.\n\n`
+            + `Press this once you can see they are in the right car.`)) return;
+        res = await sb.rpc('live_lap_resume', args);
     } else {
-        const why = prompt(`Set ${name}'s times aside for `
-            + `${mode ? 'this session' : 'this whole round'}?\n\n`
+        const why = prompt(`Set ${name}'s times aside for ${span}?\n\n`
             + `Their laps leave the chart, the log, the pace table and live `
             + `timing. Nothing is deleted and this can be undone.\n\n`
             + `Why, for whoever undoes it later:`, 'Wrong car');
@@ -699,10 +737,8 @@ function render() {
     // on each button, because the table and the list are both rewritten
     // whenever anything is loaded.
     app.onclick = e => {
-        const off = e.target.closest('[data-aside-driver]');
-        if (off) return setAside(off.dataset.asideDriver, off.dataset.asideName, false);
-        const on = e.target.closest('[data-back-driver]');
-        if (on) return setAside(on.dataset.backDriver, on.dataset.backName, true);
+        const btn = e.target.closest('.aside-btn[data-act]');
+        if (btn) setAside(btn.dataset.driver, btn.dataset.name, btn.dataset.act);
     };
 
     const cars = document.getElementById('cars');
@@ -762,10 +798,15 @@ async function load() {
     const byDriver = new Map();
     for (const v of (va || [])) {
         const e = byDriver.get(v.driver_id);
-        if (e) { e.laps += v.laps || 0; e.modes.push(v.mode); }
-        else byDriver.set(v.driver_id, { driver_id: v.driver_id,
+        if (e) {
+            e.laps += v.laps || 0; e.kept += v.kept || 0; e.modes.push(v.mode);
+            // One session set aside outright is enough to say the driver is,
+            // which is the cautious reading when the picker is on Everything.
+            if (!v.through) e.through = null;
+        } else byDriver.set(v.driver_id, { driver_id: v.driver_id,
             display_name: v.display_name, reason: v.reason,
-            laps: v.laps || 0, modes: [v.mode] });
+            laps: v.laps || 0, kept: v.kept || 0, through: v.through,
+            modes: [v.mode] });
     }
     setAsideList = [...byDriver.values()]
         .sort((a, b) => a.display_name.localeCompare(b.display_name));

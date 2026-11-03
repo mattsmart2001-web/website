@@ -215,15 +215,7 @@
         .chart-chip.aside .nm { text-decoration: line-through;
             text-decoration-thickness: 1px; }
         .chart-chip.aside:hover { border-color: var(--border); }
-        /* Set aside, and put back. Admins only, and quiet: on a chip this
-           small a bright control invites a stray tap. */
-        .chip-act { background: none; border: 0; cursor: pointer; padding: 0 0.1rem;
-            margin: -0.2rem -0.3rem -0.2rem 0.1rem; font-size: 0.72rem; line-height: 1;
-            color: var(--muted); opacity: 0.35; transition: opacity 0.15s, color 0.15s; }
-        .chart-chip:hover .chip-act { opacity: 0.8; }
-        .chip-act:hover, .chip-act:focus-visible { opacity: 1; color: #fca5a5; }
-        .chart-chip.aside .chip-act { opacity: 0.9; color: #fca5a5; }
-        @media (hover: none) { .chip-act { opacity: 0.6; } }
+        .chart-chip .chip-act { margin: -0.2rem -0.3rem -0.2rem 0; }
         /* The fold. Deliberately not a chip: it is not a car. */
         .chart-more { font-family: 'Orbitron', sans-serif; font-size: 0.6rem;
             font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
@@ -318,15 +310,19 @@
         /* No hover on a phone, so they have to be visible enough to tap. */
         @media (hover: none) { .pin { opacity: 0.55; } }
 
-        /* Admins only, and quieter than the star: setting somebody's times
-           aside is rare and the button should not invite a stray tap. */
-        .void-btn { background: none; border: 0; cursor: pointer; color: var(--muted);
-            opacity: 0.22; font-size: 0.72rem; line-height: 1; padding: 0.15rem 0.2rem;
+        /* The admin controls, on a board row and inside a legend chip alike.
+           Quieter than the star: setting somebody's times aside is rare and
+           the control should not invite a stray tap. */
+        .chip-act { background: none; border: 0; cursor: pointer; color: var(--muted);
+            opacity: 0.22; font-size: 0.74rem; line-height: 1; padding: 0.15rem 0.2rem;
             flex: 0 0 auto; transition: opacity 0.15s, color 0.15s; }
-        tr:hover .void-btn { opacity: 0.6; }
-        .void-btn:hover, .void-btn:focus-visible { opacity: 1; color: #fca5a5; }
-        .void-btn.on, tr:hover .void-btn.on { opacity: 1; color: #fca5a5; }
-        @media (hover: none) { .void-btn { opacity: 0.45; } }
+        tr:hover .chip-act, .chart-chip:hover .chip-act { opacity: 0.7; }
+        .chip-act:hover, .chip-act:focus-visible { opacity: 1; color: #fca5a5; }
+        /* Once something IS set aside, the way back stops hiding. */
+        .chip-act[data-act="restore"], .chip-act[data-act="resume"] {
+            opacity: 0.85; color: #fca5a5; }
+        .chip-act[data-act="resume"] { color: #86efac; }
+        @media (hover: none) { .chip-act { opacity: 0.5; } }
 
         .splits { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 1.25rem; margin-top: 2rem; align-items: start; }
 
@@ -867,19 +863,27 @@ function togglePin(e, id) {
  * Confirmed rather than instant, because it changes what everybody watching
  * sees. Undone by pressing it again.
  */
-async function setAside(id, name, wasVoid) {
+async function setAside(e, id, name, action) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
     const ev = lastRows && lastRows[0];
     if (!ev) return;
     const args = { p_event_id: ev.event_id, p_driver_id: id, p_mode: ev.mode };
+    const session = ev.mode === 'race' ? 'race' : 'session';
     let res;
-    if (wasVoid) {
-        if (!confirm(`Count ${name}'s times again?\n\n`
-            + `Their laps go back on the chart and, if they are still out, `
-            + `their Best and Last come back.`)) return;
+    if (action === 'restore') {
+        if (!confirm(`Count everything ${name} has done this ${session}?\n\n`
+            + `Every lap goes back on the chart, including the ones that were `
+            + `set aside. This is the undo for having picked the wrong driver, `
+            + `not the way back for somebody who has changed car.`)) return;
         res = await sb.rpc('live_lap_unvoid', args);
+    } else if (action === 'resume') {
+        if (!confirm(`Start counting ${name} again from now?\n\n`
+            + `What they have already done stays set aside. Every lap they `
+            + `finish from this moment counts normally.\n\n`
+            + `Press this once you can see they are in the right car.`)) return;
+        res = await sb.rpc('live_lap_resume', args);
     } else {
-        const why = prompt(`Set ${name}'s times aside for this `
-            + `${ev.mode === 'race' ? 'race' : 'session'}?\n\n`
+        const why = prompt(`Set ${name}'s times aside for this ${session}?\n\n`
             + `Their laps leave the chart, the log and the pace table, and `
             + `their Best and Last are blanked for everyone watching. The car `
             + `stays on the board and the map, the lap counter keeps running, `
@@ -890,22 +894,31 @@ async function setAside(id, name, wasVoid) {
     }
     if (res.error) { alert(res.error.message); return; }
     // Answered straight away rather than waiting for the next poll, which is
-    // up to a second and a half and feels like the button did nothing.
+    // up to a second and a half and feels like the button did nothing. The
+    // poll then confirms it, so anything guessed wrong here lasts one tick.
     const row = (lastRows || []).find(r => r.driver_id === id);
-    if (wasVoid) {
+    const entry = voidList.find(v => v.driver_id === id);
+    if (action === 'restore') {
         voided.delete(id);
         voidList = voidList.filter(v => v.driver_id !== id);
-        if (row) row.times_void = false;
+        if (row) { row.times_void = false; row.times_from = null; }
         // Every one of that driver's laps is behind our cursor, and only a
         // read from the top brings them back.
         resetLapFeed();
+    } else if (action === 'resume') {
+        const cut = res.data?.from || new Date().toISOString();
+        voided.delete(id);            // their new laps are to be drawn
+        if (entry) entry.through = cut;
+        if (row) { row.times_void = false; row.times_from = cut; }
     } else {
         voided.add(id);
-        if (!voidList.some(v => v.driver_id === id)) {
-            voidList = voidList.concat([{ driver_id: id, display_name: name,
-                reason: null, laps: null }]);
+        if (entry) entry.through = null;
+        else voidList = voidList.concat([{ driver_id: id, display_name: name,
+            reason: null, laps: null, kept: 0, through: null }]);
+        if (row) {
+            row.times_void = true; row.times_from = null;
+            row.best_lap_ms = null; row.last_lap_ms = null;
         }
-        if (row) { row.times_void = true; row.best_lap_ms = null; row.last_lap_ms = null; }
         // Nothing else needed: the laps already in memory are filtered out by
         // lapCars and the feed stops sending new ones, so the chart never
         // blanks for a poll in the direction this is normally used.
@@ -914,13 +927,44 @@ async function setAside(id, name, wasVoid) {
     drawLapChart();
 }
 
-/** The board row's control. The driver is out there, so the field has them. */
-function toggleVoid(e, id) {
-    if (e) { e.stopPropagation(); e.preventDefault(); }
-    const row = (lastRows || []).find(r => r.driver_id === id);
-    // Read before the request rather than after it: a poll can land while
-    // the request is in the air and rewrite the row underneath us.
-    if (row) setAside(id, row.display_name, !!row.times_void);
+/** A clock time for a cut, in the viewer's own zone. */
+function clockTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    // en-GB rather than the browser's locale: a UK league reads 21:14, and
+    // a viewer in Texas looking at a British race wants the same string
+    // everybody in the Discord is using.
+    return isNaN(d) ? '' : d.toLocaleTimeString('en-GB',
+        { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * The admin controls for one driver, wherever they are shown.
+ *
+ *   nothing set aside   ->  set it aside
+ *   set aside           ->  count from now, or count everything
+ *   counting from a cut ->  set aside again, or count everything
+ *
+ * Counting from now is the route back for a driver who has swapped into
+ * the car he is entered in. Counting everything is the undo for having
+ * picked the wrong driver, and says so, because the two are easy to
+ * confuse and only one of them puts a Gr.1 lap back on the board.
+ */
+function asideActs(id, name, isVoid, from) {
+    if (!isAdmin) return '';
+    const n = esc(name), q = JSON.stringify(name).replace(/"/g, '&quot;');
+    const btn = (act, glyph, title) => `<span class="chip-act" role="button"
+        tabindex="0" data-act="${act}" title="${title}"
+        onclick="setAside(event, '${id}', ${q}, '${act}')">${glyph}</span>`;
+    if (isVoid) {
+        return btn('resume', '&#9205;', `Start counting ${n} again from now. What they have already done stays set aside.`)
+             + btn('restore', '&#8634;', `Count everything ${n} has done, including what was set aside. The undo for having picked the wrong driver.`);
+    }
+    if (from) {
+        return btn('void', '&#8856;', `Set aside everything ${n} has done this session, including since ${esc(clockTime(from))}.`)
+             + btn('restore', '&#8634;', `Count everything ${n} has done, including what was set aside before ${esc(clockTime(from))}.`);
+    }
+    return btn('void', '&#8856;', `Set ${n}'s times aside for this session. Use it when a car is not in the class it should be in. Nothing is deleted.`);
 }
 
 /**
@@ -937,7 +981,9 @@ async function loadVoidList(ev) {
         { p_event_id: ev.event_id, p_mode: ev.mode });
     if (error) return;
     voidList = data || [];
-    for (const v of voidList) voided.add(v.driver_id);
+    // Only a full void takes a driver off the chart. One with a cut is
+    // having their newer laps counted, and those are in the feed.
+    for (const v of voidList) if (!v.through) voided.add(v.driver_id);
     drawLapChart();
 }
 
@@ -962,19 +1008,18 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
         <td class="pos">${idx + 1}</td>
         <td>
             <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${clientBadge(r.client)}${
-                r.times_void ? `<span class="flag flag-void" title="An admin has set this car's times aside for this session. It is still out there and still counting laps; the times are not being shown.">Times set aside</span>` : ''}${
+                // Kept to two words. These sit beside the driver's name in a
+                // column that also has to hold Signal lost and In menus, and
+                // a longer phrase eats the name rather than wrapping.
+                r.times_void ? `<span class="flag flag-void" title="An admin has set this car's times aside for this session. It is still out there and still counting laps; the times are not being shown.">Set aside</span>`
+                : r.times_from ? `<span class="flag flag-void" title="An admin set this car's earlier times aside and started counting it again at ${esc(clockTime(r.times_from))}. Best and Last are its laps since then, taken off the lap log because GT7 is still reporting the old best.">Since ${esc(clockTime(r.times_from))}</span>` : ''}${
                 st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}<button
                 type="button" class="pin${pinned.has(r.driver_id) ? ' on' : ''}"
                 aria-pressed="${pinned.has(r.driver_id)}"
                 title="${pinned.has(r.driver_id) ? 'Stop following' : 'Follow'} ${esc(r.display_name)}"
                 aria-label="${pinned.has(r.driver_id) ? 'Stop following' : 'Follow'} ${esc(r.display_name)}"
                 onclick="togglePin(event, '${r.driver_id}')">${pinned.has(r.driver_id) ? '★' : '☆'}</button>${
-                isAdmin ? `<button type="button" class="void-btn${r.times_void ? ' on' : ''}"
-                title="${r.times_void
-                    ? `Count ${esc(r.display_name)}'s times again`
-                    : `Set ${esc(r.display_name)}'s times aside for this session. Use it when a car is not in the class it should be in. The car stays on the board and the map; only the times go, and nothing is deleted.`}"
-                aria-label="${r.times_void ? 'Count these times again' : 'Set these times aside'}"
-                onclick="toggleVoid(event, '${r.driver_id}')">${r.times_void ? '↺' : '⊘'}</button>` : ''}</div>
+                asideActs(r.driver_id, r.display_name, r.times_void, r.times_from)}</div>
             ${sub ? `<span class="team">${swatch}${sub}</span>` : ''}
         </td>
         <!-- The lap they are on, and nothing after it. GT7's "laps in race"
@@ -3918,10 +3963,14 @@ function drawLapChart() {
     // are no longer in the field at all, so without this a name that was
     // there ten minutes ago is simply gone with nothing to explain it and,
     // for an admin, no way back to it.
-    const aside = voidList.filter(v => !listed.some(c => c.driver_id === v.driver_id));
+    // Only the full voids. A driver being counted from a cut is in the feed
+    // and has an ordinary chip, carrying the controls for his own state.
+    const aside = voidList.filter(v => !v.through
+        && !listed.some(c => c.driver_id === v.driver_id));
 
     const chipsNow = listed.map(c => `${c.driver_id}|${c.name}|${c.pts.length}`
-        + `|${colour.get(c.driver_id)}|${lapOff.has(c.driver_id) ? 1 : 0}`).join(',')
+        + `|${colour.get(c.driver_id)}|${lapOff.has(c.driver_id) ? 1 : 0}`
+        + `|${voidList.find(v => v.driver_id === c.driver_id)?.through || ''}`).join(',')
         + `#${folded.length}#${chipsOpen ? 1 : 0}#${isAdmin ? 1 : 0}`
         + `#${aside.map(v => v.driver_id + '|' + v.laps).join(',')}`;
     if (chipsNow !== chipKey) {
@@ -3932,9 +3981,9 @@ function drawLapChart() {
             title="${c.pts.length} lap${c.pts.length === 1 ? '' : 's'} recorded, best ${esc(lapTime(c.best))}">
             <span class="dot"></span><span class="nm">${esc(c.name)}</span>
             <span class="chip-n">${c.pts.length}</span>${
-            isAdmin ? `<span class="chip-act" role="button" tabindex="0" data-aside="0"
-                title="Set ${esc(c.name)}'s times aside for this session. Use it when a car is not in the class it should be in. Nothing is deleted."
-                >&#8856;</span>` : ''}</button>`).join('')
+            asideActs(c.driver_id, c.name, false,
+                      voidList.find(v => v.driver_id === c.driver_id)?.through)
+            }</button>`).join('')
             // While the fold is open the way back is always offered. It used
             // to depend on there still being something folded, so switching
             // every car on by hand emptied that set and took the button with
@@ -3956,9 +4005,7 @@ function drawLapChart() {
                 <span class="dot" style="background:var(--muted)"></span>
                 <span class="nm">${esc(v.display_name)}</span>
                 <span class="chip-n">set aside</span>${
-                isAdmin ? `<span class="chip-act" role="button" tabindex="0" data-aside="1"
-                    title="Count ${esc(v.display_name)}'s times again"
-                    >&#8634;</span>` : ''}</button>`).join('');
+                asideActs(v.driver_id, v.display_name, true, null)}</button>`).join('');
     }
     // The highlight is a class rather than part of the rebuild, so it can be
     // put on and taken off without touching the rest of the row.
@@ -3978,15 +4025,10 @@ function drawLapChart() {
         const chip = e.target.closest('.chart-chip');
         if (!chip) return;
         const id = chip.dataset.driver;
-        // The admin control sits inside the chip, so it has to be tested for
-        // before the chip's own job of switching a line on and off.
-        const act = e.target.closest('.chip-act');
-        if (act) {
-            e.stopPropagation();
-            const name = chip.querySelector('.nm')?.textContent || 'this driver';
-            setAside(id, name, act.dataset.aside === '1');
-            return;
-        }
+        // The admin controls sit inside the chip and carry their own
+        // handler, which stops this one. Tested for again in case a click
+        // lands on padding inside the control rather than on its glyph.
+        if (e.target.closest('.chip-act')) return;
         if (chip.classList.contains('aside')) return;   // no line to switch
         if (lapOff.has(id)) lapOff.delete(id); else lapOff.add(id);
         // Touched by hand, so it is the viewer's choice now and stops
@@ -4227,7 +4269,7 @@ async function tick() {
         resetLapFeed();
         if (rev === null) voidList = []; else loadVoidList(data[0]);
     }
-    for (const v of voidList) voided.add(v.driver_id);
+    for (const v of voidList) if (!v.through) voided.add(v.driver_id);
 
     await loadBasePath(trackState?.error ? null : trackState?.data);
     loadCoverage(data[0].event_id);        // cached, not awaited
