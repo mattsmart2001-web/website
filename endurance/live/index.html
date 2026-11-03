@@ -301,6 +301,16 @@
         /* No hover on a phone, so they have to be visible enough to tap. */
         @media (hover: none) { .pin { opacity: 0.55; } }
 
+        /* Admins only, and quieter than the star: setting somebody's times
+           aside is rare and the button should not invite a stray tap. */
+        .void-btn { background: none; border: 0; cursor: pointer; color: var(--muted);
+            opacity: 0.22; font-size: 0.72rem; line-height: 1; padding: 0.15rem 0.2rem;
+            flex: 0 0 auto; transition: opacity 0.15s, color 0.15s; }
+        tr:hover .void-btn { opacity: 0.6; }
+        .void-btn:hover, .void-btn:focus-visible { opacity: 1; color: #fca5a5; }
+        .void-btn.on, tr:hover .void-btn.on { opacity: 1; color: #fca5a5; }
+        @media (hover: none) { .void-btn { opacity: 0.45; } }
+
         .splits { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 1.25rem; margin-top: 2rem; align-items: start; }
 
         .split { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
@@ -415,6 +425,7 @@
         .flag-lost    { background: rgba(251,146,60,0.15); color: #fdba74; }
         .flag-offline { background: rgba(255,255,255,0.06); color: var(--muted); }
         .flag-menus   { background: rgba(148,163,184,0.12); color: var(--muted); }
+        .flag-void    { background: rgba(248,113,113,0.14); color: #fca5a5; }
 
         .state { text-align: center; padding: 4.5rem 2rem; }
         .state h3 { font-family: 'Anton', sans-serif; font-size: 1.3rem; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.6rem; }
@@ -498,11 +509,27 @@ const { createClient } = window.supabase;
 const sb = createClient(window.GTEC_CONFIG.supabaseUrl, window.GTEC_CONFIG.supabaseAnonKey);
 const app = document.getElementById('app');
 
-sb.auth.getSession().then(({ data }) => {
+// Whether the viewer may set a driver's times aside. Everything to do with
+// that is admin only and nothing else on this page depends on it, so a
+// viewer who is not signed in never makes the second request.
+let isAdmin = false;
+// Drivers whose times are currently set aside, by id. Kept from live_field
+// so that laps already pulled down before the void was set are dropped from
+// the chart too, rather than lingering until somebody reloads.
+let voided = new Set();
+
+sb.auth.getSession().then(async ({ data }) => {
     const portal = document.getElementById('nav-portal');
     const signin = document.getElementById('nav-signin');
     if (data?.session) { if (portal) portal.style.display = ''; }
     else if (signin) signin.style.display = '';
+    if (!data?.session) return;
+    // RLS on user_roles answers this for us: an admin reads their own row,
+    // everybody else reads nothing, so an empty result IS the answer.
+    const { data: roles } = await sb.from('user_roles')
+        .select('role').eq('user_id', data.session.user.id).eq('role', 'admin');
+    isAdmin = !!(roles && roles.length);
+    if (isAdmin && lastRows) renderField(lastRows);
 });
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -804,6 +831,59 @@ function togglePin(e, id) {
     drawLapChart();
 }
 
+/**
+ * Set a driver's times aside for this session, or count them again.
+ *
+ * GT7 tells us how quick a lap was and never what it was driven in, so a
+ * car in the wrong class sets a time that is perfectly real and completely
+ * meaningless beside the rest of the field. No arithmetic can tell that
+ * apart from a quick driver on a good lap, so it takes somebody who knows
+ * what happened.
+ *
+ * Confirmed rather than instant, because it changes what everybody watching
+ * sees. Undone by pressing it again.
+ */
+async function toggleVoid(e, id) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    const row = (lastRows || []).find(r => r.driver_id === id);
+    if (!row) return;
+    const args = { p_event_id: row.event_id, p_driver_id: id, p_mode: row.mode };
+    // Read before the request rather than after it: a poll can land while
+    // the request is in the air and rewrite the row underneath us, and then
+    // the second half of this function would undo what the first half did.
+    const wasVoid = !!row.times_void;
+    let res;
+    if (wasVoid) {
+        if (!confirm(`Count ${row.display_name}'s times again?\n\n`
+            + `Their laps go back on the chart and their Best and Last come back.`)) return;
+        res = await sb.rpc('live_lap_unvoid', args);
+    } else {
+        const why = prompt(`Set ${row.display_name}'s times aside for this `
+            + `${row.mode === 'race' ? 'race' : 'session'}?\n\n`
+            + `Their laps leave the chart, the log and the pace table, and `
+            + `their Best and Last are blanked for everyone watching. The car `
+            + `stays on the board and the map, the lap counter keeps running, `
+            + `and nothing is deleted.\n\n`
+            + `Why, for whoever undoes it later:`, 'Wrong car');
+        if (why === null) return;
+        res = await sb.rpc('live_lap_void', { ...args, p_reason: why });
+    }
+    if (res.error) { alert(res.error.message); return; }
+    // Answered straight away rather than waiting for the next poll, which is
+    // up to a second and a half and feels like the button did nothing.
+    if (wasVoid) voided.delete(id); else voided.add(id);
+    row.times_void = !wasVoid;
+    if (row.times_void) { row.best_lap_ms = null; row.last_lap_ms = null; }
+    // Setting aside needs nothing more: the laps already in memory are
+    // filtered out by lapCars, and the feed stops sending new ones. Counting
+    // them again does, because every one of that driver's laps is behind our
+    // cursor and only a read from the top brings them back. Done this way
+    // round so the common case never blanks the chart for a poll.
+    if (wasVoid) resetLapFeed();
+    renderField(lastRows);
+    drawLapChart();
+}
+
 function rowHtml(r, idx, showFuel, isRace, ahead) {
     const st = liveness(r.age_ms ?? 0, r.on_track, strays.has(r.driver_id));
     const live = st.cls === 's-live' && r.on_track;
@@ -824,12 +904,20 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
     return `<tr class="${st.cls}" data-driver="${r.driver_id}">
         <td class="pos">${idx + 1}</td>
         <td>
-            <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${clientBadge(r.client)}${st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}<button
+            <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${clientBadge(r.client)}${
+                r.times_void ? `<span class="flag flag-void" title="An admin has set this car's times aside for this session. It is still out there and still counting laps; the times are not being shown.">Times set aside</span>` : ''}${
+                st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}<button
                 type="button" class="pin${pinned.has(r.driver_id) ? ' on' : ''}"
                 aria-pressed="${pinned.has(r.driver_id)}"
                 title="${pinned.has(r.driver_id) ? 'Stop following' : 'Follow'} ${esc(r.display_name)}"
                 aria-label="${pinned.has(r.driver_id) ? 'Stop following' : 'Follow'} ${esc(r.display_name)}"
-                onclick="togglePin(event, '${r.driver_id}')">${pinned.has(r.driver_id) ? '★' : '☆'}</button></div>
+                onclick="togglePin(event, '${r.driver_id}')">${pinned.has(r.driver_id) ? '★' : '☆'}</button>${
+                isAdmin ? `<button type="button" class="void-btn${r.times_void ? ' on' : ''}"
+                title="${r.times_void
+                    ? `Count ${esc(r.display_name)}'s times again`
+                    : `Set ${esc(r.display_name)}'s times aside for this session. Use it when a car is not in the class it should be in. The car stays on the board and the map; only the times go, and nothing is deleted.`}"
+                aria-label="${r.times_void ? 'Count these times again' : 'Set these times aside'}"
+                onclick="toggleVoid(event, '${r.driver_id}')">${r.times_void ? '↺' : '⊘'}</button>` : ''}</div>
             ${sub ? `<span class="team">${swatch}${sub}</span>` : ''}
         </td>
         <!-- The lap they are on, and nothing after it. GT7's "laps in race"
@@ -3221,6 +3309,16 @@ const LAP_MAX_LINES = 10;     // beyond this the chart is a ball of wool
 
 let lapRows = [], lapAfterId = null, lapKey = null, lapAt = 0, lapBusy = false;
 let lapScopeKey = null;
+// Bumped whenever the feed has to be read again from the top. A request
+// that was already in flight when that happened carries the old number and
+// is thrown away, rather than concatenating onto the cleared list and
+// leaving the cursor pointing past laps we no longer hold.
+let lapGen = 0;
+
+/** Forget the lap feed and read it again from the start of the session. */
+function resetLapFeed() {
+    lapGen++; lapRows = []; lapAfterId = null; lapAt = 0;
+}
 const lapOff = new Set();     // cars the viewer has switched off
 // Of those, the ones the page switched off by itself because their best lap
 // put them outside the ten it draws. Kept apart from the viewer's own
@@ -3439,15 +3537,19 @@ async function loadLaps(ev) {
     // different log: the race's laps are not a continuation of qualifying's.
     const key = `${ev.event_id}|${ev.mode}`;
     if (key !== lapKey) {
-        lapKey = key; lapRows = []; lapAfterId = null; lapAt = 0;
+        lapKey = key; resetLapFeed();
         lapScopeKey = null; lapOff.clear();
     } else if (lapBusy || Date.now() - lapAt < LAP_FEED_MS) {
         return;
     }
     lapBusy = true;
+    const gen = lapGen;
     try {
         const { data, error } = await sb.rpc('live_lap_feed', {
             p_event_id: ev.event_id, p_mode: ev.mode, p_after_id: lapAfterId });
+        // The feed was reset while this was in the air: these rows were read
+        // against a cursor that no longer exists.
+        if (gen !== lapGen) return;
         lapAt = Date.now();
         if (error || !data || !data.length) return;
         lapRows = lapRows.concat(data);
@@ -3458,8 +3560,12 @@ async function loadLaps(ev) {
 
 /** The chart follows the map: a focused split shows that split alone. */
 function lapCars() {
-    const scope = focusedSplit === null ? lapRows
-        : lapRows.filter(l => String(l.lobby_number ?? 0) === focusedSplit);
+    // Laps pulled down before an admin set that driver's times aside are
+    // still in lapRows on every page that was already open. The server stops
+    // sending new ones; this stops the old ones being drawn.
+    const kept = voided.size ? lapRows.filter(l => !voided.has(l.driver_id)) : lapRows;
+    const scope = focusedSplit === null ? kept
+        : kept.filter(l => String(l.lobby_number ?? 0) === focusedSplit);
     const by = new Map();
     for (const l of scope) {
         let c = by.get(l.driver_id);
@@ -4014,6 +4120,14 @@ async function tick() {
 
     failures = 0;
     if (!data || data.length === 0) { await renderIdle(); return; }
+    // Who is currently set aside, straight off the field rather than a
+    // request of its own. Read before the laps are asked for, because
+    // lifting a void means the feed has to be re-read from the top: the
+    // restored driver's laps are all behind our cursor.
+    const wasVoided = voided;
+    voided = new Set(data.filter(r => r.times_void).map(r => r.driver_id));
+    if ([...wasVoided].some(id => !voided.has(id))) resetLapFeed();
+
     await loadBasePath(trackState?.error ? null : trackState?.data);
     loadCoverage(data[0].event_id);        // cached, not awaited
     loadCircuitRecord(data[0].event_id);   // once per round, not awaited
