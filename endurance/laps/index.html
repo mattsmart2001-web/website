@@ -211,7 +211,10 @@ const app = document.getElementById('app');
 // second request.
 let isAdmin = false;
 
-sb.auth.getSession().then(async ({ data }) => {
+// Settled before the first load, because the page asks the server for
+// different things depending on the answer. One extra round trip for a
+// signed-in viewer, none at all for anybody who is not.
+const adminKnown = sb.auth.getSession().then(async ({ data }) => {
     const portal = document.getElementById('nav-portal');
     const signin = document.getElementById('nav-signin');
     if (data?.session) { if (portal) portal.style.display = ''; }
@@ -222,8 +225,7 @@ sb.auth.getSession().then(async ({ data }) => {
     const { data: roles } = await sb.from('user_roles')
         .select('role').eq('user_id', data.session.user.id).eq('role', 'admin');
     isAdmin = !!(roles && roles.length);
-    if (isAdmin && summary.length) render();
-});
+}).catch(() => {});
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -276,8 +278,9 @@ let hoveredDriver = null;
 let rounds = [], laps = [], summary = [], shown = new Set();
 // Drivers whose times an admin has set aside for this round and session.
 // They are filtered out of the log and the summary by the server, so this
-// list is the only trace of them on the page, and the only way back.
-let setAsideList = [];
+// list is the only trace of them on the page, and the only way back. Admins
+// only; everybody else gets the count and no names.
+let setAsideList = [], setAsideCount = 0;
 let eventId = null, mode = 'race', metric = 'lap';
 // Whether the session showing is the viewer's choice or ours. Until it is
 // theirs, the page opens on whichever session the round actually has.
@@ -575,17 +578,42 @@ function table() {
  * saying why rather than silence.
  */
 function asideHtml() {
+    // What a viewer gets: a count and the reason the feature exists. Which
+    // cars, and what the admin wrote about them, is between the admin and
+    // the driver. A name beside "wrong car" on a page anybody can link to
+    // is a published accusation, and the league has a stewarding process
+    // for that which is not this.
+    if (!isAdmin) {
+        if (!setAsideCount) return '';
+        return `<div class="card aside-card">
+            <div class="card-head">
+                <span class="card-title">Not counted</span>
+                <span class="card-note">${setAsideCount} car${
+                    setAsideCount === 1 ? '' : 's'}</span>
+            </div>
+            <div class="aside-body">
+                <p class="aside-why">GT7 reports how quick a lap was and never
+                what it was driven in, so times set in a car a driver is not
+                entered in have to be set aside by hand. ${setAsideCount === 1
+                    ? 'One car\'s times are'
+                    : setAsideCount + ' cars\' times are'} not being counted for
+                ${mode ? 'this session' : 'this round'} and are left out of
+                everything above. Nothing has been deleted.</p>
+            </div>
+        </div>`;
+    }
     if (!setAsideList.length) return '';
     return `<div class="card aside-card">
         <div class="card-head">
             <span class="card-title">Set aside</span>
-            <span class="card-note">Laps an admin is not counting</span>
+            <span class="card-note">Admins only · laps you are not counting</span>
         </div>
         <div class="aside-body">
             <p class="aside-why">GT7 reports how quick a lap was and never what
-            it was driven in. An admin has set these cars' earlier times aside for
+            it was driven in. These cars' earlier times are set aside for
             ${mode ? 'this session' : 'this round'}. Nothing has been deleted:
-            every lap is still recorded and can be counted again.</p>
+            every lap is still recorded and can be counted again. Viewers see
+            only how many cars are not being counted, not which.</p>
             <ul class="aside-list">${setAsideList.map(v => `<li>
                 <span class="aside-name${v.through ? ' part' : ''}">${esc(v.display_name)}</span>
                 <span class="aside-meta">${v.laps} lap${v.laps === 1 ? '' : 's'} set aside${
@@ -779,12 +807,18 @@ async function load() {
     const picked = rounds.find(r => r.event_id === eventId);
     if (!modeChosen && picked) mode = picked.race_laps > 0 ? 'race' : 'practice';
 
-    const [{ data: lg, error: e1 }, { data: sm, error: e2 }, { data: va }] =
-        await Promise.all([
-            sb.rpc('live_lap_log',       { p_event_id: eventId, p_mode: mode || null }),
-            sb.rpc('live_lap_summary',   { p_event_id: eventId, p_mode: mode || null }),
-            sb.rpc('live_lap_void_list', { p_event_id: eventId, p_mode: mode || null }),
-        ]);
+    const args = { p_event_id: eventId, p_mode: mode || null };
+    const [{ data: lg, error: e1 }, { data: sm, error: e2 },
+           { data: vc }, { data: va }] = await Promise.all([
+        sb.rpc('live_lap_log',        args),
+        sb.rpc('live_lap_summary',    args),
+        sb.rpc('live_lap_void_count', args),
+        // Names and reasons are admins only, and the server refuses this
+        // for anybody else. Not asked for rather than asked for and
+        // swallowed, so a console full of 403s does not become normal.
+        isAdmin ? sb.rpc('live_lap_void_list', args)
+                : Promise.resolve({ data: [] }),
+    ]);
     if (e1 || e2) {
         app.innerHTML = `<div class="page-wrap"><div class="state">
             <h3>Can't read the lap log</h3><p>${esc((e1 || e2).message)}</p></div></div>`;
@@ -810,6 +844,7 @@ async function load() {
     }
     setAsideList = [...byDriver.values()]
         .sort((a, b) => a.display_name.localeCompare(b.display_name));
+    setAsideCount = vc || 0;
     summary = (sm || []).map((r, i) => ({ ...r, colour: COLOURS[i % COLOURS.length] }));
     // Car numbers live on the laps rather than the summary, so carry one over.
     for (const r of summary) {
@@ -823,7 +858,9 @@ async function load() {
 }
 
 (async () => {
-    const { data, error } = await sb.rpc('live_lap_rounds');
+    // In parallel with the rounds, so knowing the role costs no wall time.
+    const [{ data, error }] = await Promise.all([
+        sb.rpc('live_lap_rounds'), adminKnown]);
     if (error) {
         app.innerHTML = `<div class="page-wrap"><div class="state">
             <h3>Can't read the lap log</h3><p>${esc(error.message)}</p></div></div>`;

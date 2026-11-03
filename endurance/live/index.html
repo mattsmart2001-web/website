@@ -549,7 +549,9 @@ sb.auth.getSession().then(async ({ data }) => {
     const { data: roles } = await sb.from('user_roles')
         .select('role').eq('user_id', data.session.user.id).eq('role', 'admin');
     isAdmin = !!(roles && roles.length);
-    if (isAdmin && lastRows) renderField(lastRows);
+    // The role lands after the first poll or two, so anything that was
+    // skipped for want of it is asked for now.
+    if (isAdmin && lastRows) { voidRev = null; renderField(lastRows); }
 });
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -968,15 +970,19 @@ function asideActs(id, name, isVoid, from) {
 }
 
 /**
- * Who is currently set aside, with their names.
+ * Who is currently set aside, with their names. Admins only.
  *
  * Asked for only when live_field says the voids have changed, so an evening
- * with none of them never makes this request at all. The names matter
- * because a driver who has quit has no row in the field: without this their
- * line would simply disappear off the chart with no explanation and no way
- * back to it.
+ * with none of them never makes this request at all. The names matter to an
+ * admin because a driver who has quit has no row in the field: without this
+ * their chip would disappear with no way back to it. They do not matter to
+ * anybody else, and 200 put them behind the admin check for that reason.
  */
 async function loadVoidList(ev) {
+    // Admins only. Who was set aside, and why, is between the admin and the
+    // driver: a viewer whose page is already open catches up because the
+    // feed is read again from the top, not because they are told any names.
+    if (!isAdmin) return;
     const { data, error } = await sb.rpc('live_lap_void_list',
         { p_event_id: ev.event_id, p_mode: ev.mode });
     if (error) return;
@@ -1011,8 +1017,25 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
                 // Kept to two words. These sit beside the driver's name in a
                 // column that also has to hold Signal lost and In menus, and
                 // a longer phrase eats the name rather than wrapping.
-                r.times_void ? `<span class="flag flag-void" title="An admin has set this car's times aside for this session. It is still out there and still counting laps; the times are not being shown.">Set aside</span>`
-                : r.times_from ? `<span class="flag flag-void" title="An admin set this car's earlier times aside and started counting it again at ${esc(clockTime(r.times_from))}. Best and Last are its laps since then, taken off the lap log because GT7 is still reporting the old best.">Since ${esc(clockTime(r.times_from))}</span>` : ''}${
+                //
+                // A viewer gets the flat fact and no more. The car is on the
+                // board, so its name is public whatever we do, and its Best
+                // and Last are blank, so something has to account for the
+                // blank or the next hour goes on telling people the timing
+                // is broken. "Set aside" says a person decided; "Not timed"
+                // says only that it is not being timed, which is all anybody
+                // outside the stewards' room is owed.
+                // Red for the admin, because it marks a decision of theirs
+                // that is still in force. The same grey as In menus for
+                // everybody else: it is a state the car is in, not a verdict
+                // on the driver, and it should not read as one.
+                r.times_void ? `<span class="flag ${isAdmin ? 'flag-void' : 'flag-menus'}" title="${isAdmin
+                    ? 'You have set this car\'s times aside for this session. It is still out there and still counting laps; the times are not being shown.'
+                    : 'This car\'s times are not being counted for this session. The car is still running and its laps are still counting.'
+                    }">${isAdmin ? 'Set aside' : 'Not timed'}</span>`
+                // Being counted from a cut is being counted, so to a viewer
+                // this car is simply a car again and carries no flag at all.
+                : (r.times_from && isAdmin) ? `<span class="flag flag-void" title="You set this car's earlier times aside and started counting it again at ${esc(clockTime(r.times_from))}. Best and Last are its laps since then, taken off the lap log because GT7 is still reporting the old best.">Since ${esc(clockTime(r.times_from))}</span>` : ''}${
                 st.flag ? `<span class="flag ${st.flagCls}">${st.flag}</span>` : ''}<button
                 type="button" class="pin${pinned.has(r.driver_id) ? ' on' : ''}"
                 aria-pressed="${pinned.has(r.driver_id)}"
