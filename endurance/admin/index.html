@@ -2202,6 +2202,7 @@ async function renderDrivers() {
                 <input class="table-search" type="search" placeholder="Search drivers…" oninput="filterTable(this,'drivers-table')">
                 ${exportBtn("exportTableCsv('drivers-table','drivers')")}
                 ${exportBtn("exportHardwareCsv()", 'Hardware CSV')}
+                ${exportBtn("exportWillingHostsCsv()", 'Willing Hosts CSV')}
             </div>
             <table id="drivers-table"><thead><tr>
                 <th class="th-sort" onclick="thSort(this,'drivers-table')">Name</th>
@@ -4256,6 +4257,16 @@ async function showOutlineState(eventId) {
     if (!data?.closed) outlineWatch = setTimeout(() => showOutlineState(eventId), 5000);
 }
 
+// ---- who hosts ----
+//
+// These drivers are always host if present in their lobby, regardless of
+// the willing_host flag.
+const DEFAULT_HOSTS = ['SparksTheory', 'l888-1', 'RufffWizard'];
+// The primary host outranks every other default host: whenever they are in
+// a split, they take hosting duty even if another default host is present
+// too (default hosts otherwise tie and the first one seen wins).
+const PRIMARY_HOST = 'SparksTheory';
+
 // ---- who may not host ----
 //
 // Out here rather than inside the allocator, because the allocator is not
@@ -4399,14 +4410,9 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const totalLobbiesUsed = currentLobby;
 
     // Host selection — pick the highest-rated willing driver per lobby.
-    // These drivers are always host if present in their lobby, regardless of willing_host flag.
-    const DEFAULT_HOSTS = ['SparksTheory', 'l888-1', 'RufffWizard'];
-    // The primary host outranks every other default host: whenever they are
-    // in a split, they take hosting duty even if another default host is
-    // present too (default hosts otherwise tie and the first one seen wins).
-    const PRIMARY_HOST = 'SparksTheory';
-    // The bar itself lives at module scope, so that setting a host by hand
-    // is held to the same list. See barredFromHosting.
+    // Who hosts by default, and who may not host at all, both live at
+    // module scope: setting a host by hand is held to the same list, and
+    // the willing-hosts export reports against it. See barredFromHosting.
     const lobbyMap = new Map();
     entries.forEach(en => {
         const ln = en._lobby;
@@ -10318,6 +10324,48 @@ async function exportHardwareCsv() {
         toast(`${wheels} of ${stated} who have said are on a wheel `
             + `(${Math.round((wheels / stated) * 100)}%). ${drivers.length - stated} not stated.`, 'success');
     }
+}
+
+// Everyone who ticked "willing to host", with enough beside each name to
+// act on it: how to reach them, and whether the allocator would actually
+// pick them. That last column is the point of the export. A willing host
+// in Australia or on the barred list will never be chosen, so a flat list
+// of the ticked box would have you counting on people who are not in the
+// running — which is exactly the thing you find out at 7pm on a Saturday.
+async function exportWillingHostsCsv() {
+    const { data, error } = await sb.from('drivers')
+        .select('display_name, career_number, psn_id, discord_username, nationality, '
+              + 'gt7_dr_rating, gt7_sr_rating, teams!current_team_id(name)')
+        .eq('willing_host', true)
+        .order('display_name');
+    if (error) { toast(error.message, 'error'); return; }
+
+    const drivers = data || [];
+    const why = d => {
+        if (HOST_EXCLUDED_NATIONALITIES.includes(d.nationality)) return 'No · too far for ping';
+        if (HOST_EXCLUDED_NAMES.includes((d.display_name || '').trim().toLowerCase()))
+            return 'No · barred';
+        return 'Yes';
+    };
+    const headers = ['Driver', 'Car #', 'PSN ID', 'Discord', 'Nationality',
+                     'Team', 'DR', 'SR', 'Allocator will pick'];
+    const rows = drivers.map(d => [
+        d.display_name || '',
+        d.career_number ?? '',
+        d.psn_id || '',
+        d.discord_username || '',
+        d.nationality || '',
+        d.teams?.name || 'Solo',
+        d.gt7_dr_rating || '',
+        d.gt7_sr_rating || '',
+        why(d),
+    ]);
+    downloadCsv('willing-hosts', headers, rows);
+
+    const usable = drivers.filter(d => why(d) === 'Yes').length;
+    toast(`${drivers.length} have offered to host, ${usable} of them eligible. `
+        + `The ${DEFAULT_HOSTS.length} default hosts are not in this list: they host `
+        + `whether or not they tick the box.`, 'success');
 }
 
 async function exportStandingsCsv(kind) {
