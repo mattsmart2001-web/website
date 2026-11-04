@@ -4081,7 +4081,10 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
                         en.host_driver_id === d.id
                             ? `<button class="btn-icon" title="Remove as host"
                                 onclick="removeEntryHost('${en.id}','${esc(d.display_name)}','${eventId}','${esc(eventName)}','${seasonId}')">Unhost</button>`
-                            : `<button class="btn-icon" title="Set as host for this split"
+                            : `<button class="btn-icon"${barredFromHosting(d) ? ' style="opacity:0.45"' : ''}
+                                title="${barredFromHosting(d)
+                                    ? esc(d.display_name) + ' is on the list of drivers who should not host. The allocator will never pick them; this asks first.'
+                                    : 'Set as host for this split'}"
                                 onclick="setEntryHost('${en.id}','${d.id}','${esc(d.display_name)}','${eventId}','${esc(eventName)}','${seasonId}',${lobbyNum})">Host</button>`
                     ) : ''}
                     ${lobbyNum !== 0 ? `<button class="btn-icon" title="Unassign entry"
@@ -4253,6 +4256,37 @@ async function showOutlineState(eventId) {
     if (!data?.closed) outlineWatch = setTimeout(() => showOutlineState(eventId), 5000);
 }
 
+// ---- who may not host ----
+//
+// Out here rather than inside the allocator, because the allocator is not
+// the only way somebody becomes a host: an admin can also set one by hand
+// from the split panel, and a bar that only the automatic path honoured
+// would be no bar at all.
+//
+// Excluded from hosting entirely (connection quality) regardless of
+// willing_host or DEFAULT_HOSTS status. The broader Europe-only allow-list
+// was too restrictive in practice — willing hosts outside it left some
+// splits with no eligible host at all. Back to a deny-list of specific
+// known-bad cases.
+// ZA (South Africa) and AU (Australia): too much ping to host a
+// Europe-centred grid reliably.
+const HOST_EXCLUDED_NATIONALITIES = ['ZA', 'AU'];
+// Specific drivers barred from hosting regardless of willing_host or
+// default-host status. Compared case-insensitively on display name, so
+// every entry here is lower case.
+// x_macthree_x = Wayne Mason.
+// neldintay    = barred at the owner's request.
+const HOST_EXCLUDED_NAMES = ['x_macthree_x', 'neldintay'];
+
+/** Whether this driver is barred from hosting. Name match is exact once
+ *  trimmed and lower-cased, so a barred driver who changes their display
+ *  name stops being matched: the list is a list of names, not of people. */
+function barredFromHosting(driver) {
+    if (!driver) return false;
+    if (HOST_EXCLUDED_NATIONALITIES.includes(driver.nationality)) return true;
+    return HOST_EXCLUDED_NAMES.includes((driver.display_name || '').trim().toLowerCase());
+}
+
 async function autoAllocateLobbies(eventId, eventName, seasonId) {
     const sizeInput = document.getElementById('lobby-size');
     const lobbySize = Math.max(2, Math.min(32, parseInt(sizeInput?.value, 10) || 16));
@@ -4371,26 +4405,15 @@ async function autoAllocateLobbies(eventId, eventName, seasonId) {
     // in a split, they take hosting duty even if another default host is
     // present too (default hosts otherwise tie and the first one seen wins).
     const PRIMARY_HOST = 'SparksTheory';
-    // Excluded from hosting entirely (connection quality) regardless of
-    // willing_host or DEFAULT_HOSTS status. The broader Europe-only
-    // allow-list was too restrictive in practice — willing hosts outside
-    // it left some splits with no eligible host at all. Back to a
-    // deny-list of specific known-bad cases.
-    // ZA (South Africa) and AU (Australia): too much ping to host a
-    // Europe-centred grid reliably.
-    const HOST_EXCLUDED_NATIONALITIES = ['ZA', 'AU'];
-    // Specific drivers barred from hosting regardless of willing_host or
-    // default-host status. Compared case-insensitively on display name.
-    // x_macthree_x = Wayne Mason.
-    const HOST_EXCLUDED_NAMES = ['x_macthree_x'];
+    // The bar itself lives at module scope, so that setting a host by hand
+    // is held to the same list. See barredFromHosting.
     const lobbyMap = new Map();
     entries.forEach(en => {
         const ln = en._lobby;
         if (!ln) return;
         (en.entry_drivers || []).forEach(ed => {
-            if (HOST_EXCLUDED_NATIONALITIES.includes(ed.drivers?.nationality)) return;
+            if (barredFromHosting(ed.drivers)) return;
             const name = ed.drivers?.display_name;
-            if (HOST_EXCLUDED_NAMES.includes((name || '').trim().toLowerCase())) return;
             const isPrimaryHost = name === PRIMARY_HOST;
             const isDefaultHost = DEFAULT_HOSTS.includes(name);
             if (!ed.drivers?.willing_host && !isDefaultHost && !isPrimaryHost) return;
@@ -4548,6 +4571,16 @@ async function sendPushToDriver(accessToken, driverId, title, body, url) {
 const EVENT_RACE_SETTINGS_COLUMNS = 'round, starts_at, tyre_wear, fuel_consumption, time_multiplier, weather, time_of_day, damage_level, slipstream, grip_reduction_off_track, nitrous, engine_swap, race_start, autodrive, settings_allowed, initial_fuel, bop_enabled, quali_same_as_race, quali_notes, equal_conditions_mode, shortcut_penalty, wall_collision_penalty, car_collision_penalty, correct_vehicle_course, flag_rules, ghosting, pit_lane_cutting_penalty';
 
 async function setEntryHost(entryId, driverId, driverName, eventId, eventName, seasonId, lobbyNum) {
+    // The allocator will never pick a barred driver, so reaching this by
+    // hand is either a mistake or a deliberate exception. Said out loud and
+    // then allowed, rather than refused: the list is there to stop the
+    // automatic path doing it silently, not to take the decision away from
+    // whoever is running race night.
+    if (barredFromHosting({ display_name: driverName })) {
+        if (!confirm(`${driverName} is on the list of drivers who should not host.\n\n`
+            + `The automatic allocation will never pick them. Set them as host for `
+            + `Split ${lobbyNum} anyway?`)) return;
+    }
     if (!confirm(`Set ${driverName} as host for Split ${lobbyNum}?\n\nThey'll immediately get hosting instructions by email and in their portal inbox. Any existing host for this split will be replaced.`)) return;
 
     // Only one host per lobby — clear any existing host in this split first.
