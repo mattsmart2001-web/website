@@ -275,7 +275,13 @@ const STOP_RISE_PCT = 2;
 let lapMarks = [];
 let hoveredDriver = null;
 
-let rounds = [], laps = [], summary = [], shown = new Set();
+// summaryAll is every driver in the session; summary is whatever the
+// manufacturer filter has left of them. Everything that draws — the chips,
+// the table and the chart — reads summary, so the filter is applied in one
+// place and none of them need to know about it.
+let rounds = [], laps = [], summaryAll = [], summary = [], shown = new Set();
+// The marque currently filtered to, '' for all of them.
+let mfr = '';
 // Drivers whose times an admin has set aside for this round and session.
 // They are filtered out of the log and the summary by the server, so this
 // list is the only trace of them on the page, and the only way back. Admins
@@ -723,6 +729,14 @@ function render() {
                     <option value="fuel" ${metric === 'fuel' ? 'selected' : ''}>Fuel</option>
                 </select>
             </div>
+            ${marques().length > 1 ? `<div class="control">
+                <label for="pick-mfr">Manufacturer</label>
+                <select id="pick-mfr">
+                    <option value="" ${mfr === '' ? 'selected' : ''}>All</option>
+                    ${marques().map(m => `<option value="${esc(m)}" ${
+                        m === mfr ? 'selected' : ''}>${esc(m)}</option>`).join('')}
+                </select>
+            </div>` : ''}
         </div>
 
         ${!laps.length ? `<div class="state">
@@ -748,7 +762,10 @@ function render() {
 
         <div class="card">
             <div class="card-head"><span class="card-title">By Driver</span>
-                <span class="card-note">Sorted by best lap</span></div>
+                <span class="card-note">${mfr
+                    ? esc(mfr) + ' only · ' + summary.length + ' driver'
+                      + (summary.length === 1 ? '' : 's')
+                    : 'Sorted by best lap'}</span></div>
             ${table()}
         </div>`}
 
@@ -769,6 +786,10 @@ function render() {
     if (onMode) onMode.onchange = e => { mode = e.target.value; modeChosen = true; load(); };
     const onMetric = document.getElementById('pick-metric');
     if (onMetric) onMetric.onchange = e => { metric = e.target.value; drawChart(); };
+    // Filtering needs no trip to the server: the whole session is already
+    // here and this only decides which of it to draw.
+    const onMfr = document.getElementById('pick-mfr');
+    if (onMfr) onMfr.onchange = e => { mfr = e.target.value; applyMfr(); render(); };
 
     // Both directions of setting aside, bound once on the page rather than
     // on each button, because the table and the list are both rewritten
@@ -854,16 +875,38 @@ async function load() {
     setAsideList = [...byDriver.values()]
         .sort((a, b) => a.display_name.localeCompare(b.display_name));
     setAsideCount = vc || 0;
-    summary = (sm || []).map((r, i) => ({ ...r, colour: COLOURS[i % COLOURS.length] }));
+    // Colours are handed out over the WHOLE field, before any filter, so a
+    // driver keeps the same colour whether you are looking at everybody or
+    // at their marque alone.
+    summaryAll = (sm || []).map((r, i) => ({ ...r, colour: COLOURS[i % COLOURS.length] }));
     // Car numbers live on the laps rather than the summary, so carry one over.
-    for (const r of summary) {
+    for (const r of summaryAll) {
         const l = laps.find(x => x.driver_id === r.driver_id);
         r.car_number = l ? l.car_number : null;
     }
-    // Opening with sixteen lines on top of each other reads as noise, so the
-    // first few are shown and the rest are a click away.
-    shown = new Set(summary.slice(0, 6).map(r => r.driver_id));
+    // A marque picked for one round may not be in the next one. Rather than
+    // showing an empty page, the filter lets go.
+    if (mfr && !summaryAll.some(r => r.manufacturer_name === mfr)) mfr = '';
+    applyMfr();
     render();
+}
+
+/** Narrow the field to the chosen marque, and start the chart off again. */
+function applyMfr() {
+    summary = mfr ? summaryAll.filter(r => r.manufacturer_name === mfr)
+                  : summaryAll.slice();
+    // Opening with sixteen lines on top of each other reads as noise, so the
+    // first few are shown and the rest are a click away. Re-done on every
+    // change of filter: picking a marque and being shown "pick a car below"
+    // because the six that were on screen are no longer listed would be a
+    // silly way to answer.
+    shown = new Set(summary.slice(0, 6).map(r => r.driver_id));
+}
+
+/** Every marque with somebody in this session, for the filter. */
+function marques() {
+    return [...new Set(summaryAll.map(r => r.manufacturer_name).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b));
 }
 
 (async () => {
