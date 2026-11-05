@@ -468,6 +468,16 @@
             th:nth-child(6), td:nth-child(6) { width: 58px; }
             .fuel-pct { display: none; }
             .flag { font-size: 0.46rem; letter-spacing: 0.06em; }
+            /* Number and car only. The team is a column on the drivers
+               page and a link on every profile; the car is not written
+               down anywhere else a spectator is going to look. */
+            .sub-team { display: none; }
+            /* And let what is left wrap rather than ellipse. The driver
+               column is about 150px here, which truncates "911 GT3 R
+               (992) '22" to "911 GT3 …" and tells nobody anything. Two
+               short lines cost a few pixels of row height and can
+               actually be read. */
+            .team { white-space: normal; overflow: visible; text-overflow: clip; }
         }
 
         @media (max-width: 860px) {
@@ -1005,10 +1015,33 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
     // race, where it is the question everybody is asking.
     const num = carNumber(r, r.mode);
     const swatch = `<span class="team-dot" style="background:${carColour(r)}"></span>`;
-    const sub = [
-        num != null ? '#' + num : null,
-        r.team_name ? esc(r.team_name) : null,
-    ].filter(Boolean).join(' · ');
+    // Number, car, team. The car comes off the same manufacturer row that
+    // picks the colour of the dot immediately to its left, which is what
+    // makes that dot readable: until now it was a colour code with no key.
+    //
+    // Each part is its own span so the line can shed one at phone width
+    // rather than being truncated mid-word. The team is what goes: it is
+    // already a column on the drivers page and a link on the profile,
+    // where the car is not written down anywhere a spectator will look.
+    //
+    // car_name is absent until 202 has been run, and renders as nothing
+    // when it is. That is deliberate: the page and the migration can go
+    // out in either order with no window where the board is broken.
+    // Each separator is real text nested inside the part that follows it,
+    // so hiding a part takes its separator with it and the line never ends
+    // in a dangling dot. Not a CSS ::before, which paints the right thing
+    // but leaves nothing behind for anyone copying the row or reading it
+    // with a screen reader.
+    const subParts = [
+        num != null ? { cls: 'sub-num', text: '#' + num } : null,
+        r.car_name ? { cls: 'sub-car', text: r.car_name } : null,
+        r.team_name ? { cls: 'sub-team', text: r.team_name } : null,
+    ].filter(Boolean);
+    const sub = subParts.map((part, i) => `<span class="${part.cls}">${
+        i ? '<span class="sub-sep"> · </span>' : ''}${esc(part.text)}</span>`).join('');
+    // The whole line as plain text, for the tooltip. A long team name
+    // still ellipses on a narrow split card, and this is how to read it.
+    const subPlain = subParts.map(p => p.text).join(' · ');
 
     return `<tr class="${st.cls}" data-driver="${r.driver_id}">
         <td class="pos">${idx + 1}</td>
@@ -1043,7 +1076,7 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
                 aria-label="${pinned.has(r.driver_id) ? 'Stop following' : 'Follow'} ${esc(r.display_name)}"
                 onclick="togglePin(event, '${r.driver_id}')">${pinned.has(r.driver_id) ? '★' : '☆'}</button>${
                 asideActs(r.driver_id, r.display_name, r.times_void, r.times_from)}</div>
-            ${sub ? `<span class="team">${swatch}${sub}</span>` : ''}
+            ${sub ? `<span class="team" title="${esc(subPlain)}">${swatch}${sub}</span>` : ''}
         </td>
         <!-- The lap they are on, and nothing after it. GT7's "laps in race"
              used to follow it as "12/60", which is the right thing to show

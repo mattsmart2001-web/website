@@ -448,7 +448,8 @@ function drawChart() {
                 g.stroke();
             }
             lapMarks.push({ driver_id: s.row.driver_id, name: s.row.display_name,
-                            colour: s.row.colour, x, y, lap: lapX(s.pts[i]),
+                            car: s.row.car_name, colour: s.row.colour, x, y,
+                            lap: lapX(s.pts[i]),
                             lap_ms: s.pts[i].lap_ms, fuel_pct: s.pts[i].fuel_pct,
                             mode: s.pts[i].mode, stop });
         }
@@ -512,6 +513,7 @@ function bindChart() {
             <div class="t-lap">${lapTime(hit.lap_ms)}</div>
             <div class="t-sub">${hit.mode === 'race' ? 'lap' : 'their lap'} ${hit.lap}${
                 hit.fuel_pct != null ? ` &middot; ${Math.round(hit.fuel_pct)}% fuel` : ''}</div>
+            ${hit.car ? `<div class="t-sub">${esc(hit.car)}</div>` : ''}
             ${hit.stop ? '<div class="t-stop">came in this lap</div>' : ''}`;
         tip.hidden = false;
         // Above and to the right of the point, flipped at either edge so it
@@ -550,8 +552,15 @@ function table() {
         </tr></thead>
         <tbody>${summary.map(r => `<tr data-driver="${r.driver_id}">
             <td><div class="who"><span class="dot" style="background:${r.colour}"></span>
-                <span>${esc(r.display_name)}${r.car_number != null
-                    ? `<span class="sub2">#${r.car_number}</span>` : ''}</span>${
+                <span>${esc(r.display_name)}${(() => {
+                    // The number and the car share the line already under
+                    // the name, so neither needs a column of its own.
+                    // car_name is absent until 202 has been run and simply
+                    // does not appear until then.
+                    const bits = [r.car_number != null ? '#' + r.car_number : null,
+                                  r.car_name ? esc(r.car_name) : null].filter(Boolean);
+                    return bits.length ? `<span class="sub2">${bits.join(' · ')}</span>` : '';
+                })()}</span>${
                 // Beside the name rather than in a column of its own. The
                 // sponsor rail is fixed to the right edge and overlaps the
                 // last column at some widths, which is survivable for a
