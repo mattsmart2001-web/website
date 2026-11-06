@@ -137,20 +137,36 @@ def _salsa_new(key, nonce):
     return _PureSalsa20(key, nonce)
 
 
+# 'G7S0' is stored little-endian, so the decoded bytes read '0S7G'. The
+# trailing character is a version, and a bigger packet is likely to carry a
+# different one: insisting on '0' would throw away a perfectly good decode
+# of a packet type we have never seen. So the family is what is checked,
+# and the variant is reported back.
+_FAMILY = b'S7G'
+
+
 def decrypt_packet(data):
-    """Decode one packet, or None if it is not one of ours."""
+    """Decode one packet.
+
+    Returns (plaintext, magic) where magic is the four characters as they
+    read in the packet, e.g. 'G7S0'. Returns (None, None) if this is not a
+    GT7 packet at all, and (None, hex) if it decoded to something whose
+    magic is not of the family, which is worth seeing rather than hiding.
+    """
     if len(data) < A_SIZE:
-        return None
+        return None, None
     # Already decoded by whatever forwarded it.
-    if int.from_bytes(data[0:4], 'little') == G7S0:
-        return data
+    if data[1:4] == _FAMILY:
+        return data, data[0:4][::-1].decode('latin-1')
     seed = int.from_bytes(data[0x40:0x44], 'little')
     nonce = (seed ^ 0xDEADBEAF).to_bytes(4, 'little') + seed.to_bytes(4, 'little')
     try:
         dec = _salsa_new(_KEY, nonce).decrypt(data)
     except Exception:
-        return None
-    return dec if int.from_bytes(dec[0:4], 'little') == G7S0 else None
+        return None, None
+    if dec[1:4] == _FAMILY:
+        return dec, dec[0:4][::-1].decode('latin-1')
+    return None, dec[0:8].hex()
 
 
 def subnet_bcast():
@@ -219,6 +235,7 @@ def main():
     print("Press Ctrl-C to stop early.\n")
 
     rows, sizes = [], {}
+    magics, bad_sample = [], None
     console = None
     first_seen = None
     t0 = time.time()
@@ -246,9 +263,18 @@ def main():
                 print(f"  console at {console}")
             n_pkts += 1
             sizes[len(data)] = sizes.get(len(data), 0) + 1
-            dec = decrypt_packet(data)
+            dec, magic = decrypt_packet(data)
             if dec is None:
+                # Keep the first thing that failed, so the summary can show
+                # what it actually decoded to instead of guessing.
+                if bad_sample is None and magic:
+                    bad_sample = magic
                 continue
+            if magic and magic not in magics:
+                magics.append(magic)
+                if magic != 'G7S0':
+                    print(f"  magic '{magic}' -- a packet type nobody has "
+                          f"published under this letter")
             if first_seen is None:
                 first_seen = len(dec)
                 note = ""
@@ -300,9 +326,15 @@ def main():
     print(f"{n_pkts} packets, sizes seen: "
           + ", ".join(f"{k} bytes x{v}" for k, v in sorted(sizes.items())))
     if not rows:
-        print("None of them decrypted. That usually means the packets are "
-              "already decoded by something forwarding them, or the game "
-              "does not know this letter.")
+        print("None of them decrypted.")
+        if bad_sample:
+            print(f"  First eight bytes after decoding: {bad_sample}")
+            print("  They should begin with a magic reading 'G7S' and one "
+                  "more character.")
+            print("  If they do not, this packet is keyed differently from "
+                  "the 'A' packet and")
+            print("  the key for it is not public. Send me that hex and the "
+                  "letter you used.")
         return 1
     if first_seen is not None and first_seen <= A_SIZE:
         if args.letter.upper() == 'A':
