@@ -14,12 +14,16 @@ sending a different letter instead:
     ~   344 bytes   reported to add a per-tyre surface type
     C   368 bytes   appeared around update 1.68, NOT publicly mapped
 
-Nobody has published what is in C's extra 72 bytes. Tyre compound and tyre
-wear are both absent from everything that has been mapped, and both would
-be worth having. This records the unmapped bytes while you drive so they
-can be diffed afterwards: a byte that changes only when you change
-compound is the compound, and one that creeps steadily through a stint and
-resets when you pit is wear.
+Nobody had published what is in C's extra 72 bytes. This records them
+while you drive so they can be diffed afterwards: a byte that changes only
+when you change compound is the compound, and one that creeps steadily
+through a stint and resets when you pit is wear.
+
+What it found is written up in gt7_c_packet.md beside this file: the
+per-wheel surface type, the current lap time, the car's category string,
+and the nonce mask C needs that A does not. Tyre compound and tyre wear
+were both looked for directly and are not in this packet, so read those
+notes before spending an evening re-testing them.
 
 It is a diagnostic, not part of the league site. It talks to the console
 and writes a CSV, and does nothing else.
@@ -28,12 +32,17 @@ USING IT
 --------
 GT7 streams to one listener only, so close the connector first.
 
-    python3 tools/gt7_probe.py 192.168.1.50 --letter C --seconds 60 --out c-hard.csv
+    python tools/gt7_probe.py --letter C --seconds 60 --out c-run.csv
 
-Then change compound in the garage and run it again to a different file.
-Two files, one difference between them, and the answer falls out.
+On Windows that is "python", not "python3", which hits the Microsoft Store
+stub instead. The console's address is optional: the probe broadcasts to
+find it and prints where it answered from. Give an address as the first
+argument only if that fails.
 
-    python3 tools/gt7_probe.py 192.168.1.50 --letter A --seconds 20 --out a-control.csv
+Change one thing in the garage, run it again to a different file, and diff
+the two. Two files, one difference between them, and the answer falls out.
+
+    python tools/gt7_probe.py --letter A --seconds 20 --out a-control.csv
 
 is worth doing once as a control: if A works and C does not, your game
 build has no C packet and that is the answer.
@@ -412,8 +421,8 @@ def main():
     still = [off for off in range(A_SIZE, first_seen)
              if len({r[f'b{off:03X}'] for r in rows}) == 1]
     if still:
-        print(f"\nheld still ({len(still)} bytes) — compare this line between "
-              f"two runs on different tyres:")
+        print(f"\nheld still ({len(still)} bytes) · compare this line between "
+              f"two runs that differ in exactly one thing:")
         line, last = [], None
         for off in still:
             if last is not None and off != last + 1:
