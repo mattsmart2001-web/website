@@ -49,6 +49,9 @@ import time
 SEND_PORT = 33739          # the console listens for the heartbeat here
 RECV_PORT = 33740          # and streams to here
 A_SIZE    = 0x128          # 296: everything below this is already mapped
+# What each letter is reported to return. 'A' is the one the connector uses
+# and the only one that is fully mapped; the rest are community findings.
+EXPECTED = {'A': 296, 'B': 316, '~': 344, 'C': 368}
 
 # Self-contained on purpose, cipher and all.
 #
@@ -248,10 +251,12 @@ def main():
                 continue
             if first_seen is None:
                 first_seen = len(dec)
-                print(f"  decoding {first_seen}-byte packets"
-                      + ("" if first_seen > A_SIZE else
-                         "  <-- this is the ordinary 'A' packet, no extra bytes")
-                      + "\n")
+                note = ""
+                if first_seen <= A_SIZE and args.letter.upper() != 'A':
+                    note = "  <-- the ordinary 'A' packet, not what was asked for"
+                elif first_seen > A_SIZE:
+                    note = f"  <-- {first_seen - A_SIZE} bytes beyond the mapped region"
+                print(f"  decoding {first_seen}-byte packets{note}\n")
             t = now - t0
             if t < next_sample:
                 continue
@@ -300,9 +305,22 @@ def main():
               "does not know this letter.")
         return 1
     if first_seen is not None and first_seen <= A_SIZE:
+        if args.letter.upper() == 'A':
+            # The control run, and it passed. 'A' is SUPPOSED to be 296
+            # bytes; saying "nothing more to find" here would read as a
+            # failure when it is the opposite.
+            print(f"\nControl run fine: the console is at {console}, the "
+                  f"packets decode, and 'A' is 296 bytes as it should be.\n"
+                  f"Now ask for the one nobody has mapped:\n"
+                  f"    python gt7_probe.py --letter C --seconds 60 "
+                  f"--out c-hard.csv")
+            return 0
         print(f"\nThe game answered '{args.letter}' with an ordinary "
               f"{first_seen}-byte packet, so this build has no bigger one "
-              f"under that letter. Nothing more to find here.")
+              f"under that letter.")
+        others = [k for k in EXPECTED if k != args.letter.upper() and k != 'A']
+        print("  Worth trying the others before giving up: "
+              + ", ".join(f"--letter {k}" for k in others))
         return 0
 
     with open(out_path, 'w', newline='') as fh:
