@@ -144,6 +144,17 @@ def _salsa_new(key, nonce):
 # and the variant is reported back.
 _FAMILY = b'S7G'
 
+# The nonce is built from a seed in the packet XORed with a mask, and the
+# mask is NOT the same for every packet type. 0xDEADBEAF is the one the
+# connector uses and is right for 'A'; the bigger packets are reported to
+# use others. Rather than pick one, try each and say which answered, which
+# also means this keeps working if a later update adds another.
+_MASKS = [
+    ('0xDEADBEAF', 0xDEADBEAF),     # the 'A' packet, what the connector uses
+    ('0x55FABB4F', 0x55FABB4F),     # cited for a later packet type
+    ('0xDEADBEEF', 0xDEADBEEF),     # cited, and one bit from the first
+]
+
 
 def decrypt_packet(data):
     """Decode one packet.
@@ -157,16 +168,20 @@ def decrypt_packet(data):
         return None, None
     # Already decoded by whatever forwarded it.
     if data[1:4] == _FAMILY:
-        return data, data[0:4][::-1].decode('latin-1')
+        return data, data[0:4][::-1].decode('latin-1') + ' (already decoded)'
     seed = int.from_bytes(data[0x40:0x44], 'little')
-    nonce = (seed ^ 0xDEADBEAF).to_bytes(4, 'little') + seed.to_bytes(4, 'little')
-    try:
-        dec = _salsa_new(_KEY, nonce).decrypt(data)
-    except Exception:
-        return None, None
-    if dec[1:4] == _FAMILY:
-        return dec, dec[0:4][::-1].decode('latin-1')
-    return None, dec[0:8].hex()
+    first = None
+    for name, mask in _MASKS:
+        nonce = (seed ^ mask).to_bytes(4, 'little') + seed.to_bytes(4, 'little')
+        try:
+            dec = _salsa_new(_KEY, nonce).decrypt(data)
+        except Exception:
+            continue
+        if first is None:
+            first = dec[0:8].hex()
+        if dec[1:4] == _FAMILY:
+            return dec, f"{dec[0:4][::-1].decode('latin-1')} via {name}"
+    return None, first
 
 
 def subnet_bcast():
@@ -205,6 +220,9 @@ def main():
                     help='samples written per second (default 2)')
     ap.add_argument('--out', default=None,
                     help='CSV to write (default probe-<letter>.csv)')
+    ap.add_argument('--save-raw', metavar='FILE', default=None,
+                    help='also write the packets exactly as they arrived, '
+                         'undecoded, so they can be picked apart offline')
     ap.add_argument('--port', type=int, default=RECV_PORT,
                     help=f'port to listen on (default {RECV_PORT})')
     args = ap.parse_args()
@@ -234,6 +252,7 @@ def main():
     print("Get in a car and drive: GT7 sends nothing from the menus.")
     print("Press Ctrl-C to stop early.\n")
 
+    raw_fh = open(args.save_raw, 'wb') if args.save_raw else None
     rows, sizes = [], {}
     magics, bad_sample = [], None
     console = None
@@ -263,6 +282,11 @@ def main():
                 print(f"  console at {console}")
             n_pkts += 1
             sizes[len(data)] = sizes.get(len(data), 0) + 1
+            if raw_fh is not None and n_pkts <= 400:
+                # Length-prefixed, so the file can be read back packet by
+                # packet. 400 is plenty to find a pattern and keeps the
+                # file small enough to send.
+                raw_fh.write(len(data).to_bytes(2, 'little') + data)
             dec, magic = decrypt_packet(data)
             if dec is None:
                 # Keep the first thing that failed, so the summary can show
@@ -272,7 +296,7 @@ def main():
                 continue
             if magic and magic not in magics:
                 magics.append(magic)
-                if magic != 'G7S0':
+                if not magic.startswith('G7S0 via 0xDEADBEAF'):
                     print(f"  magic '{magic}' -- a packet type nobody has "
                           f"published under this letter")
             if first_seen is None:
@@ -303,6 +327,9 @@ def main():
         print("\nstopped.")
     finally:
         rx.close()
+        if raw_fh is not None:
+            raw_fh.close()
+            print(f"raw packets -> {args.save_raw}")
 
     if not n_pkts:
         print("Nothing arrived.\n")
@@ -329,12 +356,11 @@ def main():
         print("None of them decrypted.")
         if bad_sample:
             print(f"  First eight bytes after decoding: {bad_sample}")
-            print("  They should begin with a magic reading 'G7S' and one "
-                  "more character.")
-            print("  If they do not, this packet is keyed differently from "
-                  "the 'A' packet and")
-            print("  the key for it is not public. Send me that hex and the "
-                  "letter you used.")
+            print(f"  Tried {len(_MASKS)} known nonce masks; none gave a "
+                  f"'G7S' magic.")
+            print("  Send me that hex and the letter you used, with "
+                  "--save-raw so the")
+            print("  packets themselves can be searched offline.")
         return 1
     if first_seen is not None and first_seen <= A_SIZE:
         if args.letter.upper() == 'A':
