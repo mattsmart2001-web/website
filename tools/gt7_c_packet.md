@@ -99,10 +99,9 @@ starts ahead of where we did.
 
 ### 0x140 to 0x153 · twenty-two bytes of nothing
 
-Flat zero in every capture, including a five-minute stint with fuel
-consumption demonstrably on. Five floats' worth. Four of them sitting
-together looked exactly like a per-wheel field, which is why it was
-chased. It is not.
+Flat zero in every capture, including a five-minute stint run with tyre
+wear at 5x. Five floats' worth. Four of them sitting together looked
+exactly like a per-wheel field, which is why it was chased. It is not.
 
 ## What is NOT in this packet
 
@@ -125,15 +124,16 @@ GT7 does not send tyre compound in this packet.
 
 ### Tyre wear · tested, absent
 
-One five-minute stint, pushing, fuel burning 5.71% over the capture so
-consumption was certainly enabled. The whole 72 bytes was scanned three
-ways for anything trending with time: every float, every single byte, and
-every 16-bit pair. Exactly one hit, and it is the lap timer at 0x15C.
+One five-minute stint, pushing, **run with tyre wear set to 5x**, fuel
+burning 5.71% over the capture. The whole 72 bytes was scanned three ways
+for anything trending with time: every float, every single byte, and every
+16-bit pair. Exactly one hit, and it is the lap timer at 0x15C.
 
-The one caveat worth stating: fuel consumption being on makes it likely
-tyre wear was on in the same lobby settings, but it does not prove it.
+Wear at 5x for five minutes of hard running is not a subtle amount of
+wear, and the 22 bytes at 0x140 did not move by one. So this is not a
+session-settings artefact: the field is genuinely absent.
 
-GT7 does not appear to send tyre wear in this packet.
+GT7 does not send tyre wear in this packet.
 
 ### Why that is probably the end of it
 
@@ -174,4 +174,4 @@ any analysis at all.
 | `c-gr4.csv` | 20s | Gr.4 car, lap 0 |
 | `c-hard.csv` (first) | 60s | Gr.3 car, lap 1 |
 | `c-hard.csv` / `c-soft.csv` | 60s each | same Gr.3 car, Racing Hard then Racing Soft |
-| `c-wear.csv` | 300s | Gr.3 car, fuel consumption on, pushing |
+| `c-wear.csv` | 300s | Gr.3 car, tyre wear 5x, fuel on, pushing |
