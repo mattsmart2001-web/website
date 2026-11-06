@@ -46,6 +46,12 @@ import struct
 import sys
 import time
 
+# Bumped whenever this file changes in a way that matters to someone
+# running it. Printed on every run and available as --version, because
+# "re-download it" and "I did" have now disagreed twice, and a number on
+# screen settles that in one line instead of a wasted capture.
+VERSION   = 5
+
 SEND_PORT = 33739          # the console listens for the heartbeat here
 RECV_PORT = 33740          # and streams to here
 A_SIZE    = 0x128          # 296: everything below this is already mapped
@@ -225,6 +231,8 @@ def main():
                          'undecoded, so they can be picked apart offline')
     ap.add_argument('--port', type=int, default=RECV_PORT,
                     help=f'port to listen on (default {RECV_PORT})')
+    ap.add_argument('--version', action='version',
+                    version=f'gt7_probe v{VERSION}')
     args = ap.parse_args()
 
     letter = args.letter.encode()[:1]
@@ -247,6 +255,7 @@ def main():
     targets = [args.ip] if args.ip else \
         [t for t in ('255.255.255.255', subnet_bcast()) if t]
     where = args.ip if args.ip else "the whole network (" + ", ".join(targets) + ")"
+    print(f"gt7_probe v{VERSION}")
     print(f"Asking {where} for the '{args.letter}' packet, listening on "
           f"{args.port}, for {args.seconds:g}s.")
     print("Get in a car and drive: GT7 sends nothing from the menus.")
