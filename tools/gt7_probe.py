@@ -150,10 +150,34 @@ def decrypt_packet(data):
     return dec if int.from_bytes(dec[0:4], 'little') == G7S0 else None
 
 
+def subnet_bcast():
+    """Best-effort subnet broadcast address, e.g. 192.168.1.255.
+
+    Lifted from the connector, which learned it the hard way: many home
+    networks drop the limited 255.255.255.255 broadcast but pass a directed
+    one, so sending both finds consoles that either alone misses.
+    """
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))      # no packet sent; this only picks the interface
+        ip = s.getsockname()[0]
+        s.close()
+        parts = ip.split('.')
+        if len(parts) == 4:
+            parts[3] = '255'
+            return '.'.join(parts)
+    except Exception:
+        pass
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('ip', help="the console's address on your network")
+    ap.add_argument('ip', nargs='?', default=None,
+                    help="the console's address. Leave it out and the probe"
+                         " broadcasts and lets the console answer, which is"
+                         " what the connector does.")
     ap.add_argument('--letter', default='C',
                     help="which packet to ask for: A, B, ~ or C (default C)")
     ap.add_argument('--seconds', type=float, default=60.0,
@@ -170,6 +194,7 @@ def main():
     out_path = args.out or f'probe-{args.letter}.csv'.replace('~', 'tilde')
 
     rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     try:
         rx.bind(('0.0.0.0', args.port))
     except OSError as e:
@@ -179,11 +204,19 @@ def main():
         return 2
     rx.settimeout(1.0)
 
-    print(f"Asking {args.ip} for the '{args.letter}' packet, listening on "
+    # No address given: shout, and let the console answer. The connector
+    # works this way and finds the console on its own, so asking a person to
+    # go and look one up is a step that need not exist.
+    targets = [args.ip] if args.ip else \
+        [t for t in ('255.255.255.255', subnet_bcast()) if t]
+    where = args.ip if args.ip else "the whole network (" + ", ".join(targets) + ")"
+    print(f"Asking {where} for the '{args.letter}' packet, listening on "
           f"{args.port}, for {args.seconds:g}s.")
-    print("Drive. Press Ctrl-C to stop early.\n")
+    print("Get in a car and drive: GT7 sends nothing from the menus.")
+    print("Press Ctrl-C to stop early.\n")
 
     rows, sizes = [], {}
+    console = None
     first_seen = None
     t0 = time.time()
     next_sample = 0.0
@@ -195,12 +228,19 @@ def main():
             now = time.time()
             # GT7 stops streaming a second or two after the last heartbeat.
             if now - last_beat > 1.0:
-                rx.sendto(letter, (args.ip, SEND_PORT))
+                for t in targets:
+                    try:
+                        rx.sendto(letter, (t, SEND_PORT))
+                    except OSError:
+                        pass
                 last_beat = now
             try:
-                data, _ = rx.recvfrom(4096)
+                data, src = rx.recvfrom(4096)
             except socket.timeout:
                 continue
+            if console is None:
+                console = src[0]
+                print(f"  console at {console}")
             n_pkts += 1
             sizes[len(data)] = sizes.get(len(data), 0) + 1
             dec = decrypt_packet(data)
@@ -234,8 +274,23 @@ def main():
         rx.close()
 
     if not n_pkts:
-        print("Nothing arrived. Check the address, that GT7 is running and "
-              "you are in a car, and that nothing else holds the port.")
+        print("Nothing arrived.\n")
+        if args.ip:
+            print(f"  You gave the address {args.ip}. Try leaving it off "
+                  f"entirely:\n"
+                  f"    python gt7_probe.py --letter {args.letter}\n"
+                  f"  and the probe will shout on the network and let the "
+                  f"console answer.")
+        else:
+            print("  Things to check, in the order they usually go wrong:\n"
+                  "   - GT7 is running AND you are out on track. It sends\n"
+                  "     nothing from the menus or the garage.\n"
+                  "   - The connector and any dashboard are closed.\n"
+                  "   - Windows did not block this when it asked. Allow it\n"
+                  "     on private networks.\n"
+                  "   - Some networks drop broadcast. If the connector finds\n"
+                  "     your console, its settings page shows the address:\n"
+                  "     pass that as the first argument.")
         return 1
     print(f"{n_pkts} packets, sizes seen: "
           + ", ".join(f"{k} bytes x{v}" for k, v in sorted(sizes.items())))
