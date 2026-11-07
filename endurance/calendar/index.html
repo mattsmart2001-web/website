@@ -182,6 +182,18 @@
 
         .event-body {
             flex: 1;
+            /* A flex item will not shrink below its content unless told to,
+               and this is both an item and a container, so the rule has to
+               be repeated at every level or the chain breaks at the first
+               one that omits it. .event-info already carries it; without it
+               here too, a long round name set the width of the whole column
+               and pushed it past the card, which then clipped it because
+               .event-card hides its overflow. "Nürburgring Nordschleife -
+               24H Layout" came out 404px wide inside a 358px card on a
+               phone, losing the end of the title and of the meta line, and
+               the ellipsis on .event-name never got the chance to do its
+               job. */
+            min-width: 0;
             padding: 1.1rem 1.4rem;
             display: flex;
             align-items: center;
@@ -470,7 +482,40 @@ function fmtTime(iso) {
     const time = dt.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/London' });
     const tz = new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/London', timeZoneName:'short' })
         .formatToParts(dt).find(p => p.type === 'timeZoneName')?.value || 'UK';
-    return `${time} ${tz}`;
+    const here = localTime(dt);
+    return here ? `${time} ${tz} · ${here} your time` : `${time} ${tz}`;
+}
+
+// The same instant on the reader's own clock. UK time stays first and
+// unchanged, because it is what the lobby runs on and what everybody needs
+// to be able to say to each other. This only saves the reader doing the
+// conversion in their head, which two drivers got wrong for Round 8 and
+// missed the start over.
+//
+// Nothing is added for a reader already on UK time, so the common case
+// gains no clutter, and the comparison is of the clock face rather than the
+// zone name so Dublin and Lisbon stay quiet too.
+//
+// Rendered in the reader's own locale, so an American sees "5:00 AM" and
+// not "05:00". The weekday comes along only when the race lands on a
+// different day where they are, which is a real case out in the Pacific
+// and the one mistake worse than being an hour out.
+function localTime(dt) {
+    try {
+        const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (!zone) return null;
+        const face = z => dt.toLocaleString('en-GB',
+            { timeZone: z, weekday: 'short', hour: '2-digit', minute: '2-digit' });
+        if (face(zone) === face('Europe/London')) return null;
+        const time = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const name = new Intl.DateTimeFormat([], { timeZone: zone, timeZoneName: 'short' })
+            .formatToParts(dt).find(p => p.type === 'timeZoneName')?.value;
+        const day = dt.toLocaleDateString('en-GB', { timeZone: zone, weekday: 'short' });
+        const ukDay = dt.toLocaleDateString('en-GB',
+            { timeZone: 'Europe/London', weekday: 'short' });
+        const when = day === ukDay ? time : `${day} ${time}`;
+        return name ? `${when} ${name}` : when;
+    } catch { return null; }
 }
 
 async function load() {
