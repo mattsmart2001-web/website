@@ -4360,8 +4360,38 @@ async function tick() {
 // Polling rather than Realtime: the table is a handful of rows, there is no
 // connection ceiling, and a dropped poll is invisible where a dropped socket
 // needs reconnection logic. Worth revisiting once the field is much larger.
+//
+// The poll runs only while the page is actually on screen. A tab left open
+// behind twenty others used to cost exactly as much as one being watched:
+// 1500ms into 24 hours is 57,600 requests a day, per tab, for a board
+// nobody could see. Enough of those together pinned the database at 100%
+// CPU and it gave out at the start of Round 7.
+//
+// Coming back polls immediately rather than waiting out the interval. A
+// board that is a second and a half stale the moment you look at it is the
+// precise thing the gap was supposed to avoid, and on a phone returning
+// from another app that would be every single time.
+let pollTimer = null;
+
+function startPolling() {
+    if (pollTimer === null) pollTimer = setInterval(tick, 1500);
+}
+
+function stopPolling() {
+    if (pollTimer !== null) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { stopPolling(); return; }
+    tick();
+    startPolling();
+});
+
+// Drawn once even when the page opens in a background tab, so there is
+// something to show the instant it is brought forward. One request, not a
+// standing cost.
 tick();
-setInterval(tick, 1500);
+if (!document.hidden) startPolling();
 </script>
 
 <script src="/endurance/assets/gtec-stars.js" defer></script>
