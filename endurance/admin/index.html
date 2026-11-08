@@ -423,6 +423,48 @@
             background: linear-gradient(180deg, rgba(239,68,68,0.22), rgba(239,68,68,0.08));
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 6px 16px -4px rgba(239,68,68,0.35);
         }
+        /* A labelled row of controls.
+         *
+         * The splits panel had grown to sixteen buttons wrapping in one
+         * undifferentiated block, which is a list of everything the panel
+         * can do rather than a tool for doing any of it. Four jobs were
+         * sharing that row: allocating splits, running live timing, the
+         * track map, and clearing up afterwards. Each gets a row with its
+         * name beside it, so finding Start Race on a race morning is
+         * reading one word rather than scanning sixteen. */
+        .tool-row {
+            display: flex;
+            gap: 0.6rem;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 0.7rem 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+        .tool-row:first-of-type { border-top: 0; }
+        .tool-row-label {
+            flex: 0 0 auto;
+            width: 86px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        /* A gap wider than the one between buttons, to group the pairs
+         * inside a row: each live timing mode sits beside the button that
+         * ends it, and nobody has to work out which End goes with which
+         * Start. */
+        .tool-sep { flex: 0 0 auto; width: 0.9rem; }
+        .tool-row-note {
+            flex: 1 1 260px;
+            text-align: right;
+            font-size: 0.74rem;
+            color: var(--muted);
+        }
+        @media (max-width: 760px) {
+            .tool-row-label { width: 100%; }
+            .tool-row-note { text-align: left; flex-basis: 100%; }
+        }
         /* Gold-tinted variant for a stand-out action (e.g. Race Report). */
         .btn-icon.gold {
             color: var(--gold);
@@ -4118,44 +4160,58 @@ async function viewEventLobbies(eventId, eventName, seasonId) {
         ? `<div class="empty-state">No entries yet — add them in the Entries panel first.</div>`
         : lobbyNumbers.map(n => renderLobbyCard(n, groups[n])).join('');
 
+    /** One labelled row of the panel's controls.
+     *
+     *  The label is the job, not the panel: a row called Live timing with
+     *  Start Race first is something you can find in a hurry on a race
+     *  morning, which a block of sixteen buttons in no particular order is
+     *  not. The note is for the thing a row cannot say with a button. */
+    const toolRow = (label, buttons, note = '') => `
+        <div class="tool-row">
+            <span class="tool-row-label">${esc(label)}</span>
+            ${buttons}
+            ${note ? `<span class="tool-row-note">${esc(note)}</span>` : ''}
+        </div>`;
+
     panel.innerHTML = `
         <div class="section-card" style="margin-bottom:1rem">
             <div class="section-card-header">
                 <span class="section-card-title">Splits — ${esc(eventName)}</span>
             </div>
-            <div style="padding:1rem 1.25rem;display:flex;gap:0.85rem;align-items:flex-end;flex-wrap:wrap">
-                <div class="form-group" style="margin:0;min-width:130px">
-                    <label style="display:block;font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.35rem">Split size</label>
-                    <input type="number" id="lobby-size" value="16" min="2" max="32" style="width:100%;padding:0.55rem 0.75rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem">
-                </div>
+            ${toolRow('Splits', `
+                <label for="lobby-size" style="font-size:0.74rem;color:var(--muted)">Size</label>
+                <input type="number" id="lobby-size" value="16" min="2" max="32" title="Drivers per split" style="width:62px;padding:0.44rem 0.5rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem">
                 <button class="btn btn-primary" onclick="autoAllocateLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Auto-allocate</button>
-                <button class="btn btn-ghost" onclick="clearAllLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Clear All</button>
                 <button class="btn btn-ghost" onclick="notifyLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Notify Drivers</button>
                 <button class="btn btn-ghost" onclick="exportSplitsCsv()">Export CSV</button>
-                <button class="btn btn-ghost" title="Open live timing on this event for a while, without touching its start time or putting a fake round on the calendar. Drivers with a paired reporter will appear on /endurance/live/ marked as a test." onclick="openLiveTest('${eventId}','${esc(eventName)}','${seasonId}')">Live Timing Test</button>
-                <button class="btn btn-ghost" title="Open live timing for practice on this event, normally straight through until race day (or set evening hours if you prefer). Shows on /endurance/live/ as Practice, needs no entry, and stands down on race days." onclick="setLivePractice('${eventId}','${esc(eventName)}')">Practice Window</button>
+                <button class="btn-icon danger" onclick="clearAllLobbies('${eventId}','${esc(eventName)}','${seasonId}')">Clear All</button>
                 <button class="btn-icon danger" title="Remove this event's split-assignment and hosting messages from every driver's inbox — use once the event is over" onclick="deleteLobbyNotifications('${eventId}','${esc(eventName)}','${seasonId}')">Delete Notifications</button>
-                <button class="btn-icon danger" title="Close any live timing test on this event and clear the cars it put on the live page" onclick="closeLiveTest('${eventId}','${esc(eventName)}')">End Live Test</button>
-                <button class="btn-icon danger" title="Stop the nightly practice window on this event and clear the cars it put on the live page" onclick="clearLivePractice('${eventId}','${esc(eventName)}')">End Practice</button>
+            `, 'Sorted by race Elo if available, else by DR / SR. Team-mates stay together.')}
+            ${toolRow('Live timing', `
+                <span id="race-state" class="badge badge-muted" title="Whether live timing is on air for this round's race. Nothing is recorded while it is off, so qualifying never reaches the page.">Race: checking</span>
                 <button class="btn btn-primary" title="Put live timing on air for the race. Press it once, in the twenty minutes before the first split goes green: each split then comes on air by itself at its own green flag, so you do not wait for the other lobbies. It clears everything from qualifying and starts recording from that moment. Press it again to restart after a red flag." onclick="startLiveRace('${eventId}','${esc(eventName)}')">Start Race</button>
                 <button class="btn-icon danger" title="Take live timing off air and clear what is on it. Use when the race is over, or if Start Race was pressed too early." onclick="stopLiveRace('${eventId}','${esc(eventName)}')">Stop Race</button>
-                <span id="race-state" class="badge badge-muted" title="Whether live timing is on air for this round's race. Nothing is recorded while it is off, so qualifying never reaches the page.">Race: checking</span>
-                <button class="btn-icon" title="Clear the track outline and hand the job of tracing it to one named driver, so it is not whoever happens to report first. They keep it while they are reporting. They drive two laps: the first gets them to the start/finish line and is discarded, the second is the one that gets stored." onclick="startTrackMap('${eventId}','${esc(eventName)}')">Start Track Map</button>
-                <button class="btn-icon danger" title="Delete the track outline the cars have traced for this event, so it draws itself again from scratch. Use if the wrong circuit got captured, or if it finished short. Does not touch the cars, the splits or the practice window." onclick="clearTrackOutline('${eventId}','${esc(eventName)}')">Clear Map Outline</button>
+                <span class="tool-sep"></span>
+                <button class="btn btn-ghost" title="Open live timing for practice on this event, normally straight through until race day (or set evening hours if you prefer). Shows on /endurance/live/ as Practice, needs no entry, and stands down on race days." onclick="setLivePractice('${eventId}','${esc(eventName)}')">Practice Window</button>
+                <button class="btn-icon danger" title="Stop the nightly practice window on this event and clear the cars it put on the live page" onclick="clearLivePractice('${eventId}','${esc(eventName)}')">End Practice</button>
+                <span class="tool-sep"></span>
+                <button class="btn btn-ghost" title="Open live timing on this event for a while, without touching its start time or putting a fake round on the calendar. Drivers with a paired reporter will appear on /endurance/live/ marked as a test." onclick="openLiveTest('${eventId}','${esc(eventName)}','${seasonId}')">Live Timing Test</button>
+                <button class="btn-icon danger" title="Close any live timing test on this event and clear the cars it put on the live page" onclick="closeLiveTest('${eventId}','${esc(eventName)}')">End Live Test</button>
+            `)}
+            ${toolRow('Track map', `
                 <span id="outline-state" class="badge badge-muted" title="The track outline stored for this round. Complete means it will not change again: clearing it is the only way to retrace it.">Outline: checking</span>
-                <button class="btn-icon danger" onclick="deleteLobbyRoomCodes('${eventId}','${esc(eventName)}')">Delete Room Codes</button>
-                <button class="btn-icon danger" onclick="deleteEventScreenshots('${eventId}','${esc(eventName)}','${seasonId}')">Delete Screenshots</button>
-                <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Split size counts drivers. Sorted by race Elo if available, else by DR / SR.</div>
-            </div>
-            <div style="padding:0.85rem 1.25rem;border-top:1px solid var(--border);display:flex;gap:0.85rem;align-items:flex-end;flex-wrap:wrap;background:rgba(255,255,255,0.015)">
-                <div class="form-group" style="margin:0;min-width:220px">
-                    <label style="display:block;font-size:0.7rem;font-weight:600;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.35rem">Test email address</label>
-                    <input type="email" id="test-email-input" placeholder="you@example.com" style="width:100%;padding:0.55rem 0.75rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.9rem">
-                </div>
-                <button class="btn btn-ghost" onclick="sendTestSplitEmail('${eventId}','${esc(eventName)}')">Send Test Split Email</button>
-                <button class="btn btn-ghost" onclick="sendTestHostEmail('${eventId}','${esc(eventName)}')">Send Test Host Email</button>
-                <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">Uses this event's real settings, but only sends to the address above — no drivers are contacted.</div>
-            </div>
+                <button class="btn btn-ghost" title="Clear the track outline and hand the job of tracing it to one named driver, so it is not whoever happens to report first. They keep it while they are reporting. They drive two laps: the first gets them to the start/finish line and is discarded, the second is the one that gets stored." onclick="startTrackMap('${eventId}','${esc(eventName)}')">Start Track Map</button>
+                <button class="btn-icon danger" title="Delete the track outline the cars have traced for this event, so it draws itself again from scratch. Use if the wrong circuit got captured, or if it finished short. Does not touch the cars, the splits or the practice window." onclick="clearTrackOutline('${eventId}','${esc(eventName)}')">Clear Map Outline</button>
+            `)}
+            ${toolRow('Tidying up', `
+                <button class="btn-icon danger" title="Delete the lobby room codes stored for this event" onclick="deleteLobbyRoomCodes('${eventId}','${esc(eventName)}')">Delete Room Codes</button>
+                <button class="btn-icon danger" title="Delete the split screenshots stored for this event, which is what frees Supabase storage" onclick="deleteEventScreenshots('${eventId}','${esc(eventName)}','${seasonId}')">Delete Screenshots</button>
+            `, 'Safe to leave until after the round. Screenshots are what take up storage.')}
+            ${toolRow('Test emails', `
+                <input type="email" id="test-email-input" placeholder="you@example.com" aria-label="Test email address" style="width:220px;padding:0.44rem 0.7rem;background:var(--bg-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:0.85rem">
+                <button class="btn btn-ghost" onclick="sendTestSplitEmail('${eventId}','${esc(eventName)}')">Split Email</button>
+                <button class="btn btn-ghost" onclick="sendTestHostEmail('${eventId}','${esc(eventName)}')">Host Email</button>
+            `, 'Real settings, but only to the address above. No drivers are contacted.')}
         </div>
         ${lobbyCardsHTML}`;
 
