@@ -168,7 +168,7 @@
            reads as a graphic somebody drew, which is the whole difference
            between a web page on a stream and a broadcast. */
         body.broadcast .bc-tower { display: flex; flex-direction: column;
-            position: absolute; left: 0; top: 0; bottom: 0; width: 392px;
+            position: absolute; left: 0; top: 0; bottom: 0; width: 468px;
             background: linear-gradient(180deg, rgba(9,11,15,0.97) 0%,
                                                 rgba(6,7,10,0.95) 100%);
             border-right: 2px solid rgba(255,209,102,0.45);
@@ -207,9 +207,34 @@
         .bc-who { font-size: 1.08rem; font-weight: 600; letter-spacing: 0.005em;
             color: var(--text); overflow: hidden; text-overflow: ellipsis;
             white-space: nowrap; flex: 1 1 auto; margin-left: 0.6rem; }
+        /* Fuel for every car, beside its name, the way the board does it.
+           Narrow, because a tower row is not a place for a readout: the bar
+           says how much is left and the figure says what that is worth in
+           laps, which are the two things a glance can take in. The exact
+           percentage is on hover, where it costs nobody anything. */
+        /* Fixed width, so a car not reporting fuel leaves a hole the same
+           size as everyone else's readout and the names all run out at the
+           same place. */
+        .bc-fu-cell { display: flex; align-items: center; gap: 0.4rem;
+            flex: 0 0 auto; padding-left: 0.5rem; width: 6.1rem;
+            box-sizing: border-box; }
+        .bc-fu-mini { width: 46px; height: 7px; border-radius: 4px;
+            background: rgba(255,255,255,0.09); overflow: hidden; flex: 0 0 auto; }
+        .bc-fu-mini span { display: block; height: 100%; background: var(--gold); }
+        .bc-fu-left { font-family: 'Orbitron', sans-serif; font-size: 0.74rem;
+            font-weight: 700; color: var(--muted); min-width: 2.1rem;
+            text-align: right; font-variant-numeric: tabular-nums; }
+        .bc-row.fu-low  .bc-fu-mini span { background: #ffb020; }
+        .bc-row.fu-low  .bc-fu-left { color: #ffb020; }
+        .bc-row.fu-crit .bc-fu-mini span { background: #ef4444; }
+        .bc-row.fu-crit .bc-fu-left { color: #ef4444; }
         .bc-gap { font-family: 'Orbitron', sans-serif; font-size: 0.78rem; font-weight: 700;
             color: var(--muted); flex: 0 0 auto; font-variant-numeric: tabular-nums;
-            padding: 0 0.9rem 0 0.5rem; }
+            padding: 0 0.9rem 0 0.6rem; text-align: right;
+            /* Fixed, not minimum. LEADER is wider than a gap figure, and on
+               a minimum it pushed the fuel bar on row one out of line with
+               every bar beneath it. */
+            width: 6.1rem; box-sizing: border-box; }
         .bc-row.lead .bc-gap { color: var(--gold); }
         .bc-row.lead .bc-pos { color: var(--gold); }
         /* The purple of a fastest lap, the one colour motorsport agrees on. */
@@ -1700,6 +1725,37 @@ to point OBS at it.">Broadcast
  *  beside the leaderboard. Neither is invented and neither needs a request
  *  of its own. If a race has no record yet the line simply is not there,
  *  rather than a dash pretending to be information. */
+/** A car's fuel as the two numbers worth having: how much is in the tank,
+ *  and what that is worth in laps at this driver's own measured burn.
+ *
+ *  Laps are null until the beacon has measured a burn, which is the first
+ *  lap or two of a stint and any race with fuel switched off. Nothing
+ *  guesses past that: it is the one figure somebody might pit on. */
+function fuelState(r) {
+    const pct = r.fuel_pct;
+    if (pct == null) return null;
+    const v = Math.max(0, Math.min(100, pct));
+    const burn = r.burn_per_lap;
+    return { v, burn, laps: burn > 0 ? Math.floor(v / burn) : null,
+             cls: v < 10 ? 'crit' : v < 25 ? 'low' : '' };
+}
+
+/** The same thing in a tower row: a bar and a figure, and the percentage on
+ *  hover. Everything else about a row is one glance wide and so is this. */
+function bcFuelCell(r) {
+    const f = fuelState(r);
+    if (!f) return '<span class="bc-fu-cell"></span>';
+    const title = `${f.v.toFixed(1)}% of tank`
+        + (f.laps != null
+            ? `, about ${f.laps} more lap${f.laps === 1 ? '' : 's'}`
+              + ` at ${f.burn.toFixed(1)}% a lap`
+            : ', burn not measured yet');
+    return `<span class="bc-fu-cell" title="${esc(title)}">`
+         + `<span class="bc-fu-mini"><span style="width:${f.v.toFixed(1)}%"></span></span>`
+         + `<span class="bc-fu-left">${f.laps != null ? f.laps + 'L' : '—'}</span>`
+         + `</span>`;
+}
+
 /** Fuel for the cars the broadcast is on.
  *
  *  Laps left, not litres and not a percentage, because that is the figure a
@@ -1720,21 +1776,19 @@ function bcFuel(order) {
         .map(id => order.find(r => r.driver_id === id)).filter(Boolean);
     const cars = on.length ? on : [order[0]];
     const body = cars.map(r => {
-        const pct = r.fuel_pct;
         const num = r.career_number ?? r.car_number;
         const who = `<div class="bc-fu-who">`
             + `<span class="bc-fu-num">${num != null ? esc(String(num)) : '—'}</span>`
             + `<span class="bc-fu-name">${esc(r.display_name || '')}</span></div>`;
-        if (pct == null) {
+        const f = fuelState(r);
+        if (!f) {
             return `<div class="bc-fu">${who}`
                  + `<div class="bc-fu-none">Not reporting fuel</div></div>`;
         }
-        const v = Math.max(0, Math.min(100, pct));
-        const burn = r.burn_per_lap;
-        const laps = burn > 0 ? Math.floor(v / burn) : null;
-        // On the tank, which is what the bar is drawn against. The laps
-        // figure takes its colour from the same place so the two agree.
-        const cls = v < 10 ? ' crit' : v < 25 ? ' low' : '';
+        // The same figures the tower rows show, from the same place, so the
+        // panel and the row for one car can never disagree.
+        const { v, laps } = f;
+        const cls = f.cls ? ' ' + f.cls : '';
         const main = laps != null
             ? `<span class="bc-fu-laps">${laps}</span>`
               + `<span class="bc-fu-unit">lap${laps === 1 ? '' : 's'} left</span>`
@@ -1854,12 +1908,15 @@ function renderBroadcast(rows) {
         // be able to see at a glance which two rows they are watching.
         const on = r.driver_id === bcFocus || r.driver_id === bcWith
                  ? ' onair' : '';
-        return `<div class="bc-row${i === 0 ? ' lead' : ''}${fast}${on}"`
+        const fu = fuelState(r);
+        const fuCls = fu && fu.cls ? ' fu-' + fu.cls : '';
+        return `<div class="bc-row${i === 0 ? ' lead' : ''}${fast}${on}${fuCls}"`
              + ` data-focus="${esc(r.driver_id)}">`
              + `<span class="bc-bar" style="background:${esc(carColour(r))}"></span>`
              + `<span class="bc-pos">${i + 1}</span>`
              + `<span class="bc-num">${num != null ? esc(String(num)) : '\u2014'}</span>`
              + `<span class="bc-who">${esc(r.display_name || '')}</span>`
+             + bcFuelCell(r)
              + `<span class="bc-gap">${gap}</span></div>`;
     }).join('') + bcFuel(order) + bcFooter();
 
