@@ -1240,6 +1240,22 @@ function renderField(rows) {
     // name would read as cars dropping out.
     const shown = findText ? rows.filter(r => matchesFind(r)) : rows;
     const allLobbies = new Set(rows.map(r => r.lobby_number ?? 0));
+    // A focus is remembered between visits, and it can outlive the split it
+    // names: eight splits at the Nordschleife, then a practice evening on
+    // the next round where nobody is assigned to one at all. The stored
+    // "Split 7" then matches no car, so the map draws an empty track while
+    // the board above it plainly lists cars, which reads as the map being
+    // broken.
+    //
+    // There is no way out of it by hand either. The way to clear a focus is
+    // to click that split's own heading, and the heading is not on the page
+    // any more, so the viewer is stuck with it. Drop it the moment it stops
+    // naming anything that is out there.
+    if (focusedSplit !== null && !allLobbies.has(Number(focusedSplit))) {
+        focusedSplit = null;
+        view = { scale: 1, x: 0, y: 0 };
+        saveSplitPrefs();
+    }
     const byLobby = new Map();
     shown.forEach(r => {
         const k = r.lobby_number ?? 0;
