@@ -3399,25 +3399,45 @@ function drawTrack(rows) {
         // Smoothstep: a move that starts and stops gently reads as a camera,
         // a linear one reads as a slide being dragged.
         if (t < 1) {
-            // Mid-cut. Worked in centre and span rather than four corners,
-            // because the span is what the pull-back below acts on.
+            // Mid-cut, worked as a centre and a half-span per axis rather
+            // than as four corners, because the span is what the pull-back
+            // below acts on.
+            //
+            // Per axis, and this matters. The frame used to be interpolated
+            // as a square built from the across-span alone, which is fine
+            // between two battles because both targets are square, and wrong
+            // at every move that starts or ends at the whole lap: the lap is
+            // not square, so the very first frame of a move inflated the
+            // up-the-screen span to match the across-span and the picture
+            // jumped backwards. Coming out, the last frame did it in
+            // reverse, which is the zoom-out-too-far-then-snap this is
+            // fixing. Interpolating each axis from where it actually is
+            // means the move starts and ends exactly on the frame either
+            // side of it, with nothing to snap back from.
             const e = t * t * (3 - 2 * t);
             const c0 = [(bcBoxFrom[0] + bcBoxFrom[1]) / 2, (bcBoxFrom[2] + bcBoxFrom[3]) / 2];
             const c1 = [(bcBoxTo[0] + bcBoxTo[1]) / 2, (bcBoxTo[2] + bcBoxTo[3]) / 2];
-            const s0 = (bcBoxFrom[1] - bcBoxFrom[0]) / 2;
-            const s1 = (bcBoxTo[1] - bcBoxTo[0]) / 2;
+            const u0 = (bcBoxFrom[1] - bcBoxFrom[0]) / 2, v0 = (bcBoxFrom[3] - bcBoxFrom[2]) / 2;
+            const u1 = (bcBoxTo[1] - bcBoxTo[0]) / 2, v1 = (bcBoxTo[3] - bcBoxTo[2]) / 2;
             const cx2 = c0[0] + (c1[0] - c0[0]) * e, cy2 = c0[1] + (c1[1] - c0[1]) * e;
-            let sp = s0 + (s1 - s0) * e;
+            let su = u0 + (u1 - u0) * e, sv = v0 + (v1 - v0) * e;
             // Cutting between two battles at opposite ends of the lap would
             // otherwise be a whip pan across eight kilometres of countryside
             // at full magnification, which is unwatchable and tells a viewer
             // nothing. The frame pulls back on the way across and pushes in
             // again on arrival, in proportion to how far it has to go, so
             // the move shows where it is going as well as getting there.
+            //
+            // Only for a move that is mostly travel. Coming in from the lap
+            // or going back out to it is already a change of height, and
+            // adding a pull-back to that is the camera backing away from a
+            // frame it is in the middle of leaving anyway.
             const travel = Math.hypot(c1[0] - c0[0], c1[1] - c0[1]);
-            const hop = Math.min(2.4, travel / Math.max(1, s0 + s1));
-            sp *= 1 + hop * Math.sin(Math.PI * e);
-            bcBox = [cx2 - sp, cx2 + sp, cy2 - sp, cy2 + sp];
+            const reach = Math.max(1, Math.max(u0, v0) + Math.max(u1, v1));
+            const hop = Math.min(1.2, Math.max(0, travel / reach - 0.35));
+            const k = 1 + hop * Math.sin(Math.PI * e);
+            su *= k; sv *= k;
+            bcBox = [cx2 - su, cx2 + su, cy2 - sv, cy2 + sv];
             // How focused the camera is, 0 at the lap and 1 in a battle.
             bcAmt = bcAmtFrom + ((want ? 1 : 0) - bcAmtFrom) * e;
         } else {
