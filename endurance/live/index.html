@@ -1888,7 +1888,11 @@ const BC_DWELL_MS = 18000;
 // far apart they were.
 const BC_BATTLE_M = 500;
 const BC_MIN_SPAN_M = 1500;
-const BC_DELAY_MS = 1600;
+// Reports arrive about every 1.5 seconds, so a delay of 1.6 left only a
+// tenth of a second of slack and any poll that ran late put the picture
+// past the last report it had. Two seconds covers an ordinary late poll
+// without the map drifting noticeably behind the tower beside it.
+const BC_DELAY_MS = 2000;
 const BC_EASE_MS = 1100;
 // The frame the camera is on and the one it is moving to, in projected
 // units, plus when the move started. Eased rather than cut, because a hard
@@ -2048,13 +2052,107 @@ function bcDirect(rows) {
     }
 }
 
-/** Where a car was BC_DELAY_MS ago, between the two reports either side of
- *  that moment.
+// ---------------------------------------------------------------
+// Running a car along the circuit between its reports.
+//
+// Sliding a car down the straight line between two reports is right on a
+// straight and wrong everywhere else. At racing pace the two are a hundred
+// metres apart, and a hundred-metre chord across the Porsche Curves passes
+// well inside them: the car leaves the road, cuts the corner, and is put
+// back on the circuit at the next report. That snap, once every report, is
+// what makes a close shot look stepped.
+//
+// The circuit is right there to follow. The cars traced it themselves, and
+// the outline is a closed polyline, so a point can be carried ALONG it
+// instead of across it. These three functions are the machinery for that:
+// how far round the lap each outline point is, where a loose coordinate
+// falls on it, and what coordinate a given distance round it comes to.
+let arcTable = null, arcTableFor = -1;
+function outlineArcs() {
+    if (arcTable && arcTableFor === baseLoop.length) return arcTable;
+    arcTableFor = baseLoop.length;
+    if (baseLoop.length < 3) return (arcTable = null);
+    const cum = new Float64Array(baseLoop.length);
+    for (let i = 1; i < baseLoop.length; i++) {
+        const a = baseLoop[i - 1], b = baseLoop[i];
+        cum[i] = cum[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1]);
+    }
+    const total = cum[cum.length - 1];
+    return (arcTable = total > 0 ? { cum, total } : null);
+}
+
+/** Where a coordinate falls on the outline: how far round, which segment,
+ *  and how far off the road it was. Measured to the nearest point ON a
+ *  segment rather than to the nearest stored point, so the answer moves
+ *  smoothly rather than in the ninety-metre steps the outline is stored in.
  *
- *  Returns the row untouched when there is nothing to interpolate from, or
- *  when the two points straddle a break: a break means the car was not
- *  driving between them, and sliding it along that line would draw a car
- *  crossing the infield to its pit box. */
+ *  The hint is the segment it was on last time. A car travels a hundred
+ *  metres between reports and the outline is stored every ninety or so, so
+ *  the answer is almost always within a segment or two of the last one, and
+ *  searching there first turns a scan of the whole circuit into a scan of
+ *  twenty segments. */
+function arcOf(x, z, hint) {
+    const t = outlineArcs();
+    if (!t) return null;
+    const n = baseLoop.length - 1;
+    let bestD = Infinity, bestS = 0, bestI = 0;
+    const scan = i => {
+        const a = baseLoop[i], b = baseLoop[i + 1];
+        const dx = b[0] - a[0], dz = b[1] - a[1];
+        const L2 = dx * dx + dz * dz;
+        let u = L2 > 0 ? ((x - a[0]) * dx + (z - a[1]) * dz) / L2 : 0;
+        u = u < 0 ? 0 : u > 1 ? 1 : u;
+        const px = a[0] + dx * u, pz = a[1] + dz * u;
+        const d = (x - px) * (x - px) + (z - pz) * (z - pz);
+        if (d < bestD) {
+            bestD = d; bestI = i;
+            bestS = t.cum[i] + (t.cum[i + 1] - t.cum[i]) * u;
+        }
+    };
+    if (hint != null) {
+        for (let k = -10; k <= 10; k++) scan(((hint + k) % n + n) % n);
+        // Near enough to be the same piece of road: take it.
+        if (bestD < 1600) return { s: bestS, i: bestI, d: Math.sqrt(bestD) };
+        bestD = Infinity;
+    }
+    for (let i = 0; i < n; i++) scan(i);
+    return { s: bestS, i: bestI, d: Math.sqrt(bestD) };
+}
+
+/** The coordinate a given distance round the outline, wrapped. */
+function pointAtArc(s) {
+    const t = outlineArcs();
+    if (!t) return null;
+    const n = baseLoop.length - 1;
+    s = ((s % t.total) + t.total) % t.total;
+    let lo = 0, hi = n;
+    while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        if (t.cum[mid] <= s) lo = mid; else hi = mid - 1;
+    }
+    const a = baseLoop[lo], b = baseLoop[Math.min(lo + 1, n)];
+    const seg = t.cum[Math.min(lo + 1, n)] - t.cum[lo];
+    const u = seg > 0 ? (s - t.cum[lo]) / seg : 0;
+    const y = a[2] == null || b[2] == null ? (a[2] ?? b[2])
+            : a[2] + (b[2] - a[2]) * u;
+    return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, y, lo];
+}
+
+// Where each car was on the outline at its last two reports, so the pair is
+// located once rather than on every one of the twenty-five frames drawn
+// between them.
+const arcCache = new Map();
+
+/** Where a car was BC_DELAY_MS ago, carried along the circuit between the
+ *  two reports either side of that moment.
+ *
+ *  Falls back to the straight line between the reports when the outline
+ *  cannot place them: before a circuit has been traced, and for a car that
+ *  is genuinely off it, where following the road would be a fiction. The
+ *  row is returned untouched when there is nothing to interpolate from at
+ *  all, or when the two reports straddle a break, which means the car was
+ *  not driving between them and sliding it along would draw a car crossing
+ *  the infield to its pit box. */
 function bcSmoothRow(r) {
     const path = carPaths.get(r.driver_id);
     if (!path || path.length < 2 || r.x == null) return r;
@@ -2063,11 +2161,48 @@ function bcSmoothRow(r) {
     for (let k = path.length - 1; k > 0; k--) {
         if (path[k - 1][4] <= t && path[k][4] >= t) { i = k; break; }
     }
-    if (i < 0) return r;
+    let f;
+    if (i < 0) {
+        const last = path[path.length - 1];
+        // Before the first report, or the feed has gone quiet.
+        if (t <= path[0][4] || last[4] >= t) return r;
+        i = path.length - 1;
+        // Past the last report, which happens whenever a poll runs late,
+        // and used to drop the car straight onto its raw position: a jump
+        // forward of however far it had travelled, once a poll. It carries
+        // on at the rate it was going instead, and no further than one
+        // report's worth, so a feed that stops coasts to a halt rather than
+        // sending the car off down the road on its own.
+        const span = last[4] - path[i - 1][4];
+        f = span > 0 ? Math.min(2, 1 + (t - last[4]) / span) : 1;
+    } else {
+        const span = path[i][4] - path[i - 1][4];
+        f = span > 0 ? Math.min(1, Math.max(0, (t - path[i - 1][4]) / span)) : 1;
+    }
     const a = path[i - 1], b = path[i];
     if (b[3]) return r;
-    const span = b[4] - a[4];
-    const f = span > 0 ? Math.min(1, Math.max(0, (t - a[4]) / span)) : 1;
+
+    let hit = arcCache.get(r.driver_id);
+    if (!hit || hit.ta !== a[4] || hit.tb !== b[4]) {
+        const sa = arcOf(a[0], a[1], hit ? hit.i : null);
+        const sb = sa ? arcOf(b[0], b[1], sa.i) : null;
+        // 45 m off the stored line is the pit lane, the grass, or a circuit
+        // this outline is not of. Following the road there would be drawing
+        // something that did not happen.
+        hit = (sa && sb && sa.d < 45 && sb.d < 45)
+            ? { ta: a[4], tb: b[4], i: sb.i, sa: sa.s, sb: sb.s }
+            : { ta: a[4], tb: b[4], i: hit ? hit.i : null, sa: null, sb: null };
+        arcCache.set(r.driver_id, hit);
+    }
+    if (hit.sa != null) {
+        const tot = outlineArcs().total;
+        // Forward round the lap, the short way: crossing the line is a few
+        // metres on, not a lap back.
+        let d = hit.sb - hit.sa;
+        if (d < -tot / 2) d += tot; else if (d > tot / 2) d -= tot;
+        const p = pointAtArc(hit.sa + d * f);
+        if (p) return { ...r, x: p[0], z: p[1], y: p[2] ?? r.y };
+    }
     return { ...r,
         x: a[0] + (b[0] - a[0]) * f,
         z: a[1] + (b[1] - a[1]) * f,
