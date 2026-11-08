@@ -4440,13 +4440,23 @@ function drawTrack(rows) {
             // Downward of the two perpendiculars, so a label never goes out
             // through the top of the frame.
             if (ny < 0) { nx = -nx; ny = -ny; }
-            const ox = mx + nx * 34, oy = my + ny * 34;
+            // How far to push, worked out from how far the plate reaches in
+            // the direction it is being pushed. A fixed distance was only
+            // ever enough when the push was vertical, where the plate is 22
+            // pixels tall. Two cars stacked up the screen push it sideways
+            // instead, where "185 m · 8 laps down" is 260 pixels wide, so
+            // thirty-four pixels of offset moved its middle off the cars and
+            // left the rest of it lying straight back across them.
+            const halfW = tw / 2 + 9, halfH = 11;
+            const reach = Math.abs(nx) * halfW + Math.abs(ny) * halfH;
+            const clear = reach + 7 * badgeK + 10;
+            const ox = mx + nx * clear, oy = my + ny * clear;
             g.fillStyle = 'rgba(5,6,8,0.85)';
-            pillPath(g, ox, oy, tw / 2 + 9, 11);
+            pillPath(g, ox, oy, halfW, halfH);
             g.fill();
             g.strokeStyle = 'rgba(255,209,102,0.5)';
             g.lineWidth = 1;
-            pillPath(g, ox, oy, tw / 2 + 9, 11);
+            pillPath(g, ox, oy, halfW, halfH);
             g.stroke();
             g.fillStyle = '#ffd166';
             g.fillText(txt, ox, oy + 0.5);
