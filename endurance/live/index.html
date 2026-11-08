@@ -1384,6 +1384,16 @@ function renderField(rows) {
             <a class="head-link" id="lap-log-link" href="/endurance/laps/">Lap Log
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            <!-- Same tab on purpose. A second tab is a second board polling,
+                 and while the visibility listener means a hidden one costs
+                 nothing, the browser's back button is a better way back than
+                 a tab nobody closes. Copy the address for OBS. -->
+            <a class="head-link" id="broadcast-link" href="?view=broadcast"
+               title="A full-screen view with the board and the controls taken
+away, for streaming or for a second screen. Back returns here; copy the address
+to point OBS at it.">Broadcast
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         </div>
         <div class="title" style="margin-top:0.4rem" id="live-round"></div>
         <div class="subtitle" id="live-sub"></div>
