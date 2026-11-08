@@ -1879,6 +1879,14 @@ let bcWith = null;         // the rival it is holding in the same frame
 let bcDirector = false;    // whether the director picks for itself
 let bcCutAt = 0;           // when the shot now on air started
 const BC_DWELL_MS = 18000;
+// Past this far apart on the road, two cars are not a battle and will not
+// be put in a frame together. 500 m is about seven seconds at racing pace,
+// and a third of the tightest frame, so a pair inside it fits the shot with
+// room to close up. It is also the line between "nobody is near anybody",
+// which is a real state a race spends time in and the camera should say so,
+// and the old behaviour of always pairing the least distant cars however
+// far apart they were.
+const BC_BATTLE_M = 500;
 const BC_MIN_SPAN_M = 1500;
 const BC_DELAY_MS = 1600;
 const BC_EASE_MS = 1100;
@@ -1928,34 +1936,70 @@ function bcBookFrame() {
  *  Cars a lap or more apart are not a battle however close they look on the
  *  map, which is why this works on total distance run rather than on where
  *  they happen to be on the outline. */
+/** How far apart two cars are ON THE ROAD, in metres, laps ignored.
+ *
+ *  This is not the same question as runDistance, and the difference is what
+ *  a camera cares about. runDistance counts laps, so it answers "who is
+ *  nearest in the classification": by that measure a car one lap down is
+ *  thirteen kilometres away even when it is filling your mirrors, and two
+ *  cars a lap and a bit apart can come out closer to each other than
+ *  anybody else. Neither makes a shot.
+ *
+ *  This answers "who can see whom out of the window", which is the only
+ *  pair a single frame can hold. Wrapped the short way round, so a car just
+ *  before the line and one just after are twenty metres apart rather than
+ *  the length of a lap. */
+function roadGap(a, b) {
+    const L = a.lap_length_m || b.lap_length_m;
+    if (!L || a.progress_m == null || b.progress_m == null) return null;
+    const d = Math.abs(a.progress_m - b.progress_m) % L;
+    return Math.min(d, L - d);
+}
+
+/** The closest pair of cars on the road, or nothing.
+ *
+ *  Or nothing, which matters as much as the choice. A field can be strung
+ *  out with no two cars near each other, and a director that must return a
+ *  pair then frames two cars kilometres apart: the frame opens up to hold
+ *  them both, which is the wide shot with a dashed line drawn across it.
+ *  Past BC_BATTLE_M there is no battle, and saying so is better than
+ *  inventing one. */
 function bcClosestPair(rows) {
     const live = rows.filter(r => r.on_track && (r.age_ms ?? 0) < 30000
-                                  && runDistance(r) != null);
+                                  && r.progress_m != null);
     if (live.length < 2) return null;
-    live.sort((a, b) => runDistance(b) - runDistance(a));
     let best = null;
     for (let i = 0; i < live.length - 1; i++) {
-        const gap = runDistance(live[i]) - runDistance(live[i + 1]);
-        if (best === null || gap < best.gap) {
-            best = { gap, lead: live[i], chase: live[i + 1] };
+        for (let j = i + 1; j < live.length; j++) {
+            const gap = roadGap(live[i], live[j]);
+            if (gap == null || gap > BC_BATTLE_M) continue;
+            if (best !== null && gap >= best.gap) continue;
+            // Which of the two is ahead, for the tower's sake. By total
+            // distance where there is one, so a lapped car is not called
+            // the leader of the pair for being a few metres up the road.
+            const da = runDistance(live[i]), db = runDistance(live[j]);
+            const iAhead = da != null && db != null
+                ? da >= db : live[i].progress_m >= live[j].progress_m;
+            best = { gap,
+                     lead:  iAhead ? live[i] : live[j],
+                     chase: iAhead ? live[j] : live[i] };
         }
     }
     return best;
 }
 
-/** The car nearest a given one by distance round the lap, in either
- *  direction: the one it is racing, whether it is chasing or being chased. */
+/** The car nearest a given one on the road, in either direction, or null
+ *  if nobody is near enough to share a frame with them. */
 function bcClosestTo(rows, id) {
     const me = rows.find(r => r.driver_id === id);
-    const mine = me ? runDistance(me) : null;
-    if (mine == null) return null;
+    if (!me || me.progress_m == null) return null;
     let best = null, bestGap = Infinity;
     for (const r of rows) {
         if (r.driver_id === id) continue;
-        const d = runDistance(r);
-        if (d == null) continue;
-        const gap = Math.abs(d - mine);
-        if (gap < bestGap) { bestGap = gap; best = r; }
+        if (!r.on_track || (r.age_ms ?? 0) > 30000) continue;
+        const gap = roadGap(me, r);
+        if (gap == null || gap > BC_BATTLE_M || gap >= bestGap) continue;
+        bestGap = gap; best = r;
     }
     return best;
 }
@@ -1969,25 +2013,38 @@ function bcClosestTo(rows, id) {
  *  closeness do not pass the camera back and forth. */
 function bcDirect(rows) {
     if (!bcDirector) return;
-    const best = bcClosestPair(rows);
-    if (!best) return;
     const now = Date.now();
-    if (bcFocus === null) {
-        bcFocus = best.chase.driver_id; bcWith = best.lead.driver_id;
-        bcCutAt = now;
+    const best = bcClosestPair(rows);
+    const cut = (focus, with_) => {
+        bcFocus = focus; bcWith = with_; bcCutAt = now;
+    };
+    // Nothing close enough to be a battle. The leader alone, which is the
+    // shot a director takes when the field is strung out, rather than two
+    // cars half a circuit apart with a dashed line between them.
+    if (!best) {
+        if (bcFocus !== null && now - bcCutAt < BC_DWELL_MS) return;
+        const lead = rows.filter(r => r.on_track && (r.age_ms ?? 0) < 30000
+                                      && runDistance(r) != null)
+                         .sort((a, b) => runDistance(b) - runDistance(a))[0];
+        if (!lead) return;
+        // Already on them, alone: leave it be rather than restarting the
+        // clock on a shot that has not changed.
+        if (bcFocus === lead.driver_id && bcWith === null) return;
+        cut(lead.driver_id, null);
         return;
     }
+    if (bcFocus === null) { cut(best.chase.driver_id, best.lead.driver_id); return; }
     if (now - bcCutAt < BC_DWELL_MS) return;
     const cur = rows.find(r => r.driver_id === bcFocus);
-    const oth = rows.find(r => r.driver_id === bcWith);
-    const curGap = cur && oth && runDistance(cur) != null && runDistance(oth) != null
-        ? Math.abs(runDistance(cur) - runDistance(oth)) : Infinity;
-    const same = (best.chase.driver_id === bcFocus && best.lead.driver_id === bcWith)
-              || (best.lead.driver_id === bcFocus && best.chase.driver_id === bcWith);
+    const oth = bcWith === null ? null : rows.find(r => r.driver_id === bcWith);
+    // On the road, the same measure the pair was chosen by. A shot of one
+    // car counts as infinitely wide, so any real battle takes the camera.
+    const curGap = cur && oth ? (roadGap(cur, oth) ?? Infinity) : Infinity;
+    const same = oth && ((best.chase.driver_id === bcFocus && best.lead.driver_id === bcWith)
+                      || (best.lead.driver_id === bcFocus && best.chase.driver_id === bcWith));
     if (same) { bcCutAt = now; return; }
-    if (best.gap < curGap * 0.75 || curGap > 600) {
-        bcFocus = best.chase.driver_id; bcWith = best.lead.driver_id;
-        bcCutAt = now;
+    if (best.gap < curGap * 0.75 || curGap > BC_BATTLE_M) {
+        cut(best.chase.driver_id, best.lead.driver_id);
     }
 }
 
@@ -4108,16 +4165,20 @@ function drawTrack(rows) {
     // What the shot is about, written on the shot: how far apart the two cars
     // the camera is holding actually are.
     //
-    // Metres round the lap, which the connector reports, and not seconds,
-    // which it does not. A gap in seconds would have to be divided out of an
-    // assumed pace, and a broadcast caption is the last place to put a number
-    // nobody measured. Rounded to five metres because the reports arrive every
-    // 1.5 seconds and a figure to the metre would be claiming a precision the
-    // beacon has not got.
+    // Metres on the road, which is what the picture shows, and not seconds,
+    // which the connector does not report. A gap in seconds would have to be
+    // divided out of an assumed pace, and a broadcast caption is the last
+    // place to put a number nobody measured. Rounded to five metres because
+    // the reports arrive every 1.5 seconds and a figure to the metre would be
+    // claiming a precision the beacon has not got.
+    //
+    // It used to measure total distance run, which counts laps: two cars
+    // nose to tail a lap apart were captioned 13.6 km, and the figure was
+    // describing the classification while the picture showed the road.
     if (framed && focusCars.length === 2 && bcAmt > 0.05) {
         const [ra, rb] = focusCars;
-        const da = runDistance(ra), db = runDistance(rb);
-        if (da != null && db != null) {
+        const road = roadGap(ra, rb);
+        if (road != null) {
             const a = S(ra.x, ra.z, ra.y), b = S(rb.x, rb.z, rb.y);
             g.save();
             // Fades up with the move rather than appearing over the wide
@@ -4128,16 +4189,32 @@ function drawTrack(rows) {
             g.lineWidth = 1.5;
             g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
             g.setLineDash([]);
-            const m = Math.round(Math.abs(da - db) / 5) * 5;
+            const m = Math.round(road / 5) * 5;
             const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-            const txt = m < 1000 ? `${m} m` : `${(m / 1000).toFixed(2)} km`;
+            // Said out loud when they are not on the same lap, because two
+            // cars nose to tail where one is a lap down is traffic, not a
+            // fight for position, and a bare distance would read as a fight.
+            const laps = Math.abs((ra.lap ?? 0) - (rb.lap ?? 0));
+            const txt = `${m} m` + (laps
+                ? ` · ${laps} lap${laps === 1 ? '' : 's'} down` : '');
             g.font = "bold 13px 'Inter', system-ui, sans-serif";
             g.textAlign = 'center';
             g.textBaseline = 'middle';
             const tw = g.measureText(txt).width;
-            // Offset to the side, so the label is not sitting on the line it
-            // is measuring or on either car.
-            const ox = mx + 46, oy = my;
+            // Pushed off to the side of the line between the two cars rather
+            // than along it. A fixed offset to the right only worked while
+            // the pair happened to be stacked up the screen: two cars sixty
+            // metres apart on a straight running left to right are a few
+            // pixels apart, and the plate landed squarely on top of both of
+            // the numbers it was captioning. Square to the line, it clears
+            // them whichever way round they are.
+            const dx = b[0] - a[0], dy = b[1] - a[1];
+            const len = Math.hypot(dx, dy) || 1;
+            let nx = -dy / len, ny = dx / len;
+            // Downward of the two perpendiculars, so a label never goes out
+            // through the top of the frame.
+            if (ny < 0) { nx = -nx; ny = -ny; }
+            const ox = mx + nx * 34, oy = my + ny * 34;
             g.fillStyle = 'rgba(5,6,8,0.85)';
             pillPath(g, ox, oy, tw / 2 + 9, 11);
             g.fill();
