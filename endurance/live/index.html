@@ -227,7 +227,56 @@
            in it most of it is empty. A strip along the bottom closes the
            panel off and spends the space on the two facts a commentator
            reaches for: where we are, and what the lap to beat is. */
-        .bc-foot { margin-top: auto; flex: 0 0 auto; padding: 0.8rem 0.95rem 0.95rem;
+        /* Fuel for whoever is on air.
+         *
+         * Down here rather than as another column in the tower, because a
+         * column has room for a number and this is the one thing on the
+         * screen that decides a race. Laps left is the hero: a bar at a
+         * quarter means nothing until you know whether that is two laps or
+         * ten, and the bar is there to say at a glance which.
+         *
+         * It takes the space the tower was wasting, so it costs no rows. */
+        .bc-fuel { margin-top: auto; flex: 0 0 auto;
+            padding: 0.9rem 0.95rem 0.2rem; }
+        .bc-fuel-head { font-family: 'Orbitron', sans-serif; font-size: 0.58rem;
+            font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+            color: var(--muted); margin-bottom: 0.6rem; }
+        .bc-fu { margin-bottom: 0.85rem; }
+        .bc-fu-who { display: flex; align-items: center; gap: 0.5rem;
+            margin-bottom: 0.4rem; }
+        .bc-fu-num { font-family: 'Orbitron', sans-serif; font-size: 0.78rem;
+            font-weight: 800; color: #0a0b0e; background: #d8dee9;
+            border-radius: 3px; padding: 0.16rem 0.34rem; min-width: 2rem;
+            line-height: 1; text-align: center; font-variant-numeric: tabular-nums; }
+        .bc-fu-name { font-size: 0.92rem; font-weight: 600; color: var(--text);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bc-fu-line { display: flex; align-items: baseline; gap: 0.5rem; }
+        /* The number somebody shouts across a garage. */
+        .bc-fu-laps { font-family: 'Orbitron', sans-serif; font-size: 2.3rem;
+            font-weight: 800; line-height: 1; color: var(--text);
+            font-variant-numeric: tabular-nums; }
+        .bc-fu-unit { font-family: 'Orbitron', sans-serif; font-size: 0.6rem;
+            font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+            color: var(--muted); }
+        .bc-fu-pct { margin-left: auto; font-family: 'Orbitron', sans-serif;
+            font-size: 0.92rem; font-weight: 700; color: var(--muted);
+            font-variant-numeric: tabular-nums; }
+        .bc-fu-bar { height: 10px; border-radius: 5px; margin-top: 0.45rem;
+            background: rgba(255,255,255,0.07); overflow: hidden; }
+        /* Block, or the width below does nothing at all: a span is inline
+           and an inline box takes neither a width nor a height. */
+        .bc-fu-fill { display: block; height: 100%; background: var(--gold);
+            transition: width 0.4s ease; }
+        /* The two states worth a colour, on the tank rather than the race,
+           which is what the bar is about. */
+        .bc-fu.low  .bc-fu-fill { background: #ffb020; }
+        .bc-fu.low  .bc-fu-laps { color: #ffb020; }
+        .bc-fu.crit .bc-fu-fill { background: #ef4444; }
+        .bc-fu.crit .bc-fu-laps { color: #ef4444; }
+        /* Nothing measured yet: the first lap or two of a stint, or a race
+           with fuel switched off. Said rather than guessed. */
+        .bc-fu-none { font-size: 0.8rem; color: var(--muted); }
+        .bc-foot { flex: 0 0 auto; padding: 0.8rem 0.95rem 0.95rem;
             border-top: 1px solid rgba(255,209,102,0.28);
             background: rgba(255,209,102,0.06); }
         .bc-foot-where { font-family: 'Orbitron', sans-serif; font-size: 0.62rem;
@@ -1651,6 +1700,54 @@ to point OBS at it.">Broadcast
  *  beside the leaderboard. Neither is invented and neither needs a request
  *  of its own. If a race has no record yet the line simply is not there,
  *  rather than a dash pretending to be information. */
+/** Fuel for the cars the broadcast is on.
+ *
+ *  Laps left, not litres and not a percentage, because that is the figure a
+ *  race turns on and the only one anybody says out loud. It is this car's
+ *  own measured burn rather than a number from a rulebook: the beacon works
+ *  out what a lap actually costs this driver and the sum is theirs.
+ *
+ *  Absent, and saying so, when the burn is not known yet. That is the first
+ *  lap or two of a stint and any race with fuel consumption switched off,
+ *  and a made-up figure there would be worse than no figure at all: it is
+ *  the one number somebody might pit on.
+ *
+ *  Follows the camera, so in a battle it is both cars and the comparison is
+ *  the story. Falls back to the leader on the wide shot. */
+function bcFuel(order) {
+    if (!order.length) return '';
+    const on = [bcFocus, bcWith].filter(id => id !== null)
+        .map(id => order.find(r => r.driver_id === id)).filter(Boolean);
+    const cars = on.length ? on : [order[0]];
+    const body = cars.map(r => {
+        const pct = r.fuel_pct;
+        const num = r.career_number ?? r.car_number;
+        const who = `<div class="bc-fu-who">`
+            + `<span class="bc-fu-num">${num != null ? esc(String(num)) : '—'}</span>`
+            + `<span class="bc-fu-name">${esc(r.display_name || '')}</span></div>`;
+        if (pct == null) {
+            return `<div class="bc-fu">${who}`
+                 + `<div class="bc-fu-none">Not reporting fuel</div></div>`;
+        }
+        const v = Math.max(0, Math.min(100, pct));
+        const burn = r.burn_per_lap;
+        const laps = burn > 0 ? Math.floor(v / burn) : null;
+        // On the tank, which is what the bar is drawn against. The laps
+        // figure takes its colour from the same place so the two agree.
+        const cls = v < 10 ? ' crit' : v < 25 ? ' low' : '';
+        const main = laps != null
+            ? `<span class="bc-fu-laps">${laps}</span>`
+              + `<span class="bc-fu-unit">lap${laps === 1 ? '' : 's'} left</span>`
+            : `<span class="bc-fu-none">Measuring the burn</span>`;
+        return `<div class="bc-fu${cls}">${who}`
+             + `<div class="bc-fu-line">${main}`
+             + `<span class="bc-fu-pct">${Math.round(v)}%</span></div>`
+             + `<div class="bc-fu-bar"><span class="bc-fu-fill"`
+             + ` style="width:${v.toFixed(1)}%"></span></div></div>`;
+    }).join('');
+    return `<div class="bc-fuel"><div class="bc-fuel-head">Fuel</div>${body}</div>`;
+}
+
 function bcFooter() {
     const where = clockEvent?.circuit_name;
     const rec = circuitRecord;
@@ -1764,7 +1861,7 @@ function renderBroadcast(rows) {
              + `<span class="bc-num">${num != null ? esc(String(num)) : '\u2014'}</span>`
              + `<span class="bc-who">${esc(r.display_name || '')}</span>`
              + `<span class="bc-gap">${gap}</span></div>`;
-    }).join('') + bcFooter();
+    }).join('') + bcFuel(order) + bcFooter();
 
     // Click a row to put the camera on that car, click it again to let the
     // lap back. Choosing by hand turns the director off: a camera that
