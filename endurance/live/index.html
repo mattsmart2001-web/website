@@ -168,7 +168,7 @@
            reads as a graphic somebody drew, which is the whole difference
            between a web page on a stream and a broadcast. */
         body.broadcast .bc-tower { display: flex; flex-direction: column;
-            position: absolute; left: 0; top: 0; bottom: 0; width: 372px;
+            position: absolute; left: 0; top: 0; bottom: 0; width: 392px;
             background: linear-gradient(180deg, rgba(9,11,15,0.97) 0%,
                                                 rgba(6,7,10,0.95) 100%);
             border-right: 2px solid rgba(255,209,102,0.45);
@@ -197,12 +197,13 @@
         /* A number plate, not a tag. It is how a viewer matches a row to a
            dot on the map, and on a compressed stream small type goes first,
            so it gets real size and a block to sit in. */
-        .bc-num { font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 800;
+        .bc-num { font-family: 'Orbitron', sans-serif; font-size: 1.22rem; font-weight: 800;
             color: #0a0b0e; background: #d8dee9; border-radius: 3px;
-            padding: 0.3rem 0.4rem; flex: 0 0 auto; min-width: 2.5rem;
+            padding: 0.26rem 0.42rem; flex: 0 0 auto; min-width: 2.9rem;
             line-height: 1; text-align: center; font-variant-numeric: tabular-nums; }
-        /* The name is what a viewer is actually looking for, so it is the
-           biggest thing in the row and everything else is furniture. */
+        /* Set to match the number plate rather than to beat it. Those two
+           are what a viewer reads and everything else in the row is
+           furniture. */
         .bc-who { font-size: 1.08rem; font-weight: 600; letter-spacing: 0.005em;
             color: var(--text); overflow: hidden; text-overflow: ellipsis;
             white-space: nowrap; flex: 1 1 auto; margin-left: 0.6rem; }
