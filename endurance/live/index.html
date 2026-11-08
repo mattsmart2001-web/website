@@ -2048,6 +2048,107 @@ const ASPECT_STEPS = 64;
 // Fixed to the world rather than to the viewer, so turning the map swings the
 // lit slopes round and the hills look like hills rather than like a pattern.
 const LIGHT_FROM = -Math.PI * 0.75;
+
+/* ---------------------------------------------------------------- clock ----
+ *
+ *  The league races into the dark. Round 8 is eight hours at x3, which is a
+ *  full day and night in game; Round 7 was six at x4, the same again. A map
+ *  lit the same way at three in the morning as at noon is telling the viewer
+ *  nothing about a race whose whole character is that it gets dark.
+ *
+ *  Where the time comes from, in order of preference:
+ *
+ *    1. GT7 itself, once any car reports it. The clock belongs to the
+ *       session rather than the car, so one driver on a build that sends it
+ *       lights the whole map. Not wired up yet: the beacon has to learn the
+ *       field first, and the connector is deliberately not sending it until
+ *       that lands.
+ *    2. Worked out from the round's own settings, which is what happens
+ *       today and needs nothing from anybody.
+ *
+ *  Only during a race. In practice every driver is in a session of their
+ *  own with a clock of their own, so there is no such thing as the time,
+ *  and the map holds still at whatever the round is set to instead of
+ *  inventing a progression nobody would recognise.
+ */
+const TIME_OF_DAY_HOUR = [
+    [/dawn|sunrise|daybreak/i,        5.5],
+    [/early\s*morning/i,              7],
+    [/late\s*morning/i,              10],
+    [/morning/i,                      9],
+    // Anchored, because "afternoon" contains "noon" and an unanchored test
+    // put every afternoon round at midday, three hours early, for five of
+    // the eight rounds in the season.
+    [/\bnoon\b|midday/i,             12],
+    [/early\s*afternoon/i,           14],
+    [/late\s*afternoon/i,            16],
+    [/afternoon/i,                   15],
+    [/dusk|sunset|evening/i,         19],
+    [/midnight/i,                     0],
+    [/night/i,                       22],
+];
+
+function hourOfBand(name) {
+    for (const [re, h] of TIME_OF_DAY_HOUR) if (re.test(name || '')) return h;
+    return null;
+}
+
+// "x3" -> 3. Stored as text, and has been seen as "X3" and "3" as well, so
+// the digits are taken rather than the format trusted.
+function multiplierOf(v) {
+    const m = String(v ?? '').match(/(\d+(?:\.\d+)?)/);
+    const n = m ? parseFloat(m[1]) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+let clockEvent = null;   // the round's settings, read once per round
+
+const DAY_MS = 86400000;
+
+/** Milliseconds since in-game midnight, or null if there is no knowing. */
+function gameClockMs() {
+    const e = clockEvent;
+    if (!e) return null;
+    const startHour = hourOfBand(e.time_of_day);
+    if (startHour == null) return null;
+    const base = startHour * 3600000;
+    // Anchored to the moment the race actually went green rather than to the
+    // hour it was scheduled for. Eight lobbies do not start together, and a
+    // race that starts ten minutes late is half an hour out in game at x3,
+    // which is the difference between dusk and dark.
+    const from = e.race_live_from ? Date.parse(e.race_live_from) : NaN;
+    if (!Number.isFinite(from)) return base;        // not started: hold still
+    const real = Date.now() - from;
+    if (real < 0) return base;
+    return (base + real * multiplierOf(e.time_multiplier)) % DAY_MS;
+}
+
+/** Sun bearing, brightness and warmth for a time of day. */
+function sunAt(ms) {
+    if (ms == null) return { from: LIGHT_FROM, bright: 1, warm: 0, night: 0 };
+    const h = ms / 3600000;
+    // Swung through the northern arc only, not the true azimuth. The sun is
+    // genuinely in the south at midday in France, and lighting the relief
+    // from the south inverts every hill on the map at the brightest hour of
+    // the race. So it travels north-east at dawn to north-west at dusk,
+    // which reads as a sun crossing the sky while keeping the ground the
+    // right way up. An honest lie, and the alternative is an unreadable map
+    // every afternoon.
+    const day = Math.max(0, Math.min(1, (h - 5) / 14));          // 05:00..19:00
+    const from = -Math.PI * (0.55 + 0.40 * day);                 // NE -> NW
+    // Brightness follows the sun's height, held just off zero at night so
+    // that the landscape is still there to read the circuit against.
+    const alt = Math.sin(Math.PI * Math.max(0, Math.min(1, (h - 5.2) / 13.6)));
+    const night = h < 5.2 || h > 18.8 ? 1 : Math.max(0, 1 - alt * 2.2);
+    const bright = 0.16 + 0.84 * Math.max(0, alt);
+    // Warmth peaks at the two ends of the day rather than in the middle.
+    const warm = Math.max(0, 1 - Math.abs(h - 6.8) / 2.2) +
+                 Math.max(0, 1 - Math.abs(h - 18.2) / 2.6);
+    return { from, bright, warm: Math.min(1, warm), night: Math.min(1, night) };
+}
+
+let sun = sunAt(null);
+function refreshSun() { sun = sunAt(gameClockMs()); }
 let view = { scale: 1, x: 0, y: 0 };
 // Where the tilted map sits when nobody has turned it: a three-quarter view,
 // far enough round to show the circuit has a shape and far enough over to
@@ -2624,7 +2725,7 @@ function drawTrack(rows) {
                 // range at full strength while leaving the drop into the
                 // Adenau valley somewhere to go.
                 const sh = (dzdx === 0 && dzdz === 0) ? 0.5
-                    : 0.5 + 0.5 * Math.cos(Math.atan2(dzdz, dzdx) - LIGHT_FROM)
+                    : 0.5 + 0.5 * Math.cos(Math.atan2(dzdz, dzdx) - sun.from)
                           * Math.min(1, Math.hypot(dzdx, dzdz) / (R.step * 0.12));
                 const t = Math.max(0, Math.min(1,
                     ((h00 + h10 + h01 + h11) / 4 - minY) / hSpan));
@@ -2660,8 +2761,16 @@ function drawTrack(rows) {
             // ridges lost their punch, so the top goes back up while the
             // altitude weighting above keeps the average down where it
             // belongs. Turning the mass down is not the same as flattening it.
-            const col = `rgb(${Math.round(9 + 30 * b)},${Math.round(12 + 34 * b)},`
-                      + `${Math.round(17 + 43 * b)})`;
+            // Daylight is the ramp above. The time of day scales it and
+            // tints it: dimmer and bluer through the night, warmer at the
+            // two ends of the day. The floor is held above zero on purpose,
+            // because ground that goes fully black stops being something to
+            // read the circuit against and the cars start floating in a
+            // void. Night is meant to look like night, not like a bug.
+            const lit = 0.30 + 1.05 * sun.bright;
+            const col = `rgb(${Math.round((9 + 30 * b) * lit + 26 * sun.warm * b)},`
+                      + `${Math.round((12 + 34 * b) * lit + 11 * sun.warm * b)},`
+                      + `${Math.round((17 + 43 * b) * lit * (1 + 0.16 * sun.night))})`;
             g.fillStyle = col;
             g.strokeStyle = col;
             g.lineWidth = 1;
@@ -2751,7 +2860,7 @@ function drawTrack(rows) {
                     // the geometry cannot: marching squares emits a cell's two
                     // ends in whatever order its case table gives.
                     const sh = asp ? 0.5 + 0.5 * Math.cos(
-                        (asp[i] / ASPECT_STEPS) * Math.PI * 2 - LIGHT_FROM) : 0.5;
+                        (asp[i] / ASPECT_STEPS) * Math.PI * 2 - sun.from) : 0.5;
                     // Height and light together, as one brightness, so that
                     // shading costs no extra strokes. Keying on tone rather
                     // than on a colour per contour level actually costs fewer:
@@ -2785,9 +2894,16 @@ function drawTrack(rows) {
             // shaded side fade towards the background as well as darken gives
             // four times the contrast for nothing, since both are set once
             // per bucket either way.
-            const op = Math.min(0.78, 0.40 * k * (0.35 + 1.10 * b));
-            g.strokeStyle = `rgba(${Math.round(48 + 174 * b)},`
-                + `${Math.round(60 + 170 * b)},${Math.round(80 + 150 * b)},`
+            // Dimmed and tinted by the hour, exactly as the ground is. A
+            // landscape that goes dark under contours still drawn for noon
+            // reads as a rendering fault rather than as nightfall, and the
+            // lines carry more of the relief than the fill does.
+            const lit = 0.34 + 0.92 * sun.bright;
+            const op = Math.min(0.78, 0.40 * k * (0.35 + 1.10 * b))
+                     * (0.40 + 0.60 * sun.bright);
+            g.strokeStyle = `rgba(${Math.round((48 + 174 * b) * lit + 30 * sun.warm * b)},`
+                + `${Math.round((60 + 170 * b) * lit + 12 * sun.warm * b)},`
+                + `${Math.round((80 + 150 * b) * lit * (1 + 0.14 * sun.night))},`
                 + `${op.toFixed(3)})`;
             // Lit contours are drawn a shade heavier as well as brighter,
             // which is the other half of the same trick.
@@ -3248,8 +3364,14 @@ async function loadCircuitRecord(eventId) {
     if (!eventId || circuitAsked === eventId) return;
     circuitAsked = eventId;
     try {
+        // The clock settings come along for the ride: same row, same request,
+        // already public, so lighting the map by the time of day costs no
+        // migration and no extra round trip.
         const { data: ev } = await sb.from('events')
-            .select('circuit_name, season_id').eq('id', eventId).maybeSingle();
+            .select('circuit_name, season_id, time_of_day, time_multiplier, '
+                  + 'race_live_from, starts_at, duration_hours')
+            .eq('id', eventId).maybeSingle();
+        if (ev) { clockEvent = ev; refreshSun(); }
         if (ev?.circuit_name) {
             const { data: rec } = await sb.from('circuit_records')
                 .select('best_lap_ms, driver_name, event_name')
@@ -4346,6 +4468,10 @@ async function tick() {
     }
 
     failures = 0;
+    // The in-game clock moves while the page is open, several times faster
+    // than the real one, so the light is worked out again on every poll
+    // rather than once when the round was read.
+    refreshSun();
     if (!data || data.length === 0) { await renderIdle(); return; }
     // Who is currently set aside. Read before the laps are asked for,
     // because a change means the feed has to be re-read from the top: a
