@@ -59,7 +59,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "3.4"   # shown in the tray so you can confirm which build is running
+VERSION       = "3.5"   # shown in the tray so you can confirm which build is running
                         # 3.0 added GTEC live timing; 3.1 adds fuel and
                         # elevation to what it reports.
 GT7_PORT_STD  = 33740   # the port GT7 itself sends telemetry to
@@ -232,6 +232,18 @@ class GT7Packet:
         self.trr_temp    = self._f(0x6C)
         self.lap_count   = self._h(0x74)
         self.laps_in_race= self._h(0x76)
+        # The in-game clock, milliseconds since midnight where the car is.
+        # Confirmed against a capture rather than taken from the community
+        # map: it only ever climbs, it reads as a sensible time of day, and
+        # it ran at exactly 3.00 game-seconds per real second in a session
+        # set to x3, which no other monotonic field in the packet did.
+        #
+        # Worth having because the league races into the dark. Round 8 is
+        # eight hours at x3, a full day and night, and this is the only
+        # honest way to know when that happens: the alternative is to work
+        # it out from the scheduled start, which cannot be right for eight
+        # lobbies that all started at slightly different times.
+        self.day_ms      = self._i(0x80)
         self.best_lap    = self._i(0x78)
         self.last_lap    = self._i(0x7C)
         flags            = self._H(0x8E)
@@ -1126,6 +1138,14 @@ async def _gtec_beacon():
             "p_fuel_pct":    (round(pkt.fuel / pkt.fuel_cap * 100, 1)
                               if (pkt.fuel_cap or 0) > 0 else None),
             "p_laps_in_race": int(pkt.laps_in_race) if (pkt.laps_in_race or 0) > 0 else None,
+            # What time it is in the game. One car reporting it is enough to
+            # light the whole map, because the clock belongs to the session
+            # rather than to the car. Sent whenever it looks like a time of
+            # day at all, so an older build that reports nothing simply
+            # leaves it out rather than sending a zero the server would have
+            # to tell apart from midnight.
+            "p_day_ms":      (int(pkt.day_ms)
+                              if 0 <= (pkt.day_ms or -1) < 86_400_000 else None),
             # Which app is reporting, so the live page can show a badge. The
             # program knows exactly what it is running on; a user agent would
             # be a guess.
