@@ -59,7 +59,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "3.5"   # shown in the tray so you can confirm which build is running
+VERSION       = "3.4"   # shown in the tray so you can confirm which build is running
                         # 3.0 added GTEC live timing; 3.1 adds fuel and
                         # elevation to what it reports.
 GT7_PORT_STD  = 33740   # the port GT7 itself sends telemetry to
@@ -1138,14 +1138,23 @@ async def _gtec_beacon():
             "p_fuel_pct":    (round(pkt.fuel / pkt.fuel_cap * 100, 1)
                               if (pkt.fuel_cap or 0) > 0 else None),
             "p_laps_in_race": int(pkt.laps_in_race) if (pkt.laps_in_race or 0) > 0 else None,
-            # What time it is in the game. One car reporting it is enough to
-            # light the whole map, because the clock belongs to the session
-            # rather than to the car. Sent whenever it looks like a time of
-            # day at all, so an older build that reports nothing simply
-            # leaves it out rather than sending a zero the server would have
-            # to tell apart from midnight.
-            "p_day_ms":      (int(pkt.day_ms)
-                              if 0 <= (pkt.day_ms or -1) < 86_400_000 else None),
+            # What time it is in the game, decoded above as pkt.day_ms and
+            # deliberately NOT sent yet.
+            #
+            # live_beacon has no p_day_ms parameter, and PostgREST refuses a
+            # call carrying a parameter the function does not declare: it
+            # answers 404 and the car stops reporting at all. A build made
+            # before the server side lands would take every driver who
+            # downloaded it straight off the board, which is a far worse
+            # failure than having no clock on the map.
+            #
+            # So the order is fixed. The beacon learns p_day_ms first, and
+            # the line below goes back in afterwards. Until then the map
+            # lights itself from time_of_day and the multiplier, which asks
+            # nothing of this file.
+            #
+            #   "p_day_ms": (int(pkt.day_ms)
+            #                if 0 <= (pkt.day_ms or -1) < 86_400_000 else None),
             # Which app is reporting, so the live page can show a badge. The
             # program knows exactly what it is running on; a user agent would
             # be a guess.
