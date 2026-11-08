@@ -3191,6 +3191,11 @@ function nextFact() {
 // the first time this went live.
 const TERRAIN = [
     { slug: 'nurburgring-24h', needs: ['nordschleife', '24'] },
+    // Round 8's circuit is named for the river rather than the town, and
+    // "sarthe" picks it out on its own: no other round is near it, and the
+    // department, the river and the circuit all being called that does no
+    // harm when the only strings matched are circuit names.
+    { slug: 'le-mans', needs: ['sarthe'] },
 ];
 
 function terrainSlug(name) {
