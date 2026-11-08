@@ -152,27 +152,62 @@
         body.broadcast .map-title { font-size: 1rem; }
         body.broadcast .map-clock { font-size: 1rem; }
 
-        /* The strip along the bottom: who is where, big enough to read on a
-           stream where the viewer has no way to ask. */
-        .bc-strip { display: none; }
-        body.broadcast .bc-strip { display: flex; align-items: stretch; gap: 0;
-            border-top: 1px solid var(--border); background: rgba(5,6,8,0.92);
-            flex: 0 0 auto; overflow: hidden; }
-        .bc-cell { flex: 1 1 0; min-width: 0; padding: 0.55rem 0.9rem;
-            border-right: 1px solid rgba(255,255,255,0.06); display: flex;
-            align-items: baseline; gap: 0.55rem; }
-        .bc-cell:last-child { border-right: 0; }
-        .bc-pos { font-family: 'Orbitron', sans-serif; font-size: 0.95rem; font-weight: 800;
-            color: var(--gold); flex: 0 0 auto; }
-        .bc-who { font-size: 0.95rem; color: var(--text); overflow: hidden;
-            text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; }
-        .bc-gap { font-family: 'Orbitron', sans-serif; font-size: 0.85rem;
-            color: var(--muted); flex: 0 0 auto; font-variant-numeric: tabular-nums; }
-        .bc-lead .bc-gap { color: #4ade80; }
+        /* The timing tower, down the left, the way every motorsport broadcast
+           has done it since the eighties. Vertical because it is a running
+           order and a running order is a list; a horizontal strip could hold
+           six cars and a tower holds the field.
+
+           Each row is a colour, a position, a number, a name and a gap, in
+           that order, because that is the order the eye wants them: find
+           your car by its colour, confirm by its number, then read. */
+        .bc-tower { display: none; }
+        body.broadcast .bc-tower { display: flex; flex-direction: column;
+            position: absolute; left: 0; top: 0; bottom: 0; width: 310px;
+            background: linear-gradient(90deg, rgba(5,6,8,0.94) 0%,
+                                              rgba(5,6,8,0.86) 72%, transparent 100%);
+            padding: 0.5rem 0 0.5rem 0; z-index: 4; pointer-events: none;
+            overflow: hidden; }
+        .bc-row { display: flex; align-items: center; gap: 0; height: 30px;
+            flex: 0 0 auto; }
+        .bc-bar { width: 5px; align-self: stretch; flex: 0 0 auto; margin-right: 0.5rem; }
+        .bc-pos { font-family: 'Orbitron', sans-serif; font-size: 0.78rem; font-weight: 800;
+            color: var(--text); width: 1.7rem; text-align: center; flex: 0 0 auto;
+            font-variant-numeric: tabular-nums; }
+        .bc-num { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700;
+            color: #0c0d10; background: var(--muted); border-radius: 3px;
+            padding: 0.08rem 0.28rem; flex: 0 0 auto; min-width: 1.5rem;
+            text-align: center; font-variant-numeric: tabular-nums; }
+        .bc-who { font-size: 0.82rem; color: var(--text); overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto;
+            margin-left: 0.45rem; }
+        .bc-gap { font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
+            color: var(--muted); flex: 0 0 auto; font-variant-numeric: tabular-nums;
+            padding-right: 0.7rem; }
+        .bc-row.lead .bc-gap { color: var(--gold); }
+        .bc-row.lead .bc-pos { color: var(--gold); }
+        /* The purple of a fastest lap, the one colour motorsport agrees on. */
+        .bc-row.fastest .bc-num { background: #b388ff; }
+        .bc-head { font-family: 'Orbitron', sans-serif; font-size: 0.56rem;
+            letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted);
+            padding: 0 0 0.4rem 0.75rem; flex: 0 0 auto; }
+
+        /* Which split is on air. Live in the view, because going back to the
+           board to change it means leaving the thing you are broadcasting. */
+        .bc-splits { display: none; }
+        body.broadcast .bc-splits { display: flex; align-items: center; gap: 0.3rem;
+            margin-left: 1rem; }
+        .bc-sp { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700;
+            letter-spacing: 0.1em; color: var(--muted); background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border); border-radius: 4px; padding: 0.22rem 0.5rem;
+            cursor: pointer; }
+        .bc-sp:hover { color: var(--text); }
+        .bc-sp.on { color: #0c0d10; background: var(--gold); border-color: var(--gold); }
         /* A banner for the round, where a title card would be. */
         body.broadcast .bc-round { font-family: 'Anton', sans-serif; letter-spacing: 0.04em;
-            text-transform: uppercase; font-size: 1.1rem; color: var(--text);
-            margin-right: auto; }
+            text-transform: uppercase; font-size: 1.1rem; color: var(--text); }
+        body.broadcast .map-head { gap: 0; }
+        body.broadcast .map-clock { margin-left: auto; }
+        body.broadcast .map-stage { position: relative; }
         .map-title { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); flex: 0 0 auto; }
         /* The note rotates through facts, so it fades rather than snapping.
            Width is reserved by the flex row, not by the text, so a longer
@@ -1409,6 +1444,7 @@ to point OBS at it.">Broadcast
             <div class="map-head">
                 <span class="map-title" id="map-title">Track Map</span>
                 <span class="map-note" id="map-note"></span>
+                <span class="bc-splits" id="bc-splits"></span>
                 <span class="map-clock" id="map-clock" hidden></span>
                 <span class="map-zoom">
                     <button type="button" id="zoom-out" aria-label="Zoom out" title="Zoom out">&minus;</button>
@@ -1421,6 +1457,7 @@ to point OBS at it.">Broadcast
             <div class="map-body">
                 <div class="map-stage">
                     <canvas id="track"></canvas>
+                    <div class="bc-tower" id="bc-tower"></div>
                     <div class="map-hint" id="map-hint" hidden></div>
                 </div>
                 <aside class="map-side">
@@ -1428,7 +1465,6 @@ to point OBS at it.">Broadcast
                     <div id="map-best"></div>
                 </aside>
             </div>
-            <div class="bc-strip" id="bc-strip"></div>
             <div class="replay" id="replay" hidden>
                 <button type="button" class="replay-live" id="replay-live">Live</button>
                 <input type="range" id="replay-bar" min="0" max="1000" value="1000"
@@ -1547,21 +1583,35 @@ to point OBS at it.">Broadcast
     if (BROADCAST) renderBroadcast(rows);
 }
 
-/** The strip along the bottom of the broadcast view.
+/** The broadcast view's timing tower and split bar.
  *
- *  Six cars, position, name and gap, sized to be read on a stream where the
- *  viewer cannot hover anything or ask a question. The leader's cell says so
- *  rather than showing a gap of zero, because "LEADER" is information and
- *  "+0.0s" is not.
+ *  A running order down the left, the way every motorsport broadcast has
+ *  done it since the eighties, and the splits across the top so whoever is
+ *  streaming can change which race is on air without leaving the thing they
+ *  are streaming.
  *
- *  Whichever split is focused, or the busiest one when none is. Six cars
- *  drawn from eight different races are six unrelated facts rather than a
- *  classification, and a broadcast has no way to explain the difference.
+ *  Each row is colour, position, number, name, gap, in that order, because
+ *  that is the order the eye wants them: find the car by its colour, confirm
+ *  it by its number, then read.
+ *
+ *  Gaps are in laps, not seconds. The beacon is 1.5s and positions snap to
+ *  outline points 90 to 170 m apart, so a gap to the tenth would be invented.
+ *  A broadcast inventing numbers is worse than one showing fewer.
  */
 function renderBroadcast(rows) {
-    const strip = document.getElementById('bc-strip');
-    if (!strip) return;
-    let pick = focusedSplit;
+    const tower = document.getElementById('bc-tower');
+    const bar = document.getElementById('bc-splits');
+    if (!tower) return;
+
+    const present = [...new Set(rows.map(r => String(r.lobby_number ?? 0)))]
+        .sort((a, b) => Number(a) - Number(b));
+    // Whatever was asked for, if it is out there; otherwise the busiest,
+    // because six cars drawn from eight different races are six unrelated
+    // facts rather than a classification.
+    let pick = bcSplit !== null && present.includes(bcSplit) ? bcSplit : null;
+    if (pick === null && focusedSplit !== null && present.includes(focusedSplit)) {
+        pick = focusedSplit;
+    }
     if (pick === null) {
         const counts = new Map();
         for (const r of rows) {
@@ -1570,22 +1620,53 @@ function renderBroadcast(rows) {
         }
         pick = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
     }
+    bcSplit = pick;
+    // The map follows the tower. Showing Split 1's running order over a map
+    // of every car on the circuit is two different races on one screen, and
+    // a viewer has no way to tell which dots belong to the list.
+    //
+    // Set rather than saved: this is the broadcast's choice for as long as
+    // it is on air, not a preference to carry back to the ordinary page.
+    focusedSplit = pick;
+
+    if (bar) {
+        // Only worth showing when there is a choice to make.
+        bar.innerHTML = present.length < 2 ? '' : present.map(k =>
+            `<button type="button" class="bc-sp${k === pick ? ' on' : ''}" data-sp="${esc(k)}">`
+            + `${k === '0' ? 'UNASSIGNED' : 'S' + esc(k)}</button>`).join('');
+        bar.querySelectorAll('.bc-sp').forEach(b => b.addEventListener('click', () => {
+            bcSplit = b.dataset.sp;
+            if (lastRows) { renderBroadcast(lastRows); drawTrack(lastRows); }
+        }));
+    }
+
     const field = rows.filter(r => String(r.lobby_number ?? 0) === pick);
     const order = field.slice().sort((a, b) =>
         (b.lap ?? -1) - (a.lap ?? -1) || (b.progress_m ?? 0) - (a.progress_m ?? 0));
     const lead = order[0];
-    strip.innerHTML = order.slice(0, 6).map((r, i) => {
+    let best = null;
+    for (const r of order) {
+        const v = bestLap(r);
+        if (v != null && (best == null || v < best[0])) best = [v, r.driver_id];
+    }
+    const head = `<div class="bc-head">${pick === '0' ? 'Unassigned'
+                   : 'Split ' + esc(pick)} \u00b7 ${order.length} car${
+                   order.length === 1 ? '' : 's'}</div>`;
+    tower.innerHTML = head + order.slice(0, BC_ROWS).map((r, i) => {
         const down = (lead.lap ?? 0) - (r.lap ?? 0);
         const gap = i === 0 ? 'LEADER'
-                  : down > 0 ? `+${down} lap${down === 1 ? '' : 's'}`
+                  : down > 0 ? `+${down}L`
                   : '\u2014';
         const num = r.career_number ?? r.car_number;
-        return `<div class="bc-cell${i === 0 ? ' bc-lead' : ''}">`
+        const fast = best && best[1] === r.driver_id ? ' fastest' : '';
+        return `<div class="bc-row${i === 0 ? ' lead' : ''}${fast}">`
+             + `<span class="bc-bar" style="background:${esc(carColour(r))}"></span>`
              + `<span class="bc-pos">${i + 1}</span>`
-             + `<span class="bc-who">${num != null ? '#' + num + ' ' : ''}`
-             + `${esc(r.display_name || '')}</span>`
+             + `<span class="bc-num">${num != null ? esc(String(num)) : '\u2014'}</span>`
+             + `<span class="bc-who">${esc(r.display_name || '')}</span>`
              + `<span class="bc-gap">${gap}</span></div>`;
     }).join('');
+
     const t = document.getElementById('map-title');
     if (t && rows[0]) {
         t.className = 'map-title bc-round';
@@ -1643,6 +1724,12 @@ let showNames = true;           // corner names, until somebody turns them off
 // map drawing is the same code the ordinary view uses and the two cannot
 // drift apart. Read once: this is not something to toggle mid-race.
 const BROADCAST = new URLSearchParams(location.search).get('view') === 'broadcast';
+// Which split is on air. From ?split= if given, so one OBS scene per split
+// can be set up and cut between from a stream deck rather than a browser;
+// otherwise whatever the buttons in the view were last set to.
+let bcSplit = new URLSearchParams(location.search).get('split');
+// How many cars the tower holds. Twelve fits 1080p with room to breathe.
+const BC_ROWS = 12;
 if (BROADCAST) document.body.classList.add('broadcast');
 let viewChosen = false;         // whether the viewer has pressed the button
 let mapTurned = false;          // whether they have worked out how to turn it
