@@ -1313,6 +1313,7 @@ function renderField(rows) {
                     <button type="button" id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
                     <button type="button" class="reset" id="zoom-reset" aria-label="Reset the view" title="Fit the whole circuit">Fit</button>
                     <button type="button" class="reset" id="view-3d" aria-pressed="false" aria-label="Tilt the map">3D</button>
+                    <button type="button" class="reset" id="view-names" aria-pressed="true" aria-label="Show or hide the corner names">Names</button>
                 </span>
             </div>
             <div class="map-body">
@@ -1487,6 +1488,7 @@ let focusedSplit = null;        // null means every split
 // reference error, the catch below swallowed it, and the upshot was that the
 // 3D choice silently reset to flat on every reload for everybody.
 let view3d = true;              // the tilted map is the one worth seeing first
+let showNames = true;           // corner names, until somebody turns them off
 let viewChosen = false;         // whether the viewer has pressed the button
 let mapTurned = false;          // whether they have worked out how to turn it
 // The driver the pointer is over in the list, so the map can say which dot
@@ -1536,6 +1538,9 @@ try {
         // a decision would leave every one of them on the old default for
         // good. Only a real press is honoured.
         if (v.view3d != null) { view3d = !!v.view3d; viewChosen = true; }
+        // Off is a real choice here, unlike the 3D default, so an absent
+        // value simply means they have never pressed it.
+        if (v.names != null) showNames = !!v.names;
         mapTurned = !!v.turned;
     }
 } catch (e) { /* private window, blocked storage: defaults are fine */ }
@@ -1553,6 +1558,7 @@ function saveSplitPrefs() {
             // Whether they have worked out how to turn it, so the hint stops
             // appearing once they have.
             turned: mapTurned || undefined,
+            names: showNames,
         }));
     } catch (e) { /* nothing to do, and nothing depends on it */ }
 }
@@ -2274,6 +2280,18 @@ function startIntro() {
     introRaf = requestAnimationFrame(frame);
 }
 
+/** The Names button reflects what it will do, like the 3D one beside it. */
+function syncNamesButton() {
+    const b = document.getElementById('view-names');
+    if (!b) return;
+    b.setAttribute('aria-pressed', String(showNames));
+    b.classList.toggle('off', !showNames);
+    b.title = showNames
+        ? 'Hide the corner names. Only the ones that fit are drawn, so there '
+        + 'are more of them the further you zoom in.'
+        : 'Show the corner names.';
+}
+
 function syncZoomButtons() {
     const out = document.getElementById('zoom-out');
     const inn = document.getElementById('zoom-in');
@@ -2430,8 +2448,15 @@ function bindMapControls() {
     document.getElementById('zoom-out')?.addEventListener('click',
         () => { endIntro(); zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.6); });
     document.getElementById('zoom-reset')?.addEventListener('click', resetView);
+    syncNamesButton();
     document.getElementById('view-3d')?.addEventListener('click',
         () => { endIntro(); setView3d(!view3d); });
+    document.getElementById('view-names')?.addEventListener('click', () => {
+        showNames = !showNames;
+        saveSplitPrefs();
+        syncNamesButton();
+        if (lastRows) drawTrack(lastRows);
+    });
 
     syncZoomButtons();
 }
@@ -3277,6 +3302,61 @@ function drawTrack(rows) {
             + (view3d ? ` · height exaggerated ${HEIGHT_EXAGGERATION}x` : '');
         setFacts(buildFacts(rows, { km, relief, climb: Math.round(maxY - minY), total }));
     }
+
+    drawCornerNames(g, S, offW0, offE0, offN0, offS0);
+}
+
+/* Corner names, last of all so nothing is drawn over them.
+ *
+ * A yellow loop becomes a circuit people can talk about: somebody losing
+ * time at Arnage rather than at the bottom left. The names come from the
+ * same OpenStreetMap export the registration used, baked into the terrain
+ * file in rank order.
+ *
+ * Two rules keep them from becoming the clutter they usually become.
+ *
+ * Any label that would touch one already placed is simply dropped, so they
+ * never pile up: at whole-circuit zoom a handful fit, and zooming into the
+ * Porsche Curves brings the local ones in as the room appears. Rank decides
+ * who wins, so the few that fit are Mulsanne and Arnage rather than
+ * whichever happened to come first in the file.
+ *
+ * And there is a button. Someone who finds them in the way turns them off
+ * once and the page remembers.
+ */
+function drawCornerNames(g, S, offW0, offE0, offN0, offS0) {
+    if (!showNames || !terrain || !Array.isArray(terrain.labels)) return;
+    g.save();
+    g.font = '600 11px Orbitron, system-ui, sans-serif';
+    g.textBaseline = 'middle';
+    // Set explicitly. The car labels leave it centred, and inheriting that
+    // put every backing plate half a name's width to the right of the name
+    // it was meant to be behind.
+    g.textAlign = 'left';
+    const placed = [];
+    for (const m of terrain.labels) {
+        const h = reliefHeightAt(m.x, m.z);
+        const s = S(m.x, m.z, h == null ? 0 : h);
+        if (s[0] < offW0 || s[0] > offE0 || s[1] < offN0 || s[1] > offS0) continue;
+        const w = g.measureText(m.t).width;
+        // A box with room to breathe, so names stop short of touching rather
+        // than stopping short of overlapping.
+        const box = [s[0] + 7, s[1] - 9, s[0] + 7 + w + 8, s[1] + 9];
+        if (placed.some(p => !(box[2] < p[0] || box[0] > p[2]
+                            || box[3] < p[1] || box[1] > p[3]))) continue;
+        placed.push(box);
+        // A dot on the corner itself, because a name floating beside an
+        // unmarked piece of track does not say which piece.
+        g.fillStyle = 'rgba(255,209,102,0.85)';
+        g.beginPath();
+        g.arc(s[0], s[1], 2.1, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = 'rgba(5,6,8,0.55)';
+        g.fillRect(box[0] - 3, box[1] + 1, w + 8, 16);
+        g.fillStyle = 'rgba(255,225,170,0.92)';
+        g.fillText(m.t, box[0] + 1, s[1] + 0.5);
+    }
+    g.restore();
 }
 
 // ---------------------------------------------------------------

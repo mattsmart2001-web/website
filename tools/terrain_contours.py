@@ -393,6 +393,94 @@ def landcover(a, cx, cz, radius, lat0, m_lon):
     return out
 
 
+# --------------------------------------------------------------- labels ----
+#
+# Corner names, from the same kind of OpenStreetMap export the registration
+# used. A yellow loop becomes a circuit people can talk about: a driver
+# losing time at Arnage rather than at the bottom left.
+#
+# Each label is one point, the mean of the way's own geometry, plus a rank.
+# The page draws them in rank order and drops any that would overlap one
+# already placed, so the few that fit at whole-circuit zoom are the ones
+# worth having rather than whichever came first in the file.
+def labels_from(path, lat0, m_lon, cx, cz, radius):
+    doc = json.load(open(path))
+    agg = {}
+    for f in doc.get("features", []):
+        p = f.get("properties") or {}
+        if p.get("highway") != "raceway":
+            continue
+        name = p.get("name")
+        if not name:
+            continue
+        g = f.get("geometry") or {}
+        cs = g.get("coordinates") or []
+        if g.get("type") == "LineString":
+            pts = cs
+        elif g.get("type") == "Polygon":
+            pts = [c for ring in cs for c in ring]
+        else:
+            continue
+        agg.setdefault(name, []).extend(pts)
+
+    a_lon0 = None
+    out = []
+    for name, pts in agg.items():
+        rank = LABEL_RANK.get(name)
+        if rank is None:
+            continue
+        mlon = sum(c[0] for c in pts) / len(pts)
+        mlat = sum(c[1] for c in pts) / len(pts)
+        x = (mlon - LABEL_LON0[0]) * m_lon
+        z = (lat0 - mlat) * M_LAT
+        if radius and math.hypot(x - cx, z - cz) > radius:
+            continue
+        out.append({"t": LABEL_RANK[name][1], "x": round(x, 1),
+                    "z": round(z, 1), "r": LABEL_RANK[name][0]})
+    out.sort(key=lambda d: d["r"])
+    # One label per printed name: OSM splits a corner across several ways and
+    # spells two of them differently, and two labels a few metres apart is
+    # worse than none.
+    seen, uniq = set(), []
+    for d in out:
+        if d["t"] in seen:
+            continue
+        seen.add(d["t"])
+        uniq.append(d)
+    print(f"labels {len(uniq)} corners: " + ", ".join(d["t"] for d in uniq))
+    return uniq
+
+
+# What to print, and in what order of importance, keyed by the OSM name.
+# The printed form is the one drivers say: Mulsanne, not Virage de Mulsanne.
+# Anything not listed is left off, which is how the Bugatti circuit's corners
+# and the pit lanes stay out of it.
+LABEL_RANK = {
+    "Virage de Mulsanne":           (1, "Mulsanne"),
+    "Tertre Rouge":                 (2, "Tertre Rouge"),
+    "Virage d'Arnage":              (3, "Arnage"),
+    "Chicane Dunlop":               (4, "Dunlop"),
+    "Virage Porsche":               (5, "Porsche Curves"),
+    "Chicane Ford":                 (6, "Ford Chicane"),
+    "Esses de la Forêt":       (7, "Esses de la Forêt"),
+    "Ligne Droite des Hunaudières": (8, "Hunaudières"),
+    "Maison Blanche":               (9, "Maison Blanche"),
+    "Courbe Dunlop":               (10, "Courbe Dunlop"),
+    # The Nordschleife, for when that file is rebuilt.
+    "Karussell":                    (1, "Karussell"),
+    "Bergwerk":                     (2, "Bergwerk"),
+    "Adenauer Forst":               (3, "Adenauer Forst"),
+    "Brünnchen":                    (4, "Brünnchen"),
+    "Pflanzgarten":                 (5, "Pflanzgarten"),
+    "Schwedenkreuz":                (6, "Schwedenkreuz"),
+    "Fuchsröhre":                   (7, "Fuchsröhre"),
+    "Hatzenbach":                   (8, "Hatzenbach"),
+    "Döttinger Höhe":               (9, "Döttinger Höhe"),
+    "Hohe Acht":                    (10, "Hohe Acht"),
+}
+LABEL_LON0 = [0.0]      # filled in from --origin before labels_from runs
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("csv", help="outline exported from live_track_path (seq,x,y,z)")
@@ -420,6 +508,8 @@ def main():
     ap.add_argument("--cover-min-m2", type=float, default=90000.0,
                     help="drop shapes smaller than this; a pond of a few "
                          "pixels costs as much to ship as a forest")
+    ap.add_argument("--labels", default=None,
+                    help="GeoJSON of named raceway ways, for corner names")
     a = ap.parse_args()
 
     lat0, lon0 = (float(v) for v in a.origin.split(","))
@@ -569,6 +659,8 @@ def main():
           f"= {len(gx) * len(gz):,} cells")
 
     cover = landcover(a, cx, cz, radius, lat0, m_lon) if a.landcover else []
+    LABEL_LON0[0] = lon0
+    marks = labels_from(a.labels, lat0, m_lon, cx, cz, radius) if a.labels else []
 
     doc = {"circuit": a.name, "interval_m": a.interval,
            "y_offset_m": round(offset, 1),
@@ -586,6 +678,9 @@ def main():
            # rather than empty when it was not, so a page can tell "no
            # file" from "nothing found".
            **({"cover": cover} if a.landcover else {}),
+           # Corner names, in order of importance. The page draws them in
+           # that order and skips any that would collide.
+           **({"labels": marks} if a.labels else {}),
            "note": "Heights are in GT7's own vertical frame, matching live_track_path.y",
            "attribution": ATTRIBUTION, "lines": out}
     with open(a.out, "w") as fh:
