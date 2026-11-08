@@ -147,7 +147,9 @@
             display: flex; flex-direction: column; }
         body.broadcast .map-card { margin: 0; border: 0; border-radius: 0;
             flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-        body.broadcast .map-head { padding: 0.7rem 1.4rem; }
+        body.broadcast .map-head { padding: 0.85rem 1.5rem;
+            background: linear-gradient(180deg, rgba(10,12,16,0.96), rgba(7,8,11,0.92));
+            border-bottom: 2px solid rgba(255,209,102,0.45); }
         body.broadcast .map-body { flex: 1 1 auto; min-height: 0; }
         body.broadcast .map-title { font-size: 1rem; }
         body.broadcast .map-clock { font-size: 1rem; }
@@ -161,50 +163,79 @@
            that order, because that is the order the eye wants them: find
            your car by its colour, confirm by its number, then read. */
         .bc-tower { display: none; }
+        /* A panel, not a fade. A gradient dissolving into the map reads as an
+           overlay that could not decide; a defined edge with a rule down it
+           reads as a graphic somebody drew, which is the whole difference
+           between a web page on a stream and a broadcast. */
         body.broadcast .bc-tower { display: flex; flex-direction: column;
-            position: absolute; left: 0; top: 0; bottom: 0; width: 310px;
-            background: linear-gradient(90deg, rgba(5,6,8,0.94) 0%,
-                                              rgba(5,6,8,0.86) 72%, transparent 100%);
-            padding: 0.5rem 0 0.5rem 0; z-index: 4; pointer-events: none;
-            overflow: hidden; }
-        .bc-row { display: flex; align-items: center; gap: 0; height: 30px;
-            flex: 0 0 auto; }
-        .bc-bar { width: 5px; align-self: stretch; flex: 0 0 auto; margin-right: 0.5rem; }
-        .bc-pos { font-family: 'Orbitron', sans-serif; font-size: 0.78rem; font-weight: 800;
-            color: var(--text); width: 1.7rem; text-align: center; flex: 0 0 auto;
+            position: absolute; left: 0; top: 0; bottom: 0; width: 372px;
+            background: linear-gradient(180deg, rgba(9,11,15,0.97) 0%,
+                                                rgba(6,7,10,0.95) 100%);
+            border-right: 2px solid rgba(255,209,102,0.45);
+            box-shadow: 6px 0 34px rgba(0,0,0,0.55);
+            z-index: 4; pointer-events: none; overflow: hidden; }
+        .bc-head { font-family: 'Orbitron', sans-serif; font-size: 0.6rem;
+            font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase;
+            color: var(--gold); background: rgba(255,209,102,0.09);
+            border-bottom: 1px solid rgba(255,209,102,0.28);
+            padding: 0.72rem 0.95rem; flex: 0 0 auto; }
+        .bc-row { display: flex; align-items: center; gap: 0; height: 42px;
+            flex: 0 0 auto; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        /* Banded, because twelve identical rows is a wall and the eye needs
+           something to count down. */
+        .bc-row:nth-child(even) { background: rgba(255,255,255,0.022); }
+        .bc-row.lead { background: rgba(255,209,102,0.085); }
+        .bc-bar { width: 7px; align-self: stretch; flex: 0 0 auto; }
+        .bc-pos { font-family: 'Orbitron', sans-serif; font-size: 1.02rem; font-weight: 800;
+            color: var(--text); width: 2.5rem; text-align: center; flex: 0 0 auto;
             font-variant-numeric: tabular-nums; }
-        .bc-num { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700;
-            color: #0c0d10; background: var(--muted); border-radius: 3px;
-            padding: 0.08rem 0.28rem; flex: 0 0 auto; min-width: 1.5rem;
-            text-align: center; font-variant-numeric: tabular-nums; }
-        .bc-who { font-size: 0.82rem; color: var(--text); overflow: hidden;
-            text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto;
-            margin-left: 0.45rem; }
-        .bc-gap { font-family: 'Orbitron', sans-serif; font-size: 0.7rem;
+        /* A number plate, not a tag. It is how a viewer matches a row to a
+           dot on the map, and on a compressed stream small type goes first,
+           so it gets real size and a block to sit in. */
+        .bc-num { font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 800;
+            color: #0a0b0e; background: #d8dee9; border-radius: 3px;
+            padding: 0.3rem 0.4rem; flex: 0 0 auto; min-width: 2.5rem;
+            line-height: 1; text-align: center; font-variant-numeric: tabular-nums; }
+        /* The name is what a viewer is actually looking for, so it is the
+           biggest thing in the row and everything else is furniture. */
+        .bc-who { font-size: 1.08rem; font-weight: 600; letter-spacing: 0.005em;
+            color: var(--text); overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; flex: 1 1 auto; margin-left: 0.6rem; }
+        .bc-gap { font-family: 'Orbitron', sans-serif; font-size: 0.78rem; font-weight: 700;
             color: var(--muted); flex: 0 0 auto; font-variant-numeric: tabular-nums;
-            padding-right: 0.7rem; }
+            padding: 0 0.9rem 0 0.5rem; }
         .bc-row.lead .bc-gap { color: var(--gold); }
         .bc-row.lead .bc-pos { color: var(--gold); }
         /* The purple of a fastest lap, the one colour motorsport agrees on. */
-        .bc-row.fastest .bc-num { background: #b388ff; }
-        .bc-head { font-family: 'Orbitron', sans-serif; font-size: 0.56rem;
-            letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted);
-            padding: 0 0 0.4rem 0.75rem; flex: 0 0 auto; }
+        .bc-row.fastest .bc-num { background: #b388ff; color: #14091f; }
+        /* The column runs the full height of the picture, so with eight cars
+           in it most of it is empty. A strip along the bottom closes the
+           panel off and spends the space on the two facts a commentator
+           reaches for: where we are, and what the lap to beat is. */
+        .bc-foot { margin-top: auto; flex: 0 0 auto; padding: 0.8rem 0.95rem 0.95rem;
+            border-top: 1px solid rgba(255,209,102,0.28);
+            background: rgba(255,209,102,0.06); }
+        .bc-foot-where { font-family: 'Orbitron', sans-serif; font-size: 0.62rem;
+            font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+            color: var(--gold); }
+        .bc-foot-rec { margin-top: 0.35rem; font-size: 0.82rem; color: var(--muted); }
+        .bc-foot-rec b { font-family: 'Orbitron', sans-serif; font-weight: 700;
+            color: var(--text); font-variant-numeric: tabular-nums; }
 
         /* Which split is on air. Live in the view, because going back to the
            board to change it means leaving the thing you are broadcasting. */
         .bc-splits { display: none; }
         body.broadcast .bc-splits { display: flex; align-items: center; gap: 0.3rem;
             margin-left: 1rem; }
-        .bc-sp { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; font-weight: 700;
-            letter-spacing: 0.1em; color: var(--muted); background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border); border-radius: 4px; padding: 0.22rem 0.5rem;
+        .bc-sp { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; font-weight: 700;
+            letter-spacing: 0.12em; color: var(--muted); background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border); border-radius: 4px; padding: 0.32rem 0.66rem;
             cursor: pointer; }
         .bc-sp:hover { color: var(--text); }
         .bc-sp.on { color: #0c0d10; background: var(--gold); border-color: var(--gold); }
         /* A banner for the round, where a title card would be. */
-        body.broadcast .bc-round { font-family: 'Anton', sans-serif; letter-spacing: 0.04em;
-            text-transform: uppercase; font-size: 1.1rem; color: var(--text); }
+        body.broadcast .bc-round { font-family: 'Anton', sans-serif; letter-spacing: 0.05em;
+            text-transform: uppercase; font-size: 1.35rem; color: var(--text); }
         body.broadcast .map-head { gap: 0; }
         body.broadcast .map-clock { margin-left: auto; }
         body.broadcast .map-stage { position: relative; }
@@ -1598,6 +1629,26 @@ to point OBS at it.">Broadcast
  *  outline points 90 to 170 m apart, so a gap to the tenth would be invented.
  *  A broadcast inventing numbers is worse than one showing fewer.
  */
+/** The strip that closes off the bottom of the tower.
+ *
+ *  Both facts are already on the page: the circuit comes with the event row
+ *  the clock settings ride in on, and the record is the one the board shows
+ *  beside the leaderboard. Neither is invented and neither needs a request
+ *  of its own. If a race has no record yet the line simply is not there,
+ *  rather than a dash pretending to be information. */
+function bcFooter() {
+    const where = clockEvent?.circuit_name;
+    const rec = circuitRecord;
+    if (!where && !rec) return '';
+    let html = '<div class="bc-foot">';
+    if (where) html += `<div class="bc-foot-where">${esc(where)}</div>`;
+    if (rec?.best_lap_ms) {
+        html += `<div class="bc-foot-rec">Lap record <b>${esc(lapTime(rec.best_lap_ms))}</b>`
+              + (rec.driver_name ? ` · ${esc(rec.driver_name)}` : '') + '</div>';
+    }
+    return html + '</div>';
+}
+
 function renderBroadcast(rows) {
     const tower = document.getElementById('bc-tower');
     const bar = document.getElementById('bc-splits');
@@ -1665,7 +1716,7 @@ function renderBroadcast(rows) {
              + `<span class="bc-num">${num != null ? esc(String(num)) : '\u2014'}</span>`
              + `<span class="bc-who">${esc(r.display_name || '')}</span>`
              + `<span class="bc-gap">${gap}</span></div>`;
-    }).join('');
+    }).join('') + bcFooter();
 
     const t = document.getElementById('map-title');
     if (t && rows[0]) {
