@@ -1909,25 +1909,49 @@ let bcAmt = 0, bcAmtFrom = 0;
 // and the camera just keeps up with it.
 let bcShotKey = 'wide';
 let bcRaf = 0, bcLastFrame = 0;
-// Frames per second to animate at while focus mode is on. Not 60: a redraw
-// is the whole picture, terrain shading included, and spending four times
-// the processor on a smoothness nobody can see is how a browser running for
-// eight hours alongside a game capture becomes the thing that drops frames.
+// Frames per second to animate at. Not 60 anywhere: a redraw is the whole
+// picture, terrain shading included, and spending four times the processor
+// on a smoothness nobody can see is how a browser running for eight hours
+// alongside a game capture becomes the thing that drops frames.
+//
+// A focused frame is magnified, so a car crosses it quickly and wants the
+// higher rate. The whole lap is 25 pixels of travel per report however
+// smoothly it is drawn, so 15 reads as continuous and costs a third less.
+// On the ordinary page the map is one panel beside the tables somebody is
+// actually reading, and a laptop on battery should not be spending more on
+// the picture than the race is worth.
 const BC_FPS = 25;
+const BC_FPS_WIDE = 15;
+const BC_FPS_PAGE = 12;
 
-/** Book the next animation frame, while focus mode has something to animate.
+/** Whether cars should be drawn moving rather than arriving.
+ *
+ *  Off while the map is wound back, because a replay places a car where it
+ *  was and inventing motion between those placements would be inventing the
+ *  race. Off in a hidden tab, where the frames would be work nobody sees,
+ *  and off for a reader who has asked their system for less movement. */
+function smoothCars() {
+    if (replayAt != null) return false;
+    if (document.hidden) return false;
+    if (prefersStill) return false;
+    return true;
+}
+const prefersStill = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Book the next animation frame.
  *
  *  Throttled rather than free-running, and a no-op when a frame is already
  *  booked, so the several reasons to want one cannot stack up into several
  *  redraws of the same moment. */
 function bcBookFrame() {
     if (bcRaf) return;
+    const fps = bcFocus !== null ? BC_FPS : BROADCAST ? BC_FPS_WIDE : BC_FPS_PAGE;
     bcRaf = requestAnimationFrame(() => {
         bcRaf = 0;
         const now = performance.now();
-        if (now - bcLastFrame < 1000 / BC_FPS) { bcBookFrame(); return; }
+        if (now - bcLastFrame < 1000 / fps) { bcBookFrame(); return; }
         bcLastFrame = now;
-        if (lastRows) drawTrack(lastRows);
+        if (lastRows && smoothCars()) drawTrack(lastRows);
     });
 }
 
@@ -3350,6 +3374,10 @@ function mapWasTurned() {
 // How wide a car's number is. Measured once per number rather than once per
 // car per redraw: measureText is not free, the font is set once and never
 // changes, and a full grid only ever has a few dozen distinct numbers.
+// The landscape, drawn once per view and stamped down on every frame that
+// only moves the cars. See the note where it is built.
+let worldCanvas = null, worldCanvasKey = null;
+
 const badgeWidths = new Map();
 // Measured against whatever font is active at the time, and Inter arrives
 // from Google Fonts after the first redraw on a slow connection. Thrown away
@@ -3390,6 +3418,7 @@ function drawTrack(rows) {
     bindMapControls();
     bindReplay();
     updateReplayBar();
+    let animating = false;
 
     // Wound back: every car is placed where it was at that moment instead
     // of where it is. Only the map moves. The tables beside it go on saying
@@ -3405,13 +3434,20 @@ function drawTrack(rows) {
             return at ? { ...r, x: at[0], z: at[1], y: at[2], speed_kph: at[4], age_ms: 0 }
                       : { ...r, x: null, z: null };
         });
-    } else if (BROADCAST && bcFocus !== null) {
-        // Close in on a battle and the 1.5 second beacon stops being a
-        // detail: a car covering a hundred metres between reports crosses a
-        // tenth of the frame in one step. Every car is drawn a beacon and a
-        // bit in the past and slid between its last two reports, so they all
-        // move together and they all move smoothly.
+    } else if (smoothCars()) {
+        const before = rows;
+        // Every car is drawn a report and a bit in the past and carried
+        // along the circuit between its last two, so they all move together
+        // and they all move. Without it a car arrives in one step of a
+        // hundred metres every second and a half, which is a tenth of a
+        // focused frame and still a visible hop on the whole lap.
         rows = rows.map(bcSmoothRow);
+        // Whether anything actually moved. bcSmoothRow hands back the row it
+        // was given when it cannot place a car between two reports, so an
+        // empty circuit, a field in the pits or a round that has not started
+        // leaves every row untouched and books no frames at all. The loop
+        // exists to show movement, and costs nothing when there is none.
+        animating = rows.some((r, i) => r !== before[i]);
     }
     const note = document.getElementById('map-note');
 
@@ -3702,6 +3738,40 @@ function drawTrack(rows) {
 
     g.lineJoin = 'round';
     g.lineCap = 'round';
+
+    // ------------------------------------------------------------------
+    // The landscape, kept between frames.
+    //
+    // Everything from here down to the cars is the ground, the contours and
+    // the circuit, and none of it moves when a car does. It is also almost
+    // all of the cost: 24.6 ms of a 24.6 ms redraw on the ordinary page,
+    // which at twelve frames a second is a third of a processor spent
+    // redrawing a hill that has not changed.
+    //
+    // So it is drawn once per view and kept. Anything that would change it
+    // goes into the key: the size of the canvas, where the camera is, which
+    // way the map is turned, how much of the circuit has been traced, and
+    // the light. A key that matches means the picture underneath the cars
+    // is the one already drawn, and the frame starts by stamping it down.
+    //
+    // Deliberately not keyed on the cars, which is the entire point: they
+    // move twenty-five times a second and the hill does not move at all.
+    const worldKey = [w, h, dpr, view3d ? 1 : 0, yaw.toFixed(4), tilt.toFixed(4),
+        minU.toFixed(1), maxU.toFixed(1), minV.toFixed(1), maxV.toFixed(1),
+        vs.toFixed(4), vdx.toFixed(1), vdy.toFixed(1), padL,
+        baseLoop.length, basePath.length, allPaths.length, total,
+        terrain ? terrain.slug || 1 : 0, showNames ? 1 : 0,
+        sun ? sun.bright.toFixed(2) + ',' + sun.from.toFixed(3) : 0].join('|');
+    const worldHit = worldCanvas && worldCanvasKey === worldKey
+                  && worldCanvas.width === cv.width
+                  && worldCanvas.height === cv.height;
+    if (worldHit) {
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.drawImage(worldCanvas, 0, 0);
+        g.restore();
+    }
+    if (!worldHit) {
 
     // The ground, before anything else and faintly, so the circuit sits on a
     // landscape rather than in a void. Only when tilted: on the flat map the
@@ -4111,6 +4181,27 @@ function drawTrack(rows) {
         for (const path of allPaths) strokePath(g, path, S, 0, path.length - 1);
     }
 
+    // The corner names belong to the landscape, so they are kept with it and
+    // the cars are drawn on top of them. They used to come last of all and
+    // dodge the car badges, which was the wrong way round: a name is the
+    // ground a car is driving over, and a number is the thing you are
+    // watching.
+    drawCornerNames(g, S, offW0, offE0, offN0, offS0);
+
+    // Keep what has just been drawn, to stamp down on the frames between
+    // this one and the next time the view changes.
+    if (!worldCanvas) worldCanvas = document.createElement('canvas');
+    if (worldCanvas.width !== cv.width || worldCanvas.height !== cv.height) {
+        worldCanvas.width = cv.width;
+        worldCanvas.height = cv.height;
+    }
+    const wg = worldCanvas.getContext('2d');
+    wg.setTransform(1, 0, 0, 1, 0, 0);
+    wg.clearRect(0, 0, worldCanvas.width, worldCanvas.height);
+    wg.drawImage(cv, 0, 0);
+    worldCanvasKey = worldKey;
+    }
+
     // ------------------------------------------------------------------
     // The speed trace.
     //
@@ -4391,7 +4482,10 @@ function drawTrack(rows) {
         setFacts(buildFacts(rows, { km, relief, climb: Math.round(maxY - minY), total }));
     }
 
-    drawCornerNames(g, S, offW0, offE0, offN0, offS0);
+    // Keep the loop going while there is movement to draw. A focused frame
+    // books its own frames for the camera; this is the rest of the time,
+    // which is the whole lap in the broadcast and the ordinary page.
+    if (animating) bcBookFrame();
 }
 
 /* Corner names, last of all so nothing is drawn over them.
@@ -4426,19 +4520,12 @@ function drawCornerNames(g, S, offW0, offE0, offN0, offS0) {
     // put every backing plate half a name's width to the right of the name
     // it was meant to be behind.
     g.textAlign = 'left';
-    // The cars are already drawn, and a corner name is painted over the top
-    // of whatever is under it. So the badges go into the collision list
-    // before any name is placed, and a name that would land on one is
-    // dropped instead.
-    //
-    // Dropped rather than nudged: the car number is the live fact and the
-    // corner name is the context around it, and the name comes back by
-    // itself a second and a half later when the car has moved on. This only
-    // started mattering once the badges grew for the broadcast view, where
-    // a covered number is the one thing on the map a viewer cannot do
-    // without.
-    const placed = carMarks.map(c => [c.x - c.half, c.y - c.rad,
-                                      c.x + c.half, c.y + c.rad]);
+    // Names no longer dodge the car badges, because they no longer need to:
+    // they are part of the landscape now and the cars are drawn on top of
+    // them. Dodging would also be wrong here, since the names are drawn
+    // before the cars and the only badge positions to hand would be last
+    // frame's.
+    const placed = [];
     for (const m of terrain.labels) {
         const h = reliefHeightAt(m.x, m.z);
         const s = S(m.x, m.z, h == null ? 0 : h);
@@ -5788,6 +5875,10 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) { stopPolling(); return; }
     tick();
     startPolling();
+    // The animation loop books the next frame from inside the last one, so
+    // a tab that goes away stops booking and has to be started again rather
+    // than simply resuming. One redraw does it: that draw books the next.
+    if (lastRows) drawTrack(lastRows);
 });
 
 // Drawn once even when the page opens in a background tab, so there is
