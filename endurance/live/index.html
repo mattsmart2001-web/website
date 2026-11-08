@@ -1881,12 +1881,21 @@ let bcCutAt = 0;           // when the shot now on air started
 const BC_DWELL_MS = 18000;
 const BC_MIN_SPAN_M = 1500;
 const BC_DELAY_MS = 1600;
-const BC_EASE_MS = 900;
+const BC_EASE_MS = 1100;
 // The frame the camera is on and the one it is moving to, in projected
 // units, plus when the move started. Eased rather than cut, because a hard
 // jump between two parts of a 13 km circuit leaves a viewer with no idea
 // where they have been taken.
 let bcBox = null, bcBoxTo = null, bcBoxFrom = null, bcBoxAt = 0;
+// How focused the camera is, 0 at the whole lap and 1 in a battle, moving
+// with the ease above. Line weights and badge sizes are taken from it rather
+// than switched on a flag, so a move does not end with the whole picture
+// changing thickness in one frame.
+let bcAmt = 0, bcAmtFrom = 0;
+// Which shot is on air, as the pair it is of. A change here is a cut and
+// starts a move; the same key with the cars in new places is the same shot,
+// and the camera just keeps up with it.
+let bcShotKey = 'wide';
 let bcRaf = 0, bcLastFrame = 0;
 // Frames per second to animate at while focus mode is on. Not 60: a redraw
 // is the whole picture, terrain shading included, and spending four times
@@ -3327,6 +3336,11 @@ function drawTrack(rows) {
     // follow keeps the circuit one place rather than a set of unrelated
     // pictures. The easing runs on its own frames, booked below.
     const focusCars = bcFocusCars(rows);
+    // The frame the ordinary fit would give: the whole lap. It is where a
+    // move into focus starts from and where leaving focus ends up, so it has
+    // to be in hand before anything is overridden.
+    const lap = [minU, maxU, minV, maxV];
+    let want = null;
     if (focusCars.length) {
         let fu0 = Infinity, fu1 = -Infinity, fv0 = Infinity, fv1 = -Infinity;
         for (const r of focusCars) {
@@ -3340,28 +3354,93 @@ function drawTrack(rows) {
         const cu = (fu0 + fu1) / 2, cv0 = (fv0 + fv1) / 2;
         const half = Math.max(BC_MIN_SPAN_M / 2, (fu1 - fu0) * 0.9,
                               (fv1 - fv0) * 0.9);
-        const want = [cu - half, cu + half, cv0 - half, cv0 + half];
-        if (!bcBox) { bcBox = want.slice(); bcBoxTo = want.slice(); bcBoxAt = 0; }
-        // A new target only when it has really moved, so the ease is not
-        // restarted from scratch by every poll.
-        if (!bcBoxTo || Math.abs(want[0] - bcBoxTo[0]) > half * 0.02
-                     || Math.abs(want[2] - bcBoxTo[2]) > half * 0.02
-                     || Math.abs((want[1] - want[0]) - (bcBoxTo[1] - bcBoxTo[0])) > half * 0.02) {
-            bcBoxFrom = bcBox.slice();
-            bcBoxTo = want.slice();
+        want = [cu - half, cu + half, cv0 - half, cv0 + half];
+    }
+    // Moving, or holding a move that has somewhere still to go. Pressing WIDE
+    // is a move like any other: the camera pulls back out to the lap rather
+    // than the lap reappearing underneath it.
+    if (want || bcBox) {
+        const target = want || lap;
+        const half = (target[1] - target[0]) / 2;
+        // Two different things look the same in the numbers and must not be
+        // treated the same. A CUT is the shot changing: into focus, out to
+        // the lap, or across to another pair. TRACKING is the same shot
+        // staying with cars that are moving through it.
+        //
+        // Only a cut starts the ease. Letting a moving car restart it meant
+        // the clock was reset every fifth of a second, so a move never ran
+        // its course: it arrived in half the time it was meant to take, and
+        // a long cut lost the pull-back below entirely, because by the time
+        // it was computed there was hardly any distance left to go.
+        const key = want ? bcFocus + '|' + bcWith : 'wide';
+        if (!bcBox) {
+            // Coming in from the wide shot. Starting the move AT the lap is
+            // the whole point: a cut straight to a frame fifteen hundred
+            // metres across gives a viewer no idea which part of a thirteen
+            // kilometre circuit they are suddenly looking at.
+            bcBox = lap.slice();
+            bcBoxFrom = lap.slice();
+            bcBoxTo = target.slice();
             bcBoxAt = performance.now();
+            bcAmtFrom = 0;
+        } else if (key !== bcShotKey) {
+            bcBoxFrom = bcBox.slice();
+            bcBoxTo = target.slice();
+            bcBoxAt = performance.now();
+            bcAmtFrom = bcAmt;
+        } else {
+            // Tracking. The target is wherever the cars are now; the frame
+            // is drawn toward it rather than at it, which is what keeps a
+            // car crossing the frame from dragging the camera in steps.
+            bcBoxTo = target.slice();
         }
-        const t = bcBoxAt ? Math.min(1, (performance.now() - bcBoxAt) / BC_EASE_MS) : 1;
+        bcShotKey = key;
+        const t = Math.min(1, (performance.now() - bcBoxAt) / BC_EASE_MS);
         // Smoothstep: a move that starts and stops gently reads as a camera,
         // a linear one reads as a slide being dragged.
-        const e = t * t * (3 - 2 * t);
-        bcBox = (bcBoxFrom || bcBoxTo).map((v, i) => v + (bcBoxTo[i] - v) * e);
+        if (t < 1) {
+            // Mid-cut. Worked in centre and span rather than four corners,
+            // because the span is what the pull-back below acts on.
+            const e = t * t * (3 - 2 * t);
+            const c0 = [(bcBoxFrom[0] + bcBoxFrom[1]) / 2, (bcBoxFrom[2] + bcBoxFrom[3]) / 2];
+            const c1 = [(bcBoxTo[0] + bcBoxTo[1]) / 2, (bcBoxTo[2] + bcBoxTo[3]) / 2];
+            const s0 = (bcBoxFrom[1] - bcBoxFrom[0]) / 2;
+            const s1 = (bcBoxTo[1] - bcBoxTo[0]) / 2;
+            const cx2 = c0[0] + (c1[0] - c0[0]) * e, cy2 = c0[1] + (c1[1] - c0[1]) * e;
+            let sp = s0 + (s1 - s0) * e;
+            // Cutting between two battles at opposite ends of the lap would
+            // otherwise be a whip pan across eight kilometres of countryside
+            // at full magnification, which is unwatchable and tells a viewer
+            // nothing. The frame pulls back on the way across and pushes in
+            // again on arrival, in proportion to how far it has to go, so
+            // the move shows where it is going as well as getting there.
+            const travel = Math.hypot(c1[0] - c0[0], c1[1] - c0[1]);
+            const hop = Math.min(2.4, travel / Math.max(1, s0 + s1));
+            sp *= 1 + hop * Math.sin(Math.PI * e);
+            bcBox = [cx2 - sp, cx2 + sp, cy2 - sp, cy2 + sp];
+            // How focused the camera is, 0 at the lap and 1 in a battle.
+            bcAmt = bcAmtFrom + ((want ? 1 : 0) - bcAmtFrom) * e;
+        } else {
+            // Landed, and now simply keeping up. Drawn a fraction of the way
+            // toward where the cars are rather than at it, so a car crossing
+            // the frame carries the camera along smoothly instead of
+            // dragging it one report at a time.
+            bcBox = bcBox.map((v, i) => v + (bcBoxTo[i] - v) * 0.18);
+            bcAmt = want ? 1 : 0;
+        }
         minU = bcBox[0]; maxU = bcBox[1]; minV = bcBox[2]; maxV = bcBox[3];
-        // Always, not only while easing: the cars themselves are being slid
-        // between reports, so the picture has something to say every frame.
-        bcBookFrame();
-    } else if (bcBox) {
-        bcBox = bcBoxTo = bcBoxFrom = null;
+        if (!want && t >= 1) {
+            // Arrived back at the lap. Hand the frame back to the ordinary
+            // fit, so the reader's own zoom and pan work again.
+            bcBox = bcBoxTo = bcBoxFrom = null;
+            bcAmt = 0;
+            minU = lap[0]; maxU = lap[1]; minV = lap[2]; maxV = lap[3];
+        } else {
+            // Always, not only while easing: the cars themselves are being
+            // slid between reports, so the picture has something to say on
+            // every frame.
+            bcBookFrame();
+        }
     }
 
     // The circuit is framed in the part of the canvas a viewer can see, which
@@ -3381,7 +3460,9 @@ function drawTrack(rows) {
     // and arriving somewhere else entirely because somebody had dragged the
     // map ten minutes earlier. Their settings are untouched and come back
     // the moment the wide shot does.
-    const framed = focusCars.length > 0;
+    // The camera is overriding the fit: while it is moving back out to the
+    // lap as well as while it is holding a battle.
+    const framed = bcBox !== null;
     if (!framed) clampView(visW, h, spanX * scale, spanZ * scale);
     const vs = framed ? 1 : view.scale, cx = padL + visW / 2, cy = h / 2;
     const vdx = framed ? 0 : view.x, vdy = framed ? 0 : view.y;
@@ -3399,7 +3480,8 @@ function drawTrack(rows) {
     // from view.scale. Fixed instead, and heavier: a hairline circuit that
     // reads at thirteen kilometres across is a thread at fifteen hundred
     // metres, and the thing the shot is about would be sitting on nothing.
-    const zw = framed ? 1.6 : Math.max(0.6, Math.min(1.8, Math.pow(vs, 0.35)));
+    const zwFit = Math.max(0.6, Math.min(1.8, Math.pow(vs, 0.35)));
+    const zw = zwFit + (1.6 - zwFit) * bcAmt;
 
     // Only shade when there is a real climb to show. A circuit with ten
     // metres of elevation would otherwise be painted as dramatically as the
@@ -3899,12 +3981,16 @@ function drawTrack(rows) {
     // Each car: its badge, then its number. A focused split dims the rest
     // rather than removing them, so you can still see where the others are
     // relative to the ones you are watching.
-    // Bigger badges in a focused frame. Everything the map draws is sized in
+    // How big a car badge is drawn. Everything the map draws is sized in
     // screen pixels so it holds still as the map zooms, which is right for a
-    // reader panning about a circuit and wrong here: the pair of cars is the
-    // subject of the shot, not a marker on a diagram of one.
-    g.font = framed ? "bold 14px 'Inter', system-ui, sans-serif"
-                    : "bold 10px 'Inter', system-ui, sans-serif";
+    // reader at a desk and wrong on a stream: the ordinary size is set for
+    // somebody who can lean in, and nobody watching a broadcast can.
+    //
+    // Bigger again in a focused frame, where the pair of cars is the subject
+    // of the shot rather than a marker on a diagram of one.
+    const badgeBase = BROADCAST ? 1.3 : 1;
+    const badgeK = badgeBase + (1.6 - badgeBase) * bcAmt;
+    g.font = `bold ${Math.round(10 * badgeK)}px 'Inter', system-ui, sans-serif`;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     // Nearest last, so a car in front of another covers it rather than the
@@ -3966,7 +4052,7 @@ function drawTrack(rows) {
         // three-figure car number ran off both sides of it and was the one
         // thing on the map you could not read. One and two digits still get a
         // circle, since the pill is only as wide as it has to be.
-        const rad = (hot ? 9 : 7) * (framed ? 1.5 : 1);
+        const rad = (hot ? 9 : 7) * badgeK;
         const half = Math.max(rad, badgeHalfWidth(g, label) + 3.5);
         if (hot) {
             g.globalAlpha = 0.35;
@@ -4008,17 +4094,20 @@ function drawTrack(rows) {
     // nobody measured. Rounded to five metres because the reports arrive every
     // 1.5 seconds and a figure to the metre would be claiming a precision the
     // beacon has not got.
-    if (framed && focusCars.length === 2) {
+    if (framed && focusCars.length === 2 && bcAmt > 0.05) {
         const [ra, rb] = focusCars;
         const da = runDistance(ra), db = runDistance(rb);
         if (da != null && db != null) {
             const a = S(ra.x, ra.z, ra.y), b = S(rb.x, rb.z, rb.y);
             g.save();
+            // Fades up with the move rather than appearing over the wide
+            // shot the instant the camera starts travelling.
+            g.globalAlpha = bcAmt;
             g.setLineDash([5, 5]);
             g.strokeStyle = 'rgba(255,209,102,0.55)';
             g.lineWidth = 1.5;
             g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
-            g.restore();
+            g.setLineDash([]);
             const m = Math.round(Math.abs(da - db) / 5) * 5;
             const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
             const txt = m < 1000 ? `${m} m` : `${(m / 1000).toFixed(2)} km`;
@@ -4038,6 +4127,7 @@ function drawTrack(rows) {
             g.stroke();
             g.fillStyle = '#ffd166';
             g.fillText(txt, ox, oy + 0.5);
+            g.restore();
         }
     }
 
@@ -4091,6 +4181,11 @@ function drawTrack(rows) {
  * once and the page remembers.
  */
 function drawCornerNames(g, S, offW0, offE0, offN0, offS0) {
+    // Not on a broadcast. On the ordinary page the names answer "which
+    // corner is that", asked by somebody reading a map; on a stream they
+    // are a second layer of type competing with the timing tower and the
+    // car numbers for the same pair of eyes.
+    if (BROADCAST) return;
     if (!showNames || !terrain || !Array.isArray(terrain.labels)) return;
     g.save();
     g.font = '600 11px Orbitron, system-ui, sans-serif';
@@ -4099,7 +4194,19 @@ function drawCornerNames(g, S, offW0, offE0, offN0, offS0) {
     // put every backing plate half a name's width to the right of the name
     // it was meant to be behind.
     g.textAlign = 'left';
-    const placed = [];
+    // The cars are already drawn, and a corner name is painted over the top
+    // of whatever is under it. So the badges go into the collision list
+    // before any name is placed, and a name that would land on one is
+    // dropped instead.
+    //
+    // Dropped rather than nudged: the car number is the live fact and the
+    // corner name is the context around it, and the name comes back by
+    // itself a second and a half later when the car has moved on. This only
+    // started mattering once the badges grew for the broadcast view, where
+    // a covered number is the one thing on the map a viewer cannot do
+    // without.
+    const placed = carMarks.map(c => [c.x - c.half, c.y - c.rad,
+                                      c.x + c.half, c.y + c.rad]);
     for (const m of terrain.labels) {
         const h = reliefHeightAt(m.x, m.z);
         const s = S(m.x, m.z, h == null ? 0 : h);
