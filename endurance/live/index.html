@@ -2577,6 +2577,27 @@ function setView3d(on) {
 
 /** Keeps the circuit from being dragged off the edge: panning is bounded by
  *  how far the zoomed content actually overflows the canvas. */
+/** How much of the canvas's left edge is spoken for.
+ *
+ *  In broadcast mode the timing tower sits over the picture rather than
+ *  beside it, so the canvas is wider than the part of it anyone can see.
+ *  Fitting the circuit to the whole canvas therefore centres it behind the
+ *  tower's shoulder and leaves a slab of empty terrain down the right.
+ *
+ *  Measured from the element rather than hard-coded, so changing the tower's
+ *  width in the stylesheet moves the map with it. Capped, because a tower
+ *  taking half the screen on a narrow window should not squeeze the circuit
+ *  into the remaining sliver. */
+function mapInsetLeft() {
+    if (!BROADCAST) return 0;
+    const t = document.getElementById('bc-tower');
+    const cv = document.getElementById('track');
+    if (!t || !cv) return 0;
+    const tw = t.getBoundingClientRect().width;
+    const cw = cv.clientWidth;
+    return cw > 0 ? Math.min(tw, cw * 0.4) : tw;
+}
+
 function clampView(w, h, contentW, contentH) {
     view.scale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, view.scale));
     const maxX = Math.max(0, (contentW * view.scale - w) / 2 + 26);
@@ -2590,7 +2611,8 @@ function clampView(w, h, contentW, contentH) {
 function zoomAt(sx, sy, factor) {
     const cv = document.getElementById('track');
     if (!cv) return;
-    const cx = cv.clientWidth / 2, cy = cv.clientHeight / 2;
+    const padL = mapInsetLeft();
+    const cx = padL + (cv.clientWidth - padL) / 2, cy = cv.clientHeight / 2;
     const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, view.scale * factor));
     const k = next / view.scale;
     view.x = sx - cx - (sx - cx - view.x) * k;
@@ -2944,6 +2966,7 @@ function drawTrack(rows) {
 
     const dpr = window.devicePixelRatio || 1;
     const w = cv.clientWidth, h = cv.clientHeight;
+    const padL = mapInsetLeft();
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
         cv.width = Math.round(w * dpr);
         cv.height = Math.round(h * dpr);
@@ -2973,7 +2996,8 @@ function drawTrack(rows) {
         g.fillStyle = '#94a3b8';
         g.font = "11px 'Inter', system-ui, sans-serif";
         g.textAlign = 'center';
-        g.fillText('The circuit draws itself as cars report their position.', w / 2, h / 2);
+        g.fillText('The circuit draws itself as cars report their position.',
+                   padL + (w - padL) / 2, h / 2);
         return;
     }
 
@@ -3044,17 +3068,20 @@ function drawTrack(rows) {
         }
     }
 
+    // The circuit is framed in the part of the canvas a viewer can see, which
+    // in broadcast mode is everything to the right of the timing tower.
     const pad = 26;
+    const visW = Math.max(120, w - padL);
     const spanX = Math.max(1, maxU - minU), spanZ = Math.max(1, maxV - minV);
-    const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanZ);
-    const offX = (w - spanX * scale) / 2, offZ = (h - spanZ * scale) / 2;
+    const scale = Math.min((visW - pad * 2) / spanX, (h - pad * 2) / spanZ);
+    const offX = padL + (visW - spanX * scale) / 2, offZ = (h - spanZ * scale) / 2;
 
     // The fitted projection above is the baseline; the reader's zoom and pan
     // ride on top of it, about the middle of the canvas. Keeping the fit
     // separate means the view survives the 1.5s redraw and the circuit still
     // reframes itself as more of it is traced.
-    clampView(w, h, spanX * scale, spanZ * scale);
-    const vs = view.scale, cx = w / 2, cy = h / 2;
+    clampView(visW, h, spanX * scale, spanZ * scale);
+    const vs = view.scale, cx = padL + visW / 2, cy = h / 2;
     const px = u => cx + (offX + (u - minU) * scale - cx) * vs + view.x;
     const pz = v => cy + (offZ + (v - minV) * scale - cy) * vs + view.y;
     // One point, from the circuit to the screen. Everything that draws goes
@@ -3097,7 +3124,10 @@ function drawTrack(rows) {
     // and there is no point shading ground nobody can see. The margin is
     // generous so that something entering the frame is already being drawn by
     // the time its first corner arrives. Shared by the surface and the lines.
-    const offW0 = -80, offE0 = w + 80, offN0 = -80, offS0 = h + 80;
+    // Ground hidden behind the timing tower is ground nobody can see either,
+    // so the window starts where the tower ends. Over an eight hour race that
+    // is a quarter of the shading not done, every second and a half.
+    const offW0 = padL - 80, offE0 = w + 80, offN0 = -80, offS0 = h + 80;
 
     if (view3d && terrain && terrain.relief && terrain.relief.h) {
         const R = terrain.relief;
