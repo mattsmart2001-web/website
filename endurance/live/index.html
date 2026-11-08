@@ -82,6 +82,17 @@
            without calibration. */
         .map-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; margin-top: 2rem; overflow: hidden; }
         .map-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+        /* The in-game clock. Deliberately quiet and deliberately not styled
+           like a lap time: it is the hour in the game, not anything a driver
+           has done, and a bare 19:42 beside live timing invites being read as
+           the wall clock, which at a time multiplier it emphatically is not.
+           The glyph carries most of that, the tooltip the rest. */
+        .map-clock { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; letter-spacing: 0.12em;
+                     color: var(--muted); flex: 0 0 auto; display: inline-flex; align-items: center;
+                     gap: 0.35rem; white-space: nowrap; }
+        .map-clock .mc-glyph { font-size: 0.8rem; line-height: 1; }
+        .map-clock.night { color: #9fb2d0; }
+        .map-clock.dusk  { color: #d8b483; }
         .map-title { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); flex: 0 0 auto; }
         /* The note rotates through facts, so it fades rather than snapping.
            Width is reserved by the flex row, not by the text, so a longer
@@ -1308,6 +1319,7 @@ function renderField(rows) {
             <div class="map-head">
                 <span class="map-title" id="map-title">Track Map</span>
                 <span class="map-note" id="map-note"></span>
+                <span class="map-clock" id="map-clock" hidden></span>
                 <span class="map-zoom">
                     <button type="button" id="zoom-out" aria-label="Zoom out" title="Zoom out">&minus;</button>
                     <button type="button" id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
@@ -2116,17 +2128,28 @@ function gameClockMs() {
     const e = clockEvent;
     if (!e) return null;
     const startHour = hourOfBand(e.time_of_day);
-    if (startHour == null) return null;
-    const base = startHour * 3600000;
+    const base = startHour == null ? null : startHour * 3600000;
     // Anchored to the moment the race actually went green rather than to the
     // hour it was scheduled for. Eight lobbies do not start together, and a
     // race that starts ten minutes late is half an hour out in game at x3,
     // which is the difference between dusk and dark.
     const from = e.race_live_from ? Date.parse(e.race_live_from) : NaN;
-    if (!Number.isFinite(from)) return base;        // not started: hold still
-    const real = Date.now() - from;
-    if (real < 0) return base;
-    return (base + real * multiplierOf(e.time_multiplier)) % DAY_MS;
+    if (Number.isFinite(from) && base != null) {
+        const real = Date.now() - from;
+        if (real >= 0) {
+            clockSource = 'race';
+            return (base + real * multiplierOf(e.time_multiplier)) % DAY_MS;
+        }
+    }
+    // No race running, so there is no such thing as the time: every driver
+    // is in a session of their own with a clock of their own. Rather than
+    // invent a shared one, the map shows the hour where the viewer is. Two
+    // people see different light at the same moment, which is honest, since
+    // there is no shared truth for them to disagree with. And a practice
+    // evening in November looks like a practice evening in November.
+    const now = new Date();
+    clockSource = 'local';
+    return ((now.getHours() * 60 + now.getMinutes()) * 60 + now.getSeconds()) * 1000;
 }
 
 /** Sun bearing, brightness and warmth for a time of day. */
@@ -2153,8 +2176,44 @@ function sunAt(ms) {
     return { from, bright, warm: Math.min(1, warm), night: Math.min(1, night) };
 }
 
+// Which clock the map is running on, for the display to be honest about.
+let clockSource = null;          // 'race' | 'local' | null
 let sun = sunAt(null);
-function refreshSun() { sun = sunAt(gameClockMs()); }
+function refreshSun() {
+    const ms = gameClockMs();
+    sun = sunAt(ms);
+    showClock(ms);
+}
+
+/** The in-game hour, in the map's header.
+ *
+ *  Without it the map goes amber and then dark and never says why, which
+ *  reads as a theme rather than as the race getting on into the evening.
+ *
+ *  Honest about which clock it is running on, because they are not the same
+ *  thing and the difference matters. In a race it is the race's own, shared
+ *  by everyone watching. Otherwise there is no such thing as the time, since
+ *  every driver is in a session of their own, so it is the viewer's own hour
+ *  and the tooltip says so rather than implying a session nobody is in.
+ */
+function showClock(ms) {
+    const el = document.getElementById('map-clock');
+    if (!el) return;
+    if (ms == null) { el.hidden = true; return; }
+    const h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60;
+    const night = sun.night > 0.5;
+    const dusk = !night && sun.warm > 0.35;
+    el.hidden = false;
+    el.className = 'map-clock' + (night ? ' night' : dusk ? ' dusk' : '');
+    el.innerHTML = `<span class="mc-glyph">${night ? '&#9790;' : '&#9728;'}</span>`
+                 + `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    el.title = clockSource === 'race'
+        ? 'The time in the game. It runs at the round\u2019s time multiplier, '
+        + 'so it moves faster than the clock on the wall.'
+        : 'Your own local time. In practice every driver is in a session of '
+        + 'their own, so there is no shared time of day to show; the map uses '
+        + 'yours. During a race this becomes the race\u2019s own clock.';
+}
 
 /** Ground height at a point, from the relief grid, in GT7's vertical frame.
  *  Nearest cell rather than interpolated: this is for sitting a wood or a
