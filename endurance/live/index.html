@@ -93,6 +93,13 @@
         .map-clock .mc-glyph { font-size: 0.8rem; line-height: 1; }
         .map-clock.night { color: #9fb2d0; }
         .map-clock.dusk  { color: #d8b483; }
+        .map-clock.settable { cursor: pointer; }
+        .map-clock.settable:hover { color: var(--text); }
+        /* Marked while it is showing an hour somebody picked, so a time that
+           is not the real one never passes for the real one. */
+        .map-clock .mc-set { font-size: 0.55rem; letter-spacing: 0.18em; opacity: 0.75;
+                             border: 1px solid currentColor; border-radius: 3px;
+                             padding: 0.05rem 0.25rem; margin-left: 0.1rem; }
         .map-title { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); flex: 0 0 auto; }
         /* The note rotates through facts, so it fades rather than snapping.
            Width is reserved by the flex row, not by the text, so a longer
@@ -2141,6 +2148,10 @@ function gameClockMs() {
             return (base + real * multiplierOf(e.time_multiplier)) % DAY_MS;
         }
     }
+    // Set by hand, for a look at another hour. Only reachable out of a race,
+    // because the button that sets it is only live out of a race.
+    const set = CLOCK_STEPS[clockStep];
+    if (set != null) { clockSource = 'set'; return set * 3600000; }
     // No race running, so there is no such thing as the time: every driver
     // is in a session of their own with a clock of their own. Rather than
     // invent a shared one, the map shows the hour where the viewer is. Two
@@ -2177,7 +2188,27 @@ function sunAt(ms) {
 }
 
 // Which clock the map is running on, for the display to be honest about.
-let clockSource = null;          // 'race' | 'local' | null
+let clockSource = null;          // 'race' | 'local' | 'set' | null
+
+/* Seeing the map at an hour that is not this one.
+ *
+ * Asked for, and fair: the whole point of lighting the map by the clock is
+ * what it looks like at dusk, and waiting until dusk to find out is a poor
+ * way to decide whether you like it.
+ *
+ * Practice only. In a race the clock is the race's own and shared by
+ * everyone watching, and a viewer quietly looking at a different hour from
+ * the one the cars are driving in is worse than no feature at all.
+ *
+ * Stepped through named hours rather than dragged. A slider would be a new
+ * control to design, explain and fit on a phone, where this is a click on
+ * something already on screen that is already showing the time.
+ */
+const CLOCK_STEPS = [
+    null,                 // automatic, which is where it starts and returns to
+    5.6, 8, 12, 16, 19.2, 21.5,
+];
+let clockStep = 0;
 let sun = sunAt(null);
 function refreshSun() {
     const ms = gameClockMs();
@@ -2203,16 +2234,24 @@ function showClock(ms) {
     const h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60;
     const night = sun.night > 0.5;
     const dusk = !night && sun.warm > 0.35;
+    const racing = clockSource === 'race';
+    const set = clockSource === 'set';
     el.hidden = false;
-    el.className = 'map-clock' + (night ? ' night' : dusk ? ' dusk' : '');
+    el.className = 'map-clock' + (night ? ' night' : dusk ? ' dusk' : '')
+                 + (racing ? '' : ' settable') + (set ? ' set' : '');
     el.innerHTML = `<span class="mc-glyph">${night ? '&#9790;' : '&#9728;'}</span>`
-                 + `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    el.title = clockSource === 'race'
+                 + `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+                 + (set ? '<span class="mc-set">set</span>' : '');
+    el.title = racing
         ? 'The time in the game. It runs at the round\u2019s time multiplier, '
         + 'so it moves faster than the clock on the wall.'
+        : set
+        ? 'Showing the map at an hour you picked. Click to step on, and round '
+        + 'again to go back to following your own clock.'
         : 'Your own local time. In practice every driver is in a session of '
         + 'their own, so there is no shared time of day to show; the map uses '
-        + 'yours. During a race this becomes the race\u2019s own clock.';
+        + 'yours. Click to see the map at another hour. During a race this '
+        + 'becomes the race\u2019s own clock.';
 }
 
 /** Ground height at a point, from the relief grid, in GT7's vertical frame.
@@ -2510,6 +2549,15 @@ function bindMapControls() {
     syncNamesButton();
     document.getElementById('view-3d')?.addEventListener('click',
         () => { endIntro(); setView3d(!view3d); });
+    document.getElementById('map-clock')?.addEventListener('click', () => {
+        // Nothing doing during a race: the clock belongs to the race then,
+        // and letting one viewer wander off to a different hour than the one
+        // the cars are driving in is worse than not offering it at all.
+        if (clockSource === 'race') return;
+        clockStep = (clockStep + 1) % CLOCK_STEPS.length;
+        refreshSun();
+        if (lastRows) drawTrack(lastRows);
+    });
     document.getElementById('view-names')?.addEventListener('click', () => {
         showNames = !showNames;
         saveSplitPrefs();
