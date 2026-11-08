@@ -2149,6 +2149,20 @@ function sunAt(ms) {
 
 let sun = sunAt(null);
 function refreshSun() { sun = sunAt(gameClockMs()); }
+
+/** Ground height at a point, from the relief grid, in GT7's vertical frame.
+ *  Nearest cell rather than interpolated: this is for sitting a wood or a
+ *  lake on the ground, where half a cell of error is a metre or two of
+ *  height on scenery nobody measures. */
+function reliefHeightAt(x, z) {
+    const R = terrain && terrain.relief;
+    if (!R || !R.h) return null;
+    const i = Math.round((x - R.x0) / R.step);
+    const j = Math.round((z - R.z0) / R.step);
+    if (i < 0 || j < 0 || i >= R.nx || j >= R.nz) return null;
+    const h = R.h[j * R.nx + i];
+    return h == null ? null : h;
+}
 let view = { scale: 1, x: 0, y: 0 };
 // Where the tilted map sits when nobody has turned it: a three-quarter view,
 // far enough round to show the circuit has a shape and far enough over to
@@ -2787,6 +2801,63 @@ function drawTrack(rows) {
             // The same path stroked in its own colour, which covers the
             // hairline the antialiasing leaves between neighbours.
             g.stroke();
+        }
+    }
+
+    /* Woods and water, over the shaded ground and under the contours, so the
+     * contour lines still read the relief across them.
+     *
+     * Elevation gives the shape of the ground but not what is on it, and at
+     * these circuits that is most of the character: the Hunaudieres is lined
+     * with trees the whole way down and the Sarthe runs past Le Mans.
+     *
+     * Barely tinted on purpose. The warning that applies to the relief
+     * applies twice over here: this is ground to read the circuit against,
+     * and a map with green forests and blue lakes on it would be a map of
+     * Sarthe with a race somewhere on it. Water takes the light, because
+     * water does; woods swallow it.
+     */
+    if (view3d && terrain && Array.isArray(terrain.cover) && terrain.cover.length) {
+        const tc = terrain.centre || [0, 0];
+        const tr = terrain.radius_m || 0;
+        const lit = 0.30 + 1.05 * sun.bright;
+        for (const kind of ['forest', 'water']) {
+            // One fill per kind rather than per shape: a thousand polygons
+            // is a thousand fills otherwise, and they all share a colour.
+            g.beginPath();
+            let any = false;
+            for (const c of terrain.cover) {
+                if (c.k !== kind) continue;
+                const p = c.p;
+                // The height is the ground under the shape's first point,
+                // which is near enough at this scale and costs one lookup
+                // rather than one per vertex.
+                const h = reliefHeightAt(p[0][0], p[0][1]);
+                if (h == null) continue;
+                let started = false, onScreen = false;
+                for (let i = 0; i < p.length; i++) {
+                    const s = S(p[i][0], p[i][1], h);
+                    if (s[0] > offW0 && s[0] < offE0 && s[1] > offN0 && s[1] < offS0) onScreen = true;
+                    if (started) g.lineTo(s[0], s[1]); else { g.moveTo(s[0], s[1]); started = true; }
+                }
+                if (!onScreen) continue;
+                g.closePath();
+                any = true;
+            }
+            if (!any) continue;
+            if (kind === 'water') {
+                // Quiet. A first pass had the lakes at a confident blue and
+                // they pulled the eye straight off the circuit, which is the
+                // failure the relief comment warns about, in the one colour
+                // guaranteed to cause it. Enough to read as water when you
+                // look for it, not enough to notice when you are not.
+                g.fillStyle = `rgba(${Math.round(17 * lit)},${Math.round(29 * lit)},`
+                            + `${Math.round(49 * lit * (1 + 0.2 * sun.night))},0.5)`;
+            } else {
+                g.fillStyle = `rgba(${Math.round(15 * lit + 9 * sun.warm)},`
+                            + `${Math.round(29 * lit)},${Math.round(17 * lit)},0.5)`;
+            }
+            g.fill('evenodd');
         }
     }
 

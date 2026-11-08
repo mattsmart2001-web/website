@@ -300,6 +300,99 @@ def aspect_at(grid, x0, z0, step, nx, nz, x, z):
 
 
 # ---------------------------------------------------------------- main ----
+# ------------------------------------------------------------ landcover ----
+#
+# Woods and water, from an OpenStreetMap export, in GT7 coordinates.
+#
+# The elevation gives the shape of the ground but not what is on it, and at
+# these circuits that is most of the character: the Hunaudieres is lined with
+# trees the whole way down, the Nordschleife is buried in the Eifel forest,
+# and the Sarthe runs past Le Mans. Without them the map is a relief; with
+# them it starts being somewhere.
+#
+# Kept deliberately coarse. This is scenery behind a circuit, drawn at a
+# scale where a wood is a shape rather than a stand of trees, so the rings
+# are simplified hard and anything too small to read is dropped. A faithful
+# copy of the OSM geometry would be several megabytes to say the same thing.
+COVER_KINDS = (
+    # (kind in the output, the tags that mean it)
+    ("water",  (("natural", "water"), ("waterway", "riverbank"),
+                ("landuse", "reservoir"), ("natural", "wetland"))),
+    ("forest", (("landuse", "forest"), ("natural", "wood"),
+                ("landuse", "orchard"))),
+)
+
+
+def ring_area(ring):
+    """Twice the signed area, which is all that is wanted for a size test."""
+    s = 0.0
+    for (x0, z0), (x1, z1) in zip(ring, ring[1:]):
+        s += x0 * z1 - x1 * z0
+    return abs(s) / 2.0
+
+
+def landcover(a, cx, cz, radius, lat0, m_lon):
+    """Read the export, project it, clip it to the disc and simplify it."""
+    with open(a.landcover) as fh:
+        doc = json.load(fh)
+
+    def kind_of(props):
+        for name, tags in COVER_KINDS:
+            for k, v in tags:
+                if props.get(k) == v:
+                    return name
+        return None
+
+    # The same frame the contours are in: x east of the origin, z south of it.
+    def to_xz(lon, lat):
+        return ((lon - a_lon0) * m_lon, (lat0 - lat) * M_LAT)
+
+    a_lon0 = float(a.origin.split(",")[1])
+    lim = radius if radius else None
+    out, dropped, kept_pts, raw_pts = [], 0, 0, 0
+
+    for f in doc.get("features", []):
+        kind = kind_of(f.get("properties") or {})
+        if kind is None:
+            continue
+        g = f.get("geometry") or {}
+        if g.get("type") == "Polygon":
+            rings = [g["coordinates"][0]] if g["coordinates"] else []
+        elif g.get("type") == "MultiPolygon":
+            rings = [poly[0] for poly in g["coordinates"] if poly]
+        else:
+            continue
+        for ring in rings:
+            pts = [to_xz(lon, lat) for lon, lat in ring]
+            raw_pts += len(pts)
+            # Wholly outside the disc: nothing to draw. Partly outside is
+            # kept whole, because the page fades the rim to nothing anyway
+            # and clipping a polygon properly is a lot of code for an edge
+            # that is already invisible.
+            if lim is not None:
+                if min(math.hypot(x - cx, z - cz) for x, z in pts) > lim:
+                    continue
+            small = ring_area(pts) < a.cover_min_m2
+            if small:
+                dropped += 1
+                continue
+            s = simplify(pts, a.cover_simplify)
+            if len(s) < 4:
+                dropped += 1
+                continue
+            if s[0] != s[-1]:
+                s.append(s[0])
+            kept_pts += len(s)
+            out.append({"k": kind,
+                        "p": [[round(x, 1), round(z, 1)] for x, z in s]})
+
+    n_water = sum(1 for c in out if c["k"] == "water")
+    print(f"landcover {len(out)} shapes "
+          f"({len(out) - n_water} wood, {n_water} water), "
+          f"{kept_pts:,} points from {raw_pts:,}, {dropped} too small or thin")
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("csv", help="outline exported from live_track_path (seq,x,y,z)")
@@ -317,6 +410,16 @@ def main():
     ap.add_argument("--relief-grid", type=int, default=80,
                     help="cells across for the shaded surface; 0 for none")
     ap.add_argument("--url", default=TILE_URL)
+    ap.add_argument("--landcover", default=None,
+                    help="GeoJSON of woods and water to bake in "
+                         "(OpenStreetMap landuse=forest, natural=wood, "
+                         "natural=water, waterway=riverbank)")
+    ap.add_argument("--cover-simplify", type=float, default=35.0,
+                    help="metres of tolerance for landcover outlines; these "
+                         "are scenery, so far coarser than the contours")
+    ap.add_argument("--cover-min-m2", type=float, default=90000.0,
+                    help="drop shapes smaller than this; a pond of a few "
+                         "pixels costs as much to ship as a forest")
     a = ap.parse_args()
 
     lat0, lon0 = (float(v) for v in a.origin.split(","))
@@ -465,6 +568,8 @@ def main():
     print(f"relief grid {len(gx)} x {len(gz)} at {a.grid * gstep:.0f} m "
           f"= {len(gx) * len(gz):,} cells")
 
+    cover = landcover(a, cx, cz, radius, lat0, m_lon) if a.landcover else []
+
     doc = {"circuit": a.name, "interval_m": a.interval,
            "y_offset_m": round(offset, 1),
            # The page fades the outer part of this disc to nothing, so it
@@ -477,6 +582,10 @@ def main():
            "aspect_steps": ASPECT_STEPS,
            # The surface between the lines, for the page to shade.
            "relief": relief,
+           # Woods and water, where a landcover file was given. Absent
+           # rather than empty when it was not, so a page can tell "no
+           # file" from "nothing found".
+           **({"cover": cover} if a.landcover else {}),
            "note": "Heights are in GT7's own vertical frame, matching live_track_path.y",
            "attribution": ATTRIBUTION, "lines": out}
     with open(a.out, "w") as fh:
