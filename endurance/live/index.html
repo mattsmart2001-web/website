@@ -100,6 +100,79 @@
         .map-clock .mc-set { font-size: 0.55rem; letter-spacing: 0.18em; opacity: 0.75;
                              border: 1px solid currentColor; border-radius: 3px;
                              padding: 0.05rem 0.25rem; margin-left: 0.1rem; }
+        /* ------------------------------------------------------- broadcast ---
+           A mode for being watched rather than operated, reached with
+           ?view=broadcast and otherwise costing the ordinary page nothing.
+
+           Subtraction, mostly. The board, the search, the side panel and the
+           site's own furniture all go, the map fills the screen, and what
+           is left is sized to be read from a sofa rather than from a desk:
+           an OBS browser source at 1920x1080 is the target, not a window.
+
+           Deliberately not an auto-director. It frames the whole circuit and
+           says who is where; a person decides what matters. */
+        body.broadcast { overflow: hidden; }
+        body.broadcast .gtec-nav,
+        body.broadcast .board-tools,
+        body.broadcast .splits,
+        body.broadcast .following,
+        body.broadcast .map-side,
+        body.broadcast .replay,
+        body.broadcast .map-zoom,
+        body.broadcast .map-note,
+        body.broadcast .map-hint,
+        body.broadcast #lap-card,
+        body.broadcast .gtec-footer,
+        body.broadcast .gtec-sponsors,
+        body.broadcast #live-shell > div:first-child,
+        body.broadcast #live-round,
+        body.broadcast #live-sub,
+        body.broadcast #live-mode-note,
+        body.broadcast #gtec-sponsors,
+        body.broadcast .gtec-sponsors,
+        body.broadcast #gtec-footer,
+        body.broadcast footer,
+        body.broadcast .foot-note { display: none !important; }
+        /* The canvas is 420px tall by default, which is a panel on a page.
+           Here it is the picture, so it takes whatever is left once the
+           header and the classification have had theirs. */
+        body.broadcast .map-body { flex: 1 1 auto; min-height: 0; }
+        body.broadcast .map-stage { height: 100%; }
+        body.broadcast #track { height: 100%; cursor: default; }
+        /* The shell is the page's own column, 1180px wide with generous
+           padding, which is right for reading and wrong for a screen that is
+           entirely this one thing. */
+        body.broadcast #live-shell, body.broadcast .page-wrap {
+            max-width: none; margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; }
+        body.broadcast .map-card { margin: 0; border: 0; border-radius: 0;
+            flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+        body.broadcast .map-head { padding: 0.7rem 1.4rem; }
+        body.broadcast .map-body { flex: 1 1 auto; min-height: 0; }
+        body.broadcast .map-title { font-size: 1rem; }
+        body.broadcast .map-clock { font-size: 1rem; }
+
+        /* The strip along the bottom: who is where, big enough to read on a
+           stream where the viewer has no way to ask. */
+        .bc-strip { display: none; }
+        body.broadcast .bc-strip { display: flex; align-items: stretch; gap: 0;
+            border-top: 1px solid var(--border); background: rgba(5,6,8,0.92);
+            flex: 0 0 auto; overflow: hidden; }
+        .bc-cell { flex: 1 1 0; min-width: 0; padding: 0.55rem 0.9rem;
+            border-right: 1px solid rgba(255,255,255,0.06); display: flex;
+            align-items: baseline; gap: 0.55rem; }
+        .bc-cell:last-child { border-right: 0; }
+        .bc-pos { font-family: 'Orbitron', sans-serif; font-size: 0.95rem; font-weight: 800;
+            color: var(--gold); flex: 0 0 auto; }
+        .bc-who { font-size: 0.95rem; color: var(--text); overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; }
+        .bc-gap { font-family: 'Orbitron', sans-serif; font-size: 0.85rem;
+            color: var(--muted); flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+        .bc-lead .bc-gap { color: #4ade80; }
+        /* A banner for the round, where a title card would be. */
+        body.broadcast .bc-round { font-family: 'Anton', sans-serif; letter-spacing: 0.04em;
+            text-transform: uppercase; font-size: 1.1rem; color: var(--text);
+            margin-right: auto; }
         .map-title { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); flex: 0 0 auto; }
         /* The note rotates through facts, so it fades rather than snapping.
            Width is reserved by the flex row, not by the text, so a longer
@@ -1345,6 +1418,7 @@ function renderField(rows) {
                     <div id="map-best"></div>
                 </aside>
             </div>
+            <div class="bc-strip" id="bc-strip"></div>
             <div class="replay" id="replay" hidden>
                 <button type="button" class="replay-live" id="replay-live">Live</button>
                 <input type="range" id="replay-bar" min="0" max="1000" value="1000"
@@ -1460,6 +1534,53 @@ function renderField(rows) {
     // Here as well as when laps arrive, because focusing a split comes
     // through this and changes which cars the chart is about.
     drawLapChart();
+    if (BROADCAST) renderBroadcast(rows);
+}
+
+/** The strip along the bottom of the broadcast view.
+ *
+ *  Six cars, position, name and gap, sized to be read on a stream where the
+ *  viewer cannot hover anything or ask a question. The leader's cell says so
+ *  rather than showing a gap of zero, because "LEADER" is information and
+ *  "+0.0s" is not.
+ *
+ *  Whichever split is focused, or the busiest one when none is. Six cars
+ *  drawn from eight different races are six unrelated facts rather than a
+ *  classification, and a broadcast has no way to explain the difference.
+ */
+function renderBroadcast(rows) {
+    const strip = document.getElementById('bc-strip');
+    if (!strip) return;
+    let pick = focusedSplit;
+    if (pick === null) {
+        const counts = new Map();
+        for (const r of rows) {
+            const k = String(r.lobby_number ?? 0);
+            counts.set(k, (counts.get(k) || 0) + 1);
+        }
+        pick = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    }
+    const field = rows.filter(r => String(r.lobby_number ?? 0) === pick);
+    const order = field.slice().sort((a, b) =>
+        (b.lap ?? -1) - (a.lap ?? -1) || (b.progress_m ?? 0) - (a.progress_m ?? 0));
+    const lead = order[0];
+    strip.innerHTML = order.slice(0, 6).map((r, i) => {
+        const down = (lead.lap ?? 0) - (r.lap ?? 0);
+        const gap = i === 0 ? 'LEADER'
+                  : down > 0 ? `+${down} lap${down === 1 ? '' : 's'}`
+                  : '\u2014';
+        const num = r.career_number ?? r.car_number;
+        return `<div class="bc-cell${i === 0 ? ' bc-lead' : ''}">`
+             + `<span class="bc-pos">${i + 1}</span>`
+             + `<span class="bc-who">${num != null ? '#' + num + ' ' : ''}`
+             + `${esc(r.display_name || '')}</span>`
+             + `<span class="bc-gap">${gap}</span></div>`;
+    }).join('');
+    const t = document.getElementById('map-title');
+    if (t && rows[0]) {
+        t.className = 'map-title bc-round';
+        t.textContent = rows[0].event_name || `Round ${rows[0].round ?? ''}`;
+    }
 }
 
 /** Which split the map is showing, in the map's own title.
@@ -1508,6 +1629,11 @@ let focusedSplit = null;        // null means every split
 // 3D choice silently reset to flat on every reload for everybody.
 let view3d = true;              // the tilted map is the one worth seeing first
 let showNames = true;           // corner names, until somebody turns them off
+// Reached with ?view=broadcast. A mode rather than a page, so every line of
+// map drawing is the same code the ordinary view uses and the two cannot
+// drift apart. Read once: this is not something to toggle mid-race.
+const BROADCAST = new URLSearchParams(location.search).get('view') === 'broadcast';
+if (BROADCAST) document.body.classList.add('broadcast');
 let viewChosen = false;         // whether the viewer has pressed the button
 let mapTurned = false;          // whether they have worked out how to turn it
 // The driver the pointer is over in the list, so the map can say which dot
