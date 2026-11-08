@@ -173,7 +173,12 @@
                                                 rgba(6,7,10,0.95) 100%);
             border-right: 2px solid rgba(255,209,102,0.45);
             box-shadow: 6px 0 34px rgba(0,0,0,0.55);
-            z-index: 4; pointer-events: none; overflow: hidden; }
+            z-index: 4; overflow: hidden; }
+        /* The panel itself takes no clicks, so dragging the map near its edge
+           still turns the map. The rows do, because clicking one is how the
+           camera is put on a car. */
+        body.broadcast .bc-tower { pointer-events: none; }
+        body.broadcast .bc-row { pointer-events: auto; cursor: pointer; }
         .bc-head { font-family: 'Orbitron', sans-serif; font-size: 0.6rem;
             font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase;
             color: var(--gold); background: rgba(255,209,102,0.09);
@@ -208,6 +213,15 @@
         .bc-row.lead .bc-pos { color: var(--gold); }
         /* The purple of a fastest lap, the one colour motorsport agrees on. */
         .bc-row.fastest .bc-num { background: #b388ff; color: #14091f; }
+        /* The two cars the camera is holding. A red rail down the row, which
+           is what a gallery uses to mean on air, and bright enough to find
+           without reading. */
+        /* Ringed rather than railed: the rail down the left of every row is
+           the driver's own colour and covering it would take away the one
+           thing that ties a row to a dot on the map. */
+        .bc-row.onair { background: rgba(239,68,68,0.14);
+            box-shadow: inset 0 0 0 1px rgba(239,68,68,0.55); }
+        .bc-row.onair .bc-who { color: #fff; }
         /* The column runs the full height of the picture, so with eight cars
            in it most of it is empty. A strip along the bottom closes the
            panel off and spends the space on the two facts a commentator
@@ -1685,13 +1699,40 @@ function renderBroadcast(rows) {
         bar.innerHTML = present.length < 2 ? '' : present.map(k =>
             `<button type="button" class="bc-sp${k === pick ? ' on' : ''}" data-sp="${esc(k)}">`
             + `${k === '0' ? 'UNASSIGNED' : 'S' + esc(k)}</button>`).join('');
+        // The director's own button, always there whether or not there is a
+        // choice of split to make.
+        bar.innerHTML += `<button type="button" class="bc-sp bc-auto${
+            bcDirector ? ' on' : ''}" id="bc-auto" title="Let the director pick`
+            + ` the closest battle and cut to it">AUTO</button>`
+            + `<button type="button" class="bc-sp bc-wide${
+            bcFocus === null ? ' on' : ''}" id="bc-wide" title="The whole lap">WIDE</button>`;
         bar.querySelectorAll('.bc-sp').forEach(b => b.addEventListener('click', () => {
-            bcSplit = b.dataset.sp;
+            if (b.id === 'bc-auto') {
+                bcDirector = !bcDirector;
+                // Turning it off leaves the camera where it is rather than
+                // snapping back to the lap: whoever pressed it was watching
+                // something, and the press was about who chooses next.
+                if (bcDirector) bcCutAt = 0;
+            } else if (b.id === 'bc-wide') {
+                bcDirector = false;
+                bcFocus = bcWith = null;
+            } else {
+                bcSplit = b.dataset.sp;
+            }
             if (lastRows) { renderBroadcast(lastRows); drawTrack(lastRows); }
         }));
     }
 
     const field = rows.filter(r => String(r.lobby_number ?? 0) === pick);
+    // The director only ever looks inside the split on air. A battle in
+    // another split is a battle in another race, and cutting to it would put
+    // two cars on screen who are not in the classification beside them.
+    bcDirect(field);
+    // Whoever the camera was on has gone: let the wide shot back rather than
+    // holding an empty frame over the part of the circuit they left.
+    if (bcFocus !== null && !field.some(r => r.driver_id === bcFocus)) {
+        bcFocus = bcWith = null;
+    }
     const order = field.slice().sort((a, b) =>
         (b.lap ?? -1) - (a.lap ?? -1) || (b.progress_m ?? 0) - (a.progress_m ?? 0));
     const lead = order[0];
@@ -1710,13 +1751,39 @@ function renderBroadcast(rows) {
                   : '\u2014';
         const num = r.career_number ?? r.car_number;
         const fast = best && best[1] === r.driver_id ? ' fastest' : '';
-        return `<div class="bc-row${i === 0 ? ' lead' : ''}${fast}">`
+        // Both cars in the shot are marked, not just the one the camera is
+        // named after, because the frame holds the pair and a viewer should
+        // be able to see at a glance which two rows they are watching.
+        const on = r.driver_id === bcFocus || r.driver_id === bcWith
+                 ? ' onair' : '';
+        return `<div class="bc-row${i === 0 ? ' lead' : ''}${fast}${on}"`
+             + ` data-focus="${esc(r.driver_id)}">`
              + `<span class="bc-bar" style="background:${esc(carColour(r))}"></span>`
              + `<span class="bc-pos">${i + 1}</span>`
              + `<span class="bc-num">${num != null ? esc(String(num)) : '\u2014'}</span>`
              + `<span class="bc-who">${esc(r.display_name || '')}</span>`
              + `<span class="bc-gap">${gap}</span></div>`;
     }).join('') + bcFooter();
+
+    // Click a row to put the camera on that car, click it again to let the
+    // lap back. Choosing by hand turns the director off: a camera that
+    // wandered off the car somebody had just asked for would be a fault,
+    // however good its reasons.
+    tower.querySelectorAll('.bc-row').forEach(el => el.addEventListener('click', () => {
+        const id = el.dataset.focus;
+        if (bcFocus === id && !bcDirector) { bcFocus = bcWith = null; }
+        else {
+            bcDirector = false;
+            bcFocus = id;
+            // Held with whoever is nearest on the road, so a car picked out
+            // of a train is framed with the car it is racing rather than
+            // alone in the middle of an empty frame.
+            const near = bcClosestTo(field, id);
+            bcWith = near ? near.driver_id : null;
+            bcCutAt = Date.now();
+        }
+        if (lastRows) { renderBroadcast(lastRows); drawTrack(lastRows); }
+    }));
 
     const t = document.getElementById('map-title');
     if (t && rows[0]) {
@@ -1781,6 +1848,177 @@ const BROADCAST = new URLSearchParams(location.search).get('view') === 'broadcas
 let bcSplit = new URLSearchParams(location.search).get('split');
 // How many cars the tower holds. Twelve fits 1080p with room to breathe.
 const BC_ROWS = 12;
+
+// ---------------------------------------------------------------
+// Focus mode, and the director that drives it.
+//
+// Focus frames a pair of cars rather than the lap. A pair, not one car,
+// because the only reason to leave the wide shot is that something is
+// happening between two of them, and a camera holding one of the two shows
+// you half of it.
+//
+// Three numbers decide how it behaves and all three come from how the data
+// actually arrives, not from taste:
+//
+//  - Cars report every 1.5 seconds. The map therefore draws the world as it
+//    was BC_DELAY_MS ago and interpolates between the two reports either
+//    side of that moment, so cars drive rather than hop from beacon to
+//    beacon. A broadcast running a second and a half behind is a broadcast;
+//    one where the cars teleport is a diagnostic tool.
+//
+//  - The tightest the frame will go is BC_MIN_SPAN_M across. At 240 km/h a
+//    car covers 100 m between reports, so a frame much tighter than this
+//    would be mostly made up by the interpolation above rather than seen.
+//
+//  - The director holds a shot for BC_DWELL_MS before it will consider
+//    another. Without it, two pairs a few metres apart in closeness trade
+//    the camera every poll and the result is unwatchable.
+let bcFocus = null;        // the driver the camera is locked to, or null
+let bcWith = null;         // the rival it is holding in the same frame
+let bcDirector = false;    // whether the director picks for itself
+let bcCutAt = 0;           // when the shot now on air started
+const BC_DWELL_MS = 18000;
+const BC_MIN_SPAN_M = 1500;
+const BC_DELAY_MS = 1600;
+const BC_EASE_MS = 900;
+// The frame the camera is on and the one it is moving to, in projected
+// units, plus when the move started. Eased rather than cut, because a hard
+// jump between two parts of a 13 km circuit leaves a viewer with no idea
+// where they have been taken.
+let bcBox = null, bcBoxTo = null, bcBoxFrom = null, bcBoxAt = 0;
+let bcRaf = 0, bcLastFrame = 0;
+// Frames per second to animate at while focus mode is on. Not 60: a redraw
+// is the whole picture, terrain shading included, and spending four times
+// the processor on a smoothness nobody can see is how a browser running for
+// eight hours alongside a game capture becomes the thing that drops frames.
+const BC_FPS = 25;
+
+/** Book the next animation frame, while focus mode has something to animate.
+ *
+ *  Throttled rather than free-running, and a no-op when a frame is already
+ *  booked, so the several reasons to want one cannot stack up into several
+ *  redraws of the same moment. */
+function bcBookFrame() {
+    if (bcRaf) return;
+    bcRaf = requestAnimationFrame(() => {
+        bcRaf = 0;
+        const now = performance.now();
+        if (now - bcLastFrame < 1000 / BC_FPS) { bcBookFrame(); return; }
+        bcLastFrame = now;
+        if (lastRows) drawTrack(lastRows);
+    });
+}
+
+/** The closest pair of cars on track, by distance round the lap.
+ *
+ *  Distance, not time: the gap in seconds would have to be invented from an
+ *  assumed pace, and the director would then be cutting on a number nobody
+ *  measured. Metres round the lap is what the connector reports.
+ *
+ *  Cars a lap or more apart are not a battle however close they look on the
+ *  map, which is why this works on total distance run rather than on where
+ *  they happen to be on the outline. */
+function bcClosestPair(rows) {
+    const live = rows.filter(r => r.on_track && (r.age_ms ?? 0) < 30000
+                                  && runDistance(r) != null);
+    if (live.length < 2) return null;
+    live.sort((a, b) => runDistance(b) - runDistance(a));
+    let best = null;
+    for (let i = 0; i < live.length - 1; i++) {
+        const gap = runDistance(live[i]) - runDistance(live[i + 1]);
+        if (best === null || gap < best.gap) {
+            best = { gap, lead: live[i], chase: live[i + 1] };
+        }
+    }
+    return best;
+}
+
+/** The car nearest a given one by distance round the lap, in either
+ *  direction: the one it is racing, whether it is chasing or being chased. */
+function bcClosestTo(rows, id) {
+    const me = rows.find(r => r.driver_id === id);
+    const mine = me ? runDistance(me) : null;
+    if (mine == null) return null;
+    let best = null, bestGap = Infinity;
+    for (const r of rows) {
+        if (r.driver_id === id) continue;
+        const d = runDistance(r);
+        if (d == null) continue;
+        const gap = Math.abs(d - mine);
+        if (gap < bestGap) { bestGap = gap; best = r; }
+    }
+    return best;
+}
+
+/** What the director does between cuts.
+ *
+ *  It leaves a shot alone unless it has had its spell AND there is a reason:
+ *  either the pair it is watching has come apart, or another pair is
+ *  decisively closer. "Decisively" is a quarter closer rather than any
+ *  amount closer, so two battles within a few metres of each other in
+ *  closeness do not pass the camera back and forth. */
+function bcDirect(rows) {
+    if (!bcDirector) return;
+    const best = bcClosestPair(rows);
+    if (!best) return;
+    const now = Date.now();
+    if (bcFocus === null) {
+        bcFocus = best.chase.driver_id; bcWith = best.lead.driver_id;
+        bcCutAt = now;
+        return;
+    }
+    if (now - bcCutAt < BC_DWELL_MS) return;
+    const cur = rows.find(r => r.driver_id === bcFocus);
+    const oth = rows.find(r => r.driver_id === bcWith);
+    const curGap = cur && oth && runDistance(cur) != null && runDistance(oth) != null
+        ? Math.abs(runDistance(cur) - runDistance(oth)) : Infinity;
+    const same = (best.chase.driver_id === bcFocus && best.lead.driver_id === bcWith)
+              || (best.lead.driver_id === bcFocus && best.chase.driver_id === bcWith);
+    if (same) { bcCutAt = now; return; }
+    if (best.gap < curGap * 0.75 || curGap > 600) {
+        bcFocus = best.chase.driver_id; bcWith = best.lead.driver_id;
+        bcCutAt = now;
+    }
+}
+
+/** Where a car was BC_DELAY_MS ago, between the two reports either side of
+ *  that moment.
+ *
+ *  Returns the row untouched when there is nothing to interpolate from, or
+ *  when the two points straddle a break: a break means the car was not
+ *  driving between them, and sliding it along that line would draw a car
+ *  crossing the infield to its pit box. */
+function bcSmoothRow(r) {
+    const path = carPaths.get(r.driver_id);
+    if (!path || path.length < 2 || r.x == null) return r;
+    const t = Date.now() - BC_DELAY_MS;
+    let i = -1;
+    for (let k = path.length - 1; k > 0; k--) {
+        if (path[k - 1][4] <= t && path[k][4] >= t) { i = k; break; }
+    }
+    if (i < 0) return r;
+    const a = path[i - 1], b = path[i];
+    if (b[3]) return r;
+    const span = b[4] - a[4];
+    const f = span > 0 ? Math.min(1, Math.max(0, (t - a[4]) / span)) : 1;
+    return { ...r,
+        x: a[0] + (b[0] - a[0]) * f,
+        z: a[1] + (b[1] - a[1]) * f,
+        y: a[2] == null || b[2] == null ? r.y : a[2] + (b[2] - a[2]) * f };
+}
+
+/** The cars the frame is being held on, if focus mode is on and they are
+ *  actually out there. */
+function bcFocusCars(rows) {
+    if (!BROADCAST || bcFocus === null) return [];
+    const ok = r => r && r.x != null && r.z != null && !strays.has(r.driver_id);
+    const a = rows.find(r => r.driver_id === bcFocus);
+    const b = bcWith === null ? null : rows.find(r => r.driver_id === bcWith);
+    const out = [];
+    if (ok(a)) out.push(a);
+    if (ok(b)) out.push(b);
+    return out;
+}
 if (BROADCAST) document.body.classList.add('broadcast');
 let viewChosen = false;         // whether the viewer has pressed the button
 let mapTurned = false;          // whether they have worked out how to turn it
@@ -2918,10 +3156,14 @@ const badgeWidths = new Map();
 if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => badgeWidths.clear()).catch(() => {});
 }
+// Keyed by the font as well as the number, now that a focused frame draws
+// the badges larger. One cache measured at 10px and handed to a 14px badge
+// is how a two-digit number ends up hanging off both ends of its pill.
 function badgeHalfWidth(g, label) {
     if (!label) return 0;
-    let w = badgeWidths.get(label);
-    if (w == null) { w = g.measureText(label).width / 2; badgeWidths.set(label, w); }
+    const key = g.font + '|' + label;
+    let w = badgeWidths.get(key);
+    if (w == null) { w = g.measureText(label).width / 2; badgeWidths.set(key, w); }
     return w;
 }
 
@@ -2961,6 +3203,13 @@ function drawTrack(rows) {
             return at ? { ...r, x: at[0], z: at[1], y: at[2], speed_kph: at[4], age_ms: 0 }
                       : { ...r, x: null, z: null };
         });
+    } else if (BROADCAST && bcFocus !== null) {
+        // Close in on a battle and the 1.5 second beacon stops being a
+        // detail: a car covering a hundred metres between reports crosses a
+        // tenth of the frame in one step. Every car is drawn a beacon and a
+        // bit in the past and slid between its last two reports, so they all
+        // move together and they all move smoothly.
+        rows = rows.map(bcSmoothRow);
     }
     const note = document.getElementById('map-note');
 
@@ -3068,6 +3317,52 @@ function drawTrack(rows) {
         }
     }
 
+    // Focus mode replaces the fit. The lap is no longer the subject; the pair
+    // of cars is, so the frame is drawn round them and the rest of the
+    // circuit runs off the edges where it belongs.
+    //
+    // Eased, not cut. A hard jump from the Porsche Curves to Mulsanne leaves
+    // a viewer with no idea where they have been taken; a move they can
+    // follow keeps the circuit one place rather than a set of unrelated
+    // pictures. The easing runs on its own frames, booked below.
+    const focusCars = bcFocusCars(rows);
+    if (focusCars.length) {
+        let fu0 = Infinity, fu1 = -Infinity, fv0 = Infinity, fv1 = -Infinity;
+        for (const r of focusCars) {
+            const q = world(r.x, r.z, r.y);
+            if (q[0] < fu0) fu0 = q[0]; if (q[0] > fu1) fu1 = q[0];
+            if (q[1] < fv0) fv0 = q[1]; if (q[1] > fv1) fv1 = q[1];
+        }
+        // Room round the cars, and never tighter than the floor: two cars
+        // side by side are four metres apart and a frame four metres wide
+        // would be a picture of nothing but tarmac.
+        const cu = (fu0 + fu1) / 2, cv0 = (fv0 + fv1) / 2;
+        const half = Math.max(BC_MIN_SPAN_M / 2, (fu1 - fu0) * 0.9,
+                              (fv1 - fv0) * 0.9);
+        const want = [cu - half, cu + half, cv0 - half, cv0 + half];
+        if (!bcBox) { bcBox = want.slice(); bcBoxTo = want.slice(); bcBoxAt = 0; }
+        // A new target only when it has really moved, so the ease is not
+        // restarted from scratch by every poll.
+        if (!bcBoxTo || Math.abs(want[0] - bcBoxTo[0]) > half * 0.02
+                     || Math.abs(want[2] - bcBoxTo[2]) > half * 0.02
+                     || Math.abs((want[1] - want[0]) - (bcBoxTo[1] - bcBoxTo[0])) > half * 0.02) {
+            bcBoxFrom = bcBox.slice();
+            bcBoxTo = want.slice();
+            bcBoxAt = performance.now();
+        }
+        const t = bcBoxAt ? Math.min(1, (performance.now() - bcBoxAt) / BC_EASE_MS) : 1;
+        // Smoothstep: a move that starts and stops gently reads as a camera,
+        // a linear one reads as a slide being dragged.
+        const e = t * t * (3 - 2 * t);
+        bcBox = (bcBoxFrom || bcBoxTo).map((v, i) => v + (bcBoxTo[i] - v) * e);
+        minU = bcBox[0]; maxU = bcBox[1]; minV = bcBox[2]; maxV = bcBox[3];
+        // Always, not only while easing: the cars themselves are being slid
+        // between reports, so the picture has something to say every frame.
+        bcBookFrame();
+    } else if (bcBox) {
+        bcBox = bcBoxTo = bcBoxFrom = null;
+    }
+
     // The circuit is framed in the part of the canvas a viewer can see, which
     // in broadcast mode is everything to the right of the timing tower.
     const pad = 26;
@@ -3080,10 +3375,17 @@ function drawTrack(rows) {
     // ride on top of it, about the middle of the canvas. Keeping the fit
     // separate means the view survives the 1.5s redraw and the circuit still
     // reframes itself as more of it is traced.
-    clampView(visW, h, spanX * scale, spanZ * scale);
-    const vs = view.scale, cx = padL + visW / 2, cy = h / 2;
-    const px = u => cx + (offX + (u - minU) * scale - cx) * vs + view.x;
-    const pz = v => cy + (offZ + (v - minV) * scale - cy) * vs + view.y;
+    // A focused frame IS the view, so the reader's zoom and pan sit the move
+    // out. Letting them ride on top would mean a camera cutting to a battle
+    // and arriving somewhere else entirely because somebody had dragged the
+    // map ten minutes earlier. Their settings are untouched and come back
+    // the moment the wide shot does.
+    const framed = focusCars.length > 0;
+    if (!framed) clampView(visW, h, spanX * scale, spanZ * scale);
+    const vs = framed ? 1 : view.scale, cx = padL + visW / 2, cy = h / 2;
+    const vdx = framed ? 0 : view.x, vdy = framed ? 0 : view.y;
+    const px = u => cx + (offX + (u - minU) * scale - cx) * vs + vdx;
+    const pz = v => cy + (offZ + (v - minV) * scale - cy) * vs + vdy;
     // One point, from the circuit to the screen. Everything that draws goes
     // through this, so flat and tilted cannot drift apart.
     const S = (x, z, y) => { const q = world(x, z, y); return [px(q[0]), pz(q[1])]; };
@@ -3091,7 +3393,12 @@ function drawTrack(rows) {
     // bloat with the zoom. Held roughly constant instead, which is what a
     // map should do, while still thickening a little so it does not look
     // spindly when zoomed right in.
-    const zw = Math.max(0.6, Math.min(1.8, Math.pow(vs, 0.35)));
+    // A focused frame is magnified eight or nine times over the wide shot
+    // without the reader's zoom moving at all, so the weight cannot be taken
+    // from view.scale. Fixed instead, and heavier: a hairline circuit that
+    // reads at thirteen kilometres across is a thread at fifteen hundred
+    // metres, and the thing the shot is about would be sitting on nothing.
+    const zw = framed ? 1.6 : Math.max(0.6, Math.min(1.8, Math.pow(vs, 0.35)));
 
     // Only shade when there is a real climb to show. A circuit with ten
     // metres of elevation would otherwise be painted as dramatically as the
@@ -3591,7 +3898,12 @@ function drawTrack(rows) {
     // Each car: its badge, then its number. A focused split dims the rest
     // rather than removing them, so you can still see where the others are
     // relative to the ones you are watching.
-    g.font = "bold 10px 'Inter', system-ui, sans-serif";
+    // Bigger badges in a focused frame. Everything the map draws is sized in
+    // screen pixels so it holds still as the map zooms, which is right for a
+    // reader panning about a circuit and wrong here: the pair of cars is the
+    // subject of the shot, not a marker on a diagram of one.
+    g.font = framed ? "bold 14px 'Inter', system-ui, sans-serif"
+                    : "bold 10px 'Inter', system-ui, sans-serif";
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     // Nearest last, so a car in front of another covers it rather than the
@@ -3653,7 +3965,7 @@ function drawTrack(rows) {
         // three-figure car number ran off both sides of it and was the one
         // thing on the map you could not read. One and two digits still get a
         // circle, since the pill is only as wide as it has to be.
-        const rad = hot ? 9 : 7;
+        const rad = (hot ? 9 : 7) * (framed ? 1.5 : 1);
         const half = Math.max(rad, badgeHalfWidth(g, label) + 3.5);
         if (hot) {
             g.globalAlpha = 0.35;
@@ -3685,6 +3997,48 @@ function drawTrack(rows) {
         }
         g.globalAlpha = 1;
     });
+
+    // What the shot is about, written on the shot: how far apart the two cars
+    // the camera is holding actually are.
+    //
+    // Metres round the lap, which the connector reports, and not seconds,
+    // which it does not. A gap in seconds would have to be divided out of an
+    // assumed pace, and a broadcast caption is the last place to put a number
+    // nobody measured. Rounded to five metres because the reports arrive every
+    // 1.5 seconds and a figure to the metre would be claiming a precision the
+    // beacon has not got.
+    if (framed && focusCars.length === 2) {
+        const [ra, rb] = focusCars;
+        const da = runDistance(ra), db = runDistance(rb);
+        if (da != null && db != null) {
+            const a = S(ra.x, ra.z, ra.y), b = S(rb.x, rb.z, rb.y);
+            g.save();
+            g.setLineDash([5, 5]);
+            g.strokeStyle = 'rgba(255,209,102,0.55)';
+            g.lineWidth = 1.5;
+            g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
+            g.restore();
+            const m = Math.round(Math.abs(da - db) / 5) * 5;
+            const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+            const txt = m < 1000 ? `${m} m` : `${(m / 1000).toFixed(2)} km`;
+            g.font = "bold 13px 'Inter', system-ui, sans-serif";
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            const tw = g.measureText(txt).width;
+            // Offset to the side, so the label is not sitting on the line it
+            // is measuring or on either car.
+            const ox = mx + 46, oy = my;
+            g.fillStyle = 'rgba(5,6,8,0.85)';
+            pillPath(g, ox, oy, tw / 2 + 9, 11);
+            g.fill();
+            g.strokeStyle = 'rgba(255,209,102,0.5)';
+            g.lineWidth = 1;
+            pillPath(g, ox, oy, tw / 2 + 9, 11);
+            g.stroke();
+            g.fillStyle = '#ffd166';
+            g.fillText(txt, ox, oy + 0.5);
+        }
+    }
 
     // That the map is wound back, and how far. Without it a replay of a
     // quiet moment is indistinguishable from a live one.
