@@ -572,8 +572,34 @@
 
         .splits { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 1.25rem; margin-top: 2rem; align-items: start; }
 
-        .split { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-        .split-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
+        /* The card as an object with a surface, rather than a rectangle of a
+           slightly different grey.
+           Three things do almost all of the work, and all three are how a
+           physical panel behaves rather than decoration for its own sake: a
+           ground that is lighter at the top than the bottom, so the card
+           reads as lit from above; a one pixel highlight along its top edge,
+           which is the light catching the bevel; and a shadow underneath
+           deep enough to lift it off the page. */
+        .split {
+            background:
+                linear-gradient(180deg, #121823 0%, #0b1017 38%, #090d13 100%);
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 14px; overflow: hidden;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.07),
+                0 1px 2px rgba(0,0,0,0.5),
+                0 18px 40px -22px rgba(0,0,0,0.9);
+        }
+        /* The header as a plate across the top: its own gradient, a gold
+           hairline under it to tie the card to the league's colour, and the
+           bevel highlight repeated so the plate sits on the card rather than
+           being painted onto it. */
+        .split-head { display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.95rem 1.1rem;
+            background: linear-gradient(180deg, #1a212e 0%, #141a25 100%);
+            border-bottom: 1px solid rgba(255,209,102,0.22);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06),
+                        0 1px 0 rgba(0,0,0,0.5); }
         .split-head .split-meta { margin-left: auto; }
         /* The card's name, given the weight of a title rather than a field
            label. It is the only thing telling you which race you are
@@ -598,13 +624,24 @@
            the sub-line simply overflowed into Last and the two ran together.
            The width comes back off Fuel, which had slack in it. */
         th:nth-child(3), td:nth-child(3) { width: 72px; }
-        th:nth-child(6), td:nth-child(6) { width: 76px; }
+        th:nth-child(6), td:nth-child(6) { width: 90px; }
         /* Sized in pixels, not ch: a Nordschleife lap reads 7:54.471, and ch
            units under-measured it once cell padding was counted, which clipped
            the Best column on the narrowest cards. */
-        th:nth-child(4), td:nth-child(4) { width: 66px; }
-        th:nth-child(5), td:nth-child(5) { width: 66px; }
-        th { font-family: 'Orbitron', sans-serif; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); }
+        /* Widened with the type. These were sized for 0.78rem numerals, and
+           growing the numerals without growing the columns is what put a
+           practice board's Last and Best into each other: in a race the
+           fifth column is Gap, which is short, so the race layout fitted
+           and the fault only showed where both columns hold a full lap
+           time. 76px takes 7:54.471 at the new size with room to spare. */
+        th:nth-child(4), td:nth-child(4) { width: 76px; }
+        th:nth-child(5), td:nth-child(5) { width: 76px; }
+        th { font-family: 'Orbitron', sans-serif; font-size: 0.52rem; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase; color: #8e9bad;
+            text-align: left; padding: 0.55rem 0.6rem;
+            background: linear-gradient(180deg, rgba(255,255,255,0.045),
+                                                rgba(255,255,255,0));
+            border-bottom: 1px solid rgba(255,255,255,0.1); }
         td { padding: 0.5rem 0.6rem; font-size: 0.82rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
         tr:last-child td { border-bottom: none; }
         .num { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; font-size: 0.78rem; padding-left: 0.25rem; padding-right: 0.45rem; }
@@ -626,16 +663,47 @@
            badge you can read across a room. Here it is the full height of
            the row, down the edge, so a column of them is the field. */
         tbody tr { position: relative; }
+        /* The rail, with its own light on it: a gradient down its length so
+           it is not a flat stripe, and a glow in the car's own colour
+           spilling onto the row. That glow is why a column of rails reads as
+           the field rather than as a row of stickers. */
         .pos::before { content: ''; position: absolute; left: 0; top: 0;
-            bottom: 0; width: 4px; background: var(--car, transparent); }
+            bottom: 0; width: 4px;
+            background: linear-gradient(180deg,
+                color-mix(in srgb, var(--car, transparent) 70%, white),
+                var(--car, transparent) 45%,
+                color-mix(in srgb, var(--car, transparent) 80%, black));
+            box-shadow: 0 0 10px -1px var(--car, transparent); }
+        /* Browsers without color-mix still get the rail, just flat. */
+        @supports not (color: color-mix(in srgb, red, blue)) {
+            .pos::before { background: var(--car, transparent); }
+        }
+        /* The position cut out of the light rather than painted on it: a
+           gradient through the numeral, which is what gives a broadcast's
+           numbers their weight.
+           Behind a support test, because the transparent fill that makes it
+           work would otherwise turn the position into an invisible numeral
+           on any engine that cannot clip a background to text. */
+        @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+            .pos { background-image: linear-gradient(180deg, #ffffff 8%, #9fabbb 96%);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent; }
+            tbody tr.p1 .pos { background-image:
+                linear-gradient(180deg, #fff4d2 6%, #e8ad3c 96%); }
+        }
         /* Banded, because twenty-four identical rows is a wall and the eye
            needs something to count down. */
         tbody tr:nth-child(even) { background: rgba(255,255,255,0.018); }
         /* The leader, lit. One row in a split that reads differently from
            the rest, which is the whole job of a classification. */
-        tbody tr.p1 { background: rgba(255,209,102,0.07); }
+        /* The leader lit from the left, fading out across the row, rather
+           than a flat wash. The light comes from where the rail is, which
+           is the only place on the row anything is happening. */
+        tbody tr.p1, tbody tr.p1:nth-child(even) {
+            background-image: linear-gradient(90deg,
+                rgba(255,209,102,0.16) 0%, rgba(255,209,102,0.05) 32%,
+                rgba(255,209,102,0) 72%); }
         tbody tr.p1 .pos { color: var(--gold); }
-        tbody tr.p1:nth-child(even) { background: rgba(255,209,102,0.085); }
         /* Numbers the size of the thing they are reporting. A lap time is
            the point of a timing board and it was set smaller than the
            driver's name. */
@@ -644,10 +712,17 @@
         /* The car number as a plate, the way it is on the map and in the
            broadcast tower, so the three places a viewer meets the same car
            agree with each other. */
+        /* A plate with a light on it: brighter at the top, a dark hairline
+           under it, and a shadow, so it reads as something screwed to the
+           car rather than a highlighted word. */
         .sub-num { font-family: 'Orbitron', sans-serif; font-weight: 700;
-            font-size: 0.68rem; color: #0a0b0e; background: #cdd5df;
-            border-radius: 3px; padding: 0.08rem 0.3rem;
-            font-variant-numeric: tabular-nums; }
+            font-size: 0.68rem; color: #0a0b0e;
+            background: linear-gradient(180deg, #f2f6fa 0%, #c3cdd9 100%);
+            border-radius: 3px; padding: 0.1rem 0.32rem;
+            font-variant-numeric: tabular-nums;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.9),
+                        inset 0 -1px 0 rgba(0,0,0,0.25),
+                        0 1px 2px rgba(0,0,0,0.5); }
         /* The dot has done its job and the rail does it better. */
         tbody .team-dot { display: none; }
 
@@ -707,10 +782,23 @@
            the eye should be drawn only by the two that are not.
            The same three colours the broadcast tower uses, so a driver and
            a viewer reading different screens are reading the same thing. */
-        .fuel-bar { width: 42px; height: 7px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; flex: 0 0 auto; }
-        .fuel-fill { display: block; height: 100%; background: var(--gold); }
-        .fuel-low .fuel-fill  { background: #ffb020; }
-        .fuel-crit .fuel-fill { background: var(--red); }
+        /* A track with depth and a fill with a gloss on it. The inset shadow
+           is what makes the empty part read as a channel rather than a grey
+           rectangle, and the highlight along the top of the fill is what
+           makes the full part read as something in it. */
+        .fuel-bar { width: 42px; height: 8px; border-radius: 4px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(255,255,255,0.05));
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.6),
+                        inset 0 0 0 1px rgba(255,255,255,0.05);
+            overflow: hidden; flex: 0 0 auto; }
+        .fuel-fill { display: block; height: 100%; border-radius: 4px;
+            background: linear-gradient(180deg,
+                color-mix(in srgb, var(--gold) 72%, white), var(--gold));
+            box-shadow: 0 0 8px -2px var(--gold); }
+        .fuel-low .fuel-fill  { background: linear-gradient(180deg, #ffd27a, #ffb020);
+            box-shadow: 0 0 8px -2px #ffb020; }
+        .fuel-crit .fuel-fill { background: linear-gradient(180deg, #ff8080, var(--red));
+            box-shadow: 0 0 9px -1px var(--red); }
         .fuel-pct { font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
         .fuel-low .fuel-pct  { color: #ffb020; }
         .fuel-crit .fuel-pct { color: #fca5a5; font-weight: 600; }
@@ -722,8 +810,12 @@
            says it: purple for the fastest anybody has done this session,
            green for a driver's own best. Both are facts we already hold,
            and a column of times becomes readable at a glance with them. */
-        .lap-session { color: #c084fc; font-weight: 700; }
-        .lap-personal { color: #4ade80; font-weight: 700; }
+        /* The two colours motorsport agrees on, given a little light so they
+           sit with the rest of the board rather than on top of it. */
+        .lap-session { color: #c9a4ff; font-weight: 700;
+            text-shadow: 0 0 14px rgba(179,136,255,0.55); }
+        .lap-personal { color: #5fe08f; font-weight: 700;
+            text-shadow: 0 0 12px rgba(74,222,128,0.35); }
         .dr { display: flex; align-items: center; min-width: 0; }
         .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; cursor: help; }
         /* Quiet: it is a detail, not a status. Never shrinks, so a long name
@@ -1121,9 +1213,18 @@ const FASTEST_FLASH_MS = 9000;
 /** What a lap was worth: the session's fastest, this driver's own best, or
  *  neither. The classes are purple and green, which is what every timing
  *  screen has meant by those colours for thirty years. */
-function lapWorth(ms, r) {
+/** Purple for the fastest lap of the round, green for a driver's own best.
+ *
+ *  `ownToo` is false in the Best column, where green would be on every row
+ *  and mean nothing: the figure in that column IS the driver's own best, so
+ *  colouring it for being equal to itself is a tautology, and a practice
+ *  board came out as a column of bright green with one purple in it. Green
+ *  earns its place in Last, where it says the lap just completed matched
+ *  the best they have driven, which is a thing that happened. */
+function lapWorth(ms, r, ownToo = true) {
     if (ms == null) return '';
     if (sessionBest != null && ms <= sessionBest) return ' class="lap-session"';
+    if (!ownToo) return '';
     const own = bestLap(r);
     if (own != null && ms <= own) return ' class="lap-personal"';
     return '';
@@ -1455,7 +1556,7 @@ function rowHtml(r, idx, showFuel, isRace, ahead, sameCar) {
             stintLaps(r.driver_id) != null ? stintLaps(r.driver_id) + ' this stint' : ''}</span></td>
         <td class="num"><span${lapWorth(r.last_lap_ms, r)}>${lapTime(r.last_lap_ms)}</span><span class="sub2">${live ? lapTime(r.lap_ms) : ''}</span></td>
         <td class="num">${isRace ? gapHtml(r, ahead)
-            : `<span${lapWorth(bestLap(r), r)}>${lapTime(bestLap(r))}</span>`}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
+            : `<span${lapWorth(bestLap(r), r, false)}>${lapTime(bestLap(r))}</span>`}<span class="sub2">${live && r.speed_kph != null ? r.speed_kph + ' kph' : ''}</span></td>
         ${showFuel ? `<td>${fuelHtml(r)}</td>` : ''}
     </tr>`;
 }
