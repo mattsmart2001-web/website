@@ -575,7 +575,12 @@
         .split { background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
         .split-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.9rem 1.1rem; background: var(--bg-2); border-bottom: 1px solid var(--border); }
         .split-head .split-meta { margin-left: auto; }
-        .split-name { font-family: 'Orbitron', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+        /* The card's name, given the weight of a title rather than a field
+           label. It is the only thing telling you which race you are
+           reading. */
+        .split-name { font-family: 'Anton', sans-serif; font-size: 1.05rem;
+            font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase;
+            color: var(--gold); }
         .split-meta { font-size: 0.7rem; color: var(--muted); }
 
         /* Fixed layout so a long team name truncates instead of forcing the
@@ -604,18 +609,110 @@
         tr:last-child td { border-bottom: none; }
         .num { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; font-size: 0.78rem; padding-left: 0.25rem; padding-right: 0.45rem; }
         th:nth-child(n+3) { text-align: right; }
-        .pos { font-family: 'Anton', sans-serif; font-size: 0.95rem; color: var(--gold); width: 2.2ch; }
+        .pos { font-family: 'Anton', sans-serif; font-size: 1.35rem; color: var(--text);
+               width: 2.2ch; position: relative; }
+        /* ------------------------------------------------------------------
+           The board, dressed as a timing board.
+           ------------------------------------------------------------------
+           It had grown into a report of a race rather than a picture of one:
+           uniform rows, right-aligned columns, every line the same weight,
+           so the leader looked like eighth. None of the structure was wrong,
+           which is why none of it changes here. What changes is what the eye
+           is given to land on.
+
+           The car's colour, first. It was a seven pixel dot on the line
+           under the name: the strongest identity signal the board has,
+           spent on its smallest mark, where the map draws the same car as a
+           badge you can read across a room. Here it is the full height of
+           the row, down the edge, so a column of them is the field. */
+        tbody tr { position: relative; }
+        .pos::before { content: ''; position: absolute; left: 0; top: 0;
+            bottom: 0; width: 4px; background: var(--car, transparent); }
+        /* Banded, because twenty-four identical rows is a wall and the eye
+           needs something to count down. */
+        tbody tr:nth-child(even) { background: rgba(255,255,255,0.018); }
+        /* The leader, lit. One row in a split that reads differently from
+           the rest, which is the whole job of a classification. */
+        tbody tr.p1 { background: rgba(255,209,102,0.07); }
+        tbody tr.p1 .pos { color: var(--gold); }
+        tbody tr.p1:nth-child(even) { background: rgba(255,209,102,0.085); }
+        /* Numbers the size of the thing they are reporting. A lap time is
+           the point of a timing board and it was set smaller than the
+           driver's name. */
+        .num { font-size: 0.92rem; }
+        .who { font-size: 0.95rem; }
+        /* The car number as a plate, the way it is on the map and in the
+           broadcast tower, so the three places a viewer meets the same car
+           agree with each other. */
+        .sub-num { font-family: 'Orbitron', sans-serif; font-weight: 700;
+            font-size: 0.68rem; color: #0a0b0e; background: #cdd5df;
+            border-radius: 3px; padding: 0.08rem 0.3rem;
+            font-variant-numeric: tabular-nums; }
+        /* The dot has done its job and the rail does it better. */
+        tbody .team-dot { display: none; }
+
+        /* The fastest lap of the round, as an event rather than a state.
+           Purple is the one colour motorsport agrees on, and a number
+           quietly turning purple in a column is not how a broadcast would
+           say somebody has just taken it. */
+        @keyframes fastest-sweep {
+            0%   { background-position: -40% 0; }
+            100% { background-position: 140% 0; }
+        }
+        tbody tr.just-fastest {
+            background-image: linear-gradient(90deg,
+                rgba(179,136,255,0) 0%, rgba(179,136,255,0.28) 45%,
+                rgba(179,136,255,0) 90%);
+            background-size: 60% 100%;
+            background-repeat: no-repeat;
+            animation: fastest-sweep 1.6s ease-in-out 2;
+            box-shadow: inset 0 0 0 1px rgba(179,136,255,0.5);
+        }
+        tbody tr.just-fastest .pos::before { background: #b388ff; }
+        @media (prefers-reduced-motion: reduce) {
+            tbody tr.just-fastest { animation: none;
+                background-image: linear-gradient(90deg,
+                    rgba(179,136,255,0.18), rgba(179,136,255,0.05)); }
+        }
+        /* And said in words, once, where somebody looking at the map rather
+           than the table will still see it. */
+        /* Ahead of the rule below, because a class setting display beats the
+           browser's own [hidden] rule: they have the same specificity and
+           this stylesheet comes later. Without it the banner sits there as
+           an empty purple bar for the whole race. */
+        .fastest-banner[hidden] { display: none; }
+        .fastest-banner { display: flex; align-items: center; gap: 0.7rem;
+            margin: 0 0 1rem; padding: 0.7rem 1rem; border-radius: 10px;
+            background: linear-gradient(90deg, rgba(179,136,255,0.22),
+                                               rgba(179,136,255,0.04));
+            border: 1px solid rgba(179,136,255,0.45); }
+        .fastest-banner b { font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem; font-weight: 700; letter-spacing: 0.2em;
+            text-transform: uppercase; color: #d6bcff; }
+        .fastest-banner .fb-name { font-weight: 700; color: var(--text); }
+        .fastest-banner .fb-time { margin-left: auto;
+            font-family: 'Orbitron', sans-serif; font-weight: 700;
+            color: #d6bcff; font-variant-numeric: tabular-nums; }
         .car { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.75rem; }
         /* Fuel as a bar rather than a bare number: across a split, "who is
            about to stop" reads from the shape of a column of bars far faster
            than from a column of percentages. */
-        .fuel-wrap { display: flex; align-items: center; gap: 0.35rem; justify-content: flex-end; }
-        .fuel-bar { width: 34px; height: 7px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; flex: 0 0 auto; }
-        .fuel-fill { display: block; height: 100%; background: var(--green); }
-        .fuel-low .fuel-fill  { background: #fb923c; }
+        .fuel-wrap { display: flex; align-items: center; gap: 0.45rem; justify-content: flex-end; }
+        /* Gold, not green. Green here was the system's idea of "fine" rather
+           than the league's, and a column of it fought the gold the rest of
+           the board is built from. It also wasted the strongest signal a bar
+           has: when every full tank is green, amber and red are the only
+           colours that mean anything, which is backwards. A tank that is
+           simply full should look like everything else that is fine, and
+           the eye should be drawn only by the two that are not.
+           The same three colours the broadcast tower uses, so a driver and
+           a viewer reading different screens are reading the same thing. */
+        .fuel-bar { width: 42px; height: 7px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; flex: 0 0 auto; }
+        .fuel-fill { display: block; height: 100%; background: var(--gold); }
+        .fuel-low .fuel-fill  { background: #ffb020; }
         .fuel-crit .fuel-fill { background: var(--red); }
         .fuel-pct { font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-        .fuel-low .fuel-pct  { color: #fdba74; }
+        .fuel-low .fuel-pct  { color: #ffb020; }
         .fuel-crit .fuel-pct { color: #fca5a5; font-weight: 600; }
         /* Second lines under Last and Best: current lap time and speed. They
            use vertical space the rows already have rather than two more
@@ -1016,6 +1113,10 @@ function gapHtml(r, ahead) {
 // once per render from the same figures the rows show. Null until somebody
 // has completed a watched lap.
 let sessionBest = null;
+// The fastest lap of the round, while it is still news. Purple is what
+// motorsport agrees this means, so that is the colour it arrives in.
+let fastestFlash = null, fastestTimer = null;
+const FASTEST_FLASH_MS = 9000;
 
 /** What a lap was worth: the session's fastest, this driver's own best, or
  *  neither. The classes are purple and green, which is what every timing
@@ -1249,7 +1350,7 @@ async function loadVoidList(ev) {
     drawLapChart();
 }
 
-function rowHtml(r, idx, showFuel, isRace, ahead) {
+function rowHtml(r, idx, showFuel, isRace, ahead, sameCar) {
     const st = liveness(r.age_ms ?? 0, r.on_track, strays.has(r.driver_id));
     const live = st.cls === 's-live' && r.on_track;
     // Order within a split is laps completed and then distance round the lap
@@ -1278,9 +1379,14 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
     // in a dangling dot. Not a CSS ::before, which paints the right thing
     // but leaves nothing behind for anyone copying the row or reading it
     // with a screen reader.
+    // The car is printed only when it tells the reader something. A GT3
+    // field is twenty-four identical 911s, so the name was set twenty-four
+    // times to say nothing, and it was the longest thing on the line. In a
+    // multi-class field, which GT7's own category now lets us see, it is the
+    // most important thing on it and stays.
     const subParts = [
         num != null ? { cls: 'sub-num', text: '#' + num } : null,
-        r.car_name ? { cls: 'sub-car', text: r.car_name } : null,
+        r.car_name && !sameCar ? { cls: 'sub-car', text: r.car_name } : null,
         r.team_name ? { cls: 'sub-team', text: r.team_name } : null,
     ].filter(Boolean);
     const sub = subParts.map((part, i) => `<span class="${part.cls}">${
@@ -1289,7 +1395,14 @@ function rowHtml(r, idx, showFuel, isRace, ahead) {
     // still ellipses on a narrow split card, and this is how to read it.
     const subPlain = subParts.map(p => p.text).join(' · ');
 
-    return `<tr class="${st.cls}" data-driver="${r.driver_id}">
+    // The car's own colour, carried on the row so the rail down its left
+    // edge can be painted in CSS. It was a six pixel dot buried in the line
+    // under the name, which is the strongest identity signal the board has
+    // spent on the smallest mark on it.
+    const flash = fastestFlash && fastestFlash.driver_id === r.driver_id
+        ? ' just-fastest' : '';
+    return `<tr class="${st.cls}${idx === 0 ? ' p1' : ''}${flash}"
+                data-driver="${r.driver_id}" style="--car:${carColour(r)}">
         <td class="pos">${idx + 1}</td>
         <td>
             <div class="dr"><span class="who" data-driver="${r.driver_id}" tabindex="0">${esc(r.display_name)}</span>${clientBadge(r.client)}${
@@ -1374,6 +1487,10 @@ function splitHtml(lobby, rows, showFuel) {
         : `<th title="${isRace
             ? `Place in this list, not position in the race. ${cov ? `${cov.reporting} of the ${cov.entered} cars` : 'Not every car'} in this split ${cov && cov.reporting === 1 ? 'is' : 'are'} reporting, so cars that are not here are not counted.`
             : 'Place in this list, by best lap.'}">#</th>`;
+    // Whether every car here is the same car, which decides if naming it
+    // on each row is information or wallpaper.
+    const cars = new Set(rows.map(r => r.car_name).filter(Boolean));
+    const sameCar = cars.size <= 1;
     const key = String(lobby ?? 0);
     const collapsed = collapsedSplits.has(key);
     const focused = focusedSplit === key;
@@ -1392,7 +1509,7 @@ function splitHtml(lobby, rows, showFuel) {
             <thead><tr>${posHead}<th>Driver</th><th>Lap</th><th>Last</th>${isRace
                 ? '<th title="Gap to the car above, worked out from how far round the lap each of them is and shown at the leading car\'s best-lap pace. A gap in metres is exact; the seconds it becomes depend on where on the circuit it is being covered.">Gap</th>'
                 : '<th>Best</th>'}${showFuel ? '<th>Fuel</th>' : ''}</tr></thead>
-            <tbody>${rows.map((r, i) => rowHtml(r, i, showFuel, isRace, rows[i - 1])).join('')}</tbody>
+            <tbody>${rows.map((r, i) => rowHtml(r, i, showFuel, isRace, rows[i - 1], sameCar)).join('')}</tbody>
         </table>
     </div>`;
 }
@@ -1517,10 +1634,35 @@ function renderField(rows) {
     // is what purple means. Worked out before any row is drawn so that every
     // row is measured against the same figure.
     computeStints();
+    const prevBest = sessionBest;
     sessionBest = rows.reduce((b, r) => {
         const v = bestLap(r);
         return v != null && (b == null || v < b) ? v : b;
     }, null);
+    // Somebody has just taken the fastest lap of the round. Worth saying out
+    // loud for a few seconds: it is the one thing on a timing board that is
+    // an event rather than a state, and a purple number appearing in a
+    // column is not how a broadcast would say it.
+    //
+    // Only on an improvement, and never on the first figure of the session,
+    // which is not somebody taking it from anyone: it is the board filling
+    // in. A reload would otherwise open with a flash for a lap set an hour
+    // ago.
+    if (sessionBest != null && prevBest != null && sessionBest < prevBest) {
+        const who = rows.find(r => bestLap(r) === sessionBest);
+        if (who) {
+            fastestFlash = { driver_id: who.driver_id,
+                             name: who.display_name, ms: sessionBest,
+                             at: Date.now() };
+            // The banner gets its own timer rather than waiting for the next
+            // poll, so it leaves when it should rather than up to 1.5s late.
+            clearTimeout(fastestTimer);
+            fastestTimer = setTimeout(() => {
+                fastestFlash = null;
+                if (lastRows) renderField(lastRows);
+            }, FASTEST_FLASH_MS);
+        }
+    }
 
     // The shell is built once and then only its volatile parts are updated.
     // Rebuilding it every poll would destroy and recreate the canvas twice a
@@ -1559,6 +1701,7 @@ to point OBS at it.">Broadcast
             <span class="find-note" id="find-note"></span>
         </div>
         <div class="following" id="following" hidden></div>
+        <div class="fastest-banner" id="fastest-banner" hidden></div>
         <div class="splits" id="live-splits"></div>
         <div class="map-card">
             <div class="map-head">
@@ -1690,6 +1833,15 @@ to point OBS at it.">Broadcast
     set('following', followingHtml(rows));
     const foll = document.getElementById('following');
     if (foll) foll.hidden = !pinned.size;
+
+    // Said in words as well as colour, so somebody watching the map rather
+    // than reading the table still gets told.
+    set('fastest-banner', fastestFlash
+        ? `<b>Fastest lap</b><span class="fb-name">${esc(fastestFlash.name)}</span>`
+          + `<span class="fb-time">${lapTime(fastestFlash.ms)}</span>`
+        : '');
+    const fb = document.getElementById('fastest-banner');
+    if (fb) fb.hidden = !fastestFlash;
 
     set('live-splits', lobbies.length
         ? lobbies.map(l => splitHtml(l, byLobby.get(l), showFuel)).join('')
