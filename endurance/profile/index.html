@@ -1282,6 +1282,20 @@
             </span>
         </div>
 
+        <!-- Recent Chrome and Edge make a page ask before it may reach
+             anything on the computer it is being read on, and this page has
+             to, because the connector is on that computer. Blocking it looks
+             from here exactly like the connector not running, so a driver
+             who presses Block by reflex gets told to install software they
+             already have, and no amount of reinstalling will fix it.
+             Hence saying so before the prompt appears rather than after.
+             Visible until telemetry is actually arriving, which is the only
+             proof that the answer was Allow. -->
+        <p class="form-hint" id="coach-perm" style="margin:-0.75rem 0 1.25rem">
+            Your browser may ask whether this page can reach other apps on this device. Allow it:
+            that is how the tab reads your connector, and it never talks to anything but this computer.
+        </p>
+
         <div id="coach-live" hidden>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:0.6rem;margin-bottom:1.25rem">
                 <div class="coach-stat"><span class="cs-k">Speed</span><span class="cs-v" id="cs-speed">&mdash;</span></div>
@@ -3667,6 +3681,9 @@ function setupRealtimeSubscriptions(driver) {
     const cv   = document.getElementById('coach-trace');
 
     let ws = null, retry = null, stuck = null, started = false;
+    // Whether the connector has ever answered on this visit, and how many
+    // attempts have come back with nothing since it last did.
+    let opened = false, tries = 0;
     // Laps as the analyser wants them, and the one being driven now. The
     // lap in progress when the tab is opened is thrown away: a lap only
     // counts if it was recorded from the line, and half a lap would be
@@ -3739,12 +3756,16 @@ function setupRealtimeSubscriptions(driver) {
 
     // `get` is the download offer: shown only while there is nothing to
     // connect to, so it is there for the driver who needs it and invisible
-    // to everyone else.
-    function state(colour, text, offer) {
+    // to everyone else. `perm` is the note about the browser's permission
+    // to reach this computer, which is worth keeping up for as long as that
+    // permission is still a candidate explanation and not a moment longer.
+    function state(colour, text, offer, perm) {
         dot.style.background = colour;
         msg.textContent = text;
         const get = document.getElementById('coach-get');
         if (get) get.style.display = offer ? 'flex' : 'none';
+        const note = document.getElementById('coach-perm');
+        if (note) note.style.display = perm ? '' : 'none';
     }
 
     function connect() {
@@ -3782,11 +3803,12 @@ function setupRealtimeSubscriptions(driver) {
             // written for.
             if (ws && ws.readyState !== WebSocket.OPEN) {
                 state('#ffb020', 'No answer from the connector. It may be starting '
-                    + 'up, or this page may not be allowed to reach it.', true);
+                    + 'up, or this page may not be allowed to reach it.', true, true);
             }
         }, 6000);
         ws.onopen = () => {
             clearTimeout(stuck);
+            opened = true; tries = 0;
             state('#22c55e', 'Connector found. Drive, and this fills in.');
             seen = 0; seenFrom = performance.now();
         };
@@ -3795,10 +3817,27 @@ function setupRealtimeSubscriptions(driver) {
             if (m.type !== 'telemetry') return;
             onPacket(m);
         };
+        // A connector that was running and stopped is a different thing from
+        // one that never answered, and only the second can be the browser
+        // refusing to let the page reach this computer. Even then, the
+        // overwhelmingly likely reason the first time is that the connector
+        // simply is not running, so that is what it says first and the
+        // permission is raised only once retrying has got nowhere.
         ws.onclose = () => {
             clearTimeout(stuck);
             live.hidden = true;
-            state('#64748b', 'Connector not running. Start it, or get it here:', true);
+            if (opened) {
+                opened = false; tries = 0;
+                state('#64748b', 'Connector stopped. Start it again and this picks '
+                    + 'straight back up.', true);
+            } else if (++tries <= 3) {
+                state('#64748b', 'Connector not running. Start it, or get it here:', true, true);
+            } else {
+                state('#ffb020', 'Still nothing. Either the connector is not running, '
+                    + 'or this browser blocked the page from reaching this computer: '
+                    + 'check the padlock beside the address for a blocked permission.',
+                    true, true);
+            }
             schedule();
         };
         // A failed connection also fires close, so the retry lives there
