@@ -685,12 +685,18 @@
         <button class="portal-tab" type="button" role="tab" data-tab="raceday" id="tab-raceday" aria-controls="panel-raceday" aria-selected="false" tabindex="-1"><span>Race day</span></button>
         <button class="portal-tab" type="button" role="tab" data-tab="inbox" id="tab-inbox" aria-controls="panel-inbox" aria-selected="false" tabindex="-1"><span>Inbox</span><span class="portal-tab-count" id="tab-count-inbox" hidden>0</span></button>
         <button class="portal-tab" type="button" role="tab" data-tab="career" id="tab-career" aria-controls="panel-career" aria-selected="false" tabindex="-1"><span>Career</span></button>
-        <button class="portal-tab" type="button" role="tab" data-tab="team" id="tab-team" aria-controls="panel-team" aria-selected="false" tabindex="-1"><span>Team</span><span class="portal-tab-count" id="tab-count-team" hidden>0</span></button>
-        <button class="portal-tab" type="button" role="tab" data-tab="account" id="tab-account" aria-controls="panel-account" aria-selected="false" tabindex="-1"><span>Account</span></button>
-        <!-- Hidden until the driver's coach_beta flag says otherwise, which
+        <!-- Beside Career, because they are the same question asked twice:
+             Career is how you are doing, Coaching is how to do better.
+             Deliberately not after Account, where it was. Account is
+             settings, settings come last, and a tab that sits after the
+             settings tab reads as an afterthought.
+
+             Hidden until the driver's coach_beta flag says otherwise, which
              206 sets for whoever is testing. Shipped hidden rather than left
              out, so switching it on is a database flag and not a deploy. -->
         <button class="portal-tab" type="button" role="tab" data-tab="coach" id="tab-coach" aria-controls="panel-coach" aria-selected="false" tabindex="-1" hidden><span>Coaching</span></button>
+        <button class="portal-tab" type="button" role="tab" data-tab="team" id="tab-team" aria-controls="panel-team" aria-selected="false" tabindex="-1"><span>Team</span><span class="portal-tab-count" id="tab-count-team" hidden>0</span></button>
+        <button class="portal-tab" type="button" role="tab" data-tab="account" id="tab-account" aria-controls="panel-account" aria-selected="false" tabindex="-1"><span>Account</span></button>
     </div>
 
     <div class="portal-panel" id="panel-raceday" role="tabpanel" aria-labelledby="tab-raceday" tabindex="0" hidden>
