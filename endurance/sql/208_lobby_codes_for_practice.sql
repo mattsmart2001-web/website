@@ -50,12 +50,34 @@ CREATE TABLE IF NOT EXISTS practice_lobby_codes (
     expires_at timestamptz NOT NULL
 );
 
--- Re-asserted by name, so that running this file again over a version of
--- itself that was applied earlier replaces the pattern instead of leaving
--- the old one in place: CREATE TABLE IF NOT EXISTS does nothing to a table
+-- Re-asserted, so that running this file again over a version of itself
+-- that was applied earlier replaces the pattern instead of leaving the
+-- old one in place: CREATE TABLE IF NOT EXISTS does nothing to a table
 -- that is already there, constraints included.
-ALTER TABLE practice_lobby_codes
-    DROP CONSTRAINT IF EXISTS practice_lobby_codes_code_ok;
+--
+-- Every check on the table goes first, by name taken from the catalogue
+-- rather than by a name guessed here. The first version of this file
+-- spelled its check inline and unnamed, so Postgres called it
+-- practice_lobby_codes_code_check; the second named its own and dropped
+-- only that, which left the first one standing. The result was a table
+-- carrying both rules at once, and the older of the two was digits only,
+-- so every real code was refused by a constraint nothing in this file
+-- mentioned. Sweeping the catalogue cannot make that mistake twice.
+--
+-- Only CHECK constraints are touched. NOT NULL and the primary key are
+-- not checks and do not appear here.
+DO $$
+DECLARE c record;
+BEGIN
+    FOR c IN SELECT conname FROM pg_constraint
+              WHERE conrelid = 'public.practice_lobby_codes'::regclass
+                AND contype = 'c'
+    LOOP
+        EXECUTE format('ALTER TABLE practice_lobby_codes DROP CONSTRAINT %I',
+                       c.conname);
+    END LOOP;
+END $$;
+
 ALTER TABLE practice_lobby_codes
     ADD  CONSTRAINT practice_lobby_codes_code_ok
          CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9-]{3,23}$');
