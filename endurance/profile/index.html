@@ -418,6 +418,74 @@
             border-radius: 50%; background: var(--gold); border: none; }
         .coach-rot-slider:focus-visible { outline: 2px solid var(--gold);
             outline-offset: 2px; }
+        /* Printing the report, which is what "save as PDF" is: every
+           browser offers it from its own print dialogue, so there is no
+           library here and no fat image of a page either. The text stays
+           text, it works with no connection, and the file is small.
+
+           What prints is the report and nothing else: no navigation, no
+           tabs, no live trace, no buttons, and nothing from the other
+           panels. On paper it goes dark on white rather than keeping the
+           screen's dark theme, which would be an ink-soaked mess and is
+           the thing most printers quietly drop anyway. The map is redrawn
+           for paper in JavaScript, because its line colours are baked into
+           the canvas where no stylesheet can reach them. */
+        .coach-print-head { display: none; }
+        @media print {
+            @page { margin: 14mm; }
+            html, body { background: #fff !important; }
+            body { color: #111 !important; }
+            .gtec-nav, .portal-tabs, .toast-container, #auth-loading,
+            #gtec-sponsors, .gtec-footer, footer, .profile-header,
+            .portal-panel:not(#panel-coach),
+            #card-coach, #card-coach-live, #coach-live,
+            .coach-rot, #coach-get, .coach-print-btn,
+            .screen-only { display: none !important; }
+            .coach-print-head { display: block; margin-bottom: 1.2rem; }
+            .coach-print-head h2 { margin: 0 0 0.2rem; font-size: 1.3rem; color: #111; }
+            .coach-print-head p { margin: 0; font-size: 0.8rem; color: #444; }
+            /* Cards become sections on a page: no fill, no glow, and never
+               split across a page break if they can help it. */
+            /* No fill, no glow, and no refusing to break: a card holding
+               five pieces of advice is taller than what is left of a page
+               more often than not, and one that will not split pushes
+               itself to the next page and leaves the first half empty.
+               The pieces inside it are what must not be cut in half. */
+            #panel-coach .card { background: none !important; border: none !important;
+                box-shadow: none !important; padding: 0 0 1.4rem !important; }
+            #panel-coach .card-title { color: #111 !important; }
+            #panel-coach .form-hint, #panel-coach .cs-k { color: #444 !important; }
+            #panel-coach .cs-v, #panel-coach b { color: #111 !important; }
+            /* The map is kept whole rather than given a page of its own:
+               forcing a break left most of the page before it empty, and
+               refusing to split is enough to stop it being cut in half. */
+            #card-coach-map { break-inside: avoid; page-break-inside: avoid; }
+            #coach-map { border: 1px solid #ccc !important; background: #fff !important;
+                height: 140mm !important; }
+            /* The speed key under the map, which is a CSS gradient and so
+               has to be told about paper separately from the map itself. */
+            #card-coach-map span[style*="linear-gradient"] {
+                background: linear-gradient(90deg,#082f5e,#15609f,#1f8fc6,#58b6dd) !important; }
+            /* The advice cards and the corner rows. Their colours carry
+               meaning (gold for a habit worth changing, green for one
+               already working) so the rails keep theirs, darkened enough
+               to survive white paper; the words go black. */
+            #panel-coach .adv, #panel-coach .cc { break-inside: avoid;
+                page-break-inside: avoid; }
+            #panel-coach .adv h4, #panel-coach .cc h4 { color: #111 !important; }
+            #panel-coach .adv p, #panel-coach .kv span { color: #333 !important; }
+            #panel-coach .adv { border-left-color: #999 !important; }
+            #panel-coach .adv.pedal, #panel-coach .adv.line,
+            #panel-coach .adv.brake { border-left-color: #b45309 !important; }
+            #panel-coach .adv.consistency { border-left-color: #7c3aed !important; }
+            #panel-coach .adv.good { border-left-color: #15803d !important; }
+            #panel-coach .adv.good h4 { color: #15803d !important; }
+            #panel-coach .advh, #panel-coach .cc h4 span,
+            #panel-coach .cc .onto { color: #555 !important; }
+            #panel-coach .cc { border-top-color: #ddd !important; }
+        }
+        #card-coach-report > .card-title { display: flex; align-items: center; gap: 0.6rem; }
+        .coach-print-btn { margin-left: auto; letter-spacing: 0.12em; }
         .coach-stat { display: flex; flex-direction: column; gap: 0.2rem;
             padding: 0.6rem 0.7rem; border-radius: 8px;
             background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
@@ -1323,8 +1391,17 @@
     <!-- The report. Three laps is where the analysis starts, because the
          advice is about what you do repeatedly and two laps cannot show a
          habit. It redraws at every line crossing after that. -->
+    <!-- Only on paper. A printed report that does not say whose it is, from
+         when, or how many laps it is built from is a sheet of advice with
+         no provenance, which is worth noticeably less a week later. -->
+    <div class="coach-print-head" id="coach-print-head">
+        <h2 id="coach-print-who">Coaching report</h2>
+        <p id="coach-print-when"></p>
+    </div>
+
     <div class="card" id="card-coach-report" style="display:none">
-        <div class="card-title">What to work on</div>
+        <div class="card-title">What to work on
+            <button type="button" class="btn-small coach-print-btn" id="coach-print">Save as PDF</button></div>
         <p class="form-hint" id="coach-report-sub" style="margin-bottom:1.25rem"></p>
         <div id="coach-advice"></div>
     </div>
@@ -1336,7 +1413,7 @@
         <div class="card-title">Your lap</div>
         <p class="form-hint" style="margin-bottom:1rem">
             Your best lap's own line, coloured by speed. Braking corners are marked in red.
-            Turn it to whichever way round you picture the circuit; your choice is remembered for this track.
+            <span class="screen-only">Turn it to whichever way round you picture the circuit; your choice is remembered for this track.</span>
         </p>
         <!-- Rotating turns the picture, it never mirrors it, so the lap on
              screen stays the lap that was driven whatever the driver does
@@ -2769,7 +2846,7 @@ async function init() {
     // The coaching tab, while it is being built. The flag arrives with the
     // select('*') above, so a database that has not run 206 yet simply has
     // no such field and the tab stays hidden, which is the right answer.
-    if (driver.coach_beta) window.enableCoach?.();
+    if (driver.coach_beta) window.enableCoach?.(driver.display_name);
 
     // Nav
     document.getElementById('nav-user').textContent = session.user.email;
@@ -3688,8 +3765,22 @@ function setupRealtimeSubscriptions(driver) {
     // lap in progress when the tab is opened is thrown away: a lap only
     // counts if it was recorded from the line, and half a lap would be
     // measured against corners it never saw.
-    const rec = { laps: [], cur: null, lastCount: null, lastPid: null, carId: null };
+    // How many laps the report is built from. Everything is re-analysed at
+    // every line crossing, so this is the only thing standing between a
+    // long stint and a tab holding hundreds of megabytes while it thinks
+    // for seconds on end. Twenty is plenty to find a habit in, and at Le
+    // Mans lap length it holds the analysis to about a third of a second.
+    const MAX_LAPS = 20;
+    // `n` is how many laps have been driven and `best` the quickest of all
+    // of them, both of which outlive the window: a session best that
+    // vanished because it aged out would be a strange thing to watch
+    // happen, even though it is right to keep it out of the analysis.
+    const rec = { laps: [], cur: null, lastCount: null, lastPid: null,
+                  carId: null, n: 0, best: null };
     let report = null, analysing = false;
+    // Set while the report is being laid out for paper, which changes the
+    // map's colours and nothing else.
+    let printing = false, driverName = '';
     // {t, v, thr, brk} for the last WINDOW_S seconds, plus a count for the
     // sample rate. The rate is worth showing: it is the one number that
     // says whether this is really 60 Hz telemetry or something slower
@@ -3908,8 +3999,26 @@ function setupRealtimeSubscriptions(driver) {
             // that it is a stint in the pits, not a lap.
             if (rec.cur && rec.cur.samples.length > 200 && d.lastLap > 0) {
                 rec.cur.ms = d.lastLap;
-                rec.cur.name = 'Lap ' + (rec.laps.length + 1);
+                // Numbered by how many laps have been driven, not by how
+                // many are being kept, so lap 40 is called lap 40 after the
+                // window has started dropping the early ones.
+                rec.n++;
+                rec.cur.name = 'Lap ' + rec.n;
                 rec.laps.push(rec.cur);
+                if (!rec.best || d.lastLap < rec.best.ms)
+                    rec.best = { ms: d.lastLap, n: rec.n };
+                // The window. Everything is re-analysed at every crossing,
+                // so without one a long stint grows without end: at Le Mans
+                // lap length, 137 laps is two and a half seconds of analysis
+                // every lap and three hundred megabytes of samples held.
+                //
+                // Dropping the oldest is also the better answer, not just
+                // the cheaper one. The advice is about what you do now, and
+                // a lap from ninety minutes ago on different fuel and tyres
+                // is not evidence about that: left in, it widens every
+                // spread this report measures and makes a driver who has
+                // settled down look as scattered as when they started.
+                while (rec.laps.length > MAX_LAPS) rec.laps.shift();
                 renderLaps();
                 if (rec.laps.length >= 3) analyse();
             }
@@ -3939,8 +4048,18 @@ function setupRealtimeSubscriptions(driver) {
         chips.innerHTML = rec.laps.map((l, i) =>
             `<span class="lapchip${i === best ? ' best' : ''}">${lapT(l.ms)}</span>`).join('')
             || '<span class="lapchip">none yet</span>';
+        // The session best is the quickest lap of the whole session, which
+        // after forty laps is not necessarily one of the twenty the report
+        // is built from. Said plainly rather than quietly: a driver who set
+        // their best at lap five and reads "best 3:30" at lap forty should
+        // be able to see why without having to work it out.
+        const dropped = rec.n > rec.laps.length;
         note.textContent = rec.laps.length >= 3
-            ? 'The report below rebuilds every time you cross the line.'
+            ? 'The report below rebuilds every time you cross the line'
+              + (dropped
+                  ? `, from your last ${rec.laps.length} laps. Session best `
+                    + `${lapT(rec.best.ms)} on lap ${rec.best.n}.`
+                  : '.')
             : rec.cur
                 ? `Recording. ${3 - rec.laps.length} more lap${rec.laps.length === 2 ? '' : 's'} `
                   + 'and the report appears.'
@@ -4092,7 +4211,14 @@ function setupRealtimeSubscriptions(driver) {
         const py = y => (h - (y1 - y0) * sc) / 2 + (y - y0) * sc;
 
         const lo = vs ? Math.min(...vs) : 0, hi = vs ? Math.max(...vs) : 1;
-        const stops = [[26,72,140],[26,150,230],[70,212,248],[198,241,255]];
+        // Two ramps of the same blue, one for a dark screen and one for
+        // white paper. The screen ramp ends in a near-white that would
+        // simply disappear when printed, so the paper one stops well short
+        // of it; both still read dark to light, slow to fast, which is the
+        // only thing the reader has to be able to order.
+        const stops = printing
+            ? [[8,47,94],[21,96,159],[31,143,198],[88,182,221]]
+            : [[26,72,140],[26,150,230],[70,212,248],[198,241,255]];
         const colour = t => {
             t = Math.max(0, Math.min(1, t)) * 3;
             const i = Math.min(2, Math.floor(t)), f = t - i;
@@ -4109,7 +4235,8 @@ function setupRealtimeSubscriptions(driver) {
             g.beginPath();
             g.moveTo(px(mx[i]), py(my[i]));
             g.lineTo(px(mx[i + step]), py(my[i + step]));
-            g.strokeStyle = vs ? colour((vs[i] - lo) / Math.max(1, hi - lo)) : '#1a96e6';
+            g.strokeStyle = vs ? colour((vs[i] - lo) / Math.max(1, hi - lo))
+                               : (printing ? '#15609f' : '#1a96e6');
             g.stroke();
         }
 
@@ -4122,10 +4249,10 @@ function setupRealtimeSubscriptions(driver) {
         };
 
         // The line, where the lap starts and ends.
-        g.fillStyle = '#f1f5f9';
+        g.fillStyle = printing ? '#111' : '#f1f5f9';
         g.beginPath(); g.arc(px(mx[0]), py(my[0]), 4.5, 0, Math.PI * 2); g.fill();
         g.font = "700 9px 'Orbitron', sans-serif";
-        g.fillStyle = 'rgba(241,245,249,0.75)';
+        g.fillStyle = printing ? '#333' : 'rgba(241,245,249,0.75)';
         g.textAlign = 'center';
         const [sx, sy] = outward(px(mx[0]), py(my[0]), 18);
         g.fillText('START', sx, sy + 3);
@@ -4136,16 +4263,19 @@ function setupRealtimeSubscriptions(driver) {
             const i = Math.max(0, Math.min(n - 1, c.idx | 0));
             const x = px(mx[i]), y = py(my[i]);
             g.beginPath(); g.arc(x, y, 6, 0, Math.PI * 2);
-            g.fillStyle = c.braking ? '#ef4444' : '#ffd166';
+            g.fillStyle = c.braking ? (printing ? '#b91c1c' : '#ef4444')
+                                    : (printing ? '#b45309' : '#ffd166');
             g.fill();
-            g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 1.5; g.stroke();
+            g.strokeStyle = printing ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.55)';
+            g.lineWidth = 1.5; g.stroke();
             const label = c.name;
             g.font = "700 11px 'Orbitron', sans-serif";
             const tw = g.measureText(label).width;
             const [ox, oy] = outward(x, y, tw / 2 + 15);
-            g.fillStyle = 'rgba(5,6,8,0.8)';
+            g.fillStyle = printing ? 'rgba(255,255,255,0.85)' : 'rgba(5,6,8,0.8)';
             g.fillRect(ox - tw / 2 - 4, oy - 8, tw + 8, 16);
-            g.fillStyle = c.braking ? '#fca5a5' : '#ffd166';
+            g.fillStyle = c.braking ? (printing ? '#991b1b' : '#fca5a5')
+                                    : (printing ? '#92400e' : '#ffd166');
             g.fillText(label, ox, oy + 0.5);
             g.lineWidth = 4;
         }
@@ -4251,6 +4381,44 @@ function setupRealtimeSubscriptions(driver) {
         }).join('');
     }
 
+    // Saving the report. This is the browser's own print, which every one
+    // of them can send to a PDF, so there is no library to load and the
+    // text stays text rather than becoming a picture of text.
+    //
+    // The map is the one part a stylesheet cannot reach: its colours are
+    // painted into a canvas, and the screen ones are a pale blue meant for
+    // a dark card that all but vanishes on white. So it is redrawn for
+    // paper and redrawn again afterwards.
+    //
+    // Both hooks, deliberately. `beforeprint` is the one that fires for
+    // Ctrl-P and for the button; the print media query is the one that
+    // fires once the print layout is actually in place, which is when the
+    // canvas has its paper size and can be drawn at the right scale.
+    function forPrint(on) {
+        if (printing === on) return;
+        printing = on;
+        const who = driverName || 'Coaching report';
+        set('coach-print-who', who + ' · coaching report');
+        set('coach-print-when', report
+            ? `${report.times.length} laps · best ${lapT(rec.best ? rec.best.ms : 0)}`
+              + ` · ${new Date().toLocaleDateString('en-GB',
+                    { day: 'numeric', month: 'long', year: 'numeric' })}`
+            : '');
+        if (report) drawLap(report);
+    }
+    window.addEventListener('beforeprint', () => forPrint(true));
+    window.addEventListener('afterprint', () => forPrint(false));
+    if (window.matchMedia) {
+        const mq = window.matchMedia('print');
+        const onMq = e => forPrint(e.matches);
+        if (mq.addEventListener) mq.addEventListener('change', onMq);
+        else if (mq.addListener) mq.addListener(onMq);
+    }
+    document.getElementById('coach-print')?.addEventListener('click', () => {
+        forPrint(true);
+        window.print();
+    });
+
     // The orientation control. The slider fires on every pixel of a drag,
     // and a redraw is a few thousand short lines on a canvas, so it can
     // follow the drag live rather than waiting for it to be let go.
@@ -4268,7 +4436,8 @@ function setupRealtimeSubscriptions(driver) {
     // Only once the tab exists for this driver, and only when they open it:
     // a WebSocket that connects on page load would have every driver's
     // browser reaching for a port nothing is listening on.
-    window.enableCoach = function () {
+    window.enableCoach = function (name) {
+        driverName = name || '';
         document.getElementById('tab-coach').hidden = false;
     };
     document.addEventListener('portal:tab', e => {
