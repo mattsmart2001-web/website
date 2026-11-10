@@ -378,6 +378,59 @@
             color: var(--muted); }
         .cs-v { font-family: 'Orbitron', sans-serif; font-size: 1.15rem;
             font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+        .lapchip { font-family: 'Orbitron', sans-serif; font-size: 0.62rem;
+            font-weight: 700; padding: 0.22rem 0.45rem; border-radius: 4px;
+            background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+            color: var(--muted); font-variant-numeric: tabular-nums; }
+        .lapchip.best { background: rgba(96,165,250,0.16);
+            border-color: rgba(96,165,250,0.5); color: #93c5fd; }
+        /* An advice card. The faults are numbered because the order is the
+           point: they are ranked by how much time each is worth, so the
+           first one is where to start. What is already working and the
+           caveats are not faults and are not numbered. */
+        .adv { border-left: 3px solid var(--border); padding: 0.1rem 0 0.1rem 0.9rem;
+            margin-bottom: 1.4rem; }
+        .adv h4 { font-size: 0.98rem; font-weight: 700; color: var(--text);
+            margin: 0 0 0.4rem; }
+        .adv p { font-size: 0.86rem; line-height: 1.65; color: var(--muted); margin: 0; }
+        .adv.pedal, .adv.line, .adv.brake { border-left-color: var(--gold); }
+        .adv.consistency { border-left-color: #c084fc; }
+        .adv.good { border-left-color: #4ade80; }
+        .adv.good h4 { color: #86efac; }
+        .adv.caveat, .adv.more { border-left-color: #64748b; }
+        .advh { font-family: 'Orbitron', sans-serif; font-size: 0.55rem;
+            font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+            color: var(--muted); margin: 2rem 0 0.9rem; }
+        .why { margin-top: 0.6rem; }
+        .why summary { font-size: 0.76rem; color: var(--gold); cursor: pointer;
+            list-style: none; }
+        .why summary::-webkit-details-marker { display: none; }
+        .why summary::before { content: '▸ '; }
+        .why[open] summary::before { content: '▾ '; }
+        .why p { margin-top: 0.5rem; font-size: 0.82rem; line-height: 1.7;
+            color: var(--muted); opacity: 0.92; }
+        /* A corner. Label and value, because every line of it is a measured
+           figure and a table of them reads faster than prose. */
+        .cc { padding: 0.9rem 0; border-top: 1px solid var(--border); }
+        .cc:first-child { border-top: 0; padding-top: 0; }
+        .cc h4 { font-size: 0.95rem; font-weight: 700; color: var(--text);
+            margin: 0 0 0.1rem; display: flex; align-items: baseline;
+            gap: 0.5rem; flex-wrap: wrap; }
+        .cc h4 span { font-family: 'Orbitron', sans-serif; font-size: 0.55rem;
+            font-weight: 700; letter-spacing: 0.14em; color: var(--muted); }
+        .cc .onto { font-family: 'Orbitron', sans-serif; font-size: 0.52rem;
+            font-weight: 700; letter-spacing: 0.14em; color: var(--gold);
+            font-style: normal; }
+        .cc .kv { display: grid; grid-template-columns: 7.5rem 1fr;
+            gap: 0.3rem 0.8rem; margin-top: 0.6rem; }
+        .cc .kv b { font-family: 'Orbitron', sans-serif; font-size: 0.52rem;
+            font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--muted); padding-top: 0.15rem; }
+        .cc .kv span { font-size: 0.83rem; color: var(--text); line-height: 1.55; }
+        @media (max-width: 560px) {
+            .cc .kv { grid-template-columns: 1fr; gap: 0.1rem 0; }
+            .cc .kv b { padding-top: 0.5rem; }
+        }
 
         /* Photo upload */
         .photo-row { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.25rem; }
@@ -1168,7 +1221,46 @@
             <p class="form-hint" style="margin-top:0.6rem;font-size:0.74rem">
                 Speed in gold, throttle in green, brake in red. The last 20 seconds.
             </p>
+
+            <div id="coach-laps" style="margin-top:1.5rem;display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap">
+                <span class="cs-k">Laps recorded</span>
+                <span id="coach-lapchips" style="display:flex;gap:0.35rem;flex-wrap:wrap"></span>
+                <span id="coach-lapnote" class="form-hint" style="flex:1 1 220px"></span>
+            </div>
         </div>
+    </div>
+
+    <!-- The report. Three laps is where the analysis starts, because the
+         advice is about what you do repeatedly and two laps cannot show a
+         habit. It redraws at every line crossing after that. -->
+    <div class="card" id="card-coach-report" style="display:none">
+        <div class="card-title">What to work on</div>
+        <p class="form-hint" id="coach-report-sub" style="margin-bottom:1.25rem"></p>
+        <div id="coach-advice"></div>
+    </div>
+
+    <!-- The lap, drawn. Without it "T2" is a label rather than a place, and
+         every number in the cards below is about somewhere the driver has
+         to be able to picture. -->
+    <div class="card" id="card-coach-map" style="display:none">
+        <div class="card-title">Your lap</div>
+        <p class="form-hint" style="margin-bottom:1rem">
+            Your best lap's own line, coloured by speed. Braking corners are marked in red.
+        </p>
+        <canvas id="coach-map" height="420" style="width:100%;height:420px;display:block;border-radius:10px;background:rgba(0,0,0,0.35);border:1px solid var(--border)"></canvas>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.7rem;font-size:0.72rem;color:var(--muted)">
+            <span id="coach-map-lo"></span>
+            <span style="flex:1 1 auto;height:7px;border-radius:4px;background:linear-gradient(90deg,#1a488c,#1a96e6,#46d4f8,#c6f1ff)"></span>
+            <span id="coach-map-hi"></span>
+        </div>
+    </div>
+
+    <div class="card" id="card-coach-corners" style="display:none">
+        <div class="card-title">Corner by corner</div>
+        <p class="form-hint" style="margin-bottom:1.25rem">
+            Every braking corner on the lap, measured from your own line. Distances are from the apex.
+        </p>
+        <div id="coach-corners"></div>
     </div>
     </div>
 </div>
@@ -1181,6 +1273,10 @@
 <script src="/endurance/assets/gtec-badges.js?v=24"></script>
 <script src="/endurance/assets/gtec-share-card.js?v=5"></script>
 <script src="/endurance/assets/gtec-crest.js"></script>
+<!-- The analysis behind the coaching tab. The same file the lap coach on
+     the main site uses, loaded rather than copied, so the two can never
+     give a driver different advice about the same lap. -->
+<script src="/lap-coach.js"></script>
 <script src="/endurance/assets/gtec-trading-card.js"></script>
 <script src="/endurance/assets/gtec-push.js"></script>
 <script src="../assets/countries.js"></script>
@@ -3476,6 +3572,12 @@ function setupRealtimeSubscriptions(driver) {
     const cv   = document.getElementById('coach-trace');
 
     let ws = null, retry = null, started = false;
+    // Laps as the analyser wants them, and the one being driven now. The
+    // lap in progress when the tab is opened is thrown away: a lap only
+    // counts if it was recorded from the line, and half a lap would be
+    // measured against corners it never saw.
+    const rec = { laps: [], cur: null, lastCount: null, lastPid: null, carId: null };
+    let report = null, analysing = false;
     // {t, v, thr, brk} for the last WINDOW_S seconds, plus a count for the
     // sample rate. The rate is worth showing: it is the one number that
     // says whether this is really 60 Hz telemetry or something slower
@@ -3541,7 +3643,82 @@ function setupRealtimeSubscriptions(driver) {
         set('cs-brk', Math.round(m.brake || 0) + '%');
         set('cs-rate', rate ? rate + '/s' : '—');
         set('cs-lap', m.lapCount == null || m.lapCount < 0 ? '—' : m.lapCount);
+        record(m);
         draw();
+    }
+
+    /** Samples into laps, cut at the line.
+     *
+     *  Deliberately the same rules the lap coach on the main site uses,
+     *  because the analyser is the same analyser and a lap gathered under
+     *  different rules would be measured against corners found under these
+     *  ones. Three of them matter. Time comes from GT7's own tick counter
+     *  rather than this computer's clock, so a browser that stutters cannot
+     *  stretch a braking zone. Speed is converted to mph, which is what the
+     *  analyser works in. And a car that changes mid-session means the
+     *  driver has gone to watch a replay, which GT7 streams exactly as it
+     *  streams driving: recording that as their own laps turns the report
+     *  into nonsense, so it stops and says so. */
+    function record(d) {
+        if (d.packetId == null || rec.lastPid === d.packetId) return;
+        rec.lastPid = d.packetId;
+        if (d.vehicleId && rec.carId && d.vehicleId !== rec.carId) {
+            rec.cur = null;
+            state('#ffb020', 'That is a different car. Watching a replay is not '
+                + 'recorded, because it is not your lap.');
+            return;
+        }
+        if (d.vehicleId) rec.carId = d.vehicleId;
+        if (rec.lastCount === null) { rec.lastCount = d.lapCount; rec.cur = null; }
+        if (d.lapCount !== rec.lastCount) {
+            // A lap is kept only if it was watched end to end and the game
+            // gave it a time. 200 samples is about three seconds: below
+            // that it is a stint in the pits, not a lap.
+            if (rec.cur && rec.cur.samples.length > 200 && d.lastLap > 0) {
+                rec.cur.ms = d.lastLap;
+                rec.cur.name = 'Lap ' + (rec.laps.length + 1);
+                rec.laps.push(rec.cur);
+                renderLaps();
+                if (rec.laps.length >= 3) analyse();
+            }
+            rec.cur = { samples: [], ms: null };
+            rec.lastCount = d.lapCount;
+            renderLaps();
+        }
+        if (!rec.cur) return;
+        rec.cur.samples.push({
+            t: d.packetId / 60,
+            x: d.posX, y: d.posY || 0, z: d.posZ,
+            v: (d.speed || 0) * 0.621371,
+            thr: d.throttle || 0, brk: d.brake || 0,
+            gear: d.gear == null ? null : d.gear,
+            rpm: d.rpm == null ? null : d.rpm,
+            latG: d.latG == null ? null : d.latG,
+            longG: d.longG == null ? null : d.longG,
+        });
+    }
+
+    function renderLaps() {
+        const chips = document.getElementById('coach-lapchips');
+        const note  = document.getElementById('coach-lapnote');
+        if (!chips) return;
+        const best = rec.laps.reduce((b, l, i) =>
+            l.ms && (b < 0 || l.ms < rec.laps[b].ms) ? i : b, -1);
+        chips.innerHTML = rec.laps.map((l, i) =>
+            `<span class="lapchip${i === best ? ' best' : ''}">${lapT(l.ms)}</span>`).join('')
+            || '<span class="lapchip">none yet</span>';
+        note.textContent = rec.laps.length >= 3
+            ? 'The report below rebuilds every time you cross the line.'
+            : rec.cur
+                ? `Recording. ${3 - rec.laps.length} more lap${rec.laps.length === 2 ? '' : 's'} `
+                  + 'and the report appears.'
+                : 'The lap you are on now is not counted: a lap only counts from the line.';
+    }
+
+    function lapT(ms) {
+        if (!ms) return '—';
+        const s = ms / 1000, m = Math.floor(s / 60);
+        return m + ':' + (s - m * 60).toFixed(3).padStart(6, '0');
     }
 
     function set(id, v) {
@@ -3589,6 +3766,228 @@ function setupRealtimeSubscriptions(driver) {
         line(s => s.v, top, '#ffd166', 2);
     }
 
+    /** The same analyser the lap coach on the main site runs, loaded from
+     *  the same file. Nothing here reimplements any of it. */
+    function analyse() {
+        if (analysing || typeof LapCoach === 'undefined') return;
+        analysing = true;
+        let R;
+        try {
+            R = LapCoach.analyse(rec.laps.map((l, i) => ({
+                name: l.name || ('Lap ' + (i + 1)), samples: l.samples, ms: l.ms })));
+        } catch (err) {
+            analysing = false;
+            state('#ef4444', 'Could not read those laps: ' + err.message);
+            return;
+        }
+        analysing = false;
+        report = R;
+        renderAdvice(R);
+        drawLap(R);
+        renderCorners(R);
+    }
+
+    /** The best lap's own line, coloured by speed, with the corners on it.
+     *
+     *  Not the main site's three-dimensional ribbon, which turns and plays
+     *  and is a project of its own. This is the flat version of the same
+     *  thing, from the same data: R.path is the reference line on a four
+     *  thousand point grid, R.speed[R.best] is how fast the best lap was at
+     *  each of those points, and each corner carries the index it sits at.
+     *
+     *  The ramp is one colour getting lighter rather than a rainbow,
+     *  because speed is a magnitude: anybody can order dark blue to pale
+     *  blue without being told, and nobody can order purple against gold.
+     *  It also leaves gold meaning what it means everywhere else here. */
+    function drawLap(R) {
+        const cv = document.getElementById('coach-map');
+        const card = document.getElementById('card-coach-map');
+        if (!cv || !R.path || !R.path.x) return;
+        card.style.display = '';
+        const xs = R.path.x, zs = R.path.z;
+        const vs = (R.speed && R.speed[R.best]) || null;
+        const dpr = window.devicePixelRatio || 1;
+        const w = cv.clientWidth, h = cv.clientHeight;
+        if (!w) return;                       // drawn before the card is shown
+        cv.width = Math.round(w * dpr);
+        cv.height = Math.round(h * dpr);
+        const g = cv.getContext('2d');
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        g.clearRect(0, 0, w, h);
+
+        const pad = 34;
+        let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+        for (let i = 0; i < xs.length; i++) {
+            if (xs[i] < x0) x0 = xs[i]; if (xs[i] > x1) x1 = xs[i];
+            if (zs[i] < z0) z0 = zs[i]; if (zs[i] > z1) z1 = zs[i];
+        }
+        const sc = Math.min((w - pad * 2) / Math.max(1, x1 - x0),
+                            (h - pad * 2) / Math.max(1, z1 - z0));
+        const px = x => (w - (x1 - x0) * sc) / 2 + (x - x0) * sc;
+        // Flipped, because the circuit's z grows the opposite way to a
+        // canvas's y and the lap would otherwise be drawn as its mirror.
+        const pz = z => (h - (z1 - z0) * sc) / 2 + ((z1 - z) * sc);
+
+        const lo = vs ? Math.min(...vs) : 0, hi = vs ? Math.max(...vs) : 1;
+        const stops = [[26,72,140],[26,150,230],[70,212,248],[198,241,255]];
+        const colour = t => {
+            t = Math.max(0, Math.min(1, t)) * 3;
+            const i = Math.min(2, Math.floor(t)), f = t - i;
+            const a = stops[i], b = stops[i + 1];
+            return `rgb(${(a[0]+(b[0]-a[0])*f)|0},${(a[1]+(b[1]-a[1])*f)|0},${(a[2]+(b[2]-a[2])*f)|0})`;
+        };
+
+        g.lineWidth = 4; g.lineCap = 'round'; g.lineJoin = 'round';
+        // Segment by segment so the colour can change along the lap. Every
+        // eighth point, which at four thousand points is still finer than
+        // the line is wide.
+        const step = 8;
+        for (let i = 0; i + step < xs.length; i += step) {
+            g.beginPath();
+            g.moveTo(px(xs[i]), pz(zs[i]));
+            g.lineTo(px(xs[i + step]), pz(zs[i + step]));
+            g.strokeStyle = vs ? colour((vs[i] - lo) / Math.max(1, hi - lo)) : '#1a96e6';
+            g.stroke();
+        }
+
+        // Labels are pushed away from the middle of the circuit so that one
+        // never sits on the track it is naming.
+        const cx = w / 2, cy = h / 2;
+        const outward = (x, y, by) => {
+            const d = Math.hypot(x - cx, y - cy) || 1;
+            return [x + (x - cx) / d * by, y + (y - cy) / d * by];
+        };
+
+        // The line, where the lap starts and ends.
+        g.fillStyle = '#f1f5f9';
+        g.beginPath(); g.arc(px(xs[0]), pz(zs[0]), 4.5, 0, Math.PI * 2); g.fill();
+        g.font = "700 9px 'Orbitron', sans-serif";
+        g.fillStyle = 'rgba(241,245,249,0.75)';
+        g.textAlign = 'center';
+        const [sx, sy] = outward(px(xs[0]), pz(zs[0]), 18);
+        g.fillText('START', sx, sy + 3);
+
+        // The corners, named the same way the cards name them.
+        g.textBaseline = 'middle';
+        for (const c of R.corners) {
+            const i = Math.max(0, Math.min(xs.length - 1, c.idx | 0));
+            const x = px(xs[i]), y = pz(zs[i]);
+            g.beginPath(); g.arc(x, y, 6, 0, Math.PI * 2);
+            g.fillStyle = c.braking ? '#ef4444' : '#ffd166';
+            g.fill();
+            g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 1.5; g.stroke();
+            const label = c.name;
+            g.font = "700 11px 'Orbitron', sans-serif";
+            const tw = g.measureText(label).width;
+            const [ox, oy] = outward(x, y, tw / 2 + 15);
+            g.fillStyle = 'rgba(5,6,8,0.8)';
+            g.fillRect(ox - tw / 2 - 4, oy - 8, tw + 8, 16);
+            g.fillStyle = c.braking ? '#fca5a5' : '#ffd166';
+            g.fillText(label, ox, oy + 0.5);
+            g.lineWidth = 4;
+        }
+        g.textBaseline = 'alphabetic';
+        set('coach-map-lo', vs ? Math.round(lo) + ' mph' : '');
+        set('coach-map-hi', vs ? Math.round(hi) + ' mph' : '');
+    }
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function renderAdvice(R) {
+        const box = document.getElementById('coach-advice');
+        const card = document.getElementById('card-coach-report');
+        if (!box || !R.advice) return;
+        card.style.display = '';
+        const spread = Math.max(...R.times) - Math.min(...R.times);
+        document.getElementById('coach-report-sub').textContent =
+            `${R.names.length} laps. Best ${lapT(R.bestTime * 1000)}, `
+            + `${(R.bestTime - R.theoretical).toFixed(2)}s on the table from your own laps, `
+            + `${spread.toFixed(2)}s between your best and worst.`;
+        // Numbered, because the order is the whole point: the analyser ranks
+        // these by how much time each is worth, so the first one is where to
+        // start. What is already working is not a fault and is not numbered.
+        let n = 0;
+        box.innerHTML = R.advice.map((a, i) => {
+            const counted = a.kind !== 'caveat' && a.kind !== 'good' && a.kind !== 'more';
+            if (counted) n++;
+            const first = a.kind === 'good'
+                && (i === 0 || R.advice[i - 1].kind !== 'good');
+            return (first ? '<div class="advh">What is already working</div>' : '')
+                + `<div class="adv ${esc(a.kind)}">`
+                + `<h4>${counted ? n + '. ' : ''}${esc(a.head)}</h4>`
+                + `<p>${esc(a.body)}</p>`
+                + (a.why ? `<details class="why"><summary>Why this matters</summary>`
+                         + `<p>${esc(a.why)}</p></details>` : '')
+                + '</div>';
+        }).join('');
+    }
+
+    function renderCorners(R) {
+        const box = document.getElementById('coach-corners');
+        const card = document.getElementById('card-coach-corners');
+        if (!box) return;
+        const braking = R.corners.filter(c => c.braking);
+        if (!braking.length) { card.style.display = 'none'; return; }
+        card.style.display = '';
+        const KIND = { slow: 'SLOW', medium: 'MEDIUM', fast: 'FAST' };
+        const m = x => x == null ? '–' : Math.round(x) + ' m';
+        // Everything here is relative to the apex, so "before" and "after"
+        // have to be said rather than left to a minus sign.
+        const fromApex = x => {
+            if (x == null) return '–';
+            const r = Math.round(x);
+            return r === 0 ? 'at the apex'
+                 : r > 0 ? r + ' m before the apex'
+                         : Math.abs(r) + ' m past the apex';
+        };
+        const afterApex = x => {
+            if (x == null) return '–';
+            const r = Math.round(x);
+            return r === 0 ? 'at the apex'
+                 : Math.abs(r) + ' m ' + (r > 0 ? 'after' : 'before') + ' the apex';
+        };
+        box.innerHTML = braking.map(c => {
+            const b = c.brakeBest;
+            const zone = (b.touch != null && b.off != null) ? b.touch - b.off : null;
+            // Lap-to-lap movement is only reported when it is bigger than
+            // the reference grid can resolve, or the report would be calling
+            // its own rounding a habit.
+            const wob = c.touchMin == null ? null : c.touchMax - c.touchMin;
+            const moves = wob != null && wob >= 4;
+            const release = (b.trail == null || zone == null) ? '–'
+                : (b.trail >= 0.55 ? 'gradual' : b.trail >= 0.35 ? 'moderate' : 'abrupt')
+                  + `, easing off over ${Math.round(b.trail * zone)} m of the `
+                  + `${Math.round(zone)} m zone`;
+            return `<div class="cc">`
+                + `<h4>${esc(c.name)}<span>${KIND[c.kind] || ''} · `
+                + `${Math.round(c.apex)} m from the line</span>`
+                + (c.name === R.longestRun.opensFrom
+                    ? '<em class="onto">onto the long straight</em>' : '')
+                + `</h4><div class="kv">`
+                + `<b>Min speed</b><span>${Math.round(c.vminBest)} mph on your best`
+                + (c.vminMin != null
+                    ? `, ${Math.round(c.vminMin)} to ${Math.round(c.vminMax)} across laps` : '')
+                + `</span>`
+                + `<b>Brake</b><span>on ${m(b.touch)} before the apex, full `
+                + `${b.full == null ? 'never' : m(b.full)}, released ${fromApex(b.off)}`
+                + (moves ? ` · braking point moves ${Math.round(wob)} m lap to lap` : '')
+                + `</span>`
+                + `<b>Release</b><span>${release}</span>`
+                + `<b>Throttle</b><span>${b.pick == null ? '–'
+                    : 'picks up ' + afterApex(b.pick)}`
+                + (b.tfull != null ? `, full ${afterApex(b.tfull)}` : '')
+                + (b.midLift ? ' · lifted again mid-exit' : '') + `</span>`
+                + `<b>Coasting</b><span>${b.coast == null ? '–'
+                    : Math.round(b.coast) + ' m with neither pedal'}`
+                + (b.overlap > 8 ? ` · ${Math.round(b.overlap)} m with both` : '')
+                + `</span>`
+                + `<b>Section</b><span>${c.sectBest.toFixed(2)} s best, `
+                + `+${(c.sectMax - c.sectMin).toFixed(2)} s on your worst lap</span>`
+                + `</div></div>`;
+        }).join('');
+    }
+
     // Only once the tab exists for this driver, and only when they open it:
     // a WebSocket that connects on page load would have every driver's
     // browser reaching for a port nothing is listening on.
@@ -3596,11 +3995,14 @@ function setupRealtimeSubscriptions(driver) {
         document.getElementById('tab-coach').hidden = false;
     };
     document.addEventListener('portal:tab', e => {
-        if (e.detail.tab !== 'coach' || started) return;
-        started = true;
-        connect();
+        if (e.detail.tab !== 'coach') return;
+        if (!started) { started = true; connect(); }
+        // A canvas in a hidden panel measures zero, so anything drawn while
+        // another tab was open drew nothing. Coming back redraws both.
+        draw();
+        if (report) drawLap(report);
     });
-    window.addEventListener('resize', draw);
+    window.addEventListener('resize', () => { draw(); if (report) drawLap(report); });
 })();
 
 init();
