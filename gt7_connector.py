@@ -59,9 +59,10 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════
 #  CONFIG
 # ═══════════════════════════════════════════════════════════════
-VERSION       = "3.4"   # shown in the tray so you can confirm which build is running
+VERSION       = "3.5"   # shown in the tray so you can confirm which build is running
                         # 3.0 added GTEC live timing; 3.1 adds fuel and
-                        # elevation to what it reports.
+                        # elevation to what it reports; 3.5 reads the race
+                        # position out of the packet.
 GT7_PORT_STD  = 33740   # the port GT7 itself sends telemetry to
 GT7_PORT      = GT7_PORT_STD   # what we actually listen on; see _resolve_udp_config
 SEND_PORT     = 33739
@@ -246,6 +247,32 @@ class GT7Packet:
         self.day_ms      = self._i(0x80)
         self.best_lap    = self._i(0x78)
         self.last_lap    = self._i(0x7C)
+        # Race position, and how many cars are in the race.
+        #
+        # The only two fields in the whole packet that say anything about
+        # anybody other than you. Everything else here describes this car,
+        # which is why the live board works out its own order from where
+        # each reporting car is round the lap: it has never had a figure
+        # from the game to use instead.
+        #
+        # The community packet map calls 0x84 a pre-race or qualifying
+        # placeholder, and on that reading it would be useless once the
+        # lights went out. It is not: driven in a real race it tracks the
+        # position live and changes on the lap an overtake happens.
+        #
+        # Signed, and read as signed on purpose: GT7 uses -1 for "no
+        # answer", which as an unsigned short would arrive as 65535 and be
+        # believed. Anything below first place is not a position, so it
+        # becomes None here rather than travelling on as a number for
+        # somebody else to render as "P-1".
+        #
+        # 0x86 is believed to be the size of the field and is read the same
+        # way, but unlike the position it has not been checked against a
+        # real race. Treat it as a candidate, not a fact.
+        pos              = self._h(0x84)
+        cars             = self._h(0x86)
+        self.pos_in_race = pos if pos >= 1 else None
+        self.total_cars  = cars if cars >= 1 else None
         flags            = self._H(0x8E)
         self.in_race     = bool(flags & 0x0001)
         self.paused      = bool(flags & 0x0002)
@@ -298,6 +325,8 @@ class GT7Packet:
             "longG":      round(self.long_g, 3),
             "lapCount":   self.lap_count,
             "lapsInRace": self.laps_in_race,
+            "posInRace":  self.pos_in_race,
+            "totalCars":  self.total_cars,
             "bestLap":    self.best_lap,
             "lastLap":    self.last_lap,
             "inRace":     self.in_race,
@@ -1155,6 +1184,14 @@ async def _gtec_beacon():
             #
             #   "p_day_ms": (int(pkt.day_ms)
             #                if 0 <= (pkt.day_ms or -1) < 86_400_000 else None),
+            #
+            # The race position is held back for exactly the same reason and
+            # goes the same way: live_beacon learns p_pos_in_race first, and
+            # then this line goes in. It is worth more than the clock was,
+            # because the board's own order can only rank the cars that are
+            # reporting, and this one counts everybody in the lobby.
+            #
+            #   "p_pos_in_race": pkt.pos_in_race,
             # Which app is reporting, so the live page can show a badge. The
             # program knows exactly what it is running on; a user agent would
             # be a guess.
