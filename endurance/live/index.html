@@ -235,6 +235,17 @@
                a minimum it pushed the fuel bar on row one out of line with
                every bar beneath it. */
             width: 6.1rem; box-sizing: border-box; }
+        /* The unit, set small and quiet beside its number.
+           Both of these columns counted in laps and both wrote it "L", so a
+           row read "8L ... +5L" with the two Ls meaning different things and
+           sitting a few inches apart. Worse on the fuel side, where "8L"
+           next to a fuel bar reads as eight litres, which is not the
+           quantity at all: it is how many more laps the tank is good for.
+           So each says its own word, and they are deliberately different
+           words rather than "laps" twice. */
+        .bc-fu-left i, .bc-gap i { font-style: normal; font-size: 0.5rem;
+            font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+            opacity: 0.6; margin-left: 0.22em; }
         .bc-row.lead .bc-gap { color: var(--gold); }
         .bc-row.lead .bc-pos { color: var(--gold); }
         /* The purple of a fastest lap, the one colour motorsport agrees on. */
@@ -2068,7 +2079,8 @@ function bcFuelCell(r) {
             : ', burn not measured yet');
     return `<span class="bc-fu-cell" title="${esc(title)}">`
          + `<span class="bc-fu-mini"><span style="width:${f.v.toFixed(1)}%"></span></span>`
-         + `<span class="bc-fu-left">${f.laps != null ? f.laps + 'L' : '—'}</span>`
+         + `<span class="bc-fu-left">${f.laps != null
+                ? f.laps + '<i>left</i>' : '\u2014'}</span>`
          + `</span>`;
 }
 
@@ -2215,7 +2227,7 @@ function renderBroadcast(rows) {
     tower.innerHTML = head + order.slice(0, BC_ROWS).map((r, i) => {
         const down = (lead.lap ?? 0) - (r.lap ?? 0);
         const gap = i === 0 ? 'LEADER'
-                  : down > 0 ? `+${down}L`
+                  : down > 0 ? `+${down}<i>laps</i>`
                   : '\u2014';
         const num = r.career_number ?? r.car_number;
         const fast = best && best[1] === r.driver_id ? ' fastest' : '';
@@ -4918,6 +4930,7 @@ function drawTrack(rows) {
     // It used to measure total distance run, which counts laps: two cars
     // nose to tail a lap apart were captioned 13.6 km, and the figure was
     // describing the classification while the picture showed the road.
+    const captionRects = [];
     if (framed && focusCars.length === 2 && bcAmt > 0.05) {
         const [ra, rb] = focusCars;
         const road = roadGap(ra, rb);
@@ -4977,9 +4990,82 @@ function drawTrack(rows) {
             g.stroke();
             g.fillStyle = '#ffd166';
             g.fillText(txt, ox, oy + 0.5);
+            captionRects.push({ x: ox, y: oy, halfW, halfH });
             g.restore();
         }
     }
+
+    // Who the shot is of, written on the shot.
+    //
+    // A focused frame holds one or two cars and names neither of them. The
+    // tower says which row is on air, but a viewer looking at the map is
+    // looking at a number in a bubble, and a number is not a person. The
+    // name belongs next to the car.
+    //
+    // Placed rather than offset. A fixed offset is fine until the car it
+    // belongs to is near the edge of the frame, or until the other car in
+    // the shot happens to be sitting exactly where the plate wants to go,
+    // which in a battle is most of the time, because a battle is two cars
+    // in the same place. So eight directions are tried and scored, and the
+    // one that covers nothing wins: nothing meaning any car on the map,
+    // this one included.
+    if (framed && bcAmt > 0.05 && focusCars.length) {
+        g.save();
+        g.globalAlpha = bcAmt;
+        g.font = "bold 12px 'Inter', system-ui, sans-serif";
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        // Where the plates already placed in this frame have landed, so the
+        // second name does not solve its own problem by sitting on the first.
+        const placed = [];
+        for (const r of focusCars) {
+            const name = (r.display_name || '').trim();
+            const mark = carMarks.find(m => m.driver_id === r.driver_id);
+            if (!name || !mark) continue;
+            const halfW = g.measureText(name).width / 2 + 8, halfH = 10;
+            // Far enough out that the plate's near edge clears the badge
+            // rather than its middle doing so.
+            const gapPx = mark.half + 8;
+            let best = null;
+            for (let i = 0; i < 8; i++) {
+                const th = i * Math.PI / 4;
+                const dx = Math.cos(th), dy = Math.sin(th);
+                const cx2 = mark.x + dx * (gapPx + Math.abs(dx) * halfW)
+                                   + dx * (Math.abs(dy) * 2);
+                const cy2 = mark.y + dy * (gapPx + Math.abs(dy) * halfH);
+                // Off the edge of the frame is worse than covering a car:
+                // a name half out of the picture cannot be read at all.
+                const inFrame = cx2 - halfW > padL + 4 && cx2 + halfW < w - 4
+                             && cy2 - halfH > 4 && cy2 + halfH < h - 4;
+                let hits = 0;
+                for (const m of carMarks.concat(placed, captionRects)) {
+                    const mw = m.half != null ? m.half : m.halfW;
+                    const mh = m.rad != null ? m.rad : m.halfH;
+                    if (Math.abs(cx2 - m.x) < halfW + mw + 2
+                     && Math.abs(cy2 - m.y) < halfH + mh + 2) hits++;
+                }
+                // Out to the right first, which is where a caption beside
+                // a car reads most naturally, then the diagonals, and only
+                // across to the left when everything else is blocked.
+                const score = (inFrame ? 0 : 100) + hits * 10
+                            + [0, 1, 2, 3, 4, 3, 2, 1][i];
+                if (!best || score < best.score)
+                    best = { score, x: cx2, y: cy2 };
+            }
+            placed.push({ x: best.x, y: best.y, halfW, halfH });
+            g.fillStyle = 'rgba(5,6,8,0.85)';
+            pillPath(g, best.x, best.y, halfW, halfH);
+            g.fill();
+            g.strokeStyle = carColour(r);
+            g.lineWidth = 1.5;
+            pillPath(g, best.x, best.y, halfW, halfH);
+            g.stroke();
+            g.fillStyle = '#f1f5f9';
+            g.fillText(name, best.x, best.y + 0.5);
+        }
+        g.restore();
+    }
+
 
     // That the map is wound back, and how far. Without it a replay of a
     // quiet moment is indistinguishable from a live one.
