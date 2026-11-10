@@ -423,6 +423,11 @@
         .map-zoom button:hover:not(:disabled) { color: var(--text); border-color: rgba(255,255,255,0.25); }
         .map-zoom button:disabled { opacity: 0.35; cursor: default; }
         .map-zoom .reset { width: auto; padding: 0 0.5rem; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; }
+        /* The turn arrows are glyphs rather than words, and Orbitron has no
+           business drawing them: it has no arrow at all, so the browser
+           substitutes one from elsewhere at whatever size suits it. Set in
+           the system font, a little larger, so the two match each other. */
+        #turn-ccw, #turn-cw { font-family: system-ui, sans-serif; font-size: 0.95rem; }
 
         /* The lap chart, under the map and built from the same parts, so the
            two read as one instrument rather than two widgets. */
@@ -1850,6 +1855,8 @@ to point OBS at it.">Broadcast
                 <span class="map-zoom">
                     <button type="button" id="zoom-out" aria-label="Zoom out" title="Zoom out">&minus;</button>
                     <button type="button" id="zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+                    <button type="button" id="turn-ccw" aria-label="Turn the map anticlockwise" title="Turn the map 15&deg; anticlockwise">&#8634;</button>
+                    <button type="button" id="turn-cw" aria-label="Turn the map clockwise" title="Turn the map 15&deg; clockwise">&#8635;</button>
                     <button type="button" class="reset" id="zoom-reset" aria-label="Reset the view" title="Fit the whole circuit">Fit</button>
                     <button type="button" class="reset" id="view-3d" aria-pressed="false" aria-label="Tilt the map">3D</button>
                     <button type="button" class="reset" id="view-names" aria-pressed="true" aria-label="Show or hide the corner names">Names</button>
@@ -3458,9 +3465,39 @@ const VIEW_YAW = 0.6, VIEW_TILT = 0.8;
 // view3d lives up with the stored preferences, which are read before this.
 let yaw = VIEW_YAW, tilt = VIEW_TILT;
 
+// Which way round the FLAT map is drawn. North up for a circuit means
+// nothing to anybody; what a driver pictures is the shape the way they
+// have always seen it drawn, and that differs from track to track and from
+// driver to driver, so it is a control rather than a decision taken here.
+//
+// Zero is the map as it has always been, and zero matters: at zero the
+// flat projection stays the identity it has always been, and the redraw
+// takes exactly the path it took before any of this existed. Nothing about
+// a broadcast changes unless somebody turns the map on purpose.
+// Counted in presses rather than carried as an angle, so that a full turn
+// lands exactly back on nought. Adding fifteen degrees twenty four times
+// does not: it leaves a millionth of a degree behind, which is invisible
+// on screen and quite visible everywhere a test or a button asks whether
+// the map is square on, and it would keep Fit lit for ever.
+let flatYaw = 0, flatStep = 0;
+const TURN_STEPS = 24;                   // 15 degrees a press
+
+// Turning either view, whichever one is showing. Tilted, this is the drag
+// that was always there; flat, it is the new one. `dir` is a press: -1 or 1.
+function turnMap(dir) {
+    if (view3d) { mapWasTurned(); yaw += dir * Math.PI * 2 / TURN_STEPS; }
+    else {
+        flatStep = (flatStep + dir + TURN_STEPS) % TURN_STEPS;
+        flatYaw = flatStep * Math.PI * 2 / TURN_STEPS;
+    }
+    syncZoomButtons();
+    if (lastRows) drawTrack(lastRows);
+}
+
 function resetView() {
     view = { scale: 1, x: 0, y: 0 };
     yaw = VIEW_YAW; tilt = VIEW_TILT;
+    flatYaw = 0; flatStep = 0;
     endIntro();
     syncZoomButtons();
     if (lastRows) drawTrack(lastRows);
@@ -3601,6 +3638,7 @@ function syncZoomButtons() {
     if (out) out.disabled = view.scale <= ZOOM_MIN + 0.001;
     if (inn) inn.disabled = view.scale >= ZOOM_MAX - 0.001;
     if (rst) rst.disabled = view.scale <= ZOOM_MIN + 0.001 && !view.x && !view.y
+                            && !flatYaw
                             && (!view3d || (Math.abs(yaw - VIEW_YAW) < 0.001
                                          && Math.abs(tilt - VIEW_TILT) < 0.001));
     const btn = document.getElementById('view-3d');
@@ -3750,6 +3788,10 @@ function bindMapControls() {
     document.getElementById('zoom-out')?.addEventListener('click',
         () => { endIntro(); zoomAt(cv.clientWidth / 2, cv.clientHeight / 2, 1 / 1.6); });
     document.getElementById('zoom-reset')?.addEventListener('click', resetView);
+    document.getElementById('turn-ccw')?.addEventListener('click',
+        () => { endIntro(); turnMap(-1); });
+    document.getElementById('turn-cw')?.addEventListener('click',
+        () => { endIntro(); turnMap(1); });
     syncNamesButton();
     document.getElementById('view-3d')?.addEventListener('click',
         () => { endIntro(); setView3d(!view3d); });
@@ -3962,6 +4004,7 @@ function drawTrack(rows) {
     const yRef = Number.isFinite(minY) ? minY : 0;
     const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
     const cosT = Math.cos(tilt), sinT = Math.sin(tilt);
+    const cosF = Math.cos(flatYaw), sinF = Math.sin(flatYaw);
     // Returns [across, down, depth]. Depth is how near the viewer a point is,
     // and is what decides which bit of track is drawn over which.
     const eye = EYE_DISTANCE * Math.max(spanXw, spanZw);
@@ -3981,15 +4024,25 @@ function drawTrack(rows) {
             const k = eye / Math.max(eye * 0.25, eye - near);
             return [xr * k, up * k, near];
         }
+        : flatYaw
+        // Turned flat: a rotation about the middle of the circuit, for the
+        // same reason the tilted one turns about the middle rather than the
+        // origin. GT7's coordinates are centred on nothing in particular.
+        ? (x, z) => {
+            const dx = x - midX, dz = z - midZ;
+            return [midX + dx * cosF - dz * sinF, midZ + dx * sinF + dz * cosF, 0];
+        }
         : (x, z) => [x, z, 0];
 
     // The fit has to be measured on the projected shape, or turning the
-    // circuit would push it out of frame. Flat does not pay for that: there
-    // the projection is the identity, so the extents are the ones the pass
-    // above already found, and walking every point twice to rediscover them
-    // cost a flat redraw seventy per cent for a feature it is not using.
+    // circuit would push it out of frame. A flat map left square on does
+    // not pay for that: there the projection is the identity, so the
+    // extents are the ones the pass above already found, and walking every
+    // point twice to rediscover them cost a flat redraw seventy per cent
+    // for a feature it is not using. A flat map that HAS been turned pays
+    // it, like the tilted one, because then it is using it.
     let minU = minX, maxU = maxX, minV = minZ, maxV = maxZ;
-    if (view3d) {
+    if (view3d || flatYaw) {
         minU = minV = Infinity; maxU = maxV = -Infinity;
         for (const path of [...allPaths, ...(basePath.length ? carPaths.values() : [])])
         for (const pt of path) {
@@ -4201,6 +4254,7 @@ function drawTrack(rows) {
     // Deliberately not keyed on the cars, which is the entire point: they
     // move twenty-five times a second and the hill does not move at all.
     const worldKey = [w, h, dpr, view3d ? 1 : 0, yaw.toFixed(4), tilt.toFixed(4),
+                      flatYaw.toFixed(4),
         minU.toFixed(1), maxU.toFixed(1), minV.toFixed(1), maxV.toFixed(1),
         vs.toFixed(4), vdx.toFixed(1), vdy.toFixed(1), padL,
         baseLoop.length, basePath.length, allPaths.length, total,
