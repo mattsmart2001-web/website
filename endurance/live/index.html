@@ -831,7 +831,14 @@
             text-shadow: 0 0 14px rgba(179,136,255,0.55); }
         .lap-personal { color: #5fe08f; font-weight: 700;
             text-shadow: 0 0 12px rgba(74,222,128,0.35); }
-        .dr { display: flex; align-items: center; min-width: 0; }
+        .dr { display: flex; align-items: center; min-width: 0;
+            flex-wrap: wrap; row-gap: 0.18rem; }
+        /* The name claims the line and anything that will not fit beside
+           it wraps under it, the follow star included. Reserving room for
+           the star instead, with a max-width, was tried and is worse: it
+           caps the name before the flex line has finished with it, and at
+           phone width it cost the name half its space to save the star a
+           trip to the second line. The name is the point of the row. */
         .who { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; cursor: help; }
         /* Quiet: it is a detail, not a status. Never shrinks, so a long name
            truncates around it rather than squashing it. */
@@ -881,10 +888,22 @@
         .s-drifting { opacity: 0.75; }
         .s-lost     { opacity: 0.45; }
         .s-offline  { opacity: 0.3; }
-        /* Shrinkable: at phone width "Signal lost" is wider than the whole
-           driver cell, and a non-shrinking flag was simply being clipped by
-           the card, which loses it entirely rather than shortening it. */
-        .flag { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-family: 'Orbitron', sans-serif; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.35rem; white-space: nowrap; }
+        /* Flags wrap rather than shrink, and the line wraps with them.
+           They used to be shrinkable, so that "Signal lost" could narrow
+           instead of being clipped away at phone width. The trouble is
+           what flexbox shrinks first: space is taken from items in
+           proportion to how wide they are, and the widest item on this
+           line is the driver's name. A car carrying two flags ended up
+           reading "Sp…  SIN…  ANOT…", which is three things none of which
+           can be read, and the one that mattered was the name.
+           So the name keeps what it needs and a flag that does not fit
+           beside it goes underneath it whole. "Another track" on its own
+           line is worth more than "ANOT…" next to a driver nobody can
+           identify. */
+        /* Last on the line, so that when one wraps it is a flag that goes
+           under the name and not the follow star, which left on its own
+           down there reads as something broken rather than as a control. */
+        .flag { order: 2; flex: 0 0 auto; font-family: 'Orbitron', sans-serif; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.35rem; white-space: nowrap; }
         .flag-lost    { background: rgba(251,146,60,0.15); color: #fdba74; }
         .flag-offline { background: rgba(255,255,255,0.06); color: var(--muted); }
         .flag-menus   { background: rgba(148,163,184,0.12); color: var(--muted); }
