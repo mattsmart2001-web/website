@@ -84,7 +84,22 @@
 [[headers]]
   for = "/endurance/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net unpkg.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com unpkg.com cdnjs.cloudflare.com; font-src 'self' fonts.gstatic.com cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://wtryzoabpkqtucfpmbnn.supabase.co wss://wtryzoabpkqtucfpmbnn.supabase.co; frame-src www.youtube.com player.vimeo.com clips.twitch.tv player.twitch.tv; worker-src 'self'; object-src 'none'; base-uri 'self';"
+    # connect-src also allows the connector on the reader's own machine, for
+    # the portal's coaching tab. That tab reads GT7 telemetry from
+    # ws://localhost:8765, which the driver is already running for live
+    # timing, and without this the browser refuses the socket before it is
+    # opened: the WebSocket constructor throws, and the tab sits on "Looking
+    # for the connector" for ever while the connector is running perfectly
+    # well a few inches away.
+    #
+    # This is why the lap coach on the main site has always worked and the
+    # portal's did not. These headers are scoped to /endurance/* on purpose,
+    # so the main site never had the restriction to run into.
+    #
+    # localhost only. It grants the page nothing beyond the machine it is
+    # being read on, and both spellings are listed because which one a
+    # browser matches depends on how it resolves the name.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net unpkg.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com unpkg.com cdnjs.cloudflare.com; font-src 'self' fonts.gstatic.com cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://wtryzoabpkqtucfpmbnn.supabase.co wss://wtryzoabpkqtucfpmbnn.supabase.co ws://localhost:8765 ws://127.0.0.1:8765; frame-src www.youtube.com player.vimeo.com clips.twitch.tv player.twitch.tv; worker-src 'self'; object-src 'none'; base-uri 'self';"
     X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"

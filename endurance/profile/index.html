@@ -3594,7 +3594,7 @@ function setupRealtimeSubscriptions(driver) {
     const live = document.getElementById('coach-live');
     const cv   = document.getElementById('coach-trace');
 
-    let ws = null, retry = null, started = false;
+    let ws = null, retry = null, stuck = null, started = false;
     // Laps as the analyser wants them, and the one being driven now. The
     // lap in progress when the tab is opened is thrown away: a lap only
     // counts if it was recorded from the line, and half a lap would be
@@ -3621,8 +3621,43 @@ function setupRealtimeSubscriptions(driver) {
     function connect() {
         if (ws && (ws.readyState === WebSocket.OPEN
                 || ws.readyState === WebSocket.CONNECTING)) return;
-        try { ws = new WebSocket(WS_URL); } catch (_) { return schedule(); }
+        try {
+            ws = new WebSocket(WS_URL);
+        } catch (err) {
+            // The constructor throws when the page is not allowed to open
+            // this socket at all, which is a refusal rather than a failure
+            // to find anything. Saying "looking for the connector" there is
+            // the worst possible answer: it is not looking, it has been
+            // stopped, and the driver sits watching a connector that is
+            // running perfectly well and being told it cannot be found.
+            //
+            // The cause is the site's own Content-Security-Policy needing
+            // ws://localhost in connect-src. Retrying cannot fix it, so it
+            // does not retry.
+            state('#ef4444', 'This page is not allowed to reach the connector. '
+                + 'That is a setting on the site, not on your computer, so '
+                + 'tell Matt rather than reinstalling anything.');
+            return;
+        }
+        // A socket that neither opens nor closes leaves the status on its
+        // first line for ever, which reads as "still looking" when nothing
+        // is looking at all. That is exactly what a Content-Security-Policy
+        // refusal did: no throw, no error event, no close, just silence.
+        // Whatever the cause, six seconds of nothing is worth saying.
+        clearTimeout(stuck);
+        stuck = setTimeout(() => {
+            // Not open, whatever state it claims to be in. A refused socket
+            // is not necessarily left CONNECTING: a policy block can mark it
+            // closed without ever firing close, which is how the first
+            // version of this watchdog managed to miss the one case it was
+            // written for.
+            if (ws && ws.readyState !== WebSocket.OPEN) {
+                state('#ffb020', 'No answer from the connector. It may be starting '
+                    + 'up, or this page may not be allowed to reach it.', true);
+            }
+        }, 6000);
         ws.onopen = () => {
+            clearTimeout(stuck);
             state('#22c55e', 'Connector found. Drive, and this fills in.');
             seen = 0; seenFrom = performance.now();
         };
@@ -3632,6 +3667,7 @@ function setupRealtimeSubscriptions(driver) {
             onPacket(m);
         };
         ws.onclose = () => {
+            clearTimeout(stuck);
             live.hidden = true;
             state('#64748b', 'Connector not running. Start it, or get it here:', true);
             schedule();
