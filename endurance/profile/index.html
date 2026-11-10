@@ -1213,9 +1213,20 @@
             PC and Mac only for now.
         </p>
 
-        <div id="coach-state" style="display:flex;align-items:center;gap:0.6rem;padding:0.75rem 0.9rem;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);margin-bottom:1.25rem">
+        <div id="coach-state" style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;padding:0.75rem 0.9rem;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);margin-bottom:1.25rem">
             <span id="coach-dot" style="width:9px;height:9px;border-radius:50%;background:#64748b;flex:0 0 auto"></span>
             <span id="coach-msg" style="font-size:0.85rem;color:var(--muted)">Looking for the connector&hellip;</span>
+            <!-- Only when there is nothing to connect to. Telling somebody
+                 they need software and then making them go and find it is
+                 doing half a job, which is the same reason the Live Timing
+                 card carries these; but a driver who already has it running
+                 does not need to be offered it every time they open the
+                 tab. Same release aliases as Account, so they never go
+                 stale and there is no second list to keep in step. -->
+            <span id="coach-get" style="display:none;gap:0.5rem;margin-left:auto;flex-wrap:wrap">
+                <a class="btn-dl" href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector.zip">PC</a>
+                <a class="btn-dl" href="https://github.com/mattsmart2001-web/website/releases/latest/download/GT7-Live-Connector-macOS-AppleSilicon.zip">Mac</a>
+            </span>
         </div>
 
         <div id="coach-live" hidden>
@@ -3597,9 +3608,14 @@ function setupRealtimeSubscriptions(driver) {
     const trace = [];
     let seen = 0, seenFrom = 0, rate = 0;
 
-    function state(colour, text) {
+    // `get` is the download offer: shown only while there is nothing to
+    // connect to, so it is there for the driver who needs it and invisible
+    // to everyone else.
+    function state(colour, text, offer) {
         dot.style.background = colour;
         msg.textContent = text;
+        const get = document.getElementById('coach-get');
+        if (get) get.style.display = offer ? 'flex' : 'none';
     }
 
     function connect() {
@@ -3617,7 +3633,7 @@ function setupRealtimeSubscriptions(driver) {
         };
         ws.onclose = () => {
             live.hidden = true;
-            state('#64748b', 'Connector not running. Start it, then come back to this tab.');
+            state('#64748b', 'Connector not running. Start it, or get it here:', true);
             schedule();
         };
         // A failed connection also fires close, so the retry lives there
