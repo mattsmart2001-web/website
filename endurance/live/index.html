@@ -389,6 +389,35 @@
         .replay-at.back { color: var(--gold); }
         .map-side { flex: 0 0 236px; border-left: 1px solid var(--border);
             padding: 0.85rem 0.95rem; }
+        /* Practice lobbies. A driver asked for this: people practise alone
+           because they do not know anyone else is out there, and the page
+           that knows who is out there is the one that should say so. */
+        .lobby-box { margin-top: 1rem; }
+        .lobby-row { display: flex; flex-direction: column; gap: 0.1rem;
+            padding: 0.45rem 0; border-top: 1px solid var(--border); }
+        .lobby-row:first-of-type { border-top: 0; }
+        .lobby-code { font-family: ui-monospace, 'JetBrains Mono', Menlo, monospace;
+            font-size: 0.86rem; font-weight: 700; color: var(--text);
+            letter-spacing: 0.04em; background: none; border: 0; padding: 0;
+            text-align: left; cursor: pointer; }
+        .lobby-code:hover, .lobby-code:focus-visible { color: var(--gold); outline: none; }
+        .lobby-who { font-size: 0.68rem; color: var(--muted); }
+        .lobby-none { font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
+        .lobby-post { display: flex; gap: 0.3rem; margin-top: 0.6rem; }
+        .lobby-post input { flex: 1 1 auto; min-width: 0; background: var(--bg-1);
+            border: 1px solid var(--border); border-radius: 5px; color: var(--text);
+            padding: 0.4rem 0.5rem; font-family: ui-monospace, Menlo, monospace;
+            font-size: 0.78rem; }
+        .lobby-post input:focus { outline: none; border-color: var(--gold); }
+        .lobby-post button { flex: 0 0 auto; font-family: 'Orbitron', sans-serif;
+            font-size: 0.55rem; font-weight: 700; letter-spacing: 0.12em;
+            text-transform: uppercase; padding: 0 0.6rem; border-radius: 5px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--muted); cursor: pointer; }
+        .lobby-post button:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .lobby-say { font-size: 0.68rem; margin-top: 0.4rem; color: var(--muted); }
+        .lobby-say.bad { color: #fca5a5; }
+        .lobby-say.ok { color: #86efac; }
         .map-side-head { font-family: 'Orbitron', sans-serif; font-size: 0.58rem;
             font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
             color: var(--muted); margin-bottom: 0.5rem; }
@@ -1027,12 +1056,16 @@ let voidList = [];
 // live_field's signature of the voids for this round and session. Null when
 // there are none, which is the ordinary case and costs a poll nothing.
 let voidRev = null;
+// Whether anybody is signed in. Only decides whether the lobby box offers
+// a place to type: reading the list needs nothing.
+let signedIn = false;
 
 sb.auth.getSession().then(async ({ data }) => {
     const portal = document.getElementById('nav-portal');
     const signin = document.getElementById('nav-signin');
-    if (data?.session) { if (portal) portal.style.display = ''; }
+    if (data?.session) { signedIn = true; if (portal) portal.style.display = ''; }
     else if (signin) signin.style.display = '';
+    if (typeof paintLobbies === 'function') paintLobbies();
     if (!data?.session) return;
     // RLS on user_roles answers this for us: an admin reads their own row,
     // everybody else reads nothing, so an empty result IS the answer.
@@ -1046,6 +1079,135 @@ sb.auth.getSession().then(async ({ data }) => {
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ═══════════════════════════════════════════════════════════════
+//  PRACTICE LOBBIES
+// ═══════════════════════════════════════════════════════════════
+// Asked for by a driver: people practise alone because they do not know
+// anybody else is out there. The database side is migration 208, which
+// holds one code per driver, digits only, expiring when the practice
+// window shuts. Everything here goes through its functions, so this page
+// never touches the table and the anon key is never given it.
+let lobbyRows = [], lobbySaid = '', lobbySaidCls = '', lobbyAsking = false;
+let lobbyTimer = null, lobbyFetched = false;
+
+/** Shown on a practice night and never during a race, where the lobbies
+ *  come from the splits and a posted code would be noise. */
+function lobbyTime() {
+    if (lastRows && lastRows.length) return lastRows[0].mode === 'practice';
+    return !!(idleCache && idleCache.prac && idleCache.prac.enabled
+              && idleCache.prac.open);
+}
+
+/** Shown exactly as it was posted. An earlier version grouped it in
+ *  fours, which reads nicely for a number and makes nonsense of a code
+ *  with letters in it, and GT7 codes have letters in them. */
+const lobbyPretty = c => String(c);
+
+function lobbyAgo(iso) {
+    const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (!isFinite(m)) return '';
+    return m < 1 ? 'just now' : m < 60 ? m + 'm ago'
+         : Math.round(m / 60) + 'h ago';
+}
+
+function lobbyHtml() {
+    const mine = lobbyRows.find(r => r.mine);
+    const rows = lobbyRows.length
+        ? lobbyRows.map(r => `<div class="lobby-row">`
+            + `<button type="button" class="lobby-code" data-code="${esc(r.code)}"`
+            + ` title="Copy ${esc(r.code)}">${esc(lobbyPretty(r.code))}</button>`
+            + `<span class="lobby-who">${esc(r.host || 'A driver')}`
+            + ` · ${esc(lobbyAgo(r.posted_at))}</span></div>`).join('')
+        : `<p class="lobby-none">Nobody has posted a lobby yet.${
+            signedIn ? ' Hosting one? Post the code and everyone can see it.'
+                     : ' Sign in to post yours.'}</p>`;
+    // Only a signed-in driver gets the box. Everyone else can read, which
+    // is the point: somebody who has not signed in can still see a lobby
+    // is running and go and join it.
+    const post = !signedIn ? ''
+        : mine
+            ? `<div class="lobby-post"><button type="button" class="lobby-clear"`
+              + `>Take mine down</button></div>`
+            : `<div class="lobby-post">`
+              + `<input type="text" class="lobby-input" autocapitalize="off"`
+              + ` autocomplete="off" spellcheck="false" maxlength="24"`
+              + ` placeholder="Lobby code" aria-label="Lobby code">`
+              + `<button type="button" class="lobby-send">Post</button></div>`;
+    const say = lobbySaid
+        ? `<p class="lobby-say ${lobbySaidCls}">${esc(lobbySaid)}</p>` : '';
+    return rows + post + say;
+}
+
+function paintLobbies() {
+    const on = lobbyTime();
+    document.querySelectorAll('.lobby-box').forEach(box => {
+        box.hidden = !on;
+        if (!on) return;
+        const inner = box.querySelector('.lobby-inner') || box;
+        // The box is left alone while somebody is typing in it, or the
+        // refresh would empty the field under their fingers.
+        if (inner.contains(document.activeElement)
+            && document.activeElement.classList.contains('lobby-input')) return;
+        inner.innerHTML = lobbyHtml();
+    });
+}
+
+async function refreshLobbies() {
+    if (lobbyAsking || !lobbyTime()) { paintLobbies(); return; }
+    lobbyAsking = true;
+    try {
+        const { data } = await sb.rpc('live_lobby_codes');
+        lobbyRows = Array.isArray(data) ? data : [];
+    } catch (_) { /* leave the last list up rather than blanking it */ }
+    lobbyAsking = false;
+    paintLobbies();
+}
+
+async function lobbyPost(code) {
+    const { data, error } = await sb.rpc('post_lobby_code', { p_code: code });
+    lobbySaidCls = 'bad';
+    lobbySaid = error ? 'Could not post that just now.'
+              : data && data.ok ? '' : (data && data.why) || 'Could not post that.';
+    if (data && data.ok) { lobbySaidCls = 'ok'; lobbySaid = 'Posted.'; }
+    await refreshLobbies();
+}
+
+document.addEventListener('click', async e => {
+    const copy = e.target.closest('.lobby-code');
+    if (copy) {
+        try {
+            await navigator.clipboard.writeText(copy.dataset.code);
+            lobbySaidCls = 'ok'; lobbySaid = 'Copied.';
+        } catch (_) {
+            // A browser that will not copy without a gesture it trusts, or
+            // an insecure context. Saying so beats a button that silently
+            // does nothing.
+            lobbySaidCls = ''; lobbySaid = 'Copy it from the list.';
+        }
+        paintLobbies();
+        return;
+    }
+    if (e.target.closest('.lobby-send')) {
+        const box = e.target.closest('.lobby-box');
+        const input = box && box.querySelector('.lobby-input');
+        if (input) await lobbyPost(input.value);
+        return;
+    }
+    if (e.target.closest('.lobby-clear')) {
+        await sb.rpc('clear_lobby_code');
+        lobbySaid = '';
+        await refreshLobbies();
+    }
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.classList
+        && e.target.classList.contains('lobby-input')) {
+        e.preventDefault();
+        lobbyPost(e.target.value);
+    }
+});
 
 /** Lap times arrive as milliseconds. */
 function lapTime(ms) {
@@ -1751,11 +1913,23 @@ async function renderIdle() {
                 : ''}
             <a class="cta" href="${practiceOpen ? '/endurance/profile/#account' : '/endurance/calendar/'}">${practiceOpen ? 'Pair your reporter' : 'Full calendar'}</a>
         </div>
+        <!-- The one moment this page can actually recruit somebody: the
+             window is open, nobody is out, and whoever is reading has
+             nothing to look at. A lobby to join is a better answer than an
+             empty map. -->
+        <div class="lobby-box" id="lobby-idle" hidden style="max-width:420px">
+            <div class="map-side-head">Practice lobbies</div>
+            <div class="lobby-inner"></div>
+        </div>
         <div class="foot-note">
             Racing in GTEC? You can put your own car on here.
             <a href="/endurance/profile/#account">Pair live timing in your portal</a>.
         </div>
     </div>`;
+    // Built fresh every time this renders, so whatever the last refresh
+    // found has to be put back into it.
+    paintLobbies();
+    if (practiceOpen) refreshLobbies();
 }
 
 /** "in about 2 hours", from the server's next-opening timestamp. Phrased
@@ -1901,6 +2075,13 @@ to point OBS at it.">Broadcast
                 <aside class="map-side">
                     <div class="map-side-head">Fastest laps</div>
                     <div id="map-best"></div>
+                    <!-- Only on a practice night, and only once the window
+                         is open. During a race the lobbies come from the
+                         splits and a posted code would be noise at best. -->
+                    <div class="lobby-box" id="lobby-side" hidden>
+                        <div class="map-side-head">Practice lobbies</div>
+                        <div class="lobby-inner"></div>
+                    </div>
                 </aside>
             </div>
             <div class="replay" id="replay" hidden>
@@ -6451,6 +6632,13 @@ async function tick() {
     loadCircuitRecord(data[0].event_id);   // once per round, not awaited
     loadLaps(data[0]);                     // throttled to its own cadence
     lastRows = data;
+    // Whether tonight is a practice night is only known once the field has
+    // been read, and the lobby box is hidden until it is. Asking the moment
+    // the answer turns yes saves the box sitting empty until the slow timer
+    // comes round again, which on a twenty second timer is most of a minute
+    // of somebody looking at a panel with nothing in it.
+    if (lobbyTime() && !lobbyFetched) { lobbyFetched = true; refreshLobbies(); }
+    else paintLobbies();
     // Worked out before anything uses it: the table labels these cars, the
     // map leaves them out, and their trails are not kept.
     strays = findStrays(data);
@@ -6478,6 +6666,11 @@ let pollTimer = null;
 
 function startPolling() {
     if (pollTimer === null) pollTimer = setInterval(tick, 1500);
+    // Lobby codes change at the speed somebody types one, not at the speed
+    // of a car, so they are asked for on their own slow timer rather than
+    // riding the 1.5 second poll. Twenty seconds is quick enough that a
+    // code posted while you are looking at the page turns up on its own.
+    if (lobbyTimer === null) lobbyTimer = setInterval(refreshLobbies, 20000);
 }
 
 function stopPolling() {

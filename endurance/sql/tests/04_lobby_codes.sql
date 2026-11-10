@@ -34,15 +34,30 @@ SELECT public.post_lobby_code('12345678')->>'why';
 -- ── A driver posts ──────────────────────────────────────────
 DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false); END $$;
 
-\echo -n '    letters refused:       '
-SELECT public.post_lobby_code('join-my-lobby')->>'why';
+-- Letters are fine: GT7 codes carry them. Spaces and punctuation are not,
+-- which is what keeps the box from being used for prose on a stream.
+\echo -n '    a code with letters:   '
+SELECT public.post_lobby_code('GT7LM24a')->>'code';
+
+\echo -n '    a sentence refused:    '
+SELECT public.post_lobby_code('join my lobby lads')->>'why';
+
+\echo -n '    punctuation refused:   '
+SELECT public.post_lobby_code('see bit.ly/x')->>'why';
 
 \echo -n '    too short refused:     '
 SELECT public.post_lobby_code('12')->>'why';
 
--- Copied off a phone, with the spaces GT7 shows it with.
-\echo -n '    spaces stripped:       '
-SELECT public.post_lobby_code('1234 5678 9012')->>'code';
+\echo -n '    too long refused:      '
+SELECT public.post_lobby_code(repeat('A', 25))->>'why';
+
+-- Trailing whitespace off a copy and paste is forgiven; a space in the
+-- middle is not, because that is how a sentence gets in.
+\echo -n '    ends trimmed:          '
+SELECT public.post_lobby_code('  123456789012  ')->>'code';
+
+\echo -n '    inner space refused:   '
+SELECT public.post_lobby_code('1234 5678')->>'why';
 
 \echo -n '    on the list as:        '
 SELECT (public.live_lobby_codes()->0->>'host') || ' · '

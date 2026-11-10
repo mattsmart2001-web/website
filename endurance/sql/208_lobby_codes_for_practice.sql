@@ -15,12 +15,22 @@
 --
 -- Three decisions worth writing down.
 --
--- DIGITS ONLY, enforced here rather than in the page. The live timing page
--- is public and is used as a broadcast overlay, so a free text box on it
--- is a sentence of someone else's choosing on your stream. A GT7 lobby ID
--- is a number, so the column will not hold anything else, and the worst
--- anybody can post is a wrong one. The check is on the column because the
--- page can be bypassed by anyone who can open a browser console.
+-- ONE WORD, NO SPACES, enforced here rather than in the page. The live
+-- timing page is public and is used as a broadcast overlay, so a free
+-- text box on it is a sentence of someone else's choosing on your stream.
+-- Letters and digits and nothing else, between 4 and 24 of them, which
+-- rules out a sentence, a URL and anything with punctuation in it.
+--
+-- This started out as digits only, which would have been a much stronger
+-- guarantee and is wrong: GT7 lobby codes carry letters as well. So the
+-- format is no longer the whole defence, and it was never meant to be the
+-- only one. A code can only be posted by a signed-in driver, it is shown
+-- with that driver's name beside it, and an admin can take any of them
+-- down. Attribution is what actually governs this; the pattern just stops
+-- the box being used for prose.
+--
+-- The check is on the column because the page can be bypassed by anyone
+-- who can open a browser console.
 --
 -- ONE CODE PER DRIVER, which is why driver_id is the primary key. Posting
 -- again replaces your own rather than adding to the list, so a changed
@@ -33,14 +43,27 @@
 
 CREATE TABLE IF NOT EXISTS practice_lobby_codes (
     driver_id  uuid PRIMARY KEY REFERENCES drivers(id) ON DELETE CASCADE,
-    code       text        NOT NULL CHECK (code ~ '^[0-9]{4,24}$'),
+    code       text        NOT NULL
+               CONSTRAINT practice_lobby_codes_code_ok
+               CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9-]{3,23}$'),
     posted_at  timestamptz NOT NULL DEFAULT now(),
     expires_at timestamptz NOT NULL
 );
 
+-- Re-asserted by name, so that running this file again over a version of
+-- itself that was applied earlier replaces the pattern instead of leaving
+-- the old one in place: CREATE TABLE IF NOT EXISTS does nothing to a table
+-- that is already there, constraints included.
+ALTER TABLE practice_lobby_codes
+    DROP CONSTRAINT IF EXISTS practice_lobby_codes_code_ok;
+ALTER TABLE practice_lobby_codes
+    ADD  CONSTRAINT practice_lobby_codes_code_ok
+         CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9-]{3,23}$');
+
 COMMENT ON TABLE practice_lobby_codes IS
     'Lobby IDs drivers are hosting on practice nights. One live code per '
-    'driver, digits only, expiring. Read through live_lobby_codes(), '
+    'driver, letters and digits only, expiring. Read through '
+    'live_lobby_codes(), '
     'written through post_lobby_code(); nothing reads this table directly.';
 
 -- No policies, on purpose. Every way in is a function below, which is
@@ -80,9 +103,12 @@ $$;
 GRANT EXECUTE ON FUNCTION public.live_lobby_codes() TO anon, authenticated;
 
 -- ── Posting ─────────────────────────────────────────────────
--- Spaces and dashes come out first, because a code copied off a phone
--- arrives as "1234 5678 9012" and refusing it would teach the driver that
--- the feature is broken rather than that the format is fussy.
+-- Only the ends are trimmed. Stripping spaces from the middle was tried
+-- and is how prose gets in: "join my lobby lads" becomes
+-- "joinmylobbylads", which is fifteen letters with no spaces and passes
+-- every check here. A space in the middle means it is not a code, and
+-- saying so is both true and a two second fix for anyone who pasted one
+-- with a space in. Hyphens stay, since a code may have one.
 CREATE OR REPLACE FUNCTION public.post_lobby_code(p_code text)
 RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -97,10 +123,10 @@ BEGIN
             'why', 'Only a signed-in driver can post a lobby code.');
     END IF;
 
-    v_clean := regexp_replace(COALESCE(p_code, ''), '[\s-]', '', 'g');
-    IF v_clean !~ '^[0-9]{4,24}$' THEN
+    v_clean := btrim(COALESCE(p_code, ''));
+    IF v_clean !~ '^[A-Za-z0-9][A-Za-z0-9-]{3,23}$' THEN
         RETURN jsonb_build_object('ok', false,
-            'why', 'A lobby ID is a number, between 4 and 24 digits long.');
+            'why', 'A lobby code is 4 to 24 letters and numbers, with no spaces.');
     END IF;
 
     -- Gone by the time practice shuts, so nobody arrives at an empty
