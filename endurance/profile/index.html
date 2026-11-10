@@ -369,6 +369,15 @@
         input::placeholder, textarea::placeholder { color: rgba(148,163,184,0.45); }
         textarea { resize: vertical; min-height: 90px; }
         .form-hint { font-size: 0.72rem; color: var(--muted); }
+        /* A qualifier on a card's title: what it is, or who it is for.
+           Set quietly, because it is a note on the heading rather than
+           part of it. */
+        .title-chip { font-family: 'Orbitron', sans-serif; font-size: 0.55rem;
+            font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+            color: var(--muted); border: 1px solid var(--border);
+            border-radius: 4px; padding: 0.18rem 0.42rem; margin-left: 0.45rem;
+            vertical-align: middle; white-space: nowrap; }
+        .title-chip.gold { color: var(--gold); border-color: rgba(255,209,102,0.4); }
         /* Coaching (beta) */
         .coach-stat { display: flex; flex-direction: column; gap: 0.2rem;
             padding: 0.6rem 0.7rem; border-radius: 8px;
@@ -1197,7 +1206,13 @@
          there, what is it sending, and how fast. The analysis comes next. -->
     <div class="portal-panel" id="panel-coach" role="tabpanel" aria-labelledby="tab-coach" tabindex="0" hidden>
     <div class="card" id="card-coach">
-        <div class="card-title">Coaching <span style="font-family:'Orbitron',sans-serif;font-size:0.55rem;letter-spacing:0.2em;color:var(--gold);border:1px solid rgba(255,209,102,0.4);border-radius:4px;padding:0.15rem 0.4rem;margin-left:0.5rem;vertical-align:middle">BETA</span></div>
+        <!-- The platform goes in the title, not three lines down. A driver
+             reporting from a phone has no way to use any of this, and the
+             earliest possible place to tell them so is the first thing they
+             read on opening the tab. -->
+        <div class="card-title">Coaching
+            <span class="title-chip gold">BETA</span>
+            <span class="title-chip">PC and Mac only</span></div>
         <!-- Kept to one line. The only part that has to survive any trim is
              "nothing is uploaded", which is a promise rather than a detail;
              why the phones cannot do this is a reason nobody needs at the
@@ -1210,7 +1225,6 @@
         <p class="form-hint" style="margin-bottom:1.25rem">
             Drive at least three laps from the line and the report builds itself, then rebuilds with every lap after that.
             Reads your telemetry straight from the connector on this computer; nothing is uploaded.
-            PC and Mac only for now.
         </p>
 
         <div id="coach-state" style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;padding:0.75rem 0.9rem;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);margin-bottom:1.25rem">
