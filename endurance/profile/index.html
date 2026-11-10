@@ -379,6 +379,45 @@
             vertical-align: middle; white-space: nowrap; }
         .title-chip.gold { color: var(--gold); border-color: rgba(255,209,102,0.4); }
         /* Coaching (beta) */
+        /* The map's orientation control. Which way up a circuit belongs is
+           a matter of what the driver pictures when they think of the
+           place, and there is no answer to it that is right for everyone,
+           so it is a control rather than a decision taken here. */
+        .coach-rot { display: flex; align-items: center; gap: 0.5rem;
+            flex-wrap: wrap; margin-bottom: 0.85rem; }
+        .coach-rot-label { font-family: 'Orbitron', sans-serif; font-size: 0.6rem;
+            font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+            color: var(--muted); }
+        .coach-rot-deg { font-family: 'Orbitron', sans-serif; font-size: 0.68rem;
+            font-weight: 700; color: var(--text); min-width: 3.2rem;
+            text-align: right; font-variant-numeric: tabular-nums; }
+        .coach-rot-btn { width: 1.95rem; height: 1.95rem; flex: 0 0 auto;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 1rem; line-height: 1; border-radius: 6px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--muted); cursor: pointer;
+            transition: color 0.15s, border-color 0.15s; }
+        .coach-rot-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+        .coach-rot-btn.wide { width: auto; padding: 0 0.6rem; font-size: 0.58rem;
+            font-family: 'Orbitron', sans-serif; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase; }
+        .coach-rot-slider { flex: 1 1 130px; min-width: 110px; height: 1.95rem;
+            margin: 0; background: transparent; cursor: pointer;
+            -webkit-appearance: none; appearance: none; }
+        /* Each vendor's track and thumb needs its own rule: a block naming a
+           pseudo-element the browser does not know is thrown away whole, so
+           one combined selector would style neither. */
+        .coach-rot-slider::-webkit-slider-runnable-track { height: 5px;
+            border-radius: 3px; background: rgba(255,255,255,0.12); }
+        .coach-rot-slider::-moz-range-track { height: 5px;
+            border-radius: 3px; background: rgba(255,255,255,0.12); }
+        .coach-rot-slider::-webkit-slider-thumb { -webkit-appearance: none;
+            appearance: none; width: 14px; height: 14px; margin-top: -4.5px;
+            border-radius: 50%; background: var(--gold); border: none; }
+        .coach-rot-slider::-moz-range-thumb { width: 14px; height: 14px;
+            border-radius: 50%; background: var(--gold); border: none; }
+        .coach-rot-slider:focus-visible { outline: 2px solid var(--gold);
+            outline-offset: 2px; }
         .coach-stat { display: flex; flex-direction: column; gap: 0.2rem;
             padding: 0.6rem 0.7rem; border-radius: 8px;
             background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
@@ -1283,7 +1322,26 @@
         <div class="card-title">Your lap</div>
         <p class="form-hint" style="margin-bottom:1rem">
             Your best lap's own line, coloured by speed. Braking corners are marked in red.
+            Turn it to whichever way round you picture the circuit; your choice is remembered for this track.
         </p>
+        <!-- Rotating turns the picture, it never mirrors it, so the lap on
+             screen stays the lap that was driven whatever the driver does
+             with this. The slider reaches any angle in one drag, the arrows
+             are there because a slider is fiddly on a phone, and half a turn
+             has its own button because that is the one people ask for. -->
+        <div class="coach-rot">
+            <span class="coach-rot-label" id="coach-rot-label">Rotate</span>
+            <button type="button" class="coach-rot-btn" id="coach-rot-ccw"
+                    title="15 degrees anticlockwise" aria-label="Rotate 15 degrees anticlockwise">&#8634;</button>
+            <input type="range" class="coach-rot-slider" id="coach-rot"
+                   min="0" max="355" step="5" value="0"
+                   aria-labelledby="coach-rot-label">
+            <button type="button" class="coach-rot-btn" id="coach-rot-cw"
+                    title="15 degrees clockwise" aria-label="Rotate 15 degrees clockwise">&#8635;</button>
+            <span class="coach-rot-deg" id="coach-rot-deg" aria-live="off">0&deg;</span>
+            <button type="button" class="coach-rot-btn wide" id="coach-rot-half"
+                    title="Turn the map the other way up">Half turn</button>
+        </div>
         <canvas id="coach-map" height="420" style="width:100%;height:420px;display:block;border-radius:10px;background:rgba(0,0,0,0.35);border:1px solid var(--border)"></canvas>
         <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.7rem;font-size:0.72rem;color:var(--muted)">
             <span id="coach-map-lo"></span>
@@ -3622,6 +3680,63 @@ function setupRealtimeSubscriptions(driver) {
     const trace = [];
     let seen = 0, seenFrom = 0, rate = 0;
 
+    // Which way round the map is drawn, in degrees clockwise. The driver's
+    // own preference, kept in their own browser: nothing about it is
+    // uploaded, and no two drivers have to agree on it.
+    //
+    // It has to be held somewhere even without the remembering, because the
+    // report rebuilds at every line crossing: an angle kept nowhere would
+    // snap back every lap, which is worse than having no control at all.
+    //
+    // Remembered per circuit, because the right way up for one track is not
+    // the right way up for the next, and keyed by the length of the lap
+    // since that is the only thing already known here about which track
+    // this is. Within two per cent counts as the same circuit: the same lap
+    // comes out a few metres shorter on a tidy line than a scruffy one.
+    const ROT_STORE = 'gtec.coach.maprot';
+    const ROT_KEEP  = 40;                // circuits remembered, oldest dropped
+    let mapRot = 0, rotFor = null;
+
+    const rotSame = (a, b) => !!a && !!b && Math.abs(a - b) / b < 0.02;
+    const rotWrap = d => ((Math.round(d / 5) * 5 % 360) + 360) % 360;
+
+    function rotRead() {
+        try {
+            const v = JSON.parse(localStorage.getItem(ROT_STORE) || '[]');
+            return Array.isArray(v) ? v : [];
+        } catch (e) { return []; }       // a private window, or storage off
+    }
+
+    // Pick up this circuit's remembered angle the first time its report is
+    // drawn, and again if the driver moves to another track without
+    // reloading the page.
+    function rotFollow(len) {
+        if (!len || rotSame(rotFor, len)) return;
+        rotFor = len;
+        const hit = rotRead().find(e => rotSame(e.m, len));
+        mapRot = hit ? rotWrap(hit.d) : 0;
+        rotShow();
+    }
+
+    function rotSet(deg) {
+        mapRot = rotWrap(deg);
+        rotShow();
+        if (rotFor) {
+            try {
+                const list = rotRead().filter(e => !rotSame(e.m, rotFor));
+                list.push({ m: Math.round(rotFor), d: mapRot });
+                localStorage.setItem(ROT_STORE, JSON.stringify(list.slice(-ROT_KEEP)));
+            } catch (e) { /* then it simply is not remembered next time */ }
+        }
+        if (report) drawLap(report);
+    }
+
+    function rotShow() {
+        const sl = document.getElementById('coach-rot');
+        if (sl && +sl.value !== mapRot) sl.value = mapRot;
+        set('coach-rot-deg', mapRot + '°');
+    }
+
     // `get` is the download offer: shown only while there is nothing to
     // connect to, so it is there for the driver who needs it and invisible
     // to everyone else.
@@ -3893,18 +4008,49 @@ function setupRealtimeSubscriptions(driver) {
         g.setTransform(dpr, 0, 0, dpr, 0, 0);
         g.clearRect(0, 0, w, h);
 
+        // Turn the lap before anything is measured, so the fit is of what
+        // will actually be drawn: rotate after fitting and a circuit that
+        // filled the canvas one way round hangs off the edge the next.
+        //
+        // The turn is applied in the plane the map is drawn in rather than
+        // in the world, which is what makes the control predictable: a
+        // positive angle is clockwise on screen whichever way the circuit's
+        // own axes happen to run. It is a rotation and never a reflection,
+        // so the lap on screen is always the lap that was driven.
+        rotFollow(R.lapLength);
+        const ang = mapRot * Math.PI / 180;
+        const ca = Math.cos(ang), sa = Math.sin(ang);
+        const n = xs.length;
+        const mx = new Float64Array(n), my = new Float64Array(n);
+        for (let i = 0; i < n; i++) {
+            // GT7's z goes down a north-up map, the same way a canvas's y
+            // goes down the screen, so the two are used as they come. This
+            // line used to negate z on the reasoning that one of them must
+            // be upside down, and that is what put a mirror in the map:
+            // every circuit was drawn as its own reflection, which is easy
+            // to miss until it is a track somebody knows by heart.
+            //
+            // The proof is in the laps already recorded. A closed lap turns
+            // through exactly one full circle, and which way round is the
+            // one thing a reflection cannot preserve: Interlagos and
+            // Daytona are both driven anticlockwise, and both come out
+            // clockwise when z is drawn upward. Live timing has always
+            // drawn them this way round, which is why its map looks right.
+            const ux = xs[i], uy = zs[i];
+            mx[i] = ux * ca - uy * sa;
+            my[i] = ux * sa + uy * ca;
+        }
+
         const pad = 34;
-        let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
-        for (let i = 0; i < xs.length; i++) {
-            if (xs[i] < x0) x0 = xs[i]; if (xs[i] > x1) x1 = xs[i];
-            if (zs[i] < z0) z0 = zs[i]; if (zs[i] > z1) z1 = zs[i];
+        let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+        for (let i = 0; i < n; i++) {
+            if (mx[i] < x0) x0 = mx[i]; if (mx[i] > x1) x1 = mx[i];
+            if (my[i] < y0) y0 = my[i]; if (my[i] > y1) y1 = my[i];
         }
         const sc = Math.min((w - pad * 2) / Math.max(1, x1 - x0),
-                            (h - pad * 2) / Math.max(1, z1 - z0));
+                            (h - pad * 2) / Math.max(1, y1 - y0));
         const px = x => (w - (x1 - x0) * sc) / 2 + (x - x0) * sc;
-        // Flipped, because the circuit's z grows the opposite way to a
-        // canvas's y and the lap would otherwise be drawn as its mirror.
-        const pz = z => (h - (z1 - z0) * sc) / 2 + ((z1 - z) * sc);
+        const py = y => (h - (y1 - y0) * sc) / 2 + (y - y0) * sc;
 
         const lo = vs ? Math.min(...vs) : 0, hi = vs ? Math.max(...vs) : 1;
         const stops = [[26,72,140],[26,150,230],[70,212,248],[198,241,255]];
@@ -3920,10 +4066,10 @@ function setupRealtimeSubscriptions(driver) {
         // eighth point, which at four thousand points is still finer than
         // the line is wide.
         const step = 8;
-        for (let i = 0; i + step < xs.length; i += step) {
+        for (let i = 0; i + step < n; i += step) {
             g.beginPath();
-            g.moveTo(px(xs[i]), pz(zs[i]));
-            g.lineTo(px(xs[i + step]), pz(zs[i + step]));
+            g.moveTo(px(mx[i]), py(my[i]));
+            g.lineTo(px(mx[i + step]), py(my[i + step]));
             g.strokeStyle = vs ? colour((vs[i] - lo) / Math.max(1, hi - lo)) : '#1a96e6';
             g.stroke();
         }
@@ -3938,18 +4084,18 @@ function setupRealtimeSubscriptions(driver) {
 
         // The line, where the lap starts and ends.
         g.fillStyle = '#f1f5f9';
-        g.beginPath(); g.arc(px(xs[0]), pz(zs[0]), 4.5, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.arc(px(mx[0]), py(my[0]), 4.5, 0, Math.PI * 2); g.fill();
         g.font = "700 9px 'Orbitron', sans-serif";
         g.fillStyle = 'rgba(241,245,249,0.75)';
         g.textAlign = 'center';
-        const [sx, sy] = outward(px(xs[0]), pz(zs[0]), 18);
+        const [sx, sy] = outward(px(mx[0]), py(my[0]), 18);
         g.fillText('START', sx, sy + 3);
 
         // The corners, named the same way the cards name them.
         g.textBaseline = 'middle';
         for (const c of R.corners) {
-            const i = Math.max(0, Math.min(xs.length - 1, c.idx | 0));
-            const x = px(xs[i]), y = pz(zs[i]);
+            const i = Math.max(0, Math.min(n - 1, c.idx | 0));
+            const x = px(mx[i]), y = py(my[i]);
             g.beginPath(); g.arc(x, y, 6, 0, Math.PI * 2);
             g.fillStyle = c.braking ? '#ef4444' : '#ffd166';
             g.fill();
@@ -4065,6 +4211,20 @@ function setupRealtimeSubscriptions(driver) {
                 + `</div></div>`;
         }).join('');
     }
+
+    // The orientation control. The slider fires on every pixel of a drag,
+    // and a redraw is a few thousand short lines on a canvas, so it can
+    // follow the drag live rather than waiting for it to be let go.
+    const rotSlider = document.getElementById('coach-rot');
+    if (rotSlider) rotSlider.addEventListener('input', () => rotSet(+rotSlider.value));
+    const rotBy = d => rotSet(mapRot + d);
+    const onClick = (id, fn) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', fn);
+    };
+    onClick('coach-rot-ccw', () => rotBy(-15));
+    onClick('coach-rot-cw', () => rotBy(15));
+    onClick('coach-rot-half', () => rotBy(180));
 
     // Only once the tab exists for this driver, and only when they open it:
     // a WebSocket that connects on page load would have every driver's
