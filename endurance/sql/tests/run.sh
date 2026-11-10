@@ -70,6 +70,16 @@ for t in "$HERE"/0[23]_*.sql; do
     "${DB[@]}" -f "$HERE/01_fixture.sql" >/dev/null
 done
 
+# Tests that are not about the beacon print their own lines, so they are
+# shown as they come rather than grepped for the three the beacon tests
+# emit. The fixture is reloaded after each, as above, so one test cannot
+# leave anything behind for the next.
+for t in "$HERE"/0[4-9]_*.sql; do
+    [ -e "$t" ] || continue
+    "${PSQL[@]}" -d gtec -tq -f "$t" 2>&1 | grep -vE "^(SET|INSERT|UPDATE|DELETE|SELECT)" || true
+    "${DB[@]}" -f "$HERE/01_fixture.sql" >/dev/null
+done
+
 cat <<'EXPECTED'
 
 What these should say, with 204 applied:
