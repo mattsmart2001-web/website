@@ -389,35 +389,60 @@
         .replay-at.back { color: var(--gold); }
         .map-side { flex: 0 0 236px; border-left: 1px solid var(--border);
             padding: 0.85rem 0.95rem; }
-        /* Practice lobbies. A driver asked for this: people practise alone
-           because they do not know anyone else is out there, and the page
-           that knows who is out there is the one that should say so. */
-        .lobby-box { margin-top: 1rem; }
-        .lobby-row { display: flex; flex-direction: column; gap: 0.1rem;
-            padding: 0.45rem 0; border-top: 1px solid var(--border); }
-        .lobby-row:first-of-type { border-top: 0; }
+        /* Practice lobbies. A driver asked for this: people practise
+           alone because they do not know anyone else is out there, and the
+           page that knows who is out there is the one that should say so.
+
+           A strip rather than a column, because it sits across the top of
+           the board now and a row of codes reads at a glance where a
+           stacked list would push the timing down the page. */
+        /* Capped rather than left to fill the page. The board below is a
+           grid of 430px splits, so on a wide screen with one split running
+           a full-width strip is a long bar with everything bunched at one
+           end of it. */
+        .lobby-box { display: flex; align-items: center; gap: 0.7rem;
+            flex-wrap: wrap; margin: 0.9rem 0 0; padding: 0.55rem 0.8rem;
+            max-width: 880px; background: var(--bg-1);
+            border: 1px solid var(--border); border-radius: 10px; }
+        .lobby-head { font-family: 'Orbitron', sans-serif; font-size: 0.56rem;
+            font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+            color: var(--gold); flex: 0 0 auto; }
+        .lobby-inner { display: flex; align-items: center; gap: 0.45rem;
+            flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+        .lobby-chip { display: inline-flex; align-items: baseline; gap: 0.45rem;
+            padding: 0.26rem 0.6rem; border-radius: 999px;
+            background: rgba(255,255,255,0.045); border: 1px solid var(--border); }
         .lobby-code { font-family: ui-monospace, 'JetBrains Mono', Menlo, monospace;
-            font-size: 0.86rem; font-weight: 700; color: var(--text);
-            letter-spacing: 0.04em; background: none; border: 0; padding: 0;
-            text-align: left; cursor: pointer; }
+            font-size: 0.84rem; font-weight: 700; color: var(--text);
+            letter-spacing: 0.03em; background: none; border: 0; padding: 0;
+            cursor: pointer; }
         .lobby-code:hover, .lobby-code:focus-visible { color: var(--gold); outline: none; }
         .lobby-who { font-size: 0.68rem; color: var(--muted); }
-        .lobby-none { font-size: 0.72rem; color: var(--muted); line-height: 1.5; }
-        .lobby-post { display: flex; gap: 0.3rem; margin-top: 0.6rem; }
-        .lobby-post input { flex: 1 1 auto; min-width: 0; background: var(--bg-1);
-            border: 1px solid var(--border); border-radius: 5px; color: var(--text);
-            padding: 0.4rem 0.5rem; font-family: ui-monospace, Menlo, monospace;
+        .lobby-none { font-size: 0.76rem; color: var(--muted); margin: 0; }
+        /* Follows whatever is there rather than being pushed to the far
+           end. Pushed, it ends up marooned across the strip from the one
+           sentence it belongs to on the evening nobody has posted yet. */
+        .lobby-post { display: flex; gap: 0.3rem; flex: 0 0 auto; }
+        .lobby-post input { width: 9.5rem; background: var(--bg-2, rgba(0,0,0,0.3));
+            border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+            padding: 0.34rem 0.5rem; font-family: ui-monospace, Menlo, monospace;
             font-size: 0.78rem; }
         .lobby-post input:focus { outline: none; border-color: var(--gold); }
         .lobby-post button { flex: 0 0 auto; font-family: 'Orbitron', sans-serif;
             font-size: 0.55rem; font-weight: 700; letter-spacing: 0.12em;
-            text-transform: uppercase; padding: 0 0.6rem; border-radius: 5px;
+            text-transform: uppercase; padding: 0 0.7rem; border-radius: 6px;
             border: 1px solid var(--border); background: transparent;
             color: var(--muted); cursor: pointer; }
         .lobby-post button:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
-        .lobby-say { font-size: 0.68rem; margin-top: 0.4rem; color: var(--muted); }
+        .lobby-say { font-size: 0.68rem; color: var(--muted); flex: 0 0 auto; }
         .lobby-say.bad { color: #fca5a5; }
         .lobby-say.ok { color: #86efac; }
+        @media (max-width: 640px) {
+            /* The box goes under the codes rather than beside them, or it
+               squeezes them into one chip per line. */
+            .lobby-post { margin-left: 0; width: 100%; }
+            .lobby-post input { flex: 1 1 auto; width: auto; }
+        }
         .map-side-head { font-family: 'Orbitron', sans-serif; font-size: 0.58rem;
             font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
             color: var(--muted); margin-bottom: 0.5rem; }
@@ -1090,10 +1115,14 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
 // never touches the table and the anon key is never given it.
 let lobbyRows = [], lobbySaid = '', lobbySaidCls = '', lobbyAsking = false;
 let lobbyTimer = null, lobbyFetched = false;
+// Set once the database says it has never heard of these functions, which
+// is the state between this page shipping and the migration being run.
+let lobbyOff = false;
 
 /** Shown on a practice night and never during a race, where the lobbies
  *  come from the splits and a posted code would be noise. */
 function lobbyTime() {
+    if (lobbyOff) return false;
     if (lastRows && lastRows.length) return lastRows[0].mode === 'practice';
     return !!(idleCache && idleCache.prac && idleCache.prac.enabled
               && idleCache.prac.open);
@@ -1114,11 +1143,11 @@ function lobbyAgo(iso) {
 function lobbyHtml() {
     const mine = lobbyRows.find(r => r.mine);
     const rows = lobbyRows.length
-        ? lobbyRows.map(r => `<div class="lobby-row">`
+        ? lobbyRows.map(r => `<span class="lobby-chip">`
             + `<button type="button" class="lobby-code" data-code="${esc(r.code)}"`
             + ` title="Copy ${esc(r.code)}">${esc(lobbyPretty(r.code))}</button>`
             + `<span class="lobby-who">${esc(r.host || 'A driver')}`
-            + ` · ${esc(lobbyAgo(r.posted_at))}</span></div>`).join('')
+            + ` · ${esc(lobbyAgo(r.posted_at))}</span></span>`).join('')
         : `<p class="lobby-none">Nobody has posted a lobby yet.${
             signedIn ? ' Hosting one? Post the code and everyone can see it.'
                      : ' Sign in to post yours.'}</p>`;
@@ -1157,18 +1186,31 @@ async function refreshLobbies() {
     if (lobbyAsking || !lobbyTime()) { paintLobbies(); return; }
     lobbyAsking = true;
     try {
-        const { data } = await sb.rpc('live_lobby_codes');
-        lobbyRows = Array.isArray(data) ? data : [];
+        const { data, error } = await sb.rpc('live_lobby_codes');
+        // Not switched on yet: the whole strip goes away rather than
+        // sitting there empty inviting a post that cannot land.
+        if (lobbyMissing(error)) { lobbyOff = true; }
+        else if (!error) lobbyRows = Array.isArray(data) ? data : [];
     } catch (_) { /* leave the last list up rather than blanking it */ }
     lobbyAsking = false;
     paintLobbies();
 }
 
+/** PostgREST answers PGRST202 when the function is not there, which on
+ *  this page means one thing: the migration behind it has not been run.
+ *  Worth separating from a bad moment on the network, because "could not
+ *  post that just now" invites somebody to keep trying something that
+ *  cannot work yet, and sends them looking at their own typing. */
+const lobbyMissing = e => !!e && (e.code === 'PGRST202'
+    || /Could not find the function|schema cache/i.test(e.message || ''));
+
 async function lobbyPost(code) {
     const { data, error } = await sb.rpc('post_lobby_code', { p_code: code });
     lobbySaidCls = 'bad';
-    lobbySaid = error ? 'Could not post that just now.'
-              : data && data.ok ? '' : (data && data.why) || 'Could not post that.';
+    lobbySaid = lobbyMissing(error)
+            ? 'Lobby codes are not switched on yet. Nothing you have done wrong.'
+        : error ? 'Could not post that just now.'
+        : data && data.ok ? '' : (data && data.why) || 'Could not post that.';
     if (data && data.ok) { lobbySaidCls = 'ok'; lobbySaid = 'Posted.'; }
     await refreshLobbies();
 }
@@ -2047,6 +2089,19 @@ to point OBS at it.">Broadcast
                    aria-label="Find a driver" autocomplete="off" spellcheck="false">
             <span class="find-note" id="find-note"></span>
         </div>
+        <!-- Only on a practice night, and only once the window is open.
+             During a race the lobbies come from the splits and a posted
+             code would be noise at best.
+
+             Up here rather than beside the map, where it first went. This
+             is an invitation to go and join somebody, so it belongs where
+             a reader decides whether to bother: under the round and the
+             search, above the board. Hung off the bottom of the track map
+             it was something you found after you had already stayed. -->
+        <div class="lobby-box" id="lobby-side" hidden>
+            <span class="lobby-head">Practice lobbies</span>
+            <div class="lobby-inner"></div>
+        </div>
         <div class="following" id="following" hidden></div>
         <div class="fastest-banner" id="fastest-banner" hidden></div>
         <div class="splits" id="live-splits"></div>
@@ -2075,13 +2130,6 @@ to point OBS at it.">Broadcast
                 <aside class="map-side">
                     <div class="map-side-head">Fastest laps</div>
                     <div id="map-best"></div>
-                    <!-- Only on a practice night, and only once the window
-                         is open. During a race the lobbies come from the
-                         splits and a posted code would be noise at best. -->
-                    <div class="lobby-box" id="lobby-side" hidden>
-                        <div class="map-side-head">Practice lobbies</div>
-                        <div class="lobby-inner"></div>
-                    </div>
                 </aside>
             </div>
             <div class="replay" id="replay" hidden>
