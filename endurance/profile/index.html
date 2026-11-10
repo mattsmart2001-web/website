@@ -1139,11 +1139,13 @@
     <div class="portal-panel" id="panel-coach" role="tabpanel" aria-labelledby="tab-coach" tabindex="0" hidden>
     <div class="card" id="card-coach">
         <div class="card-title">Coaching <span style="font-family:'Orbitron',sans-serif;font-size:0.55rem;letter-spacing:0.2em;color:var(--gold);border:1px solid rgba(255,209,102,0.4);border-radius:4px;padding:0.15rem 0.4rem;margin-left:0.5rem;vertical-align:middle">BETA</span></div>
+        <!-- Kept to one line. The only part that has to survive any trim is
+             "nothing is uploaded", which is a promise rather than a detail;
+             why the phones cannot do this is a reason nobody needs at the
+             moment they are trying to use it. -->
         <p class="form-hint" style="margin-bottom:1.25rem">
-            Reads your own telemetry straight from the connector on this computer. Nothing is sent anywhere:
-            the figures below never leave the machine you are reading this on.
-            You need the connector running and Gran Turismo 7 on track. Windows and Mac only, because
-            the phone reporters cannot serve this page.
+            Reads your telemetry straight from the connector on this computer. Nothing is uploaded.
+            Needs the connector running and GT7 on track. PC and Mac only for now.
         </p>
 
         <div id="coach-state" style="display:flex;align-items:center;gap:0.6rem;padding:0.75rem 0.9rem;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);margin-bottom:1.25rem">
