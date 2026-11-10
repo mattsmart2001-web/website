@@ -1207,9 +1207,18 @@ const lobbyMissing = e => !!e && (e.code === 'PGRST202'
 async function lobbyPost(code) {
     const { data, error } = await sb.rpc('post_lobby_code', { p_code: code });
     lobbySaidCls = 'bad';
+    // What the database actually said, not a shrug.
+    //
+    // "Could not post that just now" was written for a network blip and
+    // then had to stand in for everything else as well, which made the one
+    // real failure impossible to diagnose from the outside: the button did
+    // not work and the page would not say why. A refusal the driver can
+    // act on is worth reading; so is one only an admin can, because they
+    // are the person who will be asked about it.
+    if (error) console.error('post_lobby_code', error);
     lobbySaid = lobbyMissing(error)
             ? 'Lobby codes are not switched on yet. Nothing you have done wrong.'
-        : error ? 'Could not post that just now.'
+        : error ? 'Could not post that: ' + (error.message || error.code || 'no reason given')
         : data && data.ok ? '' : (data && data.why) || 'Could not post that.';
     if (data && data.ok) { lobbySaidCls = 'ok'; lobbySaid = 'Posted.'; }
     await refreshLobbies();
