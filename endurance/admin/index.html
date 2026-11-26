@@ -3439,12 +3439,23 @@ async function viewEventEntries(eventId, eventName, seasonId) {
         ? `<button class="btn-icon danger" onclick="removeAllEntries('${eventId}','${esc(eventName)}','${seasonId}',${data.length})">Remove All (${data.length})</button>`
         : '';
 
+    // One driver, after the bulk register has run.
+    //
+    // The register button is all or nothing, and once splits are out it is
+    // the last thing you want to press. What was missing was the small
+    // case: somebody who said they could not make it, and now can. A driver
+    // in a team is already covered, their team's entry has a + Driver
+    // button on it. A driver with no team had no route in at all.
+    const addOneBtn = `<button class="btn-icon"
+        onclick="openAddOneDriverModal('${eventId}','${esc(eventName)}','${seasonId}')">+ Add One Driver</button>`;
+
     panel.innerHTML = `
         <div class="section-card">
             <div class="section-card-header">
                 <span class="section-card-title">Entries — ${esc(eventName)}</span>
                 <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
                     ${removeAllBtn}
+                    ${addOneBtn}
                     ${headerBtn}
                 </div>
             </div>
@@ -3784,6 +3795,140 @@ async function saveEntry(eventId, eventName, seasonId) {
     });
     if (error) { toast(error.message, 'error'); return; }
     toast('Entry added — assign drivers next to set the car number.', 'success');
+    closeModal();
+    await viewEventEntries(eventId, eventName, seasonId);
+}
+
+/** Add one driver to an event that has already been registered.
+ *
+ *  Built for the case the console had no answer to: splits are out, and a
+ *  driver who had said they could not make it now can. The bulk register
+ *  is all or nothing and re-running it near a race is the last thing
+ *  anybody wants to do.
+ *
+ *  A driver in a team needs nothing new, their team's entry already has a
+ *  + Driver button. This is for the ones with no team, who had no route
+ *  in at all: it builds the same solo entry registerAllSeasonTeams would
+ *  have built for them, from their own registration, one at a time.
+ *
+ *  Anyone already entered is left off the list, because adding them twice
+ *  puts the same driver in two cars.
+ */
+async function openAddOneDriverModal(eventId, eventName, seasonId) {
+    const [{ data: entries }, { data: drivers }, { data: absences }] = await Promise.all([
+        sb.from('entries').select('id, entry_drivers(driver_id)').eq('event_id', eventId),
+        sb.from('drivers')
+            .select('id, display_name, career_number, current_team_id, current_manufacturer_id,'
+                  + ' teams(name), manufacturers(name, car_name)')
+            .not('user_id', 'is', null)
+            .order('display_name'),
+        sb.from('driver_event_absences').select('driver_id, reason').eq('event_id', eventId),
+    ]);
+
+    const entered = new Set();
+    (entries || []).forEach(en => (en.entry_drivers || []).forEach(ed => entered.add(ed.driver_id)));
+    const absent = new Map((absences || []).map(a => [a.driver_id, a.reason || '']));
+    const free = (drivers || []).filter(d => !entered.has(d.id));
+
+    if (!free.length) {
+        openModal(`Add One Driver — ${esc(eventName)}`,
+            `<p style="color:var(--muted);padding:0.5rem 0">Every driver is already entered for this round.</p>`,
+            `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`);
+        return;
+    }
+
+    // Said on the option itself, because the two things an admin needs to
+    // know before picking are whether this driver had marked themselves
+    // out, and whether they are in a team (where the + Driver button on
+    // that team's entry is the better route).
+    const opts = free.map(d => {
+        const bits = [];
+        if (d.career_number != null) bits.push('#' + d.career_number);
+        if (d.teams?.name) bits.push(d.teams.name);
+        else bits.push('solo');
+        if (absent.has(d.id)) bits.push('MARKED ABSENT' + (absent.get(d.id) ? ': ' + absent.get(d.id) : ''));
+        return { value: d.id, label: `${d.display_name}  ·  ${bits.join('  ·  ')}` };
+    });
+
+    openModal(`Add One Driver — ${esc(eventName)}`,
+        `<form id="entity-form">
+            <div class="form-group">
+                <label>Driver</label>
+                ${selectHTML('driver_id', opts, '')}
+            </div>
+            <p style="color:var(--muted);font-size:0.82rem;line-height:1.5;margin:0.25rem 0 0">
+                Makes a solo entry from this driver's own registration: their
+                career number, manufacturer and car. If they are in a team,
+                use the <strong>+ Driver</strong> button on that team's entry
+                instead, so they share the car rather than getting one of
+                their own.
+            </p>
+            <p style="color:var(--muted);font-size:0.82rem;line-height:1.5;margin:0.6rem 0 0">
+                Being marked absent does not stop this. The absence is cleared
+                for this round so they stop showing as unavailable.
+            </p>
+            <p style="color:#fca5a5;font-size:0.82rem;line-height:1.5;margin:0.6rem 0 0">
+                This does not put them in a split. Once added, open
+                <strong>Splits</strong> and move the new entry into one.
+            </p>
+        </form>`,
+        `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+         <button class="btn btn-primary" onclick="saveOneDriver('${eventId}','${esc(eventName)}','${seasonId}')">Add Driver</button>`
+    );
+}
+
+async function saveOneDriver(eventId, eventName, seasonId) {
+    const d = getFormData('entity-form');
+    if (!d.driver_id) { toast('Select a driver.', 'error'); return; }
+
+    const { data: dr, error: drErr } = await sb.from('drivers')
+        .select('id, display_name, career_number, current_manufacturer_id, manufacturers(name, car_name)')
+        .eq('id', d.driver_id).single();
+    if (drErr || !dr) { toast(drErr?.message || 'Could not read that driver.', 'error'); return; }
+
+    // Checked again here rather than trusting the list the modal was built
+    // from, which may be a minute old. Entering the same driver twice puts
+    // them in two cars and the board shows them in both.
+    const { data: already } = await sb.from('entries')
+        .select('id, entry_drivers!inner(driver_id)')
+        .eq('event_id', eventId).eq('entry_drivers.driver_id', dr.id);
+    if (already && already.length) {
+        toast(`${dr.display_name} is already entered for this round.`, 'error');
+        return;
+    }
+
+    // The same shape registerAllSeasonTeams builds for a free agent, so a
+    // driver added here is indistinguishable from one added by the bulk run.
+    const { data: made, error } = await sb.from('entries').insert({
+        event_id:        eventId,
+        team_id:         null,
+        status:          'confirmed',
+        car_number:      dr.career_number || null,
+        car_model:       dr.manufacturers?.car_name || dr.manufacturers?.name || 'TBC',
+        manufacturer_id: dr.current_manufacturer_id || null,
+    }).select('id').single();
+    if (error) { toast(error.message, 'error'); return; }
+
+    const { error: linkErr } = await sb.from('entry_drivers').insert({
+        entry_id:   made.id,
+        driver_id:  dr.id,
+        stint_role: 'starting',
+    });
+    if (linkErr) {
+        // The entry exists with nobody in it, which is worse than nothing:
+        // it inflates the field and shows as an empty car. Take it back out.
+        await sb.from('entries').delete().eq('id', made.id);
+        toast(`Could not link the driver, so the entry was removed: ${linkErr.message}`, 'error');
+        return;
+    }
+
+    // They said they could not make it and now they can, so the absence is
+    // no longer true. Left in place it keeps them on the Unable to Attend
+    // panel and out of anything else that reads it.
+    await sb.from('driver_event_absences').delete()
+        .eq('event_id', eventId).eq('driver_id', dr.id);
+
+    toast(`${dr.display_name} added. Now put the entry in a split.`, 'success');
     closeModal();
     await viewEventEntries(eventId, eventName, seasonId);
 }
