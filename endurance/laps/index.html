@@ -122,6 +122,21 @@
         tbody tr:last-child td { border-bottom: none; }
         .num { text-align: right; font-variant-numeric: tabular-nums; }
         th.num { text-align: right; }
+
+        /* Sortable headings. The button is styled back down to look like
+           the heading it replaced, so the table reads exactly as before
+           until you point at it. */
+        thead th:has(.sort) { padding: 0; }
+        thead th .sort { display: inline-flex; align-items: center; gap: 0.45em; width: 100%; padding: 0.7rem 1.1rem; background: none; border: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; transition: color 0.15s; }
+        th.num .sort { justify-content: flex-end; }
+        thead th .sort:hover { color: var(--text); }
+        thead th .sort:focus-visible { outline: 1px solid var(--gold); outline-offset: -2px; color: var(--text); }
+        thead th[aria-sort] .sort { color: var(--gold); }
+        /* Kept in the markup on every column so the headings do not shift
+           sideways as the sort moves between them. */
+        .sort .caret { font-size: 0.75em; }
+        thead th:not([aria-sort]) .caret { opacity: 0; }
+        thead th:not([aria-sort]) .sort:hover .caret { opacity: 0.4; }
         .who { display: flex; align-items: center; gap: 0.5rem; }
         .who .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
         .sub2 { display: block; font-size: 0.68rem; color: var(--muted); }
@@ -545,16 +560,77 @@ function chips() {
         </button>`).join('');
 }
 
+/**
+ * Sorting the By Driver table.
+ *
+ * The server hands the summary over in best-lap order and that stays the
+ * default. Each heading opens in its own most useful direction rather
+ * than always ascending: quickest lap, most laps, tightest spread, which
+ * is what somebody clicking Spread is nearly always after. Clicking the
+ * same heading again turns it round.
+ */
+const SORTS = {
+    driver: { first:  1, get: r => r.display_name || '',
+              asc: 'driver, A to Z',           desc: 'driver, Z to A' },
+    laps:   { first: -1, get: r => r.laps,
+              asc: 'laps, fewest first',       desc: 'laps, most first' },
+    clean:  { first: -1, get: r => r.clean_laps,
+              asc: 'clean laps, fewest first', desc: 'clean laps, most first' },
+    best:   { first:  1, get: r => r.best_ms,
+              asc: 'best lap',                 desc: 'best lap, slowest first' },
+    median: { first:  1, get: r => r.median_ms,
+              asc: 'median',                   desc: 'median, slowest first' },
+    spread: { first:  1, get: r => r.spread_ms,
+              asc: 'spread, tightest first',   desc: 'spread, widest first' },
+};
+let sortKey = 'best', sortDir = 1;
+
+function sortSummary() {
+    const s = SORTS[sortKey];
+    if (!s) return;
+    summary.sort((a, b) => {
+        const x = s.get(a), y = s.get(b);
+        // A driver with no clean laps has no median and no spread. Those
+        // go to the bottom whichever way the column is pointing, because
+        // nothing recorded is neither a quick time nor a slow one, and
+        // sorting them to the top would bury the drivers you asked for.
+        const xn = x == null || x === '', yn = y == null || y === '';
+        if (xn || yn) return xn && yn ? 0 : (xn ? 1 : -1);
+        if (typeof x === 'string') return sortDir * x.localeCompare(y);
+        return sortDir * (x - y);
+    });
+}
+
+/** What the card note says the table is currently ordered by. */
+function sortNote() {
+    const s = SORTS[sortKey];
+    return 'Sorted by ' + (sortDir === 1 ? s.asc : s.desc);
+}
+
 function table() {
     if (!summary.length) return '';
+    // A button inside the cell rather than a click handler on the cell
+    // itself, so the keyboard reaches the headings and a screen reader is
+    // told they do something. The caret is always in the markup and only
+    // shown on the live column, so the headings do not shuffle sideways
+    // as the sort moves between them.
+    const head = (key, label, cls, tip) => {
+        const on = sortKey === key;
+        return `<th class="${cls}"${on
+            ? ` aria-sort="${sortDir === 1 ? 'ascending' : 'descending'}"` : ''}>
+            <button type="button" class="sort" data-sort="${key}"${tip ? ` title="${tip}"` : ''}>
+                <span>${label}</span><span class="caret" aria-hidden="true">${
+                    on && sortDir === -1 ? '&#9660;' : '&#9650;'}</span>
+            </button></th>`;
+    };
     return `<div class="table-wrap"><table>
         <thead><tr>
-            <th>Driver</th>
-            <th class="num" title="Every lap we recorded, in-laps and out-laps included.">Laps</th>
-            <th class="num" title="Laps within 107% of that driver's own best: a genuine attempt at a lap, rather than a stop, an off or a lift for traffic.">Clean</th>
-            <th class="num">Best</th>
-            <th class="num" title="The middle of their clean laps.">Median</th>
-            <th class="num" title="How tightly the clean laps cluster, as a standard deviation. Over six hours this says more than one quick lap does.">Spread</th>
+            ${head('driver', 'Driver', '')}
+            ${head('laps',   'Laps',   'num', 'Every lap we recorded, in-laps and out-laps included.')}
+            ${head('clean',  'Clean',  'num', "Laps within 107% of that driver's own best: a genuine attempt at a lap, rather than a stop, an off or a lift for traffic.")}
+            ${head('best',   'Best',   'num')}
+            ${head('median', 'Median', 'num', 'The middle of their clean laps.')}
+            ${head('spread', 'Spread', 'num', 'How tightly the clean laps cluster, as a standard deviation. Over six hours this says more than one quick lap does.')}
         </tr></thead>
         <tbody>${summary.map(r => `<tr data-driver="${r.driver_id}">
             <td><div class="who"><span class="dot" style="background:${r.colour}"></span>
@@ -762,10 +838,10 @@ function render() {
 
         <div class="card">
             <div class="card-head"><span class="card-title">By Driver</span>
-                <span class="card-note">${mfr
+                <span class="card-note">${(mfr
                     ? esc(mfr) + ' only · ' + summary.length + ' driver'
-                      + (summary.length === 1 ? '' : 's')
-                    : 'Sorted by best lap'}</span></div>
+                      + (summary.length === 1 ? '' : 's') + ' · '
+                    : '') + sortNote()}</span></div>
             ${table()}
         </div>`}
 
@@ -816,6 +892,20 @@ function render() {
     if (tbl) {
         tbl.addEventListener('mouseover', e => hoverFrom(e.target.closest('tr[data-driver]')));
         tbl.addEventListener('mouseleave', () => hoverDriver(null));
+        // Re-ordering the table re-draws the page, which throws away the
+        // heading that was just pressed, so the focus is put back on it
+        // by name. Without that a keyboard lands back at the top of the
+        // document on every click.
+        tbl.addEventListener('click', e => {
+            const b = e.target.closest('button[data-sort]');
+            if (!b) return;
+            const k = b.dataset.sort;
+            sortDir = k === sortKey ? -sortDir : SORTS[k].first;
+            sortKey = k;
+            sortSummary();
+            render();
+            document.querySelector(`.table-wrap button[data-sort="${k}"]`)?.focus();
+        });
     }
     if (cars) {
         cars.addEventListener('mouseover', e => hoverFrom(e.target.closest('.car-chip')));
@@ -900,7 +990,12 @@ function applyMfr() {
     // change of filter: picking a marque and being shown "pick a car below"
     // because the six that were on screen are no longer listed would be a
     // silly way to answer.
+    // Picked before the sort is applied, so "the first six" always means
+    // the six quickest however the table happens to be ordered. Somebody
+    // who has sorted by name does not want the chart to open on the six
+    // drivers nearest the front of the alphabet.
     shown = new Set(summary.slice(0, 6).map(r => r.driver_id));
+    sortSummary();
 }
 
 /** Every marque with somebody in this session, for the filter. */
