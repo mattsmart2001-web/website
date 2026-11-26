@@ -53,9 +53,13 @@
         if (e.key === 'Escape') document.body.classList.remove('nav-open');
     });
 
-    // Close on resize back to desktop
+    // Close on resize back to desktop.
+    // 1149 is the drawer's breakpoint in gtec-nav.css. If one moves, move
+    // the other: a stale figure here leaves the drawer class on the body
+    // after the links have gone back to a row, which on the way back down
+    // opens the drawer on its own.
     window.addEventListener('resize', function () {
-        if (window.innerWidth > 720) document.body.classList.remove('nav-open');
+        if (window.innerWidth > 1149) document.body.classList.remove('nav-open');
     });
 
     /* -----------------------------------------------------------------

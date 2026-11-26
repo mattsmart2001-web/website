@@ -72,7 +72,22 @@ nav.gtec-nav {
     }
 }
 
-@media (min-width: 721px) {
+/* Where the desktop layout actually fits.
+
+   This used to start at 721px, which was never true. The brand is lifted
+   out of the flow into the left corner and the links are centred, so the
+   link row has no idea the logo is there: when the row is wider than the
+   space between the corners it runs straight over the top of it. Measured
+   across every page, the row wants about 1082px and each corner eats
+   2rem + 103px + a little air, so the comfortable layout needs roughly
+   1385px. Anything narrower than that was overlapping, which is most
+   laptops, not just tablets. Below 1150px even the tightened row below
+   does not fit, so the drawer takes over there instead.
+
+   Two numbers, kept in step: this one and the 1149/1150 pair further
+   down. gtec-nav.js has the same figure for closing the drawer on
+   resize. */
+@media (min-width: 1150px) {
     nav.gtec-nav {
         position: sticky;
         top: 0;
@@ -126,17 +141,43 @@ nav.gtec-nav .back:has(img) {
 /* Logo image used in the nav brand */
 .gtec-nav .brand-logo {
     height: 22px;
+    /* The shape, stated up front. Without it the browser cannot work out
+       how wide this is until the file has arrived, so `width: auto` is
+       zero to begin with and the links start life sitting on top of the
+       logo, then jump right when it loads. The image is 672 x 165, which
+       at 22px tall is 90px of space to hold open. */
+    aspect-ratio: 672 / 165;
     width: auto;
     vertical-align: middle;
     margin-left: 0.45em;
     display: inline-block;
 }
-@media (max-width: 720px) {
+@media (max-width: 1149px) {
     .gtec-nav .brand-logo { height: 18px; margin-left: 0.35em; }
 }
 
+/* The squeeze, for screens that are wide enough for the full row but not
+   comfortably so. Between the drawer and 1470px the gaps and the
+   letter-spacing come in, which buys roughly 260px and is the difference
+   between the row clearing the logo and sitting on it. `nav.gtec-nav`
+   carries an extra type selector, so these beat each page's own
+   `.gtec-nav .nav-links` rules wherever the stylesheet happens to sit.
+
+   1470 rather than the ~1385 the loose row strictly needs: at 1421 it
+   cleared the logo by 11px, which is not overlapping but is near enough
+   to read as a mistake. The handover now happens with about 60px in
+   hand. */
+@media (min-width: 1150px) and (max-width: 1470px) {
+    nav.gtec-nav .nav-links { gap: 0.5rem; }
+    nav.gtec-nav .nav-links a { letter-spacing: 0.08em; }
+    nav.gtec-nav .nav-links .apply {
+        padding: 0.5rem 0.7rem;
+        letter-spacing: 0.08em;
+    }
+}
+
 /* Animated underline on nav links (desktop only, excludes Apply + Back pills) */
-@media (min-width: 721px) {
+@media (min-width: 1150px) {
     nav.gtec-nav .nav-links a:not(.apply):not(.back) {
         position: relative;
     }
@@ -188,7 +229,7 @@ nav.gtec-nav .back:has(img) {
 body.nav-open .gtec-nav-toggle .icon-open  { display: none; }
 body.nav-open .gtec-nav-toggle .icon-close { display: block; }
 
-@media (max-width: 720px) {
+@media (max-width: 1149px) {
     /* Show hamburger */
     .gtec-nav-toggle { display: inline-flex; }
 
@@ -236,5 +277,38 @@ body.nav-open .gtec-nav-toggle .icon-close { display: block; }
     }
     nav.gtec-nav .nav-links .btn-sm {
         margin: 0.25rem 1.5rem 0.5rem;
+    }
+}
+
+/* An open drawer has to clear the sponsor rail.
+
+   The rail is fixed at z-index 50 and each page gives the nav 10, so the
+   sponsor tiles painted straight over the open drawer. It never showed
+   while the drawer belonged to phones, because the rail is tucked away
+   at that size. Lifted only while the drawer is open, so the rail goes
+   on sitting above the nav the rest of the time, which is what it was
+   built to do. */
+body.nav-open nav.gtec-nav { z-index: 60; }
+
+/* The drawer as a panel, on anything wider than a phone.
+
+   The drawer used to belong to phones only, so it spans the window. Now
+   that it also covers tablets and small laptops, a full-width sheet
+   holding one narrow column of left-aligned links is mostly empty black,
+   and the Apply pill stretches to a metre wide. Above phone width it
+   tucks under the hamburger as a panel instead. Same specificity as the
+   rules above, so it has to sit after them. */
+@media (min-width: 721px) and (max-width: 1149px) {
+    nav.gtec-nav .nav-links,
+    nav.gtec-nav > div[style*="display:flex"] {
+        left: auto;
+        width: min(320px, 90vw);
+        border-left: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom-left-radius: 12px;
+        box-shadow: -8px 14px 30px -12px rgba(0, 0, 0, 0.9);
+    }
+    nav.gtec-nav .nav-links .apply,
+    nav.gtec-nav .nav-links .back {
+        margin: 0.5rem 1.25rem;
     }
 }
