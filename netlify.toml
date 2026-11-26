@@ -5,7 +5,15 @@
 [build.environment]
   # gtec-config.js intentionally contains the public Supabase anon key and URL.
   # These are client-side credentials by design - not secrets.
-  SECRETS_SCAN_OMIT_PATHS = "endurance/assets/gtec-config.js"
+  #
+  # tools/ is developer documentation rather than anything the website
+  # serves, and gtec_beacon_protocol.md names the project URL because it
+  # tells somebody how to write their own reporter and the address is the
+  # one thing they cannot work out for themselves. Adding that file stopped
+  # every deploy from 12 November, and because a failed deploy leaves the
+  # last good one serving, the site simply stayed where it was for a
+  # fortnight with nothing on the site itself to say so.
+  SECRETS_SCAN_OMIT_PATHS = "endurance/assets/gtec-config.js,tools/**"
 
 # Legacy Shopify URLs. The site previously ran a store under these paths
 # and Google still has them in its index. Return HTTP 410 (Gone) so Google
