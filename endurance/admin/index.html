@@ -3815,15 +3815,30 @@ async function saveEntry(eventId, eventName, seasonId) {
  *  puts the same driver in two cars.
  */
 async function openAddOneDriverModal(eventId, eventName, seasonId) {
-    const [{ data: entries }, { data: drivers }, { data: absences }] = await Promise.all([
+    // teams!current_team_id, not plain teams. A driver links to teams more
+    // than one way, so PostgREST cannot pick for you: the whole query comes
+    // back as an error, and an error read as an empty list is how this said
+    // "every driver is already entered" when none of them were.
+    const [{ data: entries, error: entErr }, { data: drivers, error: drvErr },
+           { data: absences }] = await Promise.all([
         sb.from('entries').select('id, entry_drivers(driver_id)').eq('event_id', eventId),
         sb.from('drivers')
             .select('id, display_name, career_number, current_team_id, current_manufacturer_id,'
-                  + ' teams(name), manufacturers(name, car_name)')
+                  + ' teams!current_team_id(name), manufacturers(name, car_name)')
             .not('user_id', 'is', null)
             .order('display_name'),
         sb.from('driver_event_absences').select('driver_id, reason').eq('event_id', eventId),
     ]);
+
+    // Said out loud rather than folded into "nobody to add", which is what
+    // an empty list looks like and is a different thing entirely.
+    const bad = entErr || drvErr;
+    if (bad) {
+        openModal(`Add One Driver — ${esc(eventName)}`,
+            `<p style="color:#fca5a5;padding:0.5rem 0">Could not read the drivers: ${esc(bad.message)}</p>`,
+            `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`);
+        return;
+    }
 
     const entered = new Set();
     (entries || []).forEach(en => (en.entry_drivers || []).forEach(ed => entered.add(ed.driver_id)));
