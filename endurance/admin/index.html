@@ -1471,6 +1471,12 @@ async function renderDashboard() {
                     ${exportBtn("exportStandingsCsv('team')", 'Team Standings')}
                 </div>
             </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:0.85rem;padding-top:0.85rem;border-top:1px solid var(--border)">
+                <div style="font-size:0.85rem;color:var(--muted)">Every driver's current Elo, tier and peak, highest first. Not tied to a season. Anyone who has never been rated carries their DR / SR seed instead and is marked provisional.</div>
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+                    ${exportBtn("exportEloCsv()", 'Driver Elo')}
+                </div>
+            </div>
         </div>
         <div class="table-wrap" style="padding:1.5rem;margin-top:1rem">
             <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Maintenance</div>
@@ -10636,6 +10642,56 @@ async function exportStandingsCsv(kind) {
         d.manufacturer_name, d.nationality, d.points ?? 0, d.races ?? 0, d.wins ?? 0,
         d.podiums ?? 0, d.poles ?? 0, d.fastest_laps ?? 0]);
     downloadCsv('driver-standings-' + slugify(season.name || 'season'), headers, rows);
+}
+
+/**
+ * Every driver's current Elo, highest first.
+ *
+ * Not tied to a season. driver_current_ratings is the same view the
+ * drivers page and the splits generator read, so this exports exactly
+ * the numbers the league is already being run on rather than a second
+ * opinion computed here.
+ *
+ * The column that matters is Rated. The view falls back to the DR/SR
+ * seed for anybody who has never been rated, so their Elo is an
+ * estimate of where they would start rather than something earned on
+ * track. A spreadsheet that does not say which is which is how a table
+ * of seeds ends up being read as results. The drivers page draws the
+ * same distinction with a dashed pill.
+ */
+async function exportEloCsv() {
+    const { data, error } = await sb.from('driver_current_ratings')
+        .select('driver_name, career_number, nationality, team_name, manufacturer_name,'
+              + ' rating, peak_rating, last_delta, last_rated_at');
+    if (error) { toast(error.message, 'error'); return; }
+
+    const sorted = (data || []).slice().sort((a, b) =>
+        (Number(b.rating || 0) - Number(a.rating || 0))
+        || (a.driver_name || '').localeCompare(b.driver_name || ''));
+
+    const headers = ['Pos', 'Driver', 'Car #', 'Nationality', 'Team', 'Manufacturer',
+        'Elo', 'Tier', 'Peak Elo', 'Last Change', 'Rated', 'Last Rated'];
+    const rows = sorted.map((d, i) => {
+        const elo = d.rating == null ? null : Math.round(Number(d.rating));
+        return [
+            i + 1,
+            d.driver_name,
+            d.career_number ?? '',
+            d.nationality ?? '',
+            d.team_name ?? '',
+            d.manufacturer_name ?? '',
+            elo ?? '',
+            elo != null && window.eloTier ? (window.eloTier(elo)?.name || '') : '',
+            d.peak_rating == null ? '' : Math.round(Number(d.peak_rating)),
+            // Signed on purpose: a bare 12 beside a drop of twelve points
+            // would be wrong, and +12 reads as a gain at a glance.
+            d.last_delta == null ? '' : (Number(d.last_delta) > 0 ? '+' : '')
+                + Math.round(Number(d.last_delta)),
+            d.last_rated_at ? 'yes' : 'provisional',
+            d.last_rated_at ? String(d.last_rated_at).slice(0, 10) : '',
+        ];
+    });
+    downloadCsv('driver-elo', headers, rows);
 }
 
 // Split-allocation export. viewEventLobbies stashes a flat snapshot of
