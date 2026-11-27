@@ -920,6 +920,41 @@ function render() {
     drawChart();
 }
 
+/**
+ * The lap log, in pages.
+ *
+ * PostgREST returns at most 1000 rows per request and says so only in a
+ * Content-Range header nobody was reading. Le Mans practice alone is
+ * over 2600 laps, so one call brought back the first 1000 ordered by
+ * driver name, and every driver sorting after roughly the letter L had
+ * no laps at all. Their line never appeared on the chart, while the By
+ * Driver table underneath stayed complete, because the summary is one
+ * row per driver and never gets near the cap. The page looked like it
+ * was working, which is the worst way for it to be wrong.
+ *
+ * range() on an rpc builder sets limit and offset rather than a Range
+ * header, which is what this server actually honours, and live_lap_log
+ * has a stable ORDER BY, so paging cannot drop or repeat a lap. The
+ * loop stops at the first short page.
+ */
+const LAP_PAGE = 1000;
+async function fetchAllLaps(args) {
+    const out = [];
+    for (let from = 0; ; from += LAP_PAGE) {
+        const { data, error } = await sb.rpc('live_lap_log', args)
+            .range(from, from + LAP_PAGE - 1);
+        if (error) return { data: null, error };
+        const page = data || [];
+        out.push(...page);
+        if (page.length < LAP_PAGE) break;
+        // Belt and braces. If a server ever returned a full page for ever,
+        // this would spin and take the tab with it. Fifty thousand laps is
+        // far more than any GTEC session produces.
+        if (out.length >= 50000) break;
+    }
+    return { data: out, error: null };
+}
+
 async function load() {
     // Open on a session that has laps in it. A round's practice window runs
     // for days before the race, and a page that opens on Race told everyone
@@ -930,7 +965,7 @@ async function load() {
     const args = { p_event_id: eventId, p_mode: mode || null };
     const [{ data: lg, error: e1 }, { data: sm, error: e2 },
            { data: vc }, { data: va }] = await Promise.all([
-        sb.rpc('live_lap_log',        args),
+        fetchAllLaps(args),
         sb.rpc('live_lap_summary',    args),
         sb.rpc('live_lap_void_count', args),
         // Names and reasons are admins only, and the server refuses this
